@@ -1,0 +1,3 @@
+[submodule "lib/distel"]
+	path = lib/distel
+	url = https://github.com/rost/distel.git
