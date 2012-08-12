@@ -18,7 +18,7 @@
 ;; Paths
 (add-to-list 'load-path (concat edts-lib-directory "auto-complete"))
 (add-to-list 'load-path (concat edts-lib-directory "distel/elisp/"))
-(add-to-list 'load-path (concat edts-lib-directory "idle-highlight-mode"))
+(add-to-list 'load-path (concat edts-lib-directory "auto-highlight-symbol-mode"))
 (add-to-list 'load-path (concat (directory-file-name erlang-root-dir)
                                 "/lib/tools/emacs"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
@@ -58,14 +58,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode for erlang
+(require 'auto-highlight-symbol)
+(custom-set-variables
+ '(ahs-exclude (cons erlang-auto-highlight-exclusions ahs-exclude)))
+
+
 (defconst erlang-auto-highlight-exclusions
   (cons (quote erlang-mode)
                (concat
                 "\\(" erlang-operators-regexp
                 "\\|" erlang-keywords-regexp "\\)")))
 
-(custom-set-variables
- '(ahs-exclude (cons erlang-auto-highlight-exclusions ahs-exclude)))
+(ahs-regist-range-plugin
+ erlang-current-function
+ '((name    . "erlang current function")
+   (lighter . "CF")
+   (face    . ahs-plugin-defalt-face)
+   (start   . ahs-range-beginning-of-erlang-function)
+   (end     . ahs-range-end-of-erlang-function))
+ "Current Erlang function")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer setup
@@ -77,18 +88,10 @@
   (add-to-list 'erlang-electric-commands 'erlang-electric-newline)
   (setq erlang-next-lines-empty-threshold 0)
   ;; (setq indent-line-function 'my-erlang-indent)
-n
   )
 
 
-(ahs-regist-range-plugin
- erlang-current-function
- '((name    . "erlang current function")
-   (lighter . "CF")
-   (face    . ahs-plugin-defalt-face)
-   (start   . ahs-range-beginning-of-erlang-function)
-   (end     . ahs-range-end-of-erlang-function))
- "Current Erlang function")
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Erlang-specific keybindings
