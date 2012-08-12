@@ -16,9 +16,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(add-to-list 'load-path (concat edts-lib-directory "auto-complete"))
+
+
+; Add all directory names in edts-lib-directory to load-path except . and ..
+(mapcar
+ #'(lambda (path) (add-to-list 'load-path path))
+ (remove-if-not #'(lambda (f)
+                    (when (file-directory-p f)
+                      (let ((file-name (file-name-nondirectory f)))
+                        (and (not (equal "." file-name))
+                             (not (equal ".." file-name))))))
+                (directory-files edts-lib-directory t)))
 (add-to-list 'load-path (concat edts-lib-directory "distel/elisp/"))
-(add-to-list 'load-path (concat edts-lib-directory "auto-highlight-symbol-mode"))
 (add-to-list 'load-path (concat (directory-file-name erlang-root-dir)
                                 "/lib/tools/emacs"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
