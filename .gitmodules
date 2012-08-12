@@ -1,9 +1,9 @@
 [submodule "lib/distel"]
 	path = lib/distel
 	url = https://github.com/rost/distel.git
-[submodule "lib/auto-highligh-symbol-mode"]
-	path = lib/auto-highligh-symbol-mode
-	url = git@github.com:tjarvstrand/auto-highlight-symbol-mode.git
+[submodule "lib/auto-highlight-symbol-mode"]
+	path = lib/auto-highlight-symbol-mode
+	url = https://github.com/tjarvstrand/auto-highlight-symbol-mode.git
 [submodule "lib/auto-complete"]
 	path = lib/auto-complete
 	url = https://github.com/tjarvstrand/auto-complete.git
