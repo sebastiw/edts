@@ -173,16 +173,18 @@ if not already present"
   str)
 
 (defun symbol-at (&optional pos)
+  "Returns the symbol at `pos', if any, otherwise nil."
   (save-excursion
     (when pos (goto-char pos))
     (thing-at-point 'symbol)))
 
 (defun erl-complete-term-preceding-char ()
+  "Returns the character preceding symbol, or if that is a single-quote, the
+character before that."
   (let* ((char  (char-before ac-point)))
     (if (equal ?' char)
         (char-before (- ac-point 1))
         char)))
-
 
 (defun &erl-complete-receive-completions ()
   (erl-receive ()
@@ -196,6 +198,7 @@ if not already present"
 ;; Setup
 
 (defun erl-complete-erlang-mode-hook ()
+  "Buffer-setup for erl-complete."
   (setq ac-sources '(erl-complete-source))
   (setq erl-complete-local-functions (ferl-local-function-names))
 
