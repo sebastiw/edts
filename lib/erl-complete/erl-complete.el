@@ -2,8 +2,15 @@
 (require 'ferl)
 (ac-config-default)
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Source
+
 (defvar erl-complete-source
   '((candidates . erl-complete-candidates)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Top-level candidate functions
 
 (defun erl-complete-candidates ()
   (case (point-inside-quotes)
@@ -46,33 +53,6 @@ completion."
 ;; These conditions all assume that preceding items in the condition list are
 ;; unsatisfied.
 
-(defun point-inside-quotes ()
-  (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
-      'none
-      (save-excursion
-        (let ((match (re-search-backward "['\\\"]")))
-          (when match
-            (let ((char          (char-after match))
-                  (string-face-p (equal 'font-lock-string-face;
-                                        (get-text-property (- match 1) 'face))))
-           (cond
-            ; we're inside a double quoted string if either:
-            ; we hit a " and the preceding char is not string
-            ; fontified.
-            ((and (equal ?\" char) (not string-face-p)) 'double-quoted)
-            ; or we hit a ' and the preceding char is still string
-            ; fontified
-            ((and (equal ?' char) string-face-p)              'double-quoted)
-            ; we're inside a single quoted string if either:
-            ; we hit a ' and the preceding char is not string
-            ; fontified.
-            ((and (equal ?' char) (not string-face-p))        'single-quoted)
-            ; or we hit a " and the preceding char is still string
-            ; fontified
-            ((and (equal ?\" char) string-face-p)             'single-quoted)
-            ; Otherwise we're not inside quotes
-            (t                                                'none))))))))
-
 (defun erl-complete-macro-p ()
   (equal ?? (erl-complete-term-preceding-char)))
 
@@ -99,18 +79,15 @@ completion."
 
 (defun erl-complete-macro ()
   "Generates the auto-complete candidate list for macros. Unimplemented"
-  (message "completing macros")
   nil)
 
 (defun erl-complete-record ()
   "Generates the auto-complete candidate list for records. Unimplemented"
-  (message "completing records")
   nil)
 
 (defun erl-complete-variable ()
   "Generates the auto-complete candidate list for variables. Matches variables
 mentioned in current function, before current point."
-  (message "completing variables")
   (save-excursion
     (when (erl-complete-variable-p)
       (let ((old-point  (point))
@@ -123,32 +100,26 @@ mentioned in current function, before current point."
 
 (defun erl-complete-exported-function ()
   "Generates the auto-complete candidate list for exported functions for the
-relevant module."
-  (message "completing exported functions")
+relevant module. Unimplemented"
   nil)
 
 (defun erl-complete-local-function ()
   "Generates the auto-complete candidate list for functions defined in the
 current module."
-  (message "completing local functions")
   (ferl-local-function-names))
 
 (defun erl-complete-module ()
   "Generates the auto-complete candidate list for modules, using a distel node.
 Uniplemented."
-  (message "completing modules")
   nil)
 
 (defun erl-complete-built-in-function ()
-  "Generates the auto-complete candidate list for built-in functions.
-Uniplemented."
-  (message "completing built-ins")
+  "Generates the auto-complete candidate list for built-in functions."
   erlang-int-bifs)
 
 (defun erl-complete-imported-function ()
   "Generates the auto-complete candidate list for functions imported into the
-current module. Uniplemented."
-  (message "completing imported functions %s" (erlang-get-import))
+current module."
   ;; erlang get-import is on format ((mod1 (fun1 . arity) (fun2 . arity)))
   ;; So for each element in the list, skip the car (the module name) and for
   ;; each consecutive element (fun-arity pair) get the head (the function name).
@@ -160,6 +131,36 @@ current module. Uniplemented."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
+
+(defun erl-complete-point-inside-quotes ()
+  "Returns 'double if point is inside double quotes, 'single if point is inside
+single quotes and 'none otherwise. Relies on font-lock-string-face to work."
+  (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
+      'none
+      (save-excursion
+        (let ((match (re-search-backward "['\\\"]")))
+          (when match
+            (let ((char          (char-after match))
+                  (string-face-p (equal 'font-lock-string-face;
+                                        (get-text-property (- match 1) 'face))))
+           (cond
+            ; we're inside a double quoted string if either:
+            ; we hit a " and the preceding char is not string
+            ; fontified.
+            ((and (equal ?\" char) (not string-face-p)) 'double-quoted)
+            ; or we hit a ' and the preceding char is still string
+            ; fontified
+            ((and (equal ?' char) string-face-p)              'double-quoted)
+            ; we're inside a single quoted string if either:
+            ; we hit a ' and the preceding char is not string
+            ; fontified.
+            ((and (equal ?' char) (not string-face-p))        'single-quoted)
+            ; or we hit a " and the preceding char is still string
+            ; fontified
+            ((and (equal ?\" char) string-face-p)             'single-quoted)
+            ; Otherwise we're not inside quotes
+            (t                                                'none))))))))
+
 
 (defun erl-complete-single-quote-terminate (str)
   "Removes any single quotes at start and end of `str' and adds one at the end
