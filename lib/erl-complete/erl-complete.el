@@ -2,10 +2,17 @@
 (require 'ferl)
 (ac-config-default)
 
-(defvar erl-complete
+(defvar erl-complete-source
   '((candidates . erl-complete-candidates)))
 
 (defun erl-complete-candidates ()
+  (case (point-inside-quotes)
+    ('double-quoted  nil)
+    ('single-quoted (erl-complete-single-quoted-candidates))
+    ('none   (erl-complete-normal-candidates))))
+
+(defun erl-complete-normal-candidates ()
+  "Produces the completion string normal (unqoted) erlang terms."
   (cond
    ((erl-complete-macro-p)             (erl-complete-macro))
    ((erl-complete-record-p)            (erl-complete-record))
@@ -17,11 +24,54 @@
                                         (erl-complete-built-in-function)
                                         (erl-complete-imported-function)))))
 
+(defun erl-complete-single-quoted-candidates ()
+  "Produces the completion string single-qoted erlang terms, Same as normal
+candidates, except we single-quote-terminate candidates and there is no variable
+completion."
+  (mapcar
+   #'erl-complete-single-quote-terminate
+   (cond
+    ((erl-complete-macro-p)             (erl-complete-macro))
+    ((erl-complete-record-p)            (erl-complete-record))
+    ((erl-complete-exported-function-p) (erl-complete-exported-function))
+    ((erl-complete-atom-p)              (append
+                                         (erl-complete-local-function)
+                                         (erl-complete-module)
+                                         (erl-complete-built-in-function)
+                                         (erl-complete-imported-function))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
 ;;
 ;; These conditions all assume that preceding items in the condition list are
 ;; unsatisfied.
+
+(defun point-inside-quotes ()
+  (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
+      'none
+      (save-excursion
+        (let ((match (re-search-backward "['\\\"]")))
+          (when match
+            (let ((char          (char-after match))
+                  (string-face-p (equal 'font-lock-string-face;
+                                        (get-text-property (- match 1) 'face))))
+           (cond
+            ; we're inside a double quoted string if either:
+            ; we hit a " and the preceding char is not string
+            ; fontified.
+            ((and (equal ?\" char) (not string-face-p)) 'double-quoted)
+            ; or we hit a ' and the preceding char is still string
+            ; fontified
+            ((and (equal ?' char) string-face-p)              'double-quoted)
+            ; we're inside a single quoted string if either:
+            ; we hit a ' and the preceding char is not string
+            ; fontified.
+            ((and (equal ?' char) (not string-face-p))        'single-quoted)
+            ; or we hit a " and the preceding char is still string
+            ; fontified
+            ((and (equal ?\" char) string-face-p)             'single-quoted)
+            ; Otherwise we're not inside quotes
+            (t                                                'none))))))))
 
 (defun erl-complete-macro-p ()
   (equal ?? (erl-complete-term-preceding-char)))
@@ -80,7 +130,7 @@ relevant module."
 (defun erl-complete-local-function ()
   "Generates the auto-complete candidate list for functions defined in the
 current module."
-  (message "completing local functions %s" (ferl-local-function-names))
+  (message "completing local functions")
   (ferl-local-function-names))
 
 (defun erl-complete-module ()
@@ -111,6 +161,13 @@ current module. Uniplemented."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
 
+(defun erl-complete-single-quote-terminate (str)
+  "Removes any single quotes at start and end of `str' and adds one at the end
+if not already present"
+  (when      (string-match "^'" str) (setq str (substring str 1)))
+  (when (not (string-match "'$" str)) (setq str (concat str "'")))
+  str)
+
 (defun symbol-at (&optional pos)
   (save-excursion
     (when pos (goto-char pos))
@@ -135,8 +192,14 @@ current module. Uniplemented."
 ;; Setup
 
 (defun erl-complete-erlang-mode-hook ()
-  (setq ac-sources '(erl-complete))
-  (setq erl-complete-local-functions (ferl-local-function-names)))
+  (setq ac-sources '(erl-complete-source))
+  (setq erl-complete-local-functions (ferl-local-function-names))
+
+  ;; this is to allow completion inside quoted atoms. As a side-effect we
+  ;; get completion inside strings, which must be handled above.
+  (make-local-variable 'ac-disable-faces)
+  (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
+  )
 (add-hook 'erlang-mode-hook 'erl-complete-erlang-mode-hook)
 
 ;; Default settings
