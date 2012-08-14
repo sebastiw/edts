@@ -103,10 +103,9 @@ current module. Uniplemented."
   ;; So for each element in the list, skip the car (the module name) and for
   ;; each consecutive element (fun-arity pair) get the head (the function name).
   ;; Finally, append all the results.
-  (apply #'append
-         (mapcar
-          #'(lambda (mod)
-              (mapcar #'car (cdr mod)))
+  (apply #'append                                   ;; append final results.
+         (mapcar                                    ;; for each module import.
+          #'(lambda (mod) (mapcar #'car (cdr mod))) ;; get car of all but first.
           (erlang-get-import))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
