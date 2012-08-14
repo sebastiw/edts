@@ -93,13 +93,21 @@ Uniplemented."
   "Generates the auto-complete candidate list for built-in functions.
 Uniplemented."
   (message "completing built-ins")
-  nil)
+  erlang-int-bifs)
 
 (defun erl-complete-imported-function ()
   "Generates the auto-complete candidate list for functions imported into the
 current module. Uniplemented."
-  (message "completing imported functions")
-  nil)
+  (message "completing imported functions %s" (erlang-get-import))
+  ;; erlang get-import is on format ((mod1 (fun1 . arity) (fun2 . arity)))
+  ;; So for each element in the list, skip the car (the module name) and for
+  ;; each consecutive element (fun-arity pair) get the head (the function name).
+  ;; Finally, append all the results.
+  (apply #'append
+         (mapcar
+          #'(lambda (mod)
+              (mapcar #'car (cdr mod)))
+          (erlang-get-import))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -133,6 +141,7 @@ current module. Uniplemented."
 (add-hook 'erlang-mode-hook 'erl-complete-erlang-mode-hook)
 
 ;; Default settings
+(setq ac-ignore-case 'smart)
 (setq ac-use-menu-map t)
 (define-key ac-menu-map (kbd "C-n") 'ac-next)
 (define-key ac-menu-map (kbd "C-p") 'ac-previous)
