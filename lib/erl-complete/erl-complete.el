@@ -2,7 +2,6 @@
 (require 'ferl)
 (ac-config-default)
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
@@ -14,12 +13,12 @@
 
 (defun erl-complete-candidates ()
   (case (point-inside-quotes)
-    ('double-quoted  nil)
+    ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (erl-complete-single-quoted-candidates))
     ('none   (erl-complete-normal-candidates))))
 
 (defun erl-complete-normal-candidates ()
-  "Produces the completion string normal (unqoted) erlang terms."
+  "Produces the completion list for normal (unqoted) erlang terms."
   (cond
    ((erl-complete-macro-p)             (erl-complete-macro))
    ((erl-complete-record-p)            (erl-complete-record))
@@ -32,7 +31,7 @@
                                         (erl-complete-imported-function)))))
 
 (defun erl-complete-single-quoted-candidates ()
-  "Produces the completion string single-qoted erlang terms, Same as normal
+  "Produces the completion for single-qoted erlang terms, Same as normal
 candidates, except we single-quote-terminate candidates and there is no variable
 completion."
   (mapcar
@@ -54,24 +53,28 @@ completion."
 ;; unsatisfied.
 
 (defun erl-complete-macro-p ()
+  "Returns non-nil if the current `ac-prefix' can be completed with a macro."
   (equal ?? (erl-complete-term-preceding-char)))
 
 (defun erl-complete-record-p ()
+  "Returns non-nil if the current `ac-prefix' can be completed with an record."
   (equal ?# (erl-complete-term-preceding-char)))
 
 (defun erl-complete-variable-p ()
+  "Returns non-nil if the current `ac-prefix' can be completed with an
+variable."
   (let ((case-fold-search nil))
     (string-match erlang-variable-regexp ac-prefix)))
 
 (defun erl-complete-exported-function-p ()
+  "Returns non-nil if the current `ac-prefix' can be completed with an exported
+function."
   (when (equal ?: (erl-complete-term-preceding-char))
     (string-match erlang-atom-regexp (symbol-at (- ac-point 1)))))
 
-(defun erl-complete-local-function-p ()
-  (when (not (equal ?: (erl-complete-term-preceding-char)))
-    (string-match erlang-atom-regexp ac-prefix)))
-
 (defun erl-complete-atom-p ()
+  "Returns non-nil if the current `ac-prefix' can be completed with an
+atom-expression."
   (string-match erlang-atom-regexp ac-prefix))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
