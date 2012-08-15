@@ -20,15 +20,15 @@
 (defun erl-complete-normal-candidates ()
   "Produces the completion list for normal (unqoted) erlang terms."
   (cond
-   ((erl-complete-macro-p)             (erl-complete-macro))
-   ((erl-complete-record-p)            (erl-complete-record))
-   ((erl-complete-variable-p)          (erl-complete-variable))
-   ((erl-complete-exported-function-p) (erl-complete-exported-function))
-   ((erl-complete-atom-p)              (append
-                                        (erl-complete-local-function)
-                                        (erl-complete-module)
-                                        (erl-complete-built-in-function)
-                                        (erl-complete-imported-function)))))
+   ((erl-complete-macro-p)           (erl-complete-macro))
+   ((erl-complete-record-p)          (erl-complete-record))
+   ((erl-complete-variable-p)        (erl-complete-variable))
+   ((erl-complete-global-function-p) (erl-complete-global-function))
+   ((erl-complete-atom-p)            (append
+                                      (erl-complete-local-function)
+                                      (erl-complete-module)
+                                      (erl-complete-built-in-function)
+                                      (erl-complete-imported-function)))))
 
 (defun erl-complete-single-quoted-candidates ()
   "Produces the completion for single-qoted erlang terms, Same as normal
@@ -37,14 +37,14 @@ completion."
   (mapcar
    #'erl-complete-single-quote-terminate
    (cond
-    ((erl-complete-macro-p)             (erl-complete-macro))
-    ((erl-complete-record-p)            (erl-complete-record))
-    ((erl-complete-exported-function-p) (erl-complete-exported-function))
-    ((erl-complete-atom-p)              (append
-                                         (erl-complete-local-function)
-                                         (erl-complete-module)
-                                         (erl-complete-built-in-function)
-                                         (erl-complete-imported-function))))))
+    ((erl-complete-macro-p)           (erl-complete-macro))
+    ((erl-complete-record-p)          (erl-complete-record))
+    ((erl-complete-global-function-p) (erl-complete-global-function))
+    ((erl-complete-atom-p)            (append
+                                       (erl-complete-local-function)
+                                       (erl-complete-module)
+                                       (erl-complete-built-in-function)
+                                       (erl-complete-imported-function))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
@@ -66,7 +66,7 @@ variable."
   (let ((case-fold-search nil))
     (string-match erlang-variable-regexp ac-prefix)))
 
-(defun erl-complete-exported-function-p ()
+(defun erl-complete-global-function-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with an exported
 function."
   (when (equal ?: (erl-complete-term-preceding-char))
@@ -101,20 +101,53 @@ mentioned in current function, before current point."
           (add-to-list 'candidates (thing-at-point 'symbol)))
         candidates))))
 
-(defun erl-complete-exported-function ()
+(defvar erl-complete-global-function-completions nil
+  "The current completion list for exported functions")
+
+(defun erl-complete-global-function ()
   "Generates the auto-complete candidate list for exported functions for the
 relevant module. Unimplemented"
-  nil)
+  (let* ((module (symbol-at (- ac-point 1)))
+         (node erl-nodename-cache)
+         (completions
+          (erl-spawn
+            (erl-send-rpc node 'distel 'functions (list module ac-prefix))
+            (&erl-complete-receive-global-function-completions))))
+    erl-complete-global-function-completions))
+
+
+(defun &erl-complete-receive-global-function-completions ()
+  (erl-receive ()
+      ((['rex ['ok completions]]
+        (setq erl-complete-global-function-completions completions))
+       (other
+        (message "Unexpected reply: %s" other)))))
+
 
 (defun erl-complete-local-function ()
   "Generates the auto-complete candidate list for functions defined in the
 current module."
   (ferl-local-function-names))
 
+(defvar erl-complete-module-completions nil
+  "The current completion for modules")
+
 (defun erl-complete-module ()
   "Generates the auto-complete candidate list for modules, using a distel node.
 Uniplemented."
-  nil)
+  (let* ((node erl-nodename-cache)
+         (completions (erl-spawn
+                        (erl-send-rpc node 'distel 'modules (list ac-prefix))
+                        (&erl-complete-receive-module-completions))))
+    erl-complete-module-completions))
+
+(defun &erl-complete-receive-module-completions ()
+  (erl-receive ()
+      ((['rex ['ok completions]]
+        (setq erl-complete-module-completions completions))
+       (other
+        (message "Unexpected reply: %s" other)))))
+
 
 (defun erl-complete-built-in-function ()
   "Generates the auto-complete candidate list for built-in functions."
@@ -186,13 +219,10 @@ character before that."
         (char-before (- ac-point 1))
         char)))
 
-(defun &erl-complete-receive-completions ()
-  (erl-receive ()
-      ((['rex ['ok completions]]
-	(setq try-erl-complete-cache completions))
-       (other
-	(message "Unexpected reply: %s" other)))))
-
+(defun erl-complete-function (module function)
+  (erl-spawn
+    (erl-send-rpc erl-nodename-cache 'distel 'functions (list module function))
+    (&erl-complete-receive-completions)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
