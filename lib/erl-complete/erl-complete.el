@@ -106,7 +106,7 @@ mentioned in current function, before current point."
 
 (defun erl-complete-global-function ()
   "Generates the auto-complete candidate list for exported functions for the
-relevant module. Unimplemented"
+relevant module."
   (let* ((module (symbol-at (- ac-point 1)))
          (node erl-nodename-cache)
          (completions
@@ -115,14 +115,12 @@ relevant module. Unimplemented"
             (&erl-complete-receive-global-function-completions))))
     erl-complete-global-function-completions))
 
-
 (defun &erl-complete-receive-global-function-completions ()
   (erl-receive ()
       ((['rex ['ok completions]]
         (setq erl-complete-global-function-completions completions))
        (other
         (message "Unexpected reply: %s" other)))))
-
 
 (defun erl-complete-local-function ()
   "Generates the auto-complete candidate list for functions defined in the
@@ -133,8 +131,7 @@ current module."
   "The current completion for modules")
 
 (defun erl-complete-module ()
-  "Generates the auto-complete candidate list for modules, using a distel node.
-Uniplemented."
+  "Generates the auto-complete candidate list for modules, using a distel node."
   (let* ((node erl-nodename-cache)
          (completions (erl-spawn
                         (erl-send-rpc node 'distel 'modules (list ac-prefix))
