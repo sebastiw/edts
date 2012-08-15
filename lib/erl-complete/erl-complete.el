@@ -12,10 +12,10 @@
 ;; Top-level candidate functions
 
 (defun erl-complete-candidates ()
-  (case (point-inside-quotes)
+  (case (erl-complete-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (erl-complete-single-quoted-candidates))
-    ('none   (erl-complete-normal-candidates))))
+    ('none          (erl-complete-normal-candidates))))
 
 (defun erl-complete-normal-candidates ()
   "Produces the completion list for normal (unqoted) erlang terms."
