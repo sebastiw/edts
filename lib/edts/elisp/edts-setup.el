@@ -62,7 +62,8 @@
   (cons (quote erlang-mode)
                (concat
                 "\\(" erlang-operators-regexp
-                "\\|" erlang-keywords-regexp "\\)")))
+                "\\|" erlang-keywords-regexp
+                "\\|\\<[[:digit:]]+\\>\\)")))
 
 (custom-set-variables
  '(ahs-exclude (cons erlang-auto-highlight-exclusions ahs-exclude)))
