@@ -42,3 +42,8 @@ init([]) ->
     Children = [Edts, Webmachine],
     {ok, { {one_for_one, 5, 10}, Children} }.
 
+%%%_* Emacs ============================================================
+%%% Local Variables:
+%%% allout-layout: t
+%%% erlang-indent-level: 2
+%%% End:

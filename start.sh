@@ -1,6 +1,6 @@
 #!/bin/bash
 
-erl -sname edts -pa `pwd`/lib/edts/ebin `pwd`/lib/webmachine/ebin `pwd`/lib/webmachine/deps/mochiweb/ebin -s edts
+exec erl -sname edts -pa `pwd`/lib/edts/ebin `pwd`/lib/webmachine/ebin `pwd`/lib/webmachine/deps/mochiweb/ebin -s edts
 
 
 
