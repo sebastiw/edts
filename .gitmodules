@@ -13,3 +13,6 @@
 [submodule "lib/mochiweb"]
 	path = lib/mochiweb
 	url = https://github.com/mochi/mochiweb.git
+[submodule "lib/webmachine"]
+	path = lib/webmachine
+	url = https://github.com/basho/webmachine.git
