@@ -24,5 +24,9 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+    Edts = {edts_server,
+            {edts_server, start_link, []},
+            permanent, 2000, worker, [edts_server]},
+    Children = [Edts],
+    {ok, { {one_for_one, 5, 10}, Children} }.
 
