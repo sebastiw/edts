@@ -5,8 +5,6 @@
 start() ->
   application:start(inets),
   application:start(crypto),
-  application:start(mochiweb),
-  application:start(webmachine),
   application:start(edts).
 
 %%%_* Emacs ============================================================
