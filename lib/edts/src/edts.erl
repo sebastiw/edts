@@ -10,10 +10,21 @@
 %% ===================================================================
 
 start() ->
-    edts_sup:start_link().
+  application:start(inets),
+  application:start(crypto),
+  application:start(mochiweb),
+  application:start(webmachine),
+  edts_sup:start_link().
 
 start(_StartType, _Start) ->
-    start().
+  start().
 
 stop(_State) ->
-    ok.
+  ok.
+
+%%%_* Emacs ============================================================
+%%% Local Variables:
+%%% allout-layout: t
+%%% erlang-indent-level: 2
+%%% End:
+
