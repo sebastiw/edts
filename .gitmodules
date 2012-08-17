@@ -10,9 +10,6 @@
 [submodule "lib/popup-el"]
 	path = lib/popup-el
 	url = https://github.com/tjarvstrand/popup-el.git
-[submodule "lib/mochiweb"]
-	path = lib/mochiweb
-	url = https://github.com/mochi/mochiweb.git
 [submodule "lib/webmachine"]
 	path = lib/webmachine
 	url = https://github.com/basho/webmachine.git
