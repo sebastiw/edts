@@ -4,6 +4,8 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(require 'ferl)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
@@ -73,8 +75,8 @@
  '((name    . "erlang current function")
    (lighter . "CF")
    (face    . ahs-plugin-defalt-face)
-   (start   . ahs-range-beginning-of-erlang-function)
-   (end     . ahs-range-end-of-erlang-function))
+   (start   . ferl-point-beginning-of-function)
+   (end     . ferl-point-end-of-function))
  "Current Erlang function")
 
 (add-hook 'erlang-mode-hook #'(lambda () (auto-highlight-symbol-mode t)))
@@ -85,10 +87,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Erlang-specific keybindings
-(define-key erlang-mode-map (kbd "C-c C-d C-b") 'erlang-goto-previous-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-f") 'erlang-goto-next-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-e") 'erlang-ahs-edit-current-function)
+(define-key erlang-mode-map (kbd "M-G")           'ferl-goto-function)
+(define-key erlang-mode-map (kbd "C-c C-d C-b")   'ferl-goto-previous-function)
+(define-key erlang-mode-map (kbd "C-c C-d C-f")   'ferl-goto-next-function)
+(define-key erlang-mode-map (kbd "C-c C-d C-e")   'edts-ahs-edit-current-function)
 (define-key erlang-mode-map (kbd "C-c C-d C-S-e") 'ahs-edit-mode)
-(define-key erlang-mode-map (kbd "M-G") 'erlang-goto-function)
 
 (provide 'edts-setup)
