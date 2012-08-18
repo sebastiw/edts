@@ -11,6 +11,7 @@
 ;; - erl-who-calls without erl-output buffer.
 ;; - Can we use epmd-port-please to syncronously check if node is up?
 ;; - Start an internal node if external node disappears.
+;; - Add eper, and a decent user_default to all nodes started by edts.
 
 ;; Wishlist
 ;; - Indexing of project contents.
