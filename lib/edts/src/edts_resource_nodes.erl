@@ -30,7 +30,7 @@ content_types_provided(ReqData, Context) ->
     {Map, ReqData, Context}.
 
 to_json(ReqData, Context) ->
-    {[{test, 1}], ReqData, Context}.
+    {mochijson2:encode([{nodes, nodes()}]), ReqData, Context}.
 
 %%%_* Internal functions =======================================================
 

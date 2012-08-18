@@ -41,7 +41,7 @@
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 %%------------------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%%_* gen_server callbacks  ====================================================
 
@@ -56,7 +56,7 @@ start_link() ->
                       {stop, atom()}.
 %%------------------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+  {ok, #state{}}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -65,16 +65,16 @@ init([]) ->
 %% @end
 %%
 -spec handle_call(term(), {pid(), atom()}, state()) ->
-                         {reply, Reply::term(), state()} |
-                         {reply, Reply::term(), state(), timeout()} |
-                         {noreply, state()} |
-                         {noreply, state(), timeout()} |
-                         {stop, Reason::atom(), term(), state()} |
-                         {stop, Reason::atom(), state()}.
+                     {reply, Reply::term(), state()} |
+                     {reply, Reply::term(), state(), timeout()} |
+                     {noreply, state()} |
+                     {noreply, state(), timeout()} |
+                     {stop, Reason::atom(), term(), state()} |
+                     {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+  Reply = ok,
+  {reply, Reply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -86,7 +86,7 @@ handle_call(_Request, _From, State) ->
                                            {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_cast(_Msg, State) ->
-    {noreply, State}.
+  {noreply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -94,11 +94,11 @@ handle_cast(_Msg, State) ->
 %% @end
 %%
 -spec handle_info(term(), state()) -> {noreply, state()} |
-                                    {noreply, state(), Timeout::timeout()} |
-                                    {stop, Reason::atom(), state()}.
+                                      {noreply, state(), Timeout::timeout()} |
+                                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_info(_Info, State) ->
-    {noreply, State}.
+  {noreply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -111,7 +111,7 @@ handle_info(_Info, State) ->
 -spec terminate(Reason::atom(), state()) -> any().
 %%------------------------------------------------------------------------------
 terminate(_Reason, _State) ->
-    ok.
+  ok.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -121,7 +121,12 @@ terminate(_Reason, _State) ->
 -spec code_change(OldVsn::string(), state(), Extra::term()) -> {ok, state()}.
 %%------------------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+  {ok, State}.
 
 %%%_* Internal functions =======================================================
 
+%%%_* Emacs ====================================================================
+%%% Local Variables:
+%%% allout-layout: t
+%%% erlang-indent-level: 2
+%%% End:
