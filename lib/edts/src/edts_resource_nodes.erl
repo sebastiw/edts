@@ -75,7 +75,7 @@ post_is_create(ReqData, Ctx) ->
 
 resource_exists(ReqData, Ctx) ->
   case wrq:path_info(nodename, ReqData) of
-    undefined -> true;
+    undefined -> {true, ReqData, Ctx};
     Name      ->
       case edts_resource_lib:try_make_nodename(Name) of
         error          -> {false, ReqData, Ctx};
@@ -86,7 +86,8 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  {mochijson2:encode([{nodes, nodes()}]), ReqData, Ctx}.
+  {ok, Names} = edts:nodes(),
+  {mochijson2:encode([{nodes, Names}]), ReqData, Ctx}.
 
 from_json(ReqData, Ctx) ->
   {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),

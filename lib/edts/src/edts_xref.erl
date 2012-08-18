@@ -35,8 +35,16 @@ modules() ->
 -spec start() -> ok.
 %%------------------------------------------------------------------------------
 start() ->
-  {ok, _Pid}= xref:start(?SERVER),
-  %% ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
+  case xref:start(?SERVER) of
+    {ok, _Pid} -> init();
+    {error, {already_started, _Pid}} -> update()
+  end.
+
+
+%%%_* Internal functions =======================================================
+
+init() ->
+  ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
   Paths = code:get_path(),
   ok = xref:set_library_path(?SERVER, Paths),
   lists:foreach(fun(D) ->
@@ -47,8 +55,9 @@ start() ->
                 end,
                 Paths).
 
-
-%%%_* Internal functions =======================================================
+update() ->
+  {ok, _Modules} = xref:update(?SERVER),
+  ok.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

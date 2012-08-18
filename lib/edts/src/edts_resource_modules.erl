@@ -39,20 +39,25 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
-resource_exists(ReqData, Ctx) ->
+resource_exists(ReqData, Ctx0) ->
   case wrq:path_info(nodename, ReqData) of
-    undefined -> false;
+    undefined ->
+      {false, ReqData, Ctx0};
     Name      ->
       case edts_resource_lib:try_make_nodename(Name) of
-        error          -> {false, ReqData, Ctx};
-        {ok, Nodename} -> {edts:is_edts_node(Nodename), ReqData, Ctx}
+        error          ->
+          {false, ReqData, Ctx0};
+        {ok, Nodename} ->
+          Ctx = lists:keystore(nodename, 1, Ctx0, {nodename, Nodename}),
+          {edts:is_edts_node(Nodename), ReqData, Ctx}
       end
   end.
 
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  Modules = edts:modules(lists:keyfind(nodename, 1, Ctx)),
+  {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
+  {ok, Modules} = edts:modules(Nodename),
   {mochijson2:encode(Modules), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

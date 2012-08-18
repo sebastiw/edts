@@ -13,6 +13,7 @@
 -export([ ensure_node_initialized/1
         , init_node/1
         , is_edts_node/1
+        , nodes/0
         , start_link/0]).
 
 %% gen_server callbacks
@@ -36,7 +37,8 @@
         lists:keyfind(Name, #node.name, State#state.nodes)).
 -define(node_store(Node, State),
         State#state{
-          nodes = lists:keystore(Node#node.name, #node.name, State, Node)
+          nodes =
+            lists:keystore(Node#node.name, #node.name, State#state.nodes, Node)
          }).
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
@@ -86,6 +88,18 @@ init_node(Node) ->
 is_edts_node(Node) ->
   gen_server:call(?SERVER, {is_edts_node, Node}).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns a list of the edts_nodes currently registered with this
+%% edts-server instance
+%% @end
+%%
+-spec nodes() -> [node()].
+%%------------------------------------------------------------------------------
+nodes() ->
+  gen_server:call(?SERVER, nodes).
+
+
 %%%_* gen_server callbacks  ====================================================
 
 %%------------------------------------------------------------------------------
@@ -128,6 +142,8 @@ handle_call({is_edts_node, Name}, _From, State) ->
             #node{} -> true
           end,
   {reply, Reply, State};
+handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
+  {reply, {ok, [N#node.name || N <- Nodes]}, State};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 

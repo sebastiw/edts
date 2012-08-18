@@ -11,7 +11,8 @@
 %% API
 -export([ init_node/1
         , is_edts_node/1
-        , modules/1]).
+        , modules/1
+        , nodes/0]).
 
 %%%_* Includes =================================================================
 
@@ -51,6 +52,18 @@ is_edts_node(Node) ->
 modules(Node) ->
   edts_server:ensure_node_initialized(Node),
   edts_dist:call(Node, edts_xref, modules).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns a list of the edts_nodes currently registered with this
+%% edts-instance.
+%% @end
+%%
+-spec nodes() -> [node()].
+%%------------------------------------------------------------------------------
+nodes() ->
+  edts_server:nodes().
 
 %%%_* Internal functions =======================================================
 
