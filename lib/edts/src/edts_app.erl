@@ -9,8 +9,12 @@
 
 %%%_* Exports ==================================================================
 
+%% API
+-export([start/0]).
+
 %% Application callbacks
--export([start/2, stop/1]).
+-export([ start/2
+        , stop/1]).
 
 %%%_* Includes =================================================================
 
@@ -19,6 +23,12 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%% Start the whole shebang.
+start() ->
+  application:start(inets),
+  application:start(crypto),
+  application:start(edts).
 
 %% Application callbacks
 start(_StartType, _Start) ->
