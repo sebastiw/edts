@@ -38,7 +38,7 @@ call(Node, Mod, Fun, Args) ->
 %% Pings Node registered with the local epmd, so that a connection is
 %% established.
 %% @end
--spec connect(Node::node()()) -> ok.
+-spec connect(Node::node()) -> ok.
 %%------------------------------------------------------------------------------
 connect(Node) ->
   pong = net_adm:ping(Node),

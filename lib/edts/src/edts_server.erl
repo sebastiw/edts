@@ -10,7 +10,9 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ init_node/1
+-export([ ensure_node_initialized/1
+        , init_node/1
+        , is_edts_node/1
         , start_link/0]).
 
 %% gen_server callbacks
@@ -30,7 +32,12 @@
 
 -record(state, {nodes = [] :: edts_node()}).
 
-
+-define(node_find(Name, State),
+        lists:keyfind(Name, #node.name, State#state.nodes)).
+-define(node_store(Node, State),
+        State#state{
+          nodes = lists:keystore(Node#node.name, #node.name, State, Node)
+         }).
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
 -type state():: #state{}.
@@ -47,8 +54,37 @@
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Wait for Node's initialization to finish (wait for all its promises to be
+%% fulfilled).
+%% @end
+%%
+-spec ensure_node_initialized(node()) -> ok.
+%%------------------------------------------------------------------------------
+ensure_node_initialized(Node) ->
+  gen_server:call(?SERVER, {ensure_node_initialized, Node}).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Initializes a new edts node.
+%% @end
+%%
+-spec init_node(node()) -> ok.
+%%------------------------------------------------------------------------------
 init_node(Node) ->
   gen_server:call(?SERVER, {init_node, Node}).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is registered with this edts instance.
+%% @end
+%%
+-spec is_edts_node(node()) -> boolean().
+%%------------------------------------------------------------------------------
+is_edts_node(Node) ->
+  gen_server:call(?SERVER, {is_edts_node, Node}).
 
 %%%_* gen_server callbacks  ====================================================
 
@@ -79,13 +115,21 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({init_node, Node}, _From, #state{nodes = Nodes} = State) ->
+handle_call({ensure_node_initialized, Name}, _From, State) ->
+  Node = do_ensure_node_initialized(?node_find(Name, State)),
+  {reply, ok, ?node_store(Node, State)};
+handle_call({init_node, Name}, _From, State) ->
   %% Fixme, handle case where node is already present.
-  Node = #node{name = Node, promises = edts_dist:init_node(Node)},
-  {reply, ok, State#state{nodes = [Node|Nodes]}};
+  Node = #node{name = Name, promises = edts_dist:init_node(Name)},
+  {reply, ok, ?node_store(Node, State)};
+handle_call({is_edts_node, Name}, _From, State) ->
+  Reply = case ?node_find(Name, State) of
+            false   -> false;
+            #node{} -> true
+          end,
+  {reply, Reply, State};
 handle_call(_Request, _From, State) ->
-  Reply = ok,
-  {reply, Reply, State}.
+  {reply, ignored, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -135,6 +179,10 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%%_* Internal functions =======================================================
+
+do_ensure_node_initialized(#node{promises = Promises} = Node) ->
+  lists:foreach(fun rpc:yield/1, Promises),
+  Node#node{promises = []}.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

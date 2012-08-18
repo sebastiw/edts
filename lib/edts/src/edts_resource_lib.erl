@@ -4,14 +4,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts).
+-module(edts_resource_lib).
 
 %%%_* Exports ==================================================================
 
-%% API
--export([ init_node/1
-        , is_edts_node/1
-        , modules/1]).
+%% Application callbacks
+-export([try_make_nodename/1]).
 
 %%%_* Includes =================================================================
 
@@ -23,34 +21,30 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Initializes a new edts node.
+%% Try to construct a node sname from either a string() or wrq:reqdata().
 %% @end
-%%
--spec init_node(node()) -> ok.
+-spec try_make_nodename(string()|wrq:reqdata()) -> node() | error.
 %%------------------------------------------------------------------------------
-init_node(Node) ->
-  edts_server:init_node(Node).
+try_make_nodename(NameStr) when is_list(NameStr) ->
+  try
+    {ok, Name} =
+      case string:chr(NameStr, $@) of
+        0 ->
+          {ok, edts_dist:make_sname(NameStr)};
+        _ ->
+          [Name0, Host] = string:tokens(NameStr, "@"),
+          {ok, edts_dist:make_sname(Name0, Host)}
+      end,
+    Name
+  catch
+    _:_ -> error
+  end;
+try_make_nodename(ReqData) ->
+  case wrq:get_qs_value("node", ReqData) of
+    undefined -> error;
+    Name -> try_make_nodename(Name)
+  end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true iff Node is registered with this edts instance.
-%% @end
-%%
--spec is_edts_node(node()) -> boolean().
-%%------------------------------------------------------------------------------
-is_edts_node(Node) ->
-  edts_server:is_edts_node(Node).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns a list of all erlang modules available on Node.
-%% @end
-%%
--spec modules(node()) -> [module()].
-%%------------------------------------------------------------------------------
-modules(Node) ->
-  edts_server:ensure_node_initialized(Node),
-  edts_dist:call(Node, edts_xref, modules).
 
 %%%_* Internal functions =======================================================
 
@@ -59,3 +53,4 @@ modules(Node) ->
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+

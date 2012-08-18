@@ -4,25 +4,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_nodes).
+-module(edts_resource_modules).
 
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
--export([ allow_missing_post/2
-        , allowed_methods/2
-        , create_path/2
-        , content_types_accepted/2
+-export([ allowed_methods/2
         , content_types_provided/2
         , init/1
-        , malformed_request/2
-        , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([ from_json/2
-        , to_json/2]).
+-export([to_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -36,16 +30,8 @@
 init(_Config) ->
   {ok, []}.
 
-allow_missing_post(ReqData, Ctx) ->
-  {true, ReqData, Ctx}.
-
 allowed_methods(ReqData, Ctx) ->
-  {['GET', 'POST'], ReqData, Ctx}.
-
-content_types_accepted(ReqData, Ctx) ->
-  Map = [ {"application/json", from_json}],
-  {Map, ReqData, Ctx}.
-
+  {['GET'], ReqData, Ctx}.
 
 content_types_provided(ReqData, Ctx) ->
   Map = [ {"application/json", to_json}
@@ -53,29 +39,9 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
-create_path(ReqData, Ctx) ->
-  {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
-  {atom_to_list(Nodename), ReqData, Ctx}.
-
-malformed_request(ReqData, Ctx0) ->
-  case wrq:method(ReqData) of
-    'GET'  -> {false, ReqData, Ctx0};
-    'POST' ->
-      case edts_resource_lib:try_make_nodename(ReqData) of
-        {ok, Nodename} ->
-          Ctx = lists:keystore(nodename, 1, Ctx0, {nodename, Nodename}),
-          {false, ReqData, Ctx};
-        error ->
-          {true, ReqData, Ctx0}
-      end
-  end.
-
-post_is_create(ReqData, Ctx) ->
-  {true, ReqData, Ctx}.
-
 resource_exists(ReqData, Ctx) ->
   case wrq:path_info(nodename, ReqData) of
-    undefined -> true;
+    undefined -> false;
     Name      ->
       case edts_resource_lib:try_make_nodename(Name) of
         error          -> {false, ReqData, Ctx};
@@ -86,14 +52,11 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  {mochijson2:encode([{nodes, nodes()}]), ReqData, Ctx}.
-
-from_json(ReqData, Ctx) ->
-  {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
-  ok = edts:init_node(Nodename),
-  {true, ReqData, Ctx}.
+  Modules = edts:modules(lists:keyfind(nodename, 1, Ctx)),
+  {mochijson2:encode(Modules), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
