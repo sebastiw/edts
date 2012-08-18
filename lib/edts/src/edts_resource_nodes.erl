@@ -79,7 +79,7 @@ to_json(ReqData, Context) ->
 
 from_json(ReqData, Context) ->
   {nodename, Nodename} = lists:keyfind(nodename, 1, Context),
-  ok = edts_dist:connect(Nodename),
+  ok = edts_server:init_node(Nodename),
   {true, ReqData, Context}.
 
 %%%_* Internal functions =======================================================

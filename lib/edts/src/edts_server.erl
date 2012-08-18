@@ -10,7 +10,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([start_link/0]).
+-export([ init_node/1
+        , start_link/0]).
 
 %% gen_server callbacks
 -export([ code_change/3
@@ -24,7 +25,8 @@
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
--record(state, {}).
+-record(state, {promises = [] :: {Node::atom(), [Promise::rpc:key()]}
+               }).
 
 
 %%%_* Types ====================================================================
@@ -42,6 +44,9 @@
 %%------------------------------------------------------------------------------
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+init_node(Node) ->
+  gen_server:call(?SERVER, {init_node, Node}).
 
 %%%_* gen_server callbacks  ====================================================
 
@@ -72,6 +77,11 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
+handle_call({init_node, Node}, _From, #state{promises = Promises0} = State) ->
+  %% Fixme, handle case where node is already present.
+  Keys = edts_dist:init_node(Node),
+  Promises = lists:keystore(Node, 1, Promises0, {Node, Keys}),
+  {reply, ok, State#state{promises = Promises}};
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
