@@ -4,8 +4,12 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(require 'ferl)
-
+(defvar edts-lib-directory
+  (file-truename
+   (concat (file-name-directory
+            (or (locate-library "edts-start") load-file-name)) "/lib/"))
+  "Directory where edts libraries are located.")
+(add-to-list 'load-path (concat "lib/edts/elisp/"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
@@ -19,11 +23,16 @@
                         (and (not (equal "." file-name))
                              (not (equal ".." file-name))))))
                 (directory-files edts-lib-directory t)))
+(add-to-list 'load-path (concat edts-lib-directory "edts/elisp/"))
 (add-to-list 'load-path (concat edts-lib-directory "distel/elisp/"))
 (add-to-list 'load-path (concat (directory-file-name erlang-root-dir)
                                 "/lib/tools/emacs"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
                                 "/bin"))
+
+(require 'ferl)
+(require 'edts)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Indentation
 (add-hook 'align-load-hook
@@ -93,4 +102,4 @@
 (define-key erlang-mode-map (kbd "C-c C-d C-e")   'edts-ahs-edit-current-function)
 (define-key erlang-mode-map (kbd "C-c C-d C-S-e") 'ahs-edit-mode)
 
-(provide 'edts-setup)
+(provide 'edts-start)
