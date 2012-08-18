@@ -25,13 +25,15 @@
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
--record(state, {promises = [] :: {Node::atom(), [Promise::rpc:key()]}
-               }).
+-record(node, { name     = undefined :: atom()
+              , promises = []        :: [rpc:key()]}).
+
+-record(state, {nodes = [] :: edts_node()}).
 
 
 %%%_* Types ====================================================================
-
--type state()::#state{}.
+-type edts_node() :: #node{}.
+-type state():: #state{}.
 
 %%%_* API ======================================================================
 
@@ -77,11 +79,10 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({init_node, Node}, _From, #state{promises = Promises0} = State) ->
+handle_call({init_node, Node}, _From, #state{nodes = Nodes} = State) ->
   %% Fixme, handle case where node is already present.
-  Keys = edts_dist:init_node(Node),
-  Promises = lists:keystore(Node, 1, Promises0, {Node, Keys}),
-  {reply, ok, State#state{promises = Promises}};
+  Node = #node{name = Node, promises = edts_dist:init_node(Node)},
+  {reply, ok, State#state{nodes = [Node|Nodes]}};
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.

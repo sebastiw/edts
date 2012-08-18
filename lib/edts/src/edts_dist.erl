@@ -9,7 +9,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ connect/1
+-export([ call/4
+        , connect/1
         , connect_all/0
         , init_node/1
         , make_sname/1]).
@@ -24,10 +25,20 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Calls Mod:Fun with Args remotely on Node.
+%% @end
+-spec call(Node::node(), Mod::atom(), Fun::atom(), Args::[term()]) ->
+              term() | {badrpc, term()}.
+%%------------------------------------------------------------------------------
+call(Node, Mod, Fun, Args) ->
+  rpc:call(Node, Mod, Fun, Args).
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Pings Node registered with the local epmd, so that a connection is
 %% established.
 %% @end
--spec connect(Node::atom()) -> ok.
+-spec connect(Node::node()()) -> ok.
 %%------------------------------------------------------------------------------
 connect(Node) ->
   pong = net_adm:ping(Node),
@@ -65,7 +76,7 @@ init_node(Node) ->
 %% @doc
 %% Converts a string to a valid erlang sname for localhost.
 %% @end
--spec make_sname(string()) -> atom().
+-spec make_sname(string()) -> node().
 %%------------------------------------------------------------------------------
 make_sname(Name) ->
   {ok, Hostname} = inet:gethostname(),
@@ -75,7 +86,7 @@ make_sname(Name) ->
 %% @doc
 %% Converts a string to a valid erlang sname for Hostname.
 %% @end
--spec make_sname(Name::string(), Hostname::string()) -> atom().
+-spec make_sname(Name::string(), Hostname::string()) -> node().
 %%------------------------------------------------------------------------------
 make_sname(Name, Hostname) ->
   try
@@ -92,7 +103,7 @@ remote_load_modules(Node, Mods) ->
 
 remote_load_module(Node, Mod0) ->
   {Mod, Bin, File} = code:get_object_code(Mod0),
-  {module, Mod0}   = rpc:call(Node, code, load_binary, [Mod, File, Bin]).
+  {module, Mod0}   = call(Node, code, load_binary, [Mod, File, Bin]).
 
 remote_start_services(Node, Servs) ->
   lists:map(fun(Service) -> remote_start_service(Node, Service) end, Servs).
