@@ -31,6 +31,7 @@
 -export([ init_node/1
         , is_edts_node/1
         , modules/1
+        , node_exists/1
         , nodes/0]).
 
 %%%_* Includes =================================================================
@@ -46,7 +47,7 @@
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(node()) -> ok.
+-spec init_node(Node::node()) -> ok.
 %%------------------------------------------------------------------------------
 init_node(Node) ->
   edts_server:init_node(Node).
@@ -56,7 +57,7 @@ init_node(Node) ->
 %% Returns true iff Node is registered with this edts instance.
 %% @end
 %%
--spec is_edts_node(node()) -> boolean().
+-spec is_edts_node(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
 is_edts_node(Node) ->
   edts_server:is_edts_node(Node).
@@ -66,12 +67,23 @@ is_edts_node(Node) ->
 %% Returns a list of all erlang modules available on Node.
 %% @end
 %%
--spec modules(node()) -> [module()].
+-spec modules(Node::node()) -> [module()].
 %%------------------------------------------------------------------------------
 modules(Node) ->
   edts_server:ensure_node_initialized(Node),
   edts_dist:call(Node, edts_xref, modules).
 
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true if Node is registerend with the epmd on localhost.
+%% @end
+%%
+-spec node_exists(Node::node()) -> boolean().
+%%------------------------------------------------------------------------------
+node_exists(Node) ->
+  {ok, Names} = net_adm:names(),
+  lists:any(fun({Name, _Port}) -> Name =:= Node end, Names).
 
 %%------------------------------------------------------------------------------
 %% @doc

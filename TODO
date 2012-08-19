@@ -10,6 +10,7 @@
 ;; - Change registering from post to put.
 ;; - Nice error handling for the rest-communication
 ;; - Debug output
+;; - Restart edts node if it is down
 
 ;; Wishlist
 ;; - Indexing of project contents.

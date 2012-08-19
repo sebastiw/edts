@@ -52,6 +52,10 @@
 
 -record(state, {nodes = [] :: edts_node()}).
 
+-define(node_delete(Name, State),
+        State#state{
+          nodes = lists:keydelete(Name, #node.name, State#state.nodes)
+         }).
 -define(node_find(Name, State),
         lists:keyfind(Name, #node.name, State#state.nodes)).
 -define(node_store(Node, State),
@@ -132,6 +136,7 @@ nodes() ->
                       {stop, atom()}.
 %%------------------------------------------------------------------------------
 init([]) ->
+  net_kernel:monitor_nodes(true, [{node_type, all}]),
   {ok, #state{}}.
 
 %%------------------------------------------------------------------------------
@@ -191,6 +196,8 @@ handle_info({Pid, {promise_reply, _R}}, #state{nodes = Nodes0} = State) ->
   Nodes = [Node#node{promises = lists:delete(Pid, Node#node.promises)}
            || Node <- Nodes0],
   {noreply, State#state{nodes = Nodes}};
+handle_info({nodedown, Node, _Info}, #state{nodes = Nodes} = State) ->
+  {noreply, ?node_delete(Node, State)};
 handle_info(_Info, State) ->
   {noreply, State}.
 
