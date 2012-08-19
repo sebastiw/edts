@@ -87,7 +87,7 @@
     (json-encode data)))
 
 (defun edts-rest-decode (data)
-  "Encode `data' as json."
+  "Decode `data' from json."
   (unless (string-equal data "")
     (let ((json-object-type 'alist)
           (json-array-type  'list))

@@ -28,7 +28,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ init_node/1
+-export([ exported_functions/2
+        , init_node/1
         , is_edts_node/1
         , modules/1
         , node_exists/1
@@ -41,6 +42,19 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns a list of all functions exported from Module on Node.
+%% @end
+%%
+-spec exported_functions(Node::node(), Module::module()) ->
+                            {ok, [{atom(), non_neg_integer()}]}.
+%%------------------------------------------------------------------------------
+exported_functions(Node, Module) ->
+  edts_server:ensure_node_initialized(Node),
+  edts_dist:call(Node, edts_xref, exported_functions, [Module]).
+
 
 %%------------------------------------------------------------------------------
 %% @doc

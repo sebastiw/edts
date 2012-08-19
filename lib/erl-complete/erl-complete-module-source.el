@@ -43,11 +43,7 @@
 (defun erl-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (erl-complete-module-p)
-    (let* ((resource (list "nodes" (symbol-name erl-nodename-cache) "modules"))
-           (res      (edts-rest-get resource nil)))
-      (if (equal (assoc 'result res) '(result "200" "OK"))
-          (cdr (assoc 'body res))
-          (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+    (edts-get-modules)))
 
 (defun erl-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
