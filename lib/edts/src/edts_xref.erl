@@ -36,10 +36,10 @@ modules() ->
 %%------------------------------------------------------------------------------
 start() ->
   case xref:start(?SERVER) of
-    {ok, _Pid} -> init();
+    {ok, _Pid}                       -> init();
     {error, {already_started, _Pid}} -> update()
-  end.
-
+  end,
+  load_cache().
 
 %%%_* Internal functions =======================================================
 
@@ -58,6 +58,10 @@ init() ->
 update() ->
   {ok, _Modules} = xref:update(?SERVER),
   ok.
+
+%% Query the server to cache values.
+load_cache() ->
+  modules().
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
