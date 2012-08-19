@@ -27,7 +27,7 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-init ()
   "Initializes `edts-project'."
-  (when (member distel features) ;; some distel compatibility
+  (when (member 'distel features) ;; some distel compatibility
         (make-variable-buffer-local 'erl-nodename-cache))
   (add-hook 'erlang-mode-hook 'edts-project-erlang-load-hook))
 
@@ -45,7 +45,7 @@ activated for the first file that is located inside a project."
 (defun edts-project-ensure-node-started (project)
   "Start a buffer's project's node if it is not already started."
   (if (edts-project-node-started-p (edts-project-node-name project))
-      (when (member distel features)
+      (when (member 'distel features)
         (edts-project-check-backend project))
       (edts-project-start-node project)))
 
@@ -71,7 +71,7 @@ activated for the first file that is located inside a project."
     (edts-project-ensure-node-not-started node-name)
     (edts-project-make-comint-buffer buffer-name pwd command)
     (edts-project-add-node node-name buffer-name)
-    (when (member distel features)
+    (when (member 'distel features)
       (let ((node-name-symbol
              (make-symbol (concat node-name "\@" system-name))))
         (setq erl-nodename-cache node-name-symbol)))
@@ -81,9 +81,7 @@ activated for the first file that is located inside a project."
   (let ((command (edts-project-start-command project)))
     (if command
         (delete "" (split-string command))
-        (let ((path (cons
-                     distel-ebin-directory
-                     (edts-project-code-path-expand project)))
+        (let ((path (edts-project-code-path-expand project))
               (sname (edts-project-node-name project)))
           (append (list "erl" "-sname" sname "-pa") path)))))
 

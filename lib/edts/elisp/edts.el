@@ -24,7 +24,7 @@
                        (current-buffer)
                        "localhost"
                        4369)))
-          (process-send-string socket (epmd-build-message "n"))
+          (process-send-string socket (edts-build-epmd-message "n"))
           (accept-process-output socket 0.5))
           (member name (edts-nodenames-from-string (buffer-string))))
     ('file-error nil)))
@@ -37,6 +37,12 @@
         (setq names (cons (cadr string) names)))
       (setq string (cdr string)))
     names))
+
+(defun edts-build-epmd-message (msg)
+  (let* ((len (length msg))
+(len-msb (ash len -8))
+(len-lsb (logand len 255)))
+    (concat (string len-msb len-lsb) msg)))
 
 
 

@@ -1,8 +1,6 @@
 ;; TODO
-;; - start edts-node on startup
 ;; - auto-add project nodes to edts
 ;; - Monitor nodes added to edts
-;; - Get rid of distel as a component of edts
 ;; - exported function completion
 ;; - macro completion
 ;; - record completion

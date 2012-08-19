@@ -29,6 +29,12 @@
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
                                 "/bin"))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Erlang mode
+(require 'erlang-start)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Rest of edts
 (require 'ferl)
 (require 'edts)
 (require 'edts-rest)
@@ -46,10 +52,6 @@
                            (regexp . ",\\(\\s-+\\)")
                            (repeat . t)
                            (modes quote (erlang-mode))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Erlang mode
-(require 'erlang-start)
 
 ;; Auto-activate erlang mode for some additional extensions.
 (add-to-list 'auto-mode-alist '("\\.yaws$" .     erlang-mode))
