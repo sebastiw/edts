@@ -22,7 +22,7 @@
     ('none          (erl-complete-normal-exported-function-candidates))))
 
 
-(defun erl-complete-normal-module-candidates ()
+(defun erl-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (erl-complete-exported-function-p)
     (erl-complete-exported-function-candidates)))
