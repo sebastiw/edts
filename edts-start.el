@@ -24,14 +24,12 @@
                              (not (equal ".." file-name))))))
                 (directory-files edts-lib-directory t)))
 (add-to-list 'load-path (concat edts-lib-directory "edts/elisp/"))
-(add-to-list 'load-path (concat (directory-file-name erlang-root-dir)
-                                "/lib/tools/emacs"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
                                 "/bin"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Erlang mode
-(require 'erlang-start)
+(require 'erlang)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Rest of edts
