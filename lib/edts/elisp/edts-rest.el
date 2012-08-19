@@ -41,6 +41,16 @@
    (with-current-buffer (url-retrieve-synchronously url)
      (edts-rest-parse-http-response))))
 
+(defun edts-rest-post (resource args)
+  "Send a post request to resource with args"
+ (let ((url                       (edts-rest-resource-url resource args))
+       (url-request-method        "POST")
+       (url-request-extra-headers (list edts-rest-content-type-hdr))
+       (url-show-status           nil))
+   (with-current-buffer (url-retrieve-synchronously url)
+     (edts-rest-parse-http-response))))
+
+
 (defun my-switch-to-url-buffer (status)
       "Switch to the buffer returned by `url-retreive'.
     The buffer contains the raw HTTP response sent by the server."
@@ -78,8 +88,9 @@
 
 (defun edts-rest-decode (data)
   "Encode `data' as json."
-  (let ((json-object-type 'alist)
-        (json-array-type  'list))
-    (json-read-from-string data)))
+  (unless (string-equal data "")
+    (let ((json-object-type 'alist)
+          (json-array-type  'list))
+      (json-read-from-string data))))
 
 (provide 'edts-rest)

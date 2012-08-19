@@ -6,8 +6,14 @@
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
 ;; - Start an internal node if external node disappears.
-;; - Add eper, and a decent user_default to all nodes started by edts.
 ;; - Improve when completion popup closes
+;; - Generalize erl-complete
+;; - Change registering from post to put.
+;; - Nice error handling for the rest-communication
+;; - Debug output
 
 ;; Wishlist
 ;; - Indexing of project contents.
+
+;; Maybe
+;; - Add eper, and a decent user_default to all nodes started by edts.

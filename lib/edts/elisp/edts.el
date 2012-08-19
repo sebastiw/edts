@@ -52,6 +52,7 @@
     ('file-error nil)))
 
 (defun edts-nodenames-from-string (string)
+  "Convert the reply from the epmd into a list of nodenames."
   (setq string (split-string (substring string 4)))
   (let ((names  nil))
     (while string
@@ -61,11 +62,32 @@
     names))
 
 (defun edts-build-epmd-message (msg)
+  "Build a message for the epmd. Logic taken from distel's epmd.el."
   (let* ((len (length msg))
 (len-msb (ash len -8))
 (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
+(defun edts-register-node-when-ready (node-name &optional retries)
+  "Once `node-name' is registered with epmd, register it with the edts node."
+  (let ((retries (if retries retries 20)))
+  (run-with-timer
+   0.5
+   nil
+   #'edts-register-node-when-ready-function node-name retries)))
 
+(defun edts-register-node-when-ready-function (node-name retries)
+  (if (edts-node-running node-name)
+      (edts-register-node node-name)
+      (if (> retries 0)
+          (edts-register-node-when-ready node-name (- retries 1))
+          (message "Error: edts could not register node '%s'" node-name))))
+
+(defun edts-register-node (node-name)
+  "Register `node-name' with the edts node"
+  (let* ((res (edts-rest-post (list "nodes") (list (cons "node" node-name)))))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+        (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
 
 (provide 'edts)

@@ -40,9 +40,6 @@
     ('single-quoted (erl-complete-single-quoted-module-candidates))
     ('none          (erl-complete-normal-module-candidates))))
 
-(defvar erl-complete-module-completions nil
-  "The current completion for modules")
-
 (defun erl-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (erl-complete-module-p)

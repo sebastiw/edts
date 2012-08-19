@@ -23,7 +23,7 @@
   "Distel and erlang-extended-mode development tools."
   :group 'tools)
 
-(defcustom edts-project-projects nil
+(defcustom edts-projects nil
   "The list of projects."
   :group 'edts-project)
 
@@ -88,6 +88,7 @@ activated for the first file that is located inside a project."
          (pwd          (expand-file-name (edts-project-root project))))
     (edts-project-ensure-node-not-started node-name)
     (edts-project-make-comint-buffer buffer-name pwd command)
+    (edts-register-node-when-ready node-name)
     (edts-project-add-node node-name buffer-name)
     (when (member 'distel features)
       (let ((node-name-symbol
@@ -192,7 +193,7 @@ otherwise nil. If `file-name' is omitted, it defaults to the file-name of the
 current buffer."
   (unless file-name (setq file-name (buffer-file-name)))
   (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
-            edts-project-projects))
+            edts-projects))
 
 
 (defun edts-project-file-in-project-p (project file-name)
