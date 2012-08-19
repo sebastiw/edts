@@ -26,24 +26,12 @@
 
 (defun erl-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
-  (when (erl-complete-macro-p)
-    (erl-complete-module)))
-
-(defun erl-complete-module ()
-  "Generates the auto-complete candidate list for modules, using a distel node."
-  (let* ((node erl-nodename-cache)
-         (completions (erl-spawn
-                        (erl-send-rpc node 'distel 'modules (list ac-prefix))
-                        (&erl-complete-receive-module-completions))))
-    erl-complete-module-completions))
-
-(defun &erl-complete-receive-module-completions ()
-  (erl-receive ()
-      ((['rex ['ok completions]]
-        (setq erl-complete-module-completions completions))
-       (other
-        (message "Unexpected reply: %s" other)))))
-
+  (when (erl-complete-module-p)
+    (let* ((resource (list "nodes" (symbol-name erl-nodename-cache) "modules"))
+           (res      (edts-rest-get resource nil)))
+      (if (equal (assoc 'result res) '(result "200" "OK"))
+          (cdr (assoc 'body res))
+          (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun erl-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal

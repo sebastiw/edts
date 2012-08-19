@@ -16,9 +16,10 @@
   "Send a get request to resource with args"
  (let ((url                       (edts-rest-resource-url resource args))
        (url-request-method        "GET")
-       (url-request-extra-headers (list edts-rest-content-type-hdr)))
-       (with-current-buffer (url-retrieve-synchronously url)
-         (edts-rest-parse-http-response))))
+       (url-request-extra-headers (list edts-rest-content-type-hdr))
+       (url-show-status           nil))
+   (with-current-buffer (url-retrieve-synchronously url)
+     (edts-rest-parse-http-response))))
 
 (defun my-switch-to-url-buffer (status)
       "Switch to the buffer returned by `url-retreive'.
@@ -60,3 +61,5 @@
   (let ((json-object-type 'alist)
         (json-array-type  'list))
     (json-read-from-string data)))
+
+(provide 'edts-rest)

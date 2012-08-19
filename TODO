@@ -1,17 +1,15 @@
 ;; TODO
+;; - start edts-node on startup
+;; - auto-add project nodes to edts
+;; - Monitor nodes added to edts
+;; - Get rid of distel as a component of edts
+;; - exported function completion
+;; - macro completion
+;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
-;; - Close down (internal) node when last buffer in a project dies
-;;   (erl-unload-hook)
-;; - Fix bug with "buffer has a running process, kill it?"
-;; - Don't start thousands of processes (related to previous point?).
-;; - Fix edb-bug
-;; - Fix assertion-bug in epmd.el
-;; - Run distel nodeup-hook when inferior node is started and use it
-;;   to load modules and start services.
-;; - erl-who-calls without erl-output buffer.
-;; - Can we use epmd-port-please to syncronously check if node is up?
 ;; - Start an internal node if external node disappears.
 ;; - Add eper, and a decent user_default to all nodes started by edts.
+;; - Improve when completion popup closes
 
 ;; Wishlist
 ;; - Indexing of project contents.
