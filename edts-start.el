@@ -24,7 +24,6 @@
                              (not (equal ".." file-name))))))
                 (directory-files edts-lib-directory t)))
 (add-to-list 'load-path (concat edts-lib-directory "edts/elisp/"))
-(add-to-list 'load-path (concat edts-lib-directory "distel/elisp/"))
 (add-to-list 'load-path (concat (directory-file-name erlang-root-dir)
                                 "/lib/tools/emacs"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
@@ -33,8 +32,10 @@
 (require 'ferl)
 (require 'edts)
 (require 'edts-rest)
-
 (edts-ensure-server-started)
+(require 'edts-project)
+(edts-project-init)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Indentation
@@ -54,19 +55,6 @@
 (add-to-list 'auto-mode-alist '("\\.yaws$" .     erlang-mode))
 (add-to-list 'auto-mode-alist '("\\.eterm$" .    erlang-mode))
 (add-to-list 'auto-mode-alist '("rebar.config$". erlang-mode))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Distel
-(require 'distel)
-(distel-setup)
-
-(require 'erl-project)
-(erl-project-init)
-
-;; Erlang Compile Server (sebastiw's distel)
-(require 'erlang-compile-server)
-(setq erl-ecs-backends '(xref dialyzer eunit))
-(setq erl-ecs-backends nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode for erlang

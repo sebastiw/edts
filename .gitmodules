@@ -1,6 +1,3 @@
-[submodule "lib/distel"]
-	path = lib/distel
-	url = https://github.com/rost/distel.git
 [submodule "lib/auto-highlight-symbol-mode"]
 	path = lib/auto-highlight-symbol-mode
 	url = https://github.com/tjarvstrand/auto-highlight-symbol-mode.git

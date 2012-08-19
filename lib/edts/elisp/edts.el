@@ -16,7 +16,7 @@
     (make-comint "edts" "./start.sh")))
 
 (defun edts-node-running (name)
-  "Syncronously fetch nodenames registered with the current port mapper daemon."
+  "Syncronously query epmd to see whether it has a node with `name' registered."
   (condition-case ex
       (with-temp-buffer
         (let ((socket (open-network-stream
