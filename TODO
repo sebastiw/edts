@@ -1,5 +1,4 @@
 ;; TODO
-;; - auto-add project nodes to edts
 ;; - Monitor nodes added to edts
 ;; - exported function completion
 ;; - macro completion

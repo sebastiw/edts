@@ -57,13 +57,7 @@ try_make_nodename(NameStr) when is_list(NameStr) ->
     Name
   catch
     _:_ -> error
-  end;
-try_make_nodename(ReqData) ->
-  case wrq:get_qs_value("node", ReqData) of
-    undefined -> error;
-    Name -> try_make_nodename(Name)
   end.
-
 
 %%%_* Internal functions =======================================================
 
