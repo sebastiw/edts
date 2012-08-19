@@ -34,6 +34,8 @@
 (require 'edts)
 (require 'edts-rest)
 
+(edts-ensure-server-started)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Indentation
 (add-hook 'align-load-hook
