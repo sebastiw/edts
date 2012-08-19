@@ -32,6 +32,7 @@
 
 (require 'ferl)
 (require 'edts)
+(require 'edts-rest)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Indentation
