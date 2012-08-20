@@ -30,6 +30,7 @@
 -export([ exported_functions/1
         , fun_info/3
         , mod_info/1
+        , mod_info/2
         , modules/0
         , start/0]).
 
@@ -110,6 +111,69 @@ mod_info(M) ->
   [ {exports, Exports}
   , {time,    Time}
   , {source,  Source}].
+
+%% includes,
+%% exports,
+%% time,
+%% source,
+%% functions,
+%% imports,
+%% records,
+%% parameters
+-record(state, {module = undefined,
+                file = "",
+                functions = [], imports = [],
+                macros = [], records = [], parameters = []}).
+mod_info(M, _Fields) ->
+  Compile          = erlang:get_module_info(M, compile),
+  {source, Source} = lists:keyfind(source,  1, Compile),
+
+  {M, Bin, _File}                   = code:get_object_code(M),
+  {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
+  {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+  io:format("Abstract ~p", [Abstract]),
+  lists:foldl(fun info_fun/2, #state{module = M, file = Source}, Abstract).
+
+info_fun({function, Line, F, A, _Clauses}, Acc) ->
+  #state{module = M, functions = Fs} = Acc,
+  FunctionInfo =
+    [ {module,   M}
+    , {function, F}
+    , {arity,    A}
+    , {exported, lists:member({F, A}, M:module_info(exports))}
+    , {file,     Acc#state.file}
+    , {line,     Line}],
+  Acc#state{functions = [FunctionInfo|Fs]};
+info_fun({attribute, _Line0, file, {File0, _Line1}}, Acc) ->
+  %% %% Get rid of any local paths, in case function was defined in a
+  %% %% file include with a relative path.
+  File =
+    case filename:absname(File0) of
+      File0 -> File0;
+      SourcePath1  ->
+        M = Acc#state.module,
+        {source, BeamSource} = lists:keyfind(source, 1, M:module_info(compile)),
+        filename:join(filename:dirname(BeamSource), SourcePath1)
+    end,
+  Acc#state{file = File};
+info_fun({attribute,_Line,import, {Module, Imports}}, Acc) ->
+  #state{imports = OldImports} = Acc,
+  NewImportSet0 = ordsets:from_list(Imports),
+  NewImportSet =
+    case lists:keyfind(Module, 1, OldImports) of
+      {Module, OldImportSet} -> ordsets:union(NewImportSet0, OldImportSet);
+      false                  -> NewImportSet0
+    end,
+  NewImports = lists:keystore(Module, 1, OldImports, {Module, NewImportSet}),
+  Acc#state{imports = NewImports};
+info_fun({attribute, Line ,record,{Recordname, Fields0}}, Acc) ->
+  RecordInfo =
+    [ {name,   Recordname}
+      , {fields, [FName || {record_field, _, {_, _, FName}} <- Fields0]}
+      , {line,   Line}
+      , {file,   Acc#state.file}],
+      Acc#state{ records = [RecordInfo|Acc#state.records]};
+info_fun(_, Acc) -> Acc.
 
 
 %%------------------------------------------------------------------------------
