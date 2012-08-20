@@ -1,4 +1,7 @@
 ;; TODO
+;; - erl-who-calls
+;; - M-., M-,
+;; - find-module
 ;; - macro completion
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
