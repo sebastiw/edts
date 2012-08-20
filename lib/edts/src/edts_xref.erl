@@ -28,6 +28,8 @@
 %%%_* Exports ==================================================================
 
 -export([ exported_functions/1
+        , fun_info/3
+        , mod_info/1
         , modules/0
         , start/0]).
 
@@ -51,8 +53,64 @@ exported_functions(Module) ->
     {error, xref_compiler, {unknown_constant, _}} ->
       {ok, []};
     {ok, Exports} ->
-      {ok, [{F, A} || {_M, F, A} <- Exports]}
+      {ok, [{F0, A0} || {_M, F0, A0} <- Exports]}
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns information about Function as defined in Module.
+%% @end
+-spec fun_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
+                  {ok, [{atom(), term()}]}
+                | {error, atom()}.
+%%------------------------------------------------------------------------------
+fun_info(M, F0, A0) ->
+  {M, Bin, _File}                   = code:get_object_code(M),
+  {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
+  {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+  InfoFun = fun({attribute, _Line, export}, Acc) ->
+                orddict:store(exported, lists:member({F0, A0}, Acc));
+               ({function, Line, F, A, _Clauses}, Acc) when F =:= F0 andalso
+                                                            A =:= A0 ->
+                orddict:store(line_start, Line, Acc);
+               ({attribute, _Line, file, {Source, _Line}}, Acc) ->
+                orddict:store(source_file, Source, Acc);
+               (_, Acc) -> Acc
+            end,
+  Dict0 = orddict:from_list([{module,   M}
+                          , {function, F0}
+                          , {arity,    A0}
+                          , {exported, false}]),
+  Dict    = lists:foldl(InfoFun, Dict0, Abstract),
+
+  %% Get rid of any local paths, in case function was defined in a
+  %% file include with a relative path.
+  SourcePath0 = orddict:fetch(source_file, Dict),
+  case filename:absname(SourcePath0) of
+    SourcePath0 -> orddict:to_list(Dict);
+    SourcePath  ->
+      {source, BeamSource} = lists:keyfind(source, 1, M:module_info(compile)),
+      RealPath = filename:join(filename:dirname(BeamSource), SourcePath),
+      orddict:from_list(orddict:store(source_file, RealPath, Dict))
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns information Mod
+%% @end
+-spec mod_info(M::module()) -> [{atom, term()}].
+%%------------------------------------------------------------------------------
+mod_info(M) ->
+  Info               = erlang:get_module_info(M),
+  {compile, Compile} = lists:keyfind(compile, 1, Info),
+  {exports, Exports} = lists:keyfind(exports, 1, Info),
+  {time, Time}       = lists:keyfind(time,    1, Compile),
+  {source, Source}   = lists:keyfind(source,  1, Compile),
+  [ {exports, Exports}
+  , {time,    Time}
+  , {source,  Source}].
+
 
 %%------------------------------------------------------------------------------
 %% @doc
