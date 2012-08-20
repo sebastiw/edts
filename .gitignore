@@ -1,7 +1,6 @@
 .eunit
 deps
 ebin
-priv
 erl_crash.dump
 *.o
 *.beam

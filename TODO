@@ -1,5 +1,4 @@
 ;; TODO
-;; - exported function completion
 ;; - macro completion
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
@@ -9,7 +8,11 @@
 ;; - Change registering from post to put.
 ;; - Nice error handling for the rest-communication
 ;; - Debug output
-;; - Restart edts node, and re-add running project-nodes if it is down.
+;; - Restart edts node, and re-add running project-nodes if it is
+;;   down.
+;; - Return resource-not-available until node has finished
+;;   initializing.
+;; - Make edts a minor mode
 
 ;; Wishlist
 ;; - Indexing of project contents.
