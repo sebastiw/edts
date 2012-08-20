@@ -30,7 +30,8 @@
 %% API
 -export([ exported_functions/2
         , init_node/1
-        , is_edts_node/1
+        , is_node/1
+        , is_node_available/1
         , modules/1
         , node_exists/1
         , nodes/0]).
@@ -71,10 +72,22 @@ init_node(Node) ->
 %% Returns true iff Node is registered with this edts instance.
 %% @end
 %%
--spec is_edts_node(Node::node()) -> boolean().
+-spec is_node(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
-is_edts_node(Node) ->
-  edts_server:is_edts_node(Node).
+is_node(Node) ->
+  edts_server:is_node(Node).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is registered with this edts instance and has fisished
+%% its initialization.
+%% @end
+%%
+-spec is_node_available(Node::node()) -> boolean().
+%%------------------------------------------------------------------------------
+is_node_available(Node) ->
+  edts_server:is_node_available(Node).
+
 
 %%------------------------------------------------------------------------------
 %% @doc

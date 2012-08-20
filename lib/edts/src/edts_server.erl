@@ -31,7 +31,8 @@
 %% API
 -export([ ensure_node_initialized/1
         , init_node/1
-        , is_edts_node/1
+        , is_node/1
+        , is_node_available/1
         , nodes/0
         , start_link/0]).
 
@@ -106,10 +107,22 @@ init_node(Node) ->
 %% Returns true iff Node is registered with this edts instance.
 %% @end
 %%
--spec is_edts_node(node()) -> boolean().
+-spec is_node(node()) -> boolean().
 %%------------------------------------------------------------------------------
-is_edts_node(Node) ->
-  gen_server:call(?SERVER, {is_edts_node, Node}, infinity).
+is_node(Node) ->
+  gen_server:call(?SERVER, {is_node, Node}, infinity).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is registered with this edts instance and has finished
+%% its initialization.
+%% @end
+%%
+-spec is_node_available(node()) -> boolean().
+%%------------------------------------------------------------------------------
+is_node_available(Node) ->
+  gen_server:call(?SERVER, {is_node_available, Node}, infinity).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -160,10 +173,17 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
 handle_call({init_node, Name}, _From, State) ->
   Node = #node{name = Name, promises = edts_dist:init_node(Name)},
   {reply, ok, ?node_store(Node, State)};
-handle_call({is_edts_node, Name}, _From, State) ->
+handle_call({is_node, Name}, _From, State) ->
   Reply = case ?node_find(Name, State) of
-            false   -> false;
-            #node{} -> true
+            #node{} -> true;
+            false   -> false
+          end,
+  {reply, Reply, State};
+handle_call({is_node_available, Name}, _From, State) ->
+  Reply = case ?node_find(Name, State) of
+            #node{promises = []} -> true;
+            #node{}              -> false;
+            false                -> false
           end,
   {reply, Reply, State};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
@@ -196,7 +216,7 @@ handle_info({Pid, {promise_reply, _R}}, #state{nodes = Nodes0} = State) ->
   Nodes = [Node#node{promises = lists:delete(Pid, Node#node.promises)}
            || Node <- Nodes0],
   {noreply, State#state{nodes = Nodes}};
-handle_info({nodedown, Node, _Info}, #state{nodes = Nodes} = State) ->
+handle_info({nodedown, Node, _Info}, State) ->
   {noreply, ?node_delete(Node, State)};
 handle_info(_Info, State) ->
   {noreply, State}.

@@ -51,7 +51,6 @@ start() ->
 
 %% Application callbacks
 start(_StartType, _Start) ->
-  edts_dist:connect_all(),
   edts_sup:start_link().
 
 stop(_State) ->

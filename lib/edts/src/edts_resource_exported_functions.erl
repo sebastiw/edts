@@ -65,7 +65,7 @@ resource_exists(ReqData, Ctx0) ->
       {false, ReqData, Ctx0};
     {ok, Nodename} ->
       Ctx = lists:keystore(nodename, 1, Ctx0, {nodename, Nodename}),
-      {edts:is_edts_node(Nodename), ReqData, Ctx}
+      {edts:is_node_available(Nodename), ReqData, Ctx}
   end.
 
 %% Handlers
