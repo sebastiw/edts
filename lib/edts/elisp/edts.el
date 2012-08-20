@@ -34,8 +34,10 @@
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
   (with-temp-buffer
-    (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh")))
+    (let ((erl (executable-find "erl")))
+      (cd (concat edts-lib-directory "/.."))
+      (message "erl: %s" erl)
+      (make-comint "edts" "./start.sh" nil erl))))
 
 (defun edts-node-running (name)
   "Syncronously query epmd to see whether it has a node with `name' registered."

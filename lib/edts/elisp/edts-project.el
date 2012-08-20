@@ -102,7 +102,9 @@ activated for the first file that is located inside a project."
         (delete "" (split-string command))
         (let ((path (edts-project-code-path-expand project))
               (sname (edts-project-node-name project)))
-          (append (list "erl" "-sname" sname "-pa") path)))))
+          (append
+           (list (executable-find "erl") "-sname" sname "-pa")
+           path)))))
 
 (defun edts-project-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with `name' in `buf-name' adding
