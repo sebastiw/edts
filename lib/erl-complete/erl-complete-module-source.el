@@ -29,10 +29,15 @@
     (symbol     . "m")
     (requires   . nil)
     (limit      . nil)
+    (cache)
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defvar erl-complete-module-completions-cache nil
+  "The current list of module completions.")
+(ac-clear-variable-after-save 'erl-complete-module-completions-cache)
 
 (defun erl-complete-module-candidates ()
   (case (erl-complete-point-inside-quotes)
@@ -43,7 +48,8 @@
 (defun erl-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (erl-complete-module-p)
-    (edts-get-modules)))
+    (or erl-complete-module-completions-cache
+        (setq erl-complete-module-completions-cache (edts-get-modules)))))
 
 (defun erl-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal

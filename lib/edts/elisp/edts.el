@@ -34,10 +34,8 @@
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
   (with-temp-buffer
-    (let ((erl (executable-find "erl")))
-      (cd (concat edts-lib-directory "/.."))
-      (message "erl: %s" erl)
-      (make-comint "edts" "./start.sh" nil erl))))
+    (cd (concat edts-lib-directory "/.."))
+    (make-comint "edts" "./start.sh" nil (executable-find "erl"))))
 
 (defun edts-node-running (name)
   "Syncronously query epmd to see whether it has a node with `name' registered."
@@ -100,13 +98,14 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-      (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
+        (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
 
 (defun edts-get-exported-functions (module)
   "Fetches all exported functions of module on the node associated with
 current buffer."
   (let* ((node-name (edts-project-buffer-node-name))
-         (resource (list "nodes" node-name "modules" module "exported_functions"))
+         (resource
+          (list "nodes" node-name "modules" module "exported_functions"))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (mapcar  #'(lambda (e) (cdr (assoc 'function e)))

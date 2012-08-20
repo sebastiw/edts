@@ -50,7 +50,6 @@
    (with-current-buffer (url-retrieve-synchronously url)
      (edts-rest-parse-http-response))))
 
-
 (defun my-switch-to-url-buffer (status)
       "Switch to the buffer returned by `url-retreive'.
     The buffer contains the raw HTTP response sent by the server."
@@ -61,12 +60,11 @@
     (goto-char (point-min))
     (let* ((status (split-string (buffer-substring (point) (point-at-eol))))
            (result (cdr status))
-           (body   (edts-rest-decode
+           (body   (edts-rest-try-decode
                     (buffer-substring (search-forward "\n\n") (point-max)))))
       (list
        (cons 'result result)
        (cons 'body   body)))))
-
 
 (defun edts-rest-resource-url (resource args)
   "Construct the edts resource url."
@@ -86,11 +84,13 @@
         (json-array-type  'list))
     (json-encode data)))
 
-(defun edts-rest-decode (data)
-  "Decode `data' from json."
-  (unless (string-equal data "")
-    (let ((json-object-type 'alist)
-          (json-array-type  'list))
-      (json-read-from-string data))))
+(defun edts-rest-try-decode (string)
+  "Decode `string' from json if possible, otherwise return it as is."
+  (condition-case nil
+      (unless (string-equal string "")
+        (let ((json-object-type 'alist)
+              (json-array-type  'list))
+          (json-read-from-string string)))
+    (error string)))
 
 (provide 'edts-rest)

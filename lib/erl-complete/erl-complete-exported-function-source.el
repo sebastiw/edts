@@ -29,10 +29,15 @@
     (symbol     . "f")
     (requires   . nil)
     (limit      . nil)
+    (cache)
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defvar erl-complete-exported-function-completions-cache nil
+  "The current list of module completions.")
+(ac-clear-variable-after-save 'erl-complete-exported-function-cache)
 
 (defun erl-complete-exported-function-candidates ()
   (case (erl-complete-point-inside-quotes)
@@ -42,10 +47,11 @@
 
 
 (defun erl-complete-normal-exported-function-candidates ()
-  "Produces the completion list for normal (unqoted) modules."
+  "Produces the completion list for normal (unqoted) exported functions."
   (when (erl-complete-exported-function-p)
-    (let* ((module (symbol-at (- ac-point 1))))
-    (edts-get-exported-functions module))))
+    (or erl-complete-exported-function-completions-cache
+        (setq erl-complete-exported-function-completions-cache
+              (edts-get-exported-functions module)))))
 
 (defun erl-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
