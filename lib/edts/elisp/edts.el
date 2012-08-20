@@ -87,8 +87,10 @@
   "Register `node-name' with the edts node"
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
-        (cdr (assoc 'body res))
-        (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
+        node-name
+        (progn
+          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
+          nil))))
 
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
@@ -98,7 +100,9 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
+        (progn
+          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
+          nil))))
 
 (defun edts-get-exported-functions (module)
   "Fetches all exported functions of module on the node associated with
@@ -110,7 +114,9 @@ current buffer."
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (mapcar  #'(lambda (e) (cdr (assoc 'function e)))
                  (cdr (assoc 'body res)))
-        (message "Unexpected reply: %s" (cdr (assoc 'result res))))))
+        (progn
+          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
+          nil))))
 
 
 (provide 'edts)
