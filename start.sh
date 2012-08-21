@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 ### Startup-script
@@ -20,12 +20,7 @@
 ### along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ###############################################################################
 
-if [ -z $1 ];
-then
-    ERL=`which erl`
-else
-    ERL=$1
-fi
+ERL=${1:-$(which erl)}
+PWD=$(pwd)
 
-exec $ERL -sname edts -pa `pwd`/lib/edts/ebin `pwd`/lib/webmachine/ebin `pwd`/lib/webmachine/deps/mochiweb/ebin -s edts_app
-
+exec $ERL -sname edts -pa $PWD/lib/*/ebin $PWD/lib/*/deps/*/ebin -s edts_app
