@@ -1,20 +1,20 @@
 ;; TODO
+;; - fix bug in exported-functions completion
+;; - set completion limit to 1 for all sources
 ;; - erl-who-calls
 ;; - M-., M-,
 ;; - find-module
-;; - caching of auto-completion results.
 ;; - macro completion
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
 ;; - Start an internal node if external node disappears.
 ;; - Improve when completion popup closes
-;; - Generalize erl-complete
-;; - Change registering from post to put.
 ;; - Nice error handling for the rest-communication
 ;; - Debug output
 ;; - Restart edts node, and re-add running project-nodes if it is
 ;;   down.
 ;; - Make edts a minor mode
+;; - Tests
 
 ;; Wishlist
 ;; - Indexing of project contents.

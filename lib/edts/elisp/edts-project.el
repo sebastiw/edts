@@ -62,10 +62,13 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-ensure-node-started (project)
   "Start a buffer's project's node if it is not already started."
-  (if (edts-project-node-started-p (edts-project-node-name project))
-      (when (member 'distel features)
-        (edts-project-check-backend project))
-      (edts-project-start-node project)))
+  (let ((node-name (edts-project-node-name project)))
+    (if (edts-project-node-started-p node-name)
+        (progn
+          (when (member 'distel features)
+            (edts-project-check-backend project))
+          (edts-register-node-when-ready node-name))
+      (edts-project-start-node project))))
 
 (defun edts-project-check-backend (project)
   "Ensure that distel modules are available on the node used by `project'"
@@ -73,11 +76,6 @@ activated for the first file that is located inside a project."
          (node-name     (make-symbol (concat node-name-str "\@" system-name))))
     (setq erl-nodename-cache node-name)
     (erl-check-backend node-name nil)))
-
-(defun edts-project-buffer-start-node (&optional buffer)
-  "Starts a new erlang node for the project that `buffer' belongs to."
-  (unless buffer (setq buffer (current-buffer)))
-  (edts-project-start-node (edts-project-buffer-project buffer)))
 
 (defun edts-project-start-node (&optional project)
   "Starts a new erlang node for the project that `buffer' belongs to."
