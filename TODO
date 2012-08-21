@@ -1,5 +1,6 @@
 ;; TODO
-;; - fix bug in exported-functions completion
+;; - Tag values of imports with property names.
+;; - Parsing and marshalling of imports and include/include_lib's.
 ;; - set completion limit to 1 for all sources
 ;; - erl-who-calls
 ;; - M-., M-,

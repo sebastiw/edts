@@ -150,10 +150,13 @@ parse_abstract({attribute,_Line,import, {Module, Imports}}, Acc) ->
         orddict:update(Module, UpdateFun1, ImportSet, OldImports)
     end,
   orddict:update(imports, UpdateFun0, Acc);
-parse_abstract({attribute, Line ,record,{Recordname, Fields0}}, Acc) ->
+parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
+  FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
+                ({record_field, _, {_, _, FName}, _Call}) -> FName
+            end,
   RecordInfo =
     [ {name,   Recordname}
-      , {fields, [FName || {record_field, _, {_, _, FName}} <- Fields0]}
+      , {fields, lists:map(FieldsF, Fields)}
       , {line,   Line}
       , {source, orddict:fetch(file, Acc)}],
   orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
