@@ -63,6 +63,9 @@ function."
     (and
      (not (equal ?? preceding))
      (not (equal ?# preceding))
+     ; qualified calls to built-in functions are handled by the
+     ; exported-function source
+     (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
 (provide 'erl-complete-built-in-function-source)

@@ -35,9 +35,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defvar erl-complete-module-completions-cache nil
+(defvar erl-complete-module-cache nil
   "The current list of module completions.")
-(ac-clear-variable-after-save 'erl-complete-module-completions-cache)
+(ac-clear-variable-after-save 'erl-complete-module-cache)
 
 (defun erl-complete-module-candidates ()
   (case (erl-complete-point-inside-quotes)
@@ -48,8 +48,8 @@
 (defun erl-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (erl-complete-module-p)
-    (or erl-complete-module-completions-cache
-        (setq erl-complete-module-completions-cache (edts-get-modules)))))
+    (or erl-complete-module-cache
+        (setq erl-complete-module-cache (edts-get-modules)))))
 
 (defun erl-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
@@ -68,6 +68,7 @@ candidates, except we single-quote-terminate candidates."
     (and
      (not (equal ?? preceding))
      (not (equal ?# preceding))
+     (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
 (provide 'erl-complete-module-source)

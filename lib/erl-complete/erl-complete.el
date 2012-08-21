@@ -100,7 +100,8 @@ character before that."
                      erl-complete-record-source))
 
   ;; this is to allow completion inside quoted atoms. As a side-effect we
-  ;; get completion inside strings, which must be handled above.
+  ;; get completion inside strings, which must be handled in the sources
+  ;; above.
   (make-local-variable 'ac-disable-faces)
   (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
   )
