@@ -28,9 +28,9 @@
 %%%_* Exports ==================================================================
 
 -export([ exported_functions/1
-        , fun_info/3
-        , mod_info/1
-        , mod_info/2
+        , get_function_info/3
+        , get_module_info/1
+        , get_module_info/2
         , modules/0
         , start/0]).
 
@@ -61,11 +61,11 @@ exported_functions(Module) ->
 %% @doc
 %% Returns information about Function as defined in Module.
 %% @end
--spec fun_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
+-spec get_function_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
                   {ok, [{atom(), term()}]}
                 | {error, atom()}.
 %%------------------------------------------------------------------------------
-fun_info(M, F0, A0) ->
+get_function_info(M, F0, A0) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
@@ -73,7 +73,7 @@ fun_info(M, F0, A0) ->
                 orddict:store(exported, lists:member({F0, A0}, Acc));
                ({function, Line, F, A, _Clauses}, Acc) when F =:= F0 andalso
                                                             A =:= A0 ->
-                orddict:store(line_start, Line, Acc);
+                throw({done, orddict:store(line_start, Line, Acc)});
                ({attribute, _Line, file, {Source, _Line}}, Acc) ->
                 orddict:store(source_file, Source, Acc);
                (_, Acc) -> Acc
@@ -82,8 +82,9 @@ fun_info(M, F0, A0) ->
                           , {function, F0}
                           , {arity,    A0}
                           , {exported, false}]),
-  Dict    = lists:foldl(InfoFun, Dict0, Abstract),
-
+  Dict = try lists:foldl(InfoFun, Dict0, Abstract)
+         catch throw:{done, Dict1} -> Dict1
+         end,
   %% Get rid of any local paths, in case function was defined in a
   %% file include with a relative path.
   SourcePath0 = orddict:fetch(source_file, Dict),
@@ -98,81 +99,76 @@ fun_info(M, F0, A0) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns information Mod
+%% Equivalent to get_module_info(M, all).
 %% @end
--spec mod_info(M::module()) -> [{atom, term()}].
+-spec get_module_info(M::module()) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
-mod_info(M) ->
+get_module_info(M) ->
+  get_module_info(M, all).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns information on M.
+%% @end
+-spec get_module_info(M::module(), any()) -> [{atom, term()}].
+%%------------------------------------------------------------------------------
+get_module_info(M, _Fields) ->
   Info               = erlang:get_module_info(M),
   {compile, Compile} = lists:keyfind(compile, 1, Info),
   {exports, Exports} = lists:keyfind(exports, 1, Info),
   {time, Time}       = lists:keyfind(time,    1, Compile),
   {source, Source}   = lists:keyfind(source,  1, Compile),
-  [ {exports, Exports}
-  , {time,    Time}
-  , {source,  Source}].
-
-%% includes,
-%% exports,
-%% time,
-%% source,
-%% functions,
-%% imports,
-%% records,
-%% parameters
--record(state, {module = undefined,
-                file = "",
-                functions = [], imports = [],
-                macros = [], records = [], parameters = []}).
-mod_info(M, _Fields) ->
-  Compile          = erlang:get_module_info(M, compile),
-  {source, Source} = lists:keyfind(source,  1, Compile),
 
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  io:format("Abstract ~p", [Abstract]),
-  lists:foldl(fun info_fun/2, #state{module = M, file = Source}, Abstract).
+  Acc0 = orddict:from_list([ {module, M}
+                           , {exports, Exports}
+                           , {time,    Time}
+                           , {source,  Source}
+                           , {imports,   []}
+                           , {functions, []}
+                           , {records,   []}
+                           , {file,      ""}]),
+  lists:foldl(fun info_fun/2, Acc0, Abstract).
 
 info_fun({function, Line, F, A, _Clauses}, Acc) ->
-  #state{module = M, functions = Fs} = Acc,
-  FunctionInfo =
+  M = orddict:fetch(module, Acc),
+  FunInfo =
     [ {module,   M}
     , {function, F}
     , {arity,    A}
     , {exported, lists:member({F, A}, M:module_info(exports))}
-    , {file,     Acc#state.file}
+    , {source,   orddict:fetch(source, Acc)}
     , {line,     Line}],
-  Acc#state{functions = [FunctionInfo|Fs]};
-info_fun({attribute, _Line0, file, {File0, _Line1}}, Acc) ->
+  orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
+info_fun({attribute, _Line0, file, {SourcePath0, _Line1}}, Acc) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
-  File =
-    case filename:absname(File0) of
-      File0 -> File0;
+  SourcePath =
+    case filename:absname(SourcePath0) of
+      SourcePath0 -> SourcePath0;
       SourcePath1  ->
-        M = Acc#state.module,
+        M = orddict:fetch(module, Acc),
         {source, BeamSource} = lists:keyfind(source, 1, M:module_info(compile)),
         filename:join(filename:dirname(BeamSource), SourcePath1)
     end,
-  Acc#state{file = File};
+  orddict:store(file, SourcePath, Acc);
 info_fun({attribute,_Line,import, {Module, Imports}}, Acc) ->
-  #state{imports = OldImports} = Acc,
-  NewImportSet0 = ordsets:from_list(Imports),
-  NewImportSet =
-    case lists:keyfind(Module, 1, OldImports) of
-      {Module, OldImportSet} -> ordsets:union(NewImportSet0, OldImportSet);
-      false                  -> NewImportSet0
+  ImportSet = ordsets:from_list(Imports),
+  UpdateFun0 =
+    fun(OldImports) ->
+        UpdateFun1 = fun(Old) -> ordsets:union(Old, ImportSet) end,
+        orddict:update(Module, UpdateFun1, ImportSet, OldImports)
     end,
-  NewImports = lists:keystore(Module, 1, OldImports, {Module, NewImportSet}),
-  Acc#state{imports = NewImports};
+  orddict:update(imports, UpdateFun0, Acc);
 info_fun({attribute, Line ,record,{Recordname, Fields0}}, Acc) ->
   RecordInfo =
     [ {name,   Recordname}
       , {fields, [FName || {record_field, _, {_, _, FName}} <- Fields0]}
       , {line,   Line}
-      , {file,   Acc#state.file}],
-      Acc#state{ records = [RecordInfo|Acc#state.records]};
+      , {source, orddict:fetch(file, Acc)}],
+  orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
 info_fun(_, Acc) -> Acc.
 
 
