@@ -28,10 +28,10 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ exported_functions/2
+-export([ get_module_info/3
         , init_node/1
         , is_node/1
-        , is_node_available/1
+        , node_available_p/1
         , modules/1
         , node_exists/1
         , nodes/0]).
@@ -49,14 +49,16 @@
 %% Returns a list of all functions exported from Module on Node.
 %% @end
 %%
--spec exported_functions(Node::node(), Module::module()) ->
-                            {ok, [{atom(), non_neg_integer()}]}.
+-spec get_module_info(Node::node(), Module::module(),
+                      Level::detailed | basic) ->
+                         {ok, [{atom(), term()}]}.
 %%------------------------------------------------------------------------------
-exported_functions(Node, Module) ->
+get_module_info(Node, Module, Level) ->
   edts_server:ensure_node_initialized(Node),
-  edts_dist:call(Node, edts_xref, exported_functions, [Module]).
-
-
+  case edts_dist:call(Node, edts_xref, get_module_info, [Module, Level]) of
+    {ok, Info}  -> Info;
+    {badrpc, _} -> {error, not_found}
+  end.
 %%------------------------------------------------------------------------------
 %% @doc
 %% Initializes a new edts node.
@@ -83,10 +85,10 @@ is_node(Node) ->
 %% its initialization.
 %% @end
 %%
--spec is_node_available(Node::node()) -> boolean().
+-spec node_available_p(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
-is_node_available(Node) ->
-  edts_server:is_node_available(Node).
+node_available_p(Node) ->
+  edts_server:node_available_p(Node).
 
 
 %%------------------------------------------------------------------------------

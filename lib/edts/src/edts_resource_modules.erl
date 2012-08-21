@@ -47,7 +47,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  {ok, []}.
+  {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
   {['GET'], ReqData, Ctx}.
@@ -64,15 +64,14 @@ resource_exists(ReqData, Ctx0) ->
     error          ->
       {false, ReqData, Ctx0};
     {ok, Nodename} ->
-      Ctx = lists:keystore(nodename, 1, Ctx0, {nodename, Nodename}),
-      {edts:is_node_available(Nodename), ReqData, Ctx}
+      Ctx = orddict:store(nodename, Nodename, Ctx0),
+      {edts:node_available_p(Nodename), ReqData, Ctx}
   end.
 
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
-  {ok, Modules} = edts:modules(Nodename),
+  {ok, Modules} = edts:modules(orddict:fetch(nodename, Ctx)),
   {mochijson2:encode(Modules), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

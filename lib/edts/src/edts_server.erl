@@ -32,7 +32,7 @@
 -export([ ensure_node_initialized/1
         , init_node/1
         , is_node/1
-        , is_node_available/1
+        , node_available_p/1
         , nodes/0
         , start_link/0]).
 
@@ -118,10 +118,10 @@ is_node(Node) ->
 %% its initialization.
 %% @end
 %%
--spec is_node_available(node()) -> boolean().
+-spec node_available_p(node()) -> boolean().
 %%------------------------------------------------------------------------------
-is_node_available(Node) ->
-  gen_server:call(?SERVER, {is_node_available, Node}, infinity).
+node_available_p(Node) ->
+  gen_server:call(?SERVER, {node_available_p, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -179,7 +179,7 @@ handle_call({is_node, Name}, _From, State) ->
             false   -> false
           end,
   {reply, Reply, State};
-handle_call({is_node_available, Name}, _From, State) ->
+handle_call({node_available_p, Name}, _From, State) ->
   Reply = case ?node_find(Name, State) of
             #node{promises = []} -> true;
             #node{}              -> false;

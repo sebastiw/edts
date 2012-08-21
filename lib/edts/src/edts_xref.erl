@@ -27,8 +27,7 @@
 
 %%%_* Exports ==================================================================
 
--export([ exported_functions/1
-        , get_function_info/3
+-export([ get_function_info/3
         , get_module_info/1
         , get_module_info/2
         , modules/0
@@ -41,21 +40,6 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns a list of all functions exported from Module.
-%% @end
--spec exported_functions(Module::module()) ->
-                            {ok, [{atom(), non_neg_integer()}]}.
-%%------------------------------------------------------------------------------
-exported_functions(Module) ->
-  case xref:q(?SERVER, atom_to_list(Module) ++ " : Mod * X") of
-    {error, xref_compiler, {unknown_constant, _}} ->
-      {ok, []};
-    {ok, Exports} ->
-      {ok, [{F0, A0} || {_M, F0, A0} <- Exports]}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -99,40 +83,44 @@ get_function_info(M, F0, A0) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Equivalent to get_module_info(M, all).
+%% Equivalent to get_module_info(M, detailed).
 %% @end
 -spec get_module_info(M::module()) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
 get_module_info(M) ->
-  get_module_info(M, all).
+  get_module_info(M, detailed).
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Returns information on M.
 %% @end
--spec get_module_info(M::module(), any()) -> [{atom, term()}].
+-spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
-get_module_info(M, _Fields) ->
-  Info               = erlang:get_module_info(M),
-  {compile, Compile} = lists:keyfind(compile, 1, Info),
-  {exports, Exports} = lists:keyfind(exports, 1, Info),
-  {time, Time}       = lists:keyfind(time,    1, Compile),
-  {source, Source}   = lists:keyfind(source,  1, Compile),
-
+get_module_info(M, basic) ->
+  Info                         = erlang:get_module_info(M),
+  {compile, Compile}           = lists:keyfind(compile, 1, Info),
+  {exports, Exports}           = lists:keyfind(exports, 1, Info),
+  {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
+  Ret = [ {module, M}
+        , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
+        , {time, {{Y, Mo, D}, {H, Mi, S}}}
+        , lists:keyfind(source,  1, Compile)],
+  {ok, Ret};
+get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  Acc0 = orddict:from_list([ {module, M}
-                           , {exports, Exports}
-                           , {time,    Time}
-                           , {source,  Source}
-                           , {imports,   []}
-                           , {functions, []}
-                           , {records,   []}
-                           , {file,      ""}]),
-  lists:foldl(fun info_fun/2, Acc0, Abstract).
+  {ok, Basic} = get_module_info(M, basic),
 
-info_fun({function, Line, F, A, _Clauses}, Acc) ->
+  Acc0 = orddict:from_list([ {imports,   []}
+                           , {functions, []}
+                           , {records,   []}]
+                           ++ Basic),
+  Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
+  Dict  = orddict:update(imports, fun(I) -> ordsets:to_list(I) end, Dict0),
+  {ok, orddict:to_list(Dict)}.
+
+parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
   M = orddict:fetch(module, Acc),
   FunInfo =
     [ {module,   M}
@@ -142,7 +130,7 @@ info_fun({function, Line, F, A, _Clauses}, Acc) ->
     , {source,   orddict:fetch(source, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
-info_fun({attribute, _Line0, file, {SourcePath0, _Line1}}, Acc) ->
+parse_abstract({attribute, _Line0, file, {SourcePath0, _Line1}}, Acc) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
   SourcePath =
@@ -154,7 +142,7 @@ info_fun({attribute, _Line0, file, {SourcePath0, _Line1}}, Acc) ->
         filename:join(filename:dirname(BeamSource), SourcePath1)
     end,
   orddict:store(file, SourcePath, Acc);
-info_fun({attribute,_Line,import, {Module, Imports}}, Acc) ->
+parse_abstract({attribute,_Line,import, {Module, Imports}}, Acc) ->
   ImportSet = ordsets:from_list(Imports),
   UpdateFun0 =
     fun(OldImports) ->
@@ -162,14 +150,14 @@ info_fun({attribute,_Line,import, {Module, Imports}}, Acc) ->
         orddict:update(Module, UpdateFun1, ImportSet, OldImports)
     end,
   orddict:update(imports, UpdateFun0, Acc);
-info_fun({attribute, Line ,record,{Recordname, Fields0}}, Acc) ->
+parse_abstract({attribute, Line ,record,{Recordname, Fields0}}, Acc) ->
   RecordInfo =
     [ {name,   Recordname}
       , {fields, [FName || {record_field, _, {_, _, FName}} <- Fields0]}
       , {line,   Line}
       , {source, orddict:fetch(file, Acc)}],
   orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
-info_fun(_, Acc) -> Acc.
+parse_abstract(_, Acc) -> Acc.
 
 
 %%------------------------------------------------------------------------------

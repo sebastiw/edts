@@ -50,7 +50,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  {ok, []}.
+  {ok, orddict:new()}.
 
 allow_missing_post(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -63,8 +63,7 @@ content_types_accepted(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 create_path(ReqData, Ctx) ->
-  {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
-  {atom_to_list(Nodename), ReqData, Ctx}.
+  {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx0) ->
   Name = wrq:path_info(nodename, ReqData),
@@ -73,8 +72,7 @@ malformed_request(ReqData, Ctx0) ->
     true ->
       case edts_resource_lib:try_make_nodename(Name) of
         {ok, Nodename} ->
-          Ctx = lists:keystore(nodename, 1, Ctx0, {nodename, Nodename}),
-          {false, ReqData, Ctx};
+          {false, ReqData, orddict:store(nodename, Nodename, Ctx0)};
         error ->
           {true, ReqData, Ctx0}
       end
@@ -87,8 +85,7 @@ post_is_create(ReqData, Ctx) ->
 from_json(ReqData, Ctx) ->
   case edts:node_exists(wrq:path_info(nodename, ReqData)) of
     true ->
-      {nodename, Nodename} = lists:keyfind(nodename, 1, Ctx),
-      ok = edts:init_node(Nodename),
+      ok = edts:init_node(orddict:fetch(nodename, Ctx)),
       {true, ReqData, Ctx};
     false ->
       {false, ReqData, Ctx}
