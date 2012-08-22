@@ -1,6 +1,5 @@
 ;; TODO
 ;; - Check if auto-complete-mode removes duplicates from different sources.
-;; - get rid of @localhost in sname's
 ;; - (re?) load modules before trying to extract info
 ;; - Tag values of imports with property names.
 ;; - Parsing and marshalling of imports and include/include_lib's.

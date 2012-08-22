@@ -56,8 +56,8 @@
 get_module_info(Node, Module, Level) ->
   edts_server:ensure_node_initialized(Node),
   case edts_dist:call(Node, edts_xref, get_module_info, [Module, Level]) of
-    {ok, Info}  -> Info;
-    {badrpc, _} -> {error, not_found}
+    {badrpc, _} -> {error, not_found};
+    Info  -> Info
   end.
 %%------------------------------------------------------------------------------
 %% @doc

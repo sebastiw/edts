@@ -81,43 +81,38 @@ resource_exists(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Fmt = lists:foldl(fun format/2, [], orddict:fetch(info, Ctx)),
-  {mochijson2:encode(Fmt), ReqData, Ctx}.
+  Info = orddict:fetch(info, Ctx),
+  {module, Module} = lists:keyfind(module, 1, Info),
+  Data =
+    {struct, [{module, [{name, Module}|lists:foldl(fun format/2, [], Info)]}]},
+  {mochijson2:encode(Data), ReqData, Ctx}.
 
 format({exports, Exports}, Acc) ->
-  %%   {struct, [{exports, {array, [{struct, Export} || Export <- Exports]}}]};
-  Acc;
+  [{struct, [{exports, {array, [{struct, Export} || Export <- Exports]}}]}|Acc];
 format({source, Source}, Acc) ->
-  %% {struct, [{source, list_to_binary(Source)}]};
-  Acc;
+  [{struct, [{source, list_to_binary(Source)}]}|Acc];
 format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
-  %% Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
-  %% {struct, [{time, list_to_binary(Str)}]};
-  Acc;
+  Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
+  [{struct, [{time, list_to_binary(Str)}]}|Acc];
 format({records, Records0}, Acc) ->
-  %% RecFun = fun({name,   Name})   -> {name, Name};
-  %%             ({line,   Line})   -> {line, Line};
-  %%             ({fields, Fs})     -> {fields, {array, Fs}};
-  %%             ({source, Source}) -> {source, list_to_binary(Source)}
-  %%          end,
-  %% Records = [{struct, lists:map(RecFun, Record)} || Record <- Records0],
-  %% {struct, [{records, {array, Records}}]};
-  Acc;
-format({functions, Functions0}, Acc) ->
-  %% FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
-  %%             (KV) -> KV
-  %%          end,
-  %% Functions = [{struct, lists:map(FunFun, Function)} || Function <- Functions0],
-  %% {struct, [{functions, {array, Functions}}]};
-  Acc;
-format({imports, Imports}, Acc) ->
-  ImpModFun = fun({Module, Functions0}) ->
-                  Functions = [{struct, Function} || Function <- Functions0],
-               {struct, [{module, Module}, {functions, {array, Functions}}]}
+  RecFun = fun({name,   Name})   -> {name, Name};
+              ({line,   Line})   -> {line, Line};
+              ({fields, Fs})     -> {fields, {array, Fs}};
+              ({source, Source}) -> {source, list_to_binary(Source)}
            end,
-  {struct, [{imports, {array, lists:map(ImpModFun, Imports)}}]};
-format(T, Acc) ->
-  io:format("T ~p~n", [T]),
+  Records = [{struct, lists:map(RecFun, Record)} || Record <- Records0],
+  [{struct, [{records, {array, Records}}]}|Acc];
+format({functions, Functions0}, Acc) ->
+  FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
+              (KV) -> KV
+           end,
+  Functions = [{struct, lists:map(FunFun, Function)} || Function <- Functions0],
+  [{struct, [{functions, {array, Functions}}]}|Acc];
+format({imports, Imports}, Acc) ->
+  [{struct, [{imports, {array, Imports}}]}|Acc];
+format({includes, Includes}, Acc) ->
+  [{struct, [{includes, [list_to_binary(I) || I <- Includes]}]}|Acc];
+format(_, Acc) ->
   Acc.
 
 
