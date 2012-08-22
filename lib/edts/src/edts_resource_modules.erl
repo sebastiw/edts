@@ -59,14 +59,9 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx0) ->
-  Name =  wrq:path_info(nodename, ReqData),
-  case edts_resource_lib:try_make_nodename(Name) of
-    error          ->
-      {false, ReqData, Ctx0};
-    {ok, Nodename} ->
-      Ctx = orddict:store(nodename, Nodename, Ctx0),
-      {edts:node_available_p(Nodename), ReqData, Ctx}
-  end.
+  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
+  Ctx      = orddict:store(nodename, Nodename, Ctx0),
+  {edts:node_available_p(Nodename), ReqData, Ctx}.
 
 %% Handlers
 

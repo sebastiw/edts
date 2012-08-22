@@ -71,18 +71,13 @@ malformed_request(ReqData, Ctx) ->
   end.
 
 resource_exists(ReqData, Ctx) ->
-  Name =  wrq:path_info(nodename, ReqData),
-  case edts_resource_lib:try_make_nodename(Name) of
-    error          ->
-      {false, ReqData, Ctx};
-    {ok, Nodename} ->
-      Module = list_to_atom(wrq:path_info(module, ReqData)),
-      Level  = orddict:fetch(info_level, Ctx),
-      Info   = edts:get_module_info(Nodename, Module, Level),
-      Exists = edts:node_available_p(Nodename) andalso
-               not (Info =:= {error, not_found}),
-      {Exists, ReqData, orddict:store(info, Info, Ctx)}
-  end.
+  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
+  Module = list_to_atom(wrq:path_info(module, ReqData)),
+  Level  = orddict:fetch(info_level, Ctx),
+  Info   = edts:get_module_info(Nodename, Module, Level),
+  Exists = edts:node_available_p(Nodename) andalso
+           not (Info =:= {error, not_found}),
+  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
 to_json(ReqData, Ctx) ->
@@ -115,13 +110,12 @@ format({functions, Functions0}, Acc) ->
   %% Functions = [{struct, lists:map(FunFun, Function)} || Function <- Functions0],
   %% {struct, [{functions, {array, Functions}}]};
   Acc;
-format({Imports, Imports0}, Acc) ->
-  FunFun = fun({Module, Functions}) ->
-               {struct, [{module, Module}, {functions, {array, ok}}]}
+format({imports, Imports}, Acc) ->
+  ImpModFun = fun({Module, Functions0}) ->
+                  Functions = [{struct, Function} || Function <- Functions0],
+               {struct, [{module, Module}, {functions, {array, Functions}}]}
            end,
-  Records = [
-                      , lists:map(FunFun, Function)} || Function <- Functions0],
-  {struct, [{records, {array, Records}}]};
+  {struct, [{imports, {array, lists:map(ImpModFun, Imports)}}]};
 format(T, Acc) ->
   io:format("T ~p~n", [T]),
   Acc.

@@ -66,16 +66,10 @@ create_path(ReqData, Ctx) ->
   {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx0) ->
-  Name = wrq:path_info(nodename, ReqData),
-  case edts:node_exists(Name) of
-    false -> {true, ReqData, Ctx0};
-    true ->
-      case edts_resource_lib:try_make_nodename(Name) of
-        {ok, Nodename} ->
-          {false, ReqData, orddict:store(nodename, Nodename, Ctx0)};
-        error ->
-          {true, ReqData, Ctx0}
-      end
+  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
+  case edts:node_exists(Nodename) of
+    false -> {false, ReqData, orddict:store(nodename, Nodename, Ctx0)};
+    true  -> {true, ReqData, Ctx0}
   end.
 
 post_is_create(ReqData, Ctx) ->
@@ -83,13 +77,8 @@ post_is_create(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  case edts:node_exists(wrq:path_info(nodename, ReqData)) of
-    true ->
-      ok = edts:init_node(orddict:fetch(nodename, Ctx)),
-      {true, ReqData, Ctx};
-    false ->
-      {false, ReqData, Ctx}
-  end.
+  ok = edts:init_node(orddict:fetch(nodename, Ctx)),
+  {true, ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
 

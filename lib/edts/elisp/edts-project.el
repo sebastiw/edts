@@ -209,7 +209,7 @@ edts-project `project'."
 
 (defun edts-project-normalize-path (path-str)
   "Bad name. Only replaces duplicate /'s in path-str and make sure it ends
-with a /."
+with a '/'."
   (replace-regexp-in-string "//+" "/"
                             (concat (expand-file-name path-str) "/")))
 

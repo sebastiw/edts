@@ -28,7 +28,7 @@
 %%%_* Exports ==================================================================
 
 %% Application callbacks
--export([try_make_nodename/1]).
+-export([make_nodename/1]).
 
 %%%_* Includes =================================================================
 
@@ -40,25 +40,12 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Try to construct a node sname from either a string() or wrq:reqdata().
+%% Try to construct a node sname from a string.
 %% @end
--spec try_make_nodename(string()|wrq:reqdata()) -> node() | error.
+-spec make_nodename(string()) -> node().
 %%------------------------------------------------------------------------------
-try_make_nodename(NameStr) when is_list(NameStr) ->
-  try
-    {ok, Name} =
-      case string:chr(NameStr, $@) of
-        0 ->
-          {ok, edts_dist:make_sname(NameStr)};
-        _ ->
-          [Name0, Host] = string:tokens(NameStr, "@"),
-          {ok, edts_dist:make_sname(Name0, Host)}
-      end,
-    Name
-  catch
-    _:_ -> error
-  end.
-
+make_nodename(NameStr) ->
+    list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ net_adm:localhost()).
 %%%_* Internal functions =======================================================
 
 %%%_* Emacs ====================================================================
