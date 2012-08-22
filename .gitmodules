@@ -7,6 +7,3 @@
 [submodule "lib/popup-el"]
 	path = lib/popup-el
 	url = https://github.com/tjarvstrand/popup-el.git
-[submodule "lib/webmachine"]
-	path = lib/webmachine
-	url = https://github.com/basho/webmachine.git

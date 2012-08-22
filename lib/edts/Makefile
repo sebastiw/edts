@@ -2,7 +2,7 @@ suite=$(if $(SUITE), suite=$(SUITE), )
 
 .PHONY:	all deps check test clean
 
-all:
+all: deps
 	./rebar compile
 
 deps:
