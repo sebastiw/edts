@@ -60,61 +60,32 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  case wrq:get_qs_value("info_level", ReqData) of
-    undefined ->
-      {false, ReqData, orddict:store(info_level, basic, Ctx)};
-    Info when Info =:= "basic" orelse
-              Info =:= "detailed" ->
-      {false, ReqData, orddict:store(info_level, list_to_atom(Info), Ctx)};
-    _ ->
-      {true, ReqData, Ctx}
+  case wrq:get_qs_value("arity", ReqData) of
+    undefined -> {false, ReqData, orddict:store(arity, 0, Ctx)};
+    Arity ->
+      try {false, ReqData, orddict:store(arity, list_to_integer(Arity), Ctx)}
+      catch error:badarg -> {true ,ReqData, Ctx}
+      end
   end.
 
 resource_exists(ReqData, Ctx) ->
   Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  Module = list_to_atom(wrq:path_info(module, ReqData)),
-  Level  = orddict:fetch(info_level, Ctx),
-  Info   = edts:get_module_info(Nodename, Module, Level),
-  Exists = edts:node_available_p(Nodename) andalso
-           not (Info =:= {error, not_found}),
+  Module   = list_to_atom(wrq:path_info(module, ReqData)),
+  Function = list_to_atom(wrq:path_info(function, ReqData)),
+  Arity    = orddict:fetch(arity, Ctx),
+  Info     = edts:get_function_info(Nodename, Module, Function, Arity),
+  Exists   = edts:node_available_p(Nodename) andalso
+             not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Info = orddict:fetch(info, Ctx),
-  {module, Module} = lists:keyfind(module, 1, Info),
-  Data =
-    {struct, [{module, [{name, Module}|lists:foldl(fun format/2, [], Info)]}]},
+  Info0 = orddict:fetch(info, Ctx),
+  io:format("Info ~p~n", [Info0]),
+  {value, {source, S}, Other} = lists:keytake(source, 1, Info0),
+  io:format("3"),
+  Data = {struct, [{source, list_to_binary(S)}|Other]},
   {mochijson2:encode(Data), ReqData, Ctx}.
-
-format({exports, Exports}, Acc) ->
-  [{exports, {array, [{struct, Export} || Export <- Exports]}}|Acc];
-format({source, Source}, Acc) ->
-  [{source, list_to_binary(Source)}|Acc];
-format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
-  Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
-  [{time, list_to_binary(Str)}|Acc];
-format({records, Records0}, Acc) ->
-  RecFun = fun({name,   Name})   -> {name, Name};
-              ({line,   Line})   -> {line, Line};
-              ({fields, Fs})     -> {fields, {array, Fs}};
-              ({source, Source}) -> {source, list_to_binary(Source)}
-           end,
-  Records = [{struct, lists:map(RecFun, Record)} || Record <- Records0],
-  [{struct, [{records, {array, Records}}]}|Acc];
-format({functions, Functions0}, Acc) ->
-  FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
-              (KV) -> KV
-           end,
-  Functions = [{struct, lists:map(FunFun, Function)} || Function <- Functions0],
-  [{struct, [{functions, {array, Functions}}]}|Acc];
-format({imports, Imports}, Acc) ->
-  [{struct, [{imports, {array, Imports}}]}|Acc];
-format({includes, Includes}, Acc) ->
-  [{struct, [{includes, [list_to_binary(I) || I <- Includes]}]}|Acc];
-format(_, Acc) ->
-  Acc.
-
 
 %%%_* Internal functions =======================================================
 

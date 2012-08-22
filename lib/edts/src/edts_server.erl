@@ -167,9 +167,12 @@ init([]) ->
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_call({ensure_node_initialized, Name}, _From, State) ->
-  Node = ?node_find(Name, State),
-  lists:foreach(fun rpc:yield/1, Node#node.promises),
-  {reply, ok, ?node_store(Node#node{promises = []}, State)};
+    case ?node_find(Name, State) of
+      false -> {reply, {error, not_found}, State};
+      Node ->
+        lists:foreach(fun rpc:yield/1, Node#node.promises),
+        {reply, ok, ?node_store(Node#node{promises = []}, State)}
+    end;
 handle_call({init_node, Name}, _From, State) ->
   Node = #node{name = Name, promises = edts_dist:init_node(Name)},
   {reply, ok, ?node_store(Node, State)};
@@ -217,7 +220,10 @@ handle_info({Pid, {promise_reply, _R}}, #state{nodes = Nodes0} = State) ->
            || Node <- Nodes0],
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
-  {noreply, ?node_delete(Node, State)};
+  case ?node_find(Node, State) of
+    false   -> {noreply, State};
+    #node{} -> {noreply, ?node_delete(Node, State)}
+  end;
 handle_info(_Info, State) ->
   {noreply, State}.
 

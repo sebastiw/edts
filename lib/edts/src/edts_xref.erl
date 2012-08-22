@@ -46,8 +46,7 @@
 %% Returns information about Function as defined in Module.
 %% @end
 -spec get_function_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
-                  {ok, [{atom(), term()}]}
-                | {error, atom()}.
+                           [{atom(), term()}].
 %%------------------------------------------------------------------------------
 get_function_info(M, F0, A0) ->
   c:l(M),
@@ -60,7 +59,7 @@ get_function_info(M, F0, A0) ->
                                                             A =:= A0 ->
                 throw({done, orddict:store(line_start, Line, Acc)});
                ({attribute, _Line, file, {Source, _Line}}, Acc) ->
-                orddict:store(source_file, Source, Acc);
+                orddict:store(source, Source, Acc);
                (_, Acc) -> Acc
             end,
   Dict0 = orddict:from_list([{module,   M}
@@ -72,13 +71,13 @@ get_function_info(M, F0, A0) ->
          end,
   %% Get rid of any local paths, in case function was defined in a
   %% file include with a relative path.
-  SourcePath0 = orddict:fetch(source_file, Dict),
+  SourcePath0 = orddict:fetch(source, Dict),
   case filename:absname(SourcePath0) of
     SourcePath0 -> orddict:to_list(Dict);
     SourcePath  ->
       {source, BeamSource} = lists:keyfind(source, 1, M:module_info(compile)),
       RealPath = filename:join(filename:dirname(BeamSource), SourcePath),
-      orddict:from_list(orddict:store(source_file, RealPath, Dict))
+      orddict:from_list(orddict:store(source, RealPath, Dict))
   end.
 
 

@@ -28,7 +28,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ get_module_info/3
+-export([ get_function_info/4
+        , get_module_info/3
         , init_node/1
         , is_node/1
         , node_available_p/1
@@ -46,7 +47,26 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all functions exported from Module on Node.
+%% Returns information about Module:Function/Arity on Node.
+%% @end
+%%
+-spec get_function_info( Node    ::node()
+                       , Module  ::module()
+                       , Function::atom()
+                       , Arity   ::non_neg_integer()) ->
+                           [{atom(), term()}].
+%%------------------------------------------------------------------------------
+get_function_info(Node, Module, Function, Arity) ->
+  edts_server:ensure_node_initialized(Node),
+  Args = [Module, Function, Arity],
+  case edts_dist:call(Node, edts_xref, get_function_info, Args) of
+    {badrpc, _} -> {error, not_found};
+    Info  -> Info
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns information about Module on Node.
 %% @end
 %%
 -spec get_module_info(Node::node(), Module::module(),
@@ -59,6 +79,7 @@ get_module_info(Node, Module, Level) ->
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Initializes a new edts node.

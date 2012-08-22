@@ -82,9 +82,7 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info = orddict:fetch(info, Ctx),
-  {module, Module} = lists:keyfind(module, 1, Info),
-  Data =
-    {struct, [{module, [{name, Module}|lists:foldl(fun format/2, [], Info)]}]},
+  Data = {struct, lists:foldl(fun format/2, [], Info)},
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 format({exports, Exports}, Acc) ->
@@ -112,6 +110,8 @@ format({imports, Imports}, Acc) ->
   [{struct, [{imports, {array, Imports}}]}|Acc];
 format({includes, Includes}, Acc) ->
   [{struct, [{includes, [list_to_binary(I) || I <- Includes]}]}|Acc];
+format({module, _} = Module, Acc) ->
+  [Module|Acc];
 format(_, Acc) ->
   Acc.
 
