@@ -88,12 +88,12 @@ to_json(ReqData, Ctx) ->
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 format({exports, Exports}, Acc) ->
-  [{struct, [{exports, {array, [{struct, Export} || Export <- Exports]}}]}|Acc];
+  [{exports, {array, [{struct, Export} || Export <- Exports]}}|Acc];
 format({source, Source}, Acc) ->
-  [{struct, [{source, list_to_binary(Source)}]}|Acc];
+  [{source, list_to_binary(Source)}|Acc];
 format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
   Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
-  [{struct, [{time, list_to_binary(Str)}]}|Acc];
+  [{time, list_to_binary(Str)}|Acc];
 format({records, Records0}, Acc) ->
   RecFun = fun({name,   Name})   -> {name, Name};
               ({line,   Line})   -> {line, Line};

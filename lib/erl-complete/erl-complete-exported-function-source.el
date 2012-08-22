@@ -52,7 +52,7 @@
     (or erl-complete-exported-function-cache
         (let ((module (symbol-at (- ac-point 1))))
           (setq erl-complete-exported-function-cache
-                (edts-get-exported-functions module))))))
+                (edts-get-module-exported-functions module))))))
 
 (defun erl-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal

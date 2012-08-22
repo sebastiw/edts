@@ -104,19 +104,29 @@ current buffer."
           (message "Unexpected reply: %s" (cdr (assoc 'result res)))
           nil))))
 
-(defun edts-get-exported-functions (module)
+(defun edts-get-module-exported-functions (module)
   "Fetches all exported functions of module on the node associated with
 current buffer."
+  (let* ((res (edts-get-basic-module-info module))
+         (mod (car res))
+         (exports (cdr (assoc 'exports (cdr mod)))))
+      (mapcar #'edts-function-to-string exports)))
+
+(defun edts-function-to-string (export)
+  "Converts a function struct to a string. For now, just grabs the name and
+disregards arity."
+  (cdr (assoc 'function export)))
+
+(defun edts-get-basic-module-info (module)
+  "Fetches basic info about module on the node associated with current buffer"
   (let* ((node-name (edts-project-buffer-node-name))
          (resource
-          (list "nodes" node-name "modules" module "exported_functions"))
+          (list "nodes" node-name "modules" module))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-        (mapcar  #'(lambda (e) (cdr (assoc 'function e)))
-                 (cdr (assoc 'body res)))
+        (cdr (assoc 'body res))
         (progn
           (message "Unexpected reply: %s" (cdr (assoc 'result res)))
           nil))))
-
 
 (provide 'edts)
