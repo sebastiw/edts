@@ -34,7 +34,7 @@
 
 (defun edts-rest-get (resource args)
   "Send a get request to resource with args"
-  (edts-rest-request "GET" resource args)
+  (edts-rest-request "GET" resource args))
 
 (defun edts-rest-post (resource args)
   "Send a post request to resource with args"
