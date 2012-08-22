@@ -88,9 +88,7 @@
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name
-        (progn
-          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
-          nil))))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
@@ -100,22 +98,25 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (progn
-          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
-          nil))))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-module-exported-functions (module)
-  "Fetches all exported functions of module on the node associated with
+  "Fetches all exported functions of `module' on the node associated with
 current buffer."
-  (let* ((res (edts-get-basic-module-info module))
-         (mod (car res))
-         (exports (cdr (assoc 'exports (cdr mod)))))
-      (mapcar #'edts-function-to-string exports)))
+  (let* ((node-name (edts-project-buffer-node-name))
+         (resource (list "nodes" node-name
+                         "modules" module
+                         "functions"))
+         (res      (edts-rest-get resource '(("exported" . "true")))))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (mapcar #'edts-function-to-string
+                (cdr (assoc 'functions (cdr (assoc 'body res)))))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-function-to-string (export)
+(defun edts-function-to-string (function-struct)
   "Converts a function struct to a string. For now, just grabs the name and
 disregards arity."
-  (cdr (assoc 'function export)))
+  (cdr (assoc 'function function-struct)))
 
 (defun edts-get-basic-module-info (module)
   "Fetches basic info about module on the node associated with current buffer"
@@ -135,9 +136,7 @@ buffer"
                     (list (cons "info_level" (symbol-name level))))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (progn
-          (message "Unexpected reply: %s" (cdr (assoc 'result res)))
-          nil))))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 
 (provide 'edts)

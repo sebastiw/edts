@@ -40,7 +40,6 @@
   "Send a post request to resource with args"
   (edts-rest-request "POST" resource args))
 
-
 (defun edts-rest-request (method resource args)
   "Send a get request to resource with args"
  (let ((url                       (edts-rest-resource-url resource args))
@@ -76,7 +75,6 @@
     (format "http://%s:%s/%s?%s" host port path args)))
 
 (defun edts-rest-encode-arg (arg)
-  "Url-encode a single argument."
   (concat (car arg) "=" (cdr arg)))
 
 (defun edts-rest-encode (data)
