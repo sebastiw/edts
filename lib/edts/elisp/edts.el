@@ -119,14 +119,25 @@ disregards arity."
 
 (defun edts-get-basic-module-info (module)
   "Fetches basic info about module on the node associated with current buffer"
+  (edts-get-module-info module 'basic))
+
+(defun edts-get-detailed-module-info (module)
+  "Fetches detailed info about module on the node associated with current
+buffer"
+  (edts-get-module-info module 'detailed))
+
+(defun edts-get-module-info (module level)
+  "Fetches info about `module' on the node associated with current buffer"
   (let* ((node-name (edts-project-buffer-node-name))
-         (resource
-          (list "nodes" node-name "modules" module))
-         (res      (edts-rest-get resource nil)))
+         (resource (list "nodes" node-name "modules" module))
+         (res      (edts-rest-get
+                    resource
+                    (list (cons "info_level" (symbol-name level))))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
         (progn
           (message "Unexpected reply: %s" (cdr (assoc 'result res)))
           nil))))
+
 
 (provide 'edts)

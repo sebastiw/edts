@@ -34,21 +34,22 @@
 
 (defun edts-rest-get (resource args)
   "Send a get request to resource with args"
+  (edts-rest-request "GET" resource args)
+
+(defun edts-rest-post (resource args)
+  "Send a post request to resource with args"
+  (edts-rest-request "POST" resource args))
+
+
+(defun edts-rest-request (method resource args)
+  "Send a get request to resource with args"
  (let ((url                       (edts-rest-resource-url resource args))
-       (url-request-method        "GET")
+       (url-request-method        method)
        (url-request-extra-headers (list edts-rest-content-type-hdr))
        (url-show-status           nil))
    (with-current-buffer (url-retrieve-synchronously url)
      (edts-rest-parse-http-response))))
 
-(defun edts-rest-post (resource args)
-  "Send a post request to resource with args"
- (let ((url                       (edts-rest-resource-url resource args))
-       (url-request-method        "POST")
-       (url-request-extra-headers (list edts-rest-content-type-hdr))
-       (url-show-status           nil))
-   (with-current-buffer (url-retrieve-synchronously url)
-     (edts-rest-parse-http-response))))
 
 (defun my-switch-to-url-buffer (status)
       "Switch to the buffer returned by `url-retreive'.
