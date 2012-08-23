@@ -1,6 +1,8 @@
 .eunit
 deps
 ebin
+lib/mochiweb
+lib/webmachine
 erl_crash.dump
 *.o
 *.beam
