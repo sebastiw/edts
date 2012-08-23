@@ -47,12 +47,18 @@ When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
   (ring-insert-at-beginning edts-find-history-ring
 			    (copy-marker (point-marker)))
-  (if (equal module (erlang-get-module))
-      (when function (ferl-search-function function arity))
+  (if (or (equal module (erlang-get-module))
+          (string-equal module "MODULE"))
+      (if function
+          (ferl-search-function function arity)
+          (null (error "Function %s/s not found")))
       (let* ((node (edts-project-buffer-node-name))
              (info (edts-get-function-info node module function arity)))
-        (find-file (cdr (assoc 'source info)))
-        (goto-line (cdr (assoc 'line   info))))))
+        (if info
+            (prognu
+              (find-file (cdr (assoc 'source info)))
+              (goto-line (cdr (assoc 'line   info))))
+            (null (error "Function %s/s not found"))))))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
