@@ -162,7 +162,7 @@ parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
              , {function, F}
              , {arity, A}] || {F, A} <- Imports0],
-  orddict:update(imports, fun(I) -> [Imports|I] end, Acc);
+  orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
 parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
   FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
                ({record_field, _, {_, _, FName}, _Call}) -> FName
