@@ -49,37 +49,28 @@
                            [{atom(), term()}].
 %%------------------------------------------------------------------------------
 get_function_info(M, F0, A0) ->
-  c:l(M),
+  reload_module(M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  InfoFun = fun({attribute, _Line, export}, Acc) ->
-                orddict:store(exported, lists:member({F0, A0}, Acc));
-               ({function, Line, F, A, _Clauses}, Acc) when F =:= F0 andalso
-                                                            A =:= A0 ->
-                throw({done, orddict:store(line_start, Line, Acc)});
-               ({attribute, _Line, file, {Source, _Line}}, Acc) ->
-                orddict:store(source, Source, Acc);
-               (_, Acc) -> Acc
-            end,
-  Dict0 = orddict:from_list([{module,   M}
-                          , {function, F0}
-                          , {arity,    A0}
-                          , {exported, false}]),
-  Dict = try lists:foldl(InfoFun, Dict0, Abstract)
-         catch throw:{done, Dict1} -> Dict1
-         end,
-  %% Get rid of any local paths, in case function was defined in a
-  %% file include with a relative path.
-  SourcePath0 = orddict:fetch(source, Dict),
-  case filename:absname(SourcePath0) of
-    SourcePath0 -> orddict:to_list(Dict);
-    SourcePath  ->
-      {source, BeamSource} = lists:keyfind(source, 1, M:module_info(compile)),
-      RealPath = filename:join(filename:dirname(BeamSource), SourcePath),
-      orddict:from_list(orddict:store(source, RealPath, Dict))
+  OrigSource = proplists:get_value(source, M:module_info(compile)),
+  case get_file_and_line(M, F0, A0, OrigSource, Abstract) of
+    {error, _} = Err   -> Err;
+    {ok, {File, Line}} ->
+      %% Get rid of any local paths, in case function was defined in a
+      %% file include with a relative path.
+      Source =
+        case filename:pathtype(File) of
+          absolute -> File;
+          relative -> filename:join(filename:dirname(OrigSource), File)
+        end,
+      [ {module,   M}
+      , {function, F0}
+      , {arity,    A0}
+      , {exported, lists:member({F0, A0}, M:module_info(exports))}
+      , {source,   Source}
+      , {line,     Line}]
   end.
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -97,7 +88,7 @@ get_module_info(M) ->
 -spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
 get_module_info(M, Level) ->
-  c:l(M),
+  reload_module(M),
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
@@ -125,56 +116,8 @@ do_get_module_info(M, detailed) ->
   Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
   Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
   Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
-  Dict3 = orddict:erase(cur_file,  Dict2),
-  %% Reset source of module to original value (just in case the last line is an
-  %% include/include_lib).
-  Dict  = orddict:store(source, orddict:fetch(source, Acc0), Dict3),
+  Dict = orddict:erase(cur_file,  Dict2),
   orddict:to_list(Dict).
-
-parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
-  M = orddict:fetch(module, Acc),
-  FunInfo =
-    [ {module,   M}
-    , {function, F}
-    , {arity,    A}
-    , {exported, lists:member({F, A}, M:module_info(exports))}
-    , {source,   orddict:fetch(source, Acc)}
-    , {line,     Line}],
-  orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
-parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
-  %% %% Get rid of any local paths, in case function was defined in a
-  %% %% file include with a relative path.
-  BeamSource = orddict:fetch(source, Acc0),
-  Source =
-    case filename:absname(Source0) of
-      Source0    -> Source0;
-      Source1    -> filename:join(filename:dirname(BeamSource), Source1)
-    end,
-  %% Update list of all files.
-  Acc =
-    case Source of
-      BeamSource -> Acc0;
-      Source     -> orddict:update(includes, fun(I) -> [Source|I] end, Acc0)
-    end,
-  %% Update current file.
-  orddict:store(cur_file, Source, Acc);
-parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
-  Imports = [[ {module, Module}
-             , {function, F}
-             , {arity, A}] || {F, A} <- Imports0],
-  orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
-parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
-  FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
-               ({record_field, _, {_, _, FName}, _Call}) -> FName
-            end,
-  RecordInfo =
-    [ {name,   Recordname}
-      , {fields, lists:map(FieldsF, Fields)}
-      , {line,   Line}
-      , {source, orddict:fetch(source, Acc)}],
-  orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
-parse_abstract(_, Acc) -> Acc.
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -201,6 +144,10 @@ start() ->
 
 %%%_* Internal functions =======================================================
 
+%%------------------------------------------------------------------------------
+%% @doc Initializes the server.
+-spec init() -> ok.
+%%------------------------------------------------------------------------------
 init() ->
   ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
   Paths = code:get_path(),
@@ -213,6 +160,21 @@ init() ->
                 end,
                 Paths).
 
+%%------------------------------------------------------------------------------
+%% @doc Reloads a module unless it is sticky.
+-spec reload_module(M::module()) -> ok.
+%%------------------------------------------------------------------------------
+reload_module(M) ->
+  case code:is_sticky(M) of
+    true  -> ok;
+    false -> c:l(M)
+  end,
+  ok.
+
+%%------------------------------------------------------------------------------
+%% @doc Updates the xref server
+-spec update() -> ok.
+%%------------------------------------------------------------------------------
 update() ->
   {ok, _Modules} = xref:update(?SERVER),
   ok.
@@ -220,6 +182,70 @@ update() ->
 %% Query the server to cache values.
 analyze() ->
   modules().
+
+%%------------------------------------------------------------------------------
+%% @doc Get the file and line of a function from abstract code.
+-spec get_file_and_line(M::module(), F::atom(), A::non_neg_integer(),
+                        File::string(), Abstract::[term()])->
+                           {ok, {File::string(), Line::non_neg_integer()}}.
+%%------------------------------------------------------------------------------
+get_file_and_line(_M, F, A, CurFile, [{function, Line, F, A, _Clauses}|_T]) ->
+  {ok, {CurFile, Line}};
+get_file_and_line(M, F, A, _CurFile, [{attribute, _, file, {File, _}}|T]) ->
+  get_file_and_line(M, F, A, File, T);
+get_file_and_line(M, F, A, CurFile, [_H|T]) ->
+  get_file_and_line(M, F, A, CurFile, T);
+get_file_and_line(_M, _F, _A, _CurFile, []) ->
+  {error, not_found}.
+
+%%------------------------------------------------------------------------------
+%% @doc Parse abstract code into a module information substract.
+-spec parse_abstract(Abstract::[term()], Acc::orddict:orddict()) ->
+                        orddict:orddict().
+%%------------------------------------------------------------------------------
+parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
+  M = orddict:fetch(module, Acc),
+  FunInfo =
+    [ {module,   M}
+    , {function, F}
+    , {arity,    A}
+    , {exported, lists:member({F, A}, M:module_info(exports))}
+    , {source,   orddict:fetch(source, Acc)}
+    , {line,     Line}],
+  orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
+parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
+  %% %% Get rid of any local paths, in case function was defined in a
+  %% %% file include with a relative path.
+  BeamSource = orddict:fetch(source, Acc0),
+  Source =
+    case filename:pathtype(Source0) of
+      absolute -> Source0;
+      relative -> filename:join(filename:dirname(BeamSource), Source0)
+    end,
+  %% Update list of all files.
+  Acc =
+    case Source of
+      BeamSource -> Acc0;
+      Source     -> orddict:update(includes, fun(I) -> [Source|I] end, Acc0)
+    end,
+  %% Update current file.
+  orddict:store(cur_file, Source, Acc);
+parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
+  Imports = [[ {module, Module}
+             , {function, F}
+             , {arity, A}] || {F, A} <- Imports0],
+  orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
+parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
+  FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
+               ({record_field, _, {_, _, FName}, _Call}) -> FName
+            end,
+  RecordInfo =
+    [ {name,   Recordname}
+      , {fields, lists:map(FieldsF, Fields)}
+      , {line,   Line}
+      , {source, orddict:fetch(source, Acc)}],
+  orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
+parse_abstract(_, Acc) -> Acc.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
