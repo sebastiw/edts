@@ -94,7 +94,7 @@
           (when name (add-to-list 'funs name))))
       funs)))
 
-;; Borrowed  from distel
+;; Borrowed from distel
 (defun ferl-mfa-at-point (&optional default-module)
   "Return the module, function, arity of the function reference at point.
 If not module-qualified then use DEFAULT-MODULE."
@@ -108,7 +108,7 @@ If not module-qualified then use DEFAULT-MODULE."
         (destructuring-bind (module function) mf
           (list (or module default-module) function arity))))))
 
-;; Borrowed  from distel
+;; Borrowed from distel
 (defun ferl-goto-end-of-call-name ()
   "Go to the end of the function or module:function at point."
   ;; We basically just want to do forward-sexp iff we're not already

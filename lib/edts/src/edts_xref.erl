@@ -62,7 +62,13 @@ get_function_info(M, F0, A0) ->
       Source =
         case filename:pathtype(File) of
           absolute -> File;
-          relative -> filename:join(filename:dirname(OrigSource), File)
+          relative ->
+            % Deals with File = "./src". Must be a better way to do this.
+            case lists:suffix(File, OrigSource) of
+              true  -> OrigSource;
+              false ->
+                filename:join(filename:dirname(OrigSource), File)
+            end
         end,
       [ {module,   M}
       , {function, F0}

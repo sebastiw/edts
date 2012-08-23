@@ -40,6 +40,9 @@
 (require 'edts-project)
 (edts-project-init)
 (require 'edts-navigate)
+(if (boundp 'window-persistent-parameters)
+  (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
+  (setq         window-persistent-parameters '((edts-find-history-ring . t))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

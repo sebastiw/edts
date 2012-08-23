@@ -20,8 +20,10 @@
 ;;
 ;; Code for jumping around between modules etc.
 
-(defvar edts-find-history-ring (make-ring 20)
-  "History ring tracing for following functions to their definitions.")
+(defun edts-window-find-history-ring ()
+  (let ((window (selected-window)))
+    (or (window-parameter window edts-find-history-ring)
+        (set-window-parameter window edts-find-history-ring (make-ring 20)))))
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
@@ -45,7 +47,7 @@ look in, with the following algorithm:
   "Find the source code for MODULE in a buffer, loading it if necessary.
 When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
-  (ring-insert-at-beginning edts-find-history-ring
+  (ring-insert-at-beginning (edts-window-find-history-ring)
 			    (copy-marker (point-marker)))
   (if (or (equal module (erlang-get-module))
           (string-equal module "MODULE"))
@@ -55,7 +57,7 @@ When FUNCTION is specified, the point is moved to its start."
       (let* ((node (edts-project-buffer-node-name))
              (info (edts-get-function-info node module function arity)))
         (if info
-            (prognu
+            (progn
               (find-file (cdr (assoc 'source info)))
               (goto-line (cdr (assoc 'line   info))))
             (null (error "Function %s/s not found"))))))
@@ -64,13 +66,14 @@ When FUNCTION is specified, the point is moved to its start."
 (defun edts-find-source-unwind ()
   "Unwind back from uses of `edts-find-source-under-point'."
   (interactive)
-  (unless (ring-empty-p edts-find-history-ring)
-    (let* ((marker (ring-remove edts-find-history-ring))
-	   (buffer (marker-buffer marker)))
-      (if (buffer-live-p buffer)
-	  (progn (switch-to-buffer buffer)
-		 (goto-char (marker-position marker)))
-	;; If this buffer was deleted, recurse to try the next one
-	(edts-find-source-unwind))))) 
+  (let ((ring (edts-window-find-history-ring)))
+    (unless (ring-empty-p ring)
+      (let* ((marker (ring-remove ring))
+             (buffer (marker-buffer marker)))
+        (if (buffer-live-p buffer)
+            (progn (switch-to-buffer buffer)
+                   (goto-char (marker-position marker)))
+          ;; If this buffer was deleted, recurse to try the next one
+          (edts-find-source-unwind))))))
 
 (provide 'edts-navigate)
