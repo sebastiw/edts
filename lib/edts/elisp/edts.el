@@ -90,6 +90,19 @@
         node-name
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-get-function-info (node module function arity)
+  "Fetches info `module' on the node associated with
+current buffer."
+  (let* ((node-name (edts-project-buffer-node-name))
+         (resource (list "nodes" node-name
+                         "modules" module
+                         "functions" function))
+         (arguments (list (cons "arity" (number-to-string arity))))
+         (res      (edts-rest-get resource arguments)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'body res))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
 current buffer."

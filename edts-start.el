@@ -39,6 +39,7 @@
 (edts-ensure-server-started)
 (require 'edts-project)
 (edts-project-init)
+(require 'edts-navigate)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -92,5 +93,8 @@
 (define-key erlang-mode-map (kbd "C-c C-d C-f")   'ferl-goto-next-function)
 (define-key erlang-mode-map (kbd "C-c C-d C-e")   'edts-ahs-edit-current-function)
 (define-key erlang-mode-map (kbd "C-c C-d C-S-e") 'ahs-edit-mode)
+(define-key erlang-mode-map (kbd "M-.")           'edts-find-source)
+(when (boundp 'erlang-extended-mode-map)
+  (define-key erlang-extended-mode-map (kbd "M-.") 'edts-find-source-under-point))
 
 (provide 'edts-start)

@@ -94,5 +94,93 @@
           (when name (add-to-list 'funs name))))
       funs)))
 
+;; Borrowed  from distel
+(defun ferl-mfa-at-point (&optional default-module)
+  "Return the module, function, arity of the function reference at point.
+If not module-qualified then use DEFAULT-MODULE."
+  (when (null default-module) (setq default-module (erlang-get-module)))
+  (save-excursion
+    (ferl-goto-end-of-call-name)
+    (let ((arity (ferl-arity-at-point))
+	  (mf (erlang-get-function-under-point)))
+      (if (null mf)
+	  nil
+        (destructuring-bind (module function) mf
+          (list (or module default-module) function arity))))))
+
+;; Borrowed  from distel
+(defun ferl-goto-end-of-call-name ()
+  "Go to the end of the function or module:function at point."
+  ;; We basically just want to do forward-sexp iff we're not already
+  ;; in the right place
+  (unless (or (member (char-before) '(?  ?\t ?\n))
+              (and (not (eobp))
+                   (member (char-syntax (char-after (point))) '(?w ?_))))
+    (backward-sexp))
+  (forward-sexp)
+  ;; Special case handling: On some emacs installations the (forward-sexp)
+  ;; won't skip over the : in a remote function call. This is a workaround for
+  ;; that. The issue seems to be that the emacs considers : to be punctuation
+  ;; (syntax class '.'), whereas my emacs calls it a symbol separator (syntax
+  ;; class '_'). FIXME.
+  (when (eq (char-after) ?:)
+    (forward-sexp)))
+
+;; borrowed from distel
+;;; FIXME: Merge with erlang.el!
+(defun ferl-arity-at-point ()
+  "Get the number of arguments in a function reference.
+Should be called with point directly before the opening ( or /."
+  ;; Adapted from erlang-get-function-arity.
+  (save-excursion
+    (cond ((looking-at "/")
+	   ;; form is /<n>, like the /2 in foo:bar/2
+	   (forward-char)
+	   (let ((start (point)))
+	     (if (re-search-forward "[0-9]+" nil t)
+                 (ignore-errors (car (read-from-string (match-string 0)))))))
+	  ((looking-at "[\n\r ]*(")
+	   (goto-char (match-end 0))
+	   (condition-case nil
+	       (let ((res 0)
+		     (cont t))
+		 (while cont
+		   (cond ((eobp)
+			  (setq res nil)
+			  (setq cont nil))
+			 ((looking-at "\\s *)")
+			  (setq cont nil))
+			 ((looking-at "\\s *\\($\\|%\\)")
+			  (forward-line 1))
+			 ((looking-at "\\s *,")
+			  (incf res)
+			  (goto-char (match-end 0)))
+			 (t
+			  (when (zerop res)
+			    (incf res))
+			  (forward-sexp 1))))
+		 res)
+	     (error nil))))))
+
+(defun ferl-search-function (function arity)
+  "Goto the definition of FUNCTION/ARITY in the current buffer."
+  (let ((origin (point))
+	(str (concat "\n" function "("))
+	(searching t))
+    (goto-char (point-min))
+    (while searching
+      (cond ((search-forward str nil t)
+	     (backward-char)
+	     (when (or (null arity)
+		       (eq (ferl-arity-at-point) arity))
+	       (beginning-of-line)
+	       (setq searching nil)))
+	    (t
+	     (setq searching nil)
+	     (goto-char origin)
+	     (if arity
+		 (message "Couldn't find function %S/%S" function arity)
+	       (message "Couldn't find function %S" function)))))))
+
 
 (provide 'ferl)

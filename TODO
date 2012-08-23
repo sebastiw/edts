@@ -1,4 +1,7 @@
 ;; TODO
+;; - Window specific jump-ring
+;; - replace following word if it is same as end of completion
+;; - Change to LGPL
 ;; - Check if auto-complete-mode removes duplicates from different sources.
 ;; - (re?) load modules before trying to extract info
 ;; - set completion requirement to 1 for all sources
