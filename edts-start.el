@@ -3,6 +3,7 @@
 ;; EDTS Setup and configuration.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'cl)
 
 (defvar edts-lib-directory
   (file-truename
