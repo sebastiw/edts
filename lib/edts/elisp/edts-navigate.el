@@ -98,8 +98,8 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-window-find-history-ring ()
   (let ((window (selected-window)))
-    (or (window-parameter window edts-find-history-ring)
-        (set-window-parameter window edts-find-history-ring (make-ring 20)))))
+    (or (window-parameter window 'edts-find-history-ring)
+        (set-window-parameter window 'edts-find-history-ring (make-ring 20)))))
 
 
 (provide 'edts-navigate)
