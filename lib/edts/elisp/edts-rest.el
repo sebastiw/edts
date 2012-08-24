@@ -42,12 +42,14 @@
 
 (defun edts-rest-request (method resource args)
   "Send a get request to resource with args"
- (let ((url                       (edts-rest-resource-url resource args))
-       (url-request-method        method)
-       (url-request-extra-headers (list edts-rest-content-type-hdr))
-       (url-show-status           nil))
-   (with-current-buffer (url-retrieve-synchronously url)
-     (edts-rest-parse-http-response))))
+ (let* ((url                       (edts-rest-resource-url resource args))
+        (url-request-method        method)
+        (url-request-extra-headers (list edts-rest-content-type-hdr))
+        (url-show-status           nil)
+        (buffer (url-retrieve-synchronously url)))
+   (when buffer
+     (with-current-buffer buffer
+         (edts-rest-parse-http-response)))))
 
 
 (defun my-switch-to-url-buffer (status)
@@ -58,13 +60,14 @@
 (defun edts-rest-parse-http-response ()
   (save-excursion
     (goto-char (point-min))
-    (let* ((status (split-string (buffer-substring (point) (point-at-eol))))
-           (result (cdr status))
-           (body   (edts-rest-try-decode
-                    (buffer-substring (search-forward "\n\n") (point-max)))))
-      (list
-       (cons 'result result)
-       (cons 'body   body)))))
+    (let* ((status     (split-string (buffer-substring (point) (point-at-eol))))
+           (result     (cdr status))
+           (body-start (search-forward "\n\n" nil t)))
+    (if body-start
+        (list
+         (cons 'result result)
+         (cons 'body (edts-rest-try-decode (buffer-substring body-start (point-max))))
+        (list (cons 'result result)))))))
 
 (defun edts-rest-resource-url (resource args)
   "Construct the edts resource url."

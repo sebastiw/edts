@@ -4,8 +4,6 @@
 ;; - (re?) load modules before trying to extract info
 ;; - set completion requirement to 1 for all sources
 ;; - erl-who-calls
-;; - M-., M-,
-;; - find-module
 ;; - macro completion
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change

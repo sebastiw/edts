@@ -20,10 +20,28 @@
 ;;
 ;; Code for jumping around between modules etc.
 
-(defun edts-window-find-history-ring ()
-  (let ((window (selected-window)))
-    (or (window-parameter window edts-find-history-ring)
-        (set-window-parameter window edts-find-history-ring (make-ring 20)))))
+(defun edts-find-module()
+  (interactive)
+  (let ((modules (edts-get-modules)))
+    (if modules
+        (let* ((choice (if ido-mode
+                           (ido-completing-read "Module: " modules)
+                           (completing-read     "Module:"  modules)))
+               (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
+               (mark (copy-marker (point-marker))))
+          (find-file-existing file) ; Fixme, catch error
+          (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+          (message "No modules found")))))
+
+
+(defun edts-find-local-function()
+  (interactive)
+  (let* ((functions (ferl-local-functions))
+         (names     (mapcar #'(lambda (el) (car el)) functions))
+         (choice    (ido-completing-read "Function: " names))
+         (start     (cdr (assoc choice functions)))
+         )
+    (goto-char start)))
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
@@ -47,20 +65,22 @@ look in, with the following algorithm:
   "Find the source code for MODULE in a buffer, loading it if necessary.
 When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
-  (ring-insert-at-beginning (edts-window-find-history-ring)
-			    (copy-marker (point-marker)))
-  (if (or (equal module (erlang-get-module))
-          (string-equal module "MODULE"))
-      (if function
-          (ferl-search-function function arity)
-          (null (error "Function %s/s not found")))
-      (let* ((node (edts-project-buffer-node-name))
-             (info (edts-get-function-info node module function arity)))
-        (if info
+  (let ((mark (copy-marker (point-marker))))
+    (if (or (equal module (erlang-get-module))
+            (string-equal module "MODULE"))
+        (if function
             (progn
-              (find-file (cdr (assoc 'source info)))
-              (goto-line (cdr (assoc 'line   info))))
-            (null (error "Function %s/s not found"))))))
+              (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+              (ferl-search-function function arity))
+            (null (error "Function %s/s not found")))
+        (let* ((node (edts-project-buffer-node-name))
+               (info (edts-get-function-info node module function arity)))
+          (if info
+              (progn
+                (find-file-existing (cdr (assoc 'source info)))
+                (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+                (goto-line (cdr (assoc 'line   info))))
+              (null (error "Function %s/s not found")))))))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
@@ -75,5 +95,11 @@ When FUNCTION is specified, the point is moved to its start."
                    (goto-char (marker-position marker)))
           ;; If this buffer was deleted, recurse to try the next one
           (edts-find-source-unwind))))))
+
+(defun edts-window-find-history-ring ()
+  (let ((window (selected-window)))
+    (or (window-parameter window edts-find-history-ring)
+        (set-window-parameter window edts-find-history-ring (make-ring 20)))))
+
 
 (provide 'edts-navigate)

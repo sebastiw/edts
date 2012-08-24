@@ -60,15 +60,6 @@
   (while (not (erlang-get-function-name))
     (erlang-beginning-of-function -1)))
 
-(defun ferl-goto-function()
-  (interactive)
-  (let* ((functions (ferl-functions))
-         (names     (mapcar #'(lambda (el) (car el)) functions))
-         (choice    (ido-completing-read "Function: " names))
-         (start     (cdr (assoc choice functions)))
-         )
-    (goto-char start)))
-
 (defun ferl-local-functions ()
   (save-excursion
     (goto-char (point-min))
