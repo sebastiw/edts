@@ -97,7 +97,7 @@
 (define-key erlang-mode-map (kbd "C-c C-d C-e")   'edts-ahs-edit-current-function)
 (define-key erlang-mode-map (kbd "C-c C-d C-S-e") 'ahs-edit-mode)
 (define-key erlang-mode-map (kbd "M-.")           'edts-find-source)
-(define-key erlang-mode-map (kbd "M-,")           'edts-find-source-unwind))
+(define-key erlang-mode-map (kbd "M-,")           'edts-find-source-unwind)
 (define-key erlang-mode-map (kbd "C-c C-d F")     'edts-find-module)
 (when (boundp 'erlang-extended-mode-map)
   (define-key erlang-extended-mode-map (kbd "C-c C-d F") 'edts-find-module)
