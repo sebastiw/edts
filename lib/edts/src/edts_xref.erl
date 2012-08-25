@@ -31,7 +31,8 @@
         , get_module_info/1
         , get_module_info/2
         , modules/0
-        , start/0]).
+        , start/0
+        , who_calls/3]).
 
 %%%_* Includes =================================================================
 
@@ -147,6 +148,10 @@ start() ->
     {error, {already_started, _Pid}} -> update()
   end,
   analyze().
+
+who_calls(M0, F0, A0) ->
+  {ok, Analysis} = xref:q(edts_xref, "XC || X"),
+  [In || {In, {M, F, A}} <- Analysis, M =:= M0, F =:= F0, A =:= A0].
 
 %%%_* Internal functions =======================================================
 

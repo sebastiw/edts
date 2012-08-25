@@ -32,6 +32,7 @@
 -export([ allowed_methods/2
         , content_types_provided/2
         , init/1
+        , malformed_request/2
         , resource_exists/2]).
 
 %% Handlers
@@ -57,6 +58,9 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/html",        to_json}
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
+
+malformed_request(ReqData, Ctx) ->
+  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
 resource_exists(ReqData, Ctx0) ->
   Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),

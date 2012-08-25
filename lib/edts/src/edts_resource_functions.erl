@@ -60,20 +60,11 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  case wrq:get_qs_value("exported", ReqData) of
-    undefined ->
-      {false, ReqData, orddict:store(exported, all, Ctx)};
-    Exported when Exported =:= "true" orelse
-                  Exported =:= "false" orelse
-                  Exported =:= "all" ->
-      {false, ReqData, orddict:store(exported, list_to_atom(Exported), Ctx)};
-    _ ->
-      {true, ReqData, Ctx}
-  end.
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  Module   = list_to_atom(wrq:path_info(module, ReqData)),
+  Nodename = orddict:fetch(nodename),
+  Module   = orddict:fetch(module),
   case edts:node_available_p(Nodename) of
     false -> {false, ReqData, Ctx};
     true ->
@@ -85,7 +76,7 @@ resource_exists(ReqData, Ctx) ->
 
 to_json(ReqData, Ctx) ->
   Exported = orddict:fetch(exported, Ctx),
-  Info = orddict:fetch(info, Ctx),
+  Info     = orddict:fetch(info, Ctx),
   {functions, Functions} = lists:keyfind(functions, 1, Info),
   Data = format(Exported, Functions), [], Info,
   {mochijson2:encode(Data), ReqData, Ctx}.

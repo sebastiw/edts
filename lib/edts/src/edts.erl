@@ -34,8 +34,9 @@
         , is_node/1
         , node_available_p/1
         , modules/1
-        , node_exists/1
-        , nodes/0]).
+        , node_reachable/1
+        , nodes/0
+        , who_calls/4]).
 
 %%%_* Includes =================================================================
 
@@ -63,6 +64,26 @@ get_function_info(Node, Module, Function, Arity) ->
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns a list of the functions calling Module:Function/Arity on Node.
+%% @end
+%%
+-spec who_calls( Node    ::node()
+               , Module  ::module()
+               , Function::atom()
+               , Arity   ::non_neg_integer()) ->
+                   [{module(), atom(), term()}].
+%%------------------------------------------------------------------------------
+who_calls(Node, Module, Function, Arity) ->
+  edts_server:ensure_node_initialized(Node),
+  Args = [Module, Function, Arity],
+  case edts_dist:call(Node, edts_xref, who_calls, Args) of
+    {badrpc, _} -> {error, not_found};
+    Info  -> Info
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -129,11 +150,13 @@ modules(Node) ->
 %% Returns true if Node is registerend with the epmd on localhost.
 %% @end
 %%
--spec node_exists(Node::node()) -> boolean().
+-spec node_reachable(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
-node_exists(Node) ->
-  {ok, Names} = net_adm:names(),
-  lists:any(fun({Name, _Port}) -> Name =:= Node end, Names).
+node_reachable(Node) ->
+  case net_adm:ping(Node) of
+    pong -> true;
+    pang -> false
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

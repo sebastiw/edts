@@ -65,12 +65,8 @@ content_types_accepted(ReqData, Ctx) ->
 create_path(ReqData, Ctx) ->
   {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
-malformed_request(ReqData, Ctx0) ->
-  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  case edts:node_exists(Nodename) of
-    false -> {false, ReqData, orddict:store(nodename, Nodename, Ctx0)};
-    true  -> {true, ReqData, Ctx0}
-  end.
+malformed_request(ReqData, Ctx) ->
+  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.

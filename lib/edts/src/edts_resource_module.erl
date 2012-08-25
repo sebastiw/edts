@@ -60,23 +60,15 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  case wrq:get_qs_value("info_level", ReqData) of
-    undefined ->
-      {false, ReqData, orddict:store(info_level, basic, Ctx)};
-    Info when Info =:= "basic" orelse
-              Info =:= "detailed" ->
-      {false, ReqData, orddict:store(info_level, list_to_atom(Info), Ctx)};
-    _ ->
-      {true, ReqData, Ctx}
-  end.
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, info_level]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  Module = list_to_atom(wrq:path_info(module, ReqData)),
-  Level  = orddict:fetch(info_level, Ctx),
-  Info   = edts:get_module_info(Nodename, Module, Level),
-  Exists = edts:node_available_p(Nodename) andalso
-           not (Info =:= {error, not_found}),
+  Nodename = orddict:fetch(nodename, Ctx),
+  Module   = orddict:fetch(module, Ctx),
+  Level    = orddict:fetch(info_level, Ctx),
+  Info     = edts:get_module_info(Nodename, Module, Level),
+  Exists   = edts:node_available_p(Nodename) andalso
+             not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers

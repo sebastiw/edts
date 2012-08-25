@@ -60,13 +60,7 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  case wrq:get_qs_value("arity", ReqData) of
-    undefined -> {false, ReqData, orddict:store(arity, 0, Ctx)};
-    Arity ->
-      try {false, ReqData, orddict:store(arity, list_to_integer(Arity), Ctx)}
-      catch error:badarg -> {true ,ReqData, Ctx}
-      end
-  end.
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
 
 resource_exists(ReqData, Ctx) ->
   Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
@@ -81,9 +75,7 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info0 = orddict:fetch(info, Ctx),
-  io:format("Info ~p~n", [Info0]),
   {value, {source, S}, Other} = lists:keytake(source, 1, Info0),
-  io:format("3"),
   Data = {struct, [{source, list_to_binary(S)}|Other]},
   {mochijson2:encode(Data), ReqData, Ctx}.
 
