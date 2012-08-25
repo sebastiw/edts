@@ -1,4 +1,6 @@
 ;; TODO
+;; - Newly created modules
+;; - Modules outside projects
 ;; - replace following word if it is same as end of completion
 ;; - Check if auto-complete-mode removes duplicates from different sources.
 ;; - (re?) load modules before trying to extract info
