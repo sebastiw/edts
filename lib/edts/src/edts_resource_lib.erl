@@ -28,7 +28,8 @@
 %%%_* Exports ==================================================================
 
 %% Application callbacks
--export([ make_nodename/1
+-export([ exists_p/3
+        , make_nodename/1
         , validate/3]).
 
 %%%_* Includes =================================================================
@@ -39,16 +40,30 @@
 
 %%%_* API ======================================================================
 
+
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate ReqData
+%% Check that all elements of resource_exist.
+%% @end
+-spec exists_p(wrq:req_data(), orddict:orddict(), [atom]) ->
+               {boolean(), wrq:req_data(), orddict:orddict()}.
+%%------------------------------------------------------------------------------
+exists_p(ReqData, Ctx, Keys) ->
+  F = fun(Key) -> (atom_to_exists_p(Key))(ReqData, Ctx) end,
+  lists:all(F, Keys).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate ReqData and convert values to internal representation.
+%% Fixme, should not be _p.
 %% @end
 -spec validate(wrq:req_data(), orddict:orddict(), [atom]) ->
                {boolean(), wrq:req_data(), orddict:orddict()}.
 %%------------------------------------------------------------------------------
 validate(ReqData0, Ctx0, Keys) ->
   F = fun(Key, {ReqData, Ctx}) ->
-          case (map_fun(Key))(ReqData, Ctx) of
+          case (atom_to_validate(Key))(ReqData, Ctx) of
             {ok, Value} ->
               {ReqData, orddict:store(Key, Value, Ctx)};
             error       ->
@@ -72,22 +87,26 @@ make_nodename(NameStr) ->
   list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ Host).
 
 %%%_* Internal functions =======================================================
+atom_to_exists_p(file)     -> fun file_exists_p/2;
+atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
+atom_to_exists_p(module)   -> fun module_exists_p/2.
 
-map_fun(arity)      -> fun arity/2;
-map_fun(exported)   -> fun exported/2;
-map_fun(function)   -> fun function/2;
-map_fun(info_level) -> fun info_level/2;
-map_fun(module)     -> fun module/2;
-map_fun(nodename)   -> fun nodename/2.
+atom_to_validate(arity)      -> fun arity_validate/2;
+atom_to_validate(exported)   -> fun exported_validate/2;
+atom_to_validate(file)       -> fun file_validate/2;
+atom_to_validate(function)   -> fun function_validate/2;
+atom_to_validate(info_level) -> fun info_level_validate/2;
+atom_to_validate(module)     -> fun module_validate/2;
+atom_to_validate(nodename)   -> fun nodename_validate/2.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate arity
 %% @end
--spec arity(wrq:req_data(), orddict:orddict()) ->
+-spec arity_validate(wrq:req_data(), orddict:orddict()) ->
                {ok, non_neg_integer()} | error.
 %%------------------------------------------------------------------------------
-arity(ReqData, _Ctx) ->
+arity_validate(ReqData, _Ctx) ->
   try
     case list_to_integer(wrq:path_info(arity, ReqData)) of
       Arity when Arity >= 0 -> {ok, Arity};
@@ -97,14 +116,15 @@ arity(ReqData, _Ctx) ->
   end.
 
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate export parameter
 %% @end
--spec exported(wrq:req_data(), orddict:orddict()) ->
+-spec exported_validate(wrq:req_data(), orddict:orddict()) ->
                     {ok,  boolean() | all} | error.
 %%------------------------------------------------------------------------------
-exported(ReqData, _Ctx) ->
+exported_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("exported", ReqData) of
     undefined -> {ok, all};
     "all"     -> {ok, all};
@@ -113,15 +133,31 @@ exported(ReqData, _Ctx) ->
     _         -> error
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Check if file exists.
+%% @end
+-spec file_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+file_exists_p(ReqData, _Ctx) ->
+  filelib:is_file(wrq:get_qs_value("file", ReqData)).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate path to a file.
+%% @end
+-spec file_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+file_validate(ReqData, _Ctx) ->
+  {ok, wrq:get_qs_value("file", ReqData)}.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate function
 %% @end
--spec function(wrq:req_data(), orddict:orddict()) ->
-                    {ok, module()} | error.
+-spec function_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()} | error.
 %%------------------------------------------------------------------------------
-function(ReqData, _Ctx) ->
+function_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(function, ReqData))}.
 
 
@@ -129,10 +165,10 @@ function(ReqData, _Ctx) ->
 %% @doc
 %% Validate arity
 %% @end
--spec info_level(wrq:req_data(), orddict:orddict()) ->
+-spec info_level_validate(wrq:req_data(), orddict:orddict()) ->
                     {ok, basic | detailed} | error.
 %%------------------------------------------------------------------------------
-info_level(ReqData, _Ctx) ->
+info_level_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("info_level", ReqData) of
     undefined  -> {ok, basic};
     "basic"    -> {ok, basic};
@@ -144,26 +180,45 @@ info_level(ReqData, _Ctx) ->
 %% @doc
 %% Validate module
 %% @end
--spec module(wrq:req_data(), orddict:orddict()) ->
+-spec module_validate(wrq:req_data(), orddict:orddict()) ->
                     {ok, module()} | error.
 %%------------------------------------------------------------------------------
-module(ReqData, _Ctx) ->
+module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate module
+%% @end
+-spec module_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+module_exists_p(_ReqData, Ctx) ->
+  Nodename = orddict:fetch(nodename, Ctx),
+  Module   = orddict:fetch(module, Ctx),
+  case rpc:call(Nodename, Module, module_info, []) of
+    {badrpc, _} -> false;
+    _ -> true
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate nodename
 %% @end
--spec nodename(wrq:req_data(), orddict:orddict()) ->
+-spec nodename_validate(wrq:req_data(), orddict:orddict()) ->
                {ok, node()} | error.
 %%------------------------------------------------------------------------------
-nodename(ReqData, _Ctx) ->
-  Nodename = make_nodename(wrq:path_info(nodename, ReqData)),
-  case edts:node_reachable(Nodename) of
-    true  -> {ok, Nodename};
-    false -> error
-  end.
+nodename_validate(ReqData, _Ctx) ->
+  {ok, make_nodename(wrq:path_info(nodename, ReqData))}.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate nodename
+%% @end
+-spec nodename_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+nodename_exists_p(_ReqData, Ctx) ->
+  edts:node_reachable(orddict:fetch(nodename, Ctx)).
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

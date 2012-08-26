@@ -45,10 +45,12 @@
 %% @doc
 %% Equivalent to compile_and_load(Module, []).
 %% @end
--spec compile_and_load(Module::module()) ->
-                          {ok, {module(), binary(), [term()]}}
-                        | {ok, {module(), binary()}}
-                        | {error, [term()], [term()]}.
+-spec compile_and_load(Module::file:filename() | module()) ->
+                          {ok | error,
+                           [{error | warning,
+                             File::string(),
+                             Line::non_neg_integer(),
+                             Description::string()}]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   compile_and_load(Module, []).
@@ -60,17 +62,24 @@ compile_and_load(Module) ->
 %% always include [binary, return, debug_info]. Any options passed in will be
 %% added to these.
 %% @end
--spec compile_and_load(Module::module(), [compile:option()]) ->
-                          {ok, {module(), [term()]}}
-                        | {error, {[term()], [term()]}}.
+-spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
+                          {ok | error,
+                           [{error | warning,
+                             File::string(),
+                             Line::non_neg_integer(),
+                             Description::string()}]}.
 %%------------------------------------------------------------------------------
-compile_and_load(Path, Options0) ->
-  AbsPath = filename:absname(Path),
-  Options = Options0 ++ [binary, return, debug_info, {i, get_include_dirs()}],
+compile_and_load(Module, Options) when is_atom(Module)->
+  File = proplists:get_value(source, Module:module_info(compile)),
+  compile_and_load(File, Options);
+compile_and_load(File, Options0) ->
+  AbsPath     = filename:absname(File),
+  IncludeDirs = filename:dirname(File) ++ get_include_dirs(),
+  Options     = Options0 ++ [binary, return, debug_info, {i, IncludeDirs}],
   case compile:file(AbsPath, Options) of
     {ok, Mod, Bin, Warnings} ->
       code:purge(Mod),
-      {module, Mod} = code:load_binary(Mod, Path, Bin),
+      {module, Mod} = code:load_binary(Mod, File, Bin),
       spawn(fun() -> update() end),
       {ok, format_errors(warning, Warnings)};
     {error, Errors, Warnings} ->
@@ -255,9 +264,10 @@ update() ->
 %%------------------------------------------------------------------------------
 
 format_errors(Type, Errors) ->
-   [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
-     || {Line, Source, Error} <- Errors0]
-       || {File, Errors0} <- Errors].
+   lists:append(
+     [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
+       || {Line, Source, Error} <- Errors0]
+         || {File, Errors0} <- Errors]).
 
 
 %%------------------------------------------------------------------------------

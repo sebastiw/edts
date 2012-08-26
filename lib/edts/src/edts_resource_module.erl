@@ -67,8 +67,9 @@ resource_exists(ReqData, Ctx) ->
   Module   = orddict:fetch(module, Ctx),
   Level    = orddict:fetch(info_level, Ctx),
   Info     = edts:get_module_info(Nodename, Module, Level),
-  Exists   = edts:node_available_p(Nodename) andalso
-             not (Info =:= {error, not_found}),
+  Exists   =
+    edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
+    not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers

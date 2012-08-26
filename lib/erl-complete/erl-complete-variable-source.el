@@ -51,6 +51,7 @@ mentioned in current function, before current point."
         (while (and (re-search-forward erlang-variable-regexp old-point t)
                     (< (match-end 0) old-point))
           (add-to-list 'candidates (thing-at-point 'symbol)))
+        (message "cands %s" candidates)
         candidates))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

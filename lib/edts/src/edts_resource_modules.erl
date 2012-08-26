@@ -62,10 +62,8 @@ content_types_provided(ReqData, Ctx) ->
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
-resource_exists(ReqData, Ctx0) ->
-  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  Ctx      = orddict:store(nodename, Nodename, Ctx0),
-  {edts:node_available_p(Nodename), ReqData, Ctx}.
+resource_exists(ReqData, Ctx) ->
+  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
 
 %% Handlers
 

@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_functions).
+-module(edts_resource_compilation_result).
 
 %%%_* Exports ==================================================================
 
@@ -60,42 +60,28 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, file]).
 
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
+  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, file]) of
     false -> {false, ReqData, Ctx};
-    true ->
+    true  ->
       Nodename = orddict:fetch(nodename, Ctx),
-      Module = orddict:fetch(module, Ctx),
-      case edts:get_module_info(Nodename, Module, detailed) of
-        {error, not_found} -> {false, ReqData, Ctx};
-        Info               -> {true,  ReqData, orddict:store(info, Info, Ctx)}
-      end
+      Filename = wrq:get_qs_value("file", ReqData),
+      Result   = edts:compile_and_load(Nodename, Filename),
+      {true, ReqData, orddict:store(compilation_result, Result, Ctx)}
   end.
 
+%% Handlers
+
 to_json(ReqData, Ctx) ->
-  Exported = orddict:fetch(exported, Ctx),
-  Info     = orddict:fetch(info, Ctx),
-  {functions, Functions} = lists:keyfind(functions, 1, Info),
-  Data = format(Exported, Functions), [], Info,
-  {mochijson2:encode(Data), ReqData, Ctx}.
-
-format(Exported, Functions0) ->
-  FunFun =
-    fun(Function, Acc) ->
-        case lists:keyfind(exported, 1, Function) of
-          {exported, V} when Exported =:= all orelse
-                             Exported =:= V ->
-            {value, {source, S}, Other} =
-              lists:keytake(source, 1, Function),
-            [{struct, [{source, list_to_binary(S)}|Other]}|Acc];
-          _ -> Acc
-        end
-    end,
-  Functions = lists:foldl(FunFun, [], Functions0),
-  {struct, [{functions, {array, Functions}}]}.
-
+  Result = orddict:fetch(compilation_result, Ctx),
+  Errors = [{struct, [ {type, Type}
+                     , {file, list_to_binary(File)}
+                     , {line, Line}
+                     , {description, list_to_binary(Desc)}]}
+            || {Type, File, Line, Desc} <- Result],
+  {mochijson2:encode({array, Errors}), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
 
