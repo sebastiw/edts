@@ -10,11 +10,11 @@
 
                     -- The Erlang Development Tool Suite --
 
-## Copyright ##
-2012 Thomas Järvstrand
+## License ##
+Copyright (C) 2012 by Thomas Järvstrand
 
-EDTS is licensed under the Lesser Gnu General Public License, please see
-COPYING.LESSER for details.
+EDTS is licensed under the Lesser Gnu General Public License. See COPYING.LESSER
+for details.
 
 ## Introduction ##
 
@@ -65,7 +65,9 @@ Planned features in the short term are:
                   have. Defaults to same name as the project.
   lib-dirs      - A list of paths (relative to the project's root) where the
                   project's code is located. All subdirectories of lib-dirs are
-                  assumed to be otp-applications. Defaults to '("lib").
+                  assumed to be otp-applications. Defaults to '("lib"). If
+                  start-command is set, that is assumed to properly set up the
+                  code-path and lib-dirs will be ignored.
   start-command - A custom command that EDTS should execute to start the
                   project's Erlang node. If this is set, the command must set
                   the node's sname to be the same as the value specified in the
@@ -73,15 +75,16 @@ Planned features in the short term are:
 
   Example:
   (setq edts-projects
-      '(
-        ( ;; My awesome project.
+      '(( ;; My awesome project.
          (name       . "awesome_stuff")
          (root       . "~/src/awesome_stuff")
          (node-sname . "awesome")
-         (lib-dirs   . ("lib" "test"))
-         (start-command . "./start-being-awesome.sh")
-        )
-       ))
+         (start-command . "./start-being-awesome.sh"))
+        ( ;; My other project.
+         (name       . "other_stuff")
+         (root       . "~/src/other_stuff")
+         (node-sname . "not_as_awesome")
+         (lib-dirs   . ("lib" "test")))))
 
 That should be all it takes. If it's not, I've failed. Please send a bugreport.
 
@@ -96,7 +99,7 @@ port mapper daemon (epmd), then EDTS will initiate communication with that node
 instead. The EDTS node exposes a REST-interface (using webmachine) through which
 emacs can then communicate with the project node.
 
-## EDTS and Distel
+## EDTS and Distel ##
 
 EDTS is meant to be a able to replace Distel but only provides a subset of the
 most commonly used of Distel's features, specifically the equivalents of
@@ -104,6 +107,7 @@ erl-find-module, erl-find-source-under-point and erl-who-calls. As far as I
 know, those are the only Distel features that 95% of people use, but if there is
 anything from Distel that you are missing in EDTS, please let me know.
 
-If you would like to run both Distel and edts, just make sure that your edts
-setup is executed after your Distel setup, they should work fine together.
+If you would like to run both Distel and EDTS, just make sure that your EDTS
+setup is placed after your Distel setup in your .emacs, they should work fine
+together.
 
