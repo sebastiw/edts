@@ -54,11 +54,6 @@ Planned features in the short term are:
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 
-  EDTS is meant to be a able to replace distel but only provides a subset of the
-  most commonly used of distels features. If you would like to run both distel
-  and edts, just make sure that your edts setup is executed after your distel
-  setup.
-
 - Configure you projects. EDTS projects are stored in the variable
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
@@ -82,9 +77,9 @@ Planned features in the short term are:
         ( ;; My awesome project.
          (name       . "awesome_stuff")
          (root       . "~/src/awesome_stuff")
-         (node-sname . "stuff")
+         (node-sname . "awesome")
          (lib-dirs   . ("lib" "test"))
-         (start-command . "./my-start-script.sh")
+         (start-command . "./start-being-awesome.sh")
         )
        ))
 
@@ -100,4 +95,15 @@ with the same name as the project's node is already registered with the Erlang
 port mapper daemon (epmd), then EDTS will initiate communication with that node
 instead. The EDTS node exposes a REST-interface (using webmachine) through which
 emacs can then communicate with the project node.
+
+## EDTS and Distel
+
+EDTS is meant to be a able to replace Distel but only provides a subset of the
+most commonly used of Distel's features, specifically the equivalents of
+erl-find-module, erl-find-source-under-point and erl-who-calls. As far as I
+know, those are the only Distel features that 95% of people use, but is anything
+from Distel that you are missing in EDTS, please let me know.
+
+If you would like to run both Distel and edts, just make sure that your edts
+setup is executed after your Distel setup, they should work fine together.
 

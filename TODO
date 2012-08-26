@@ -5,22 +5,21 @@
 ;; - Check if auto-complete-mode removes duplicates from different sources.
 ;; - (re?) load modules before trying to extract info
 ;; - set completion requirement to 1 for all sources
-;; - erl-who-calls
 ;; - macro completion
 ;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
 ;; - Start an internal node if external node disappears.
 ;; - Improve when completion popup closes
-;; - Nice error handling for the rest-communication
+;; - Better error handling for the rest-communication
 ;; - Debug output
 ;; - Restart edts node, and re-add running project-nodes if it is
 ;;   down.
 ;; - Make edts a minor mode
 ;; - Tests
-;; - tab-completion or auto-completion in comint-buffer
 
 ;; Wishlist
 ;; - Indexing of project contents.
+;; - tab-completion or auto-completion in comint-buffer
 
 ;; Maybe
 ;; - Add eper, and a decent user_default to all nodes started by edts.
