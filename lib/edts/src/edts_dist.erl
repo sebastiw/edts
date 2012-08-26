@@ -102,8 +102,8 @@ connect_all() ->
 -spec init_node(string()) -> [rpc:key()].
 %%------------------------------------------------------------------------------
 init_node(Node) ->
-  remote_load_modules(Node,   [edts_xref]),
-  remote_start_services(Node, [edts_xref]).
+  remote_load_modules(Node,   [edts_code]),
+  remote_start_services(Node, [edts_code]).
 
 %%------------------------------------------------------------------------------
 %% @doc

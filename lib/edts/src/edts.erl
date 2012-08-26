@@ -60,7 +60,7 @@
 get_function_info(Node, Module, Function, Arity) ->
   edts_server:ensure_node_initialized(Node),
   Args = [Module, Function, Arity],
-  case edts_dist:call(Node, edts_xref, get_function_info, Args) of
+  case edts_dist:call(Node, edts_code, get_function_info, Args) of
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
@@ -79,7 +79,7 @@ get_function_info(Node, Module, Function, Arity) ->
 who_calls(Node, Module, Function, Arity) ->
   edts_server:ensure_node_initialized(Node),
   Args = [Module, Function, Arity],
-  case edts_dist:call(Node, edts_xref, who_calls, Args) of
+  case edts_dist:call(Node, edts_code, who_calls, Args) of
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
@@ -96,7 +96,7 @@ who_calls(Node, Module, Function, Arity) ->
 %%------------------------------------------------------------------------------
 get_module_info(Node, Module, Level) ->
   edts_server:ensure_node_initialized(Node),
-  case edts_dist:call(Node, edts_xref, get_module_info, [Module, Level]) of
+  case edts_dist:call(Node, edts_code, get_module_info, [Module, Level]) of
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
@@ -142,7 +142,7 @@ node_available_p(Node) ->
 %%------------------------------------------------------------------------------
 modules(Node) ->
   edts_server:ensure_node_initialized(Node),
-  edts_dist:call(Node, edts_xref, modules).
+  edts_dist:call(Node, edts_code, modules).
 
 
 %%------------------------------------------------------------------------------

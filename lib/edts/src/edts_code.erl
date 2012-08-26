@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_xref).
+-module(edts_code).
 
 %%%_* Exports ==================================================================
 
@@ -128,7 +128,7 @@ do_get_module_info(M, detailed) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all modules known to the edts_xref server.
+%% Returns a list of all modules known to the edts_code xref-server.
 %% @end
 -spec modules() -> [atom()].
 %%------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ start() ->
 
 who_calls(M, F, A) ->
   Str = lists:flatten(io_lib:format("(XXL)(Lin)(E || ~p)", [{M, F, A}])),
-  case xref:q(edts_xref, Str) of
+  case xref:q(edts_code, Str) of
     {ok, []} -> [];
     {ok, Calls} ->
       [Caller || {{{Caller, _}, {_Callee, _}}, _} <- Calls]
