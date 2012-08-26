@@ -63,8 +63,8 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename),
-  Module   = orddict:fetch(module),
+  Nodename = orddict:fetch(nodename, Ctx),
+  Module   = orddict:fetch(module, Ctx),
   case edts:node_available_p(Nodename) of
     false -> {false, ReqData, Ctx};
     true ->

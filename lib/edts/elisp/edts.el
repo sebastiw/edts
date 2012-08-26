@@ -90,6 +90,20 @@
         node-name
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-get-who-calls (node module function arity)
+  "Fetches a list of all function calling  `module':`function'/`arity' on `node'"
+  (let* ((node-name node)
+         (resource (list "nodes" node-name
+                         "modules" module
+                         "functions" function
+                         (number-to-string arity)
+                         "callers"))
+         (res      (edts-rest-get resource nil)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'body res))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+
 (defun edts-get-function-info (node module function arity)
   "Fetches info `module' on the node associated with
 current buffer."

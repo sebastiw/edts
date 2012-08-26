@@ -18,9 +18,10 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 ;;
-;; Code for jumping around between modules etc.
+;; Code for navigating through a project.
 
-(defun edts-find-module()
+(defun edts-find-module ()
+  "Find a module in the current project."
   (interactive)
   (let ((modules (edts-get-modules)))
     (if modules
@@ -31,10 +32,11 @@
                (mark (copy-marker (point-marker))))
           (find-file-existing file) ; Fixme, catch error
           (ring-insert-at-beginning (edts-window-find-history-ring) mark)
-          (message "No modules found")))))
+          (error "No module found")))))
 
 
 (defun edts-find-local-function()
+  "Find a function in the current module."
   (interactive)
   (let* ((functions (ferl-local-functions))
          (names     (mapcar #'(lambda (el) (car el)) functions))
@@ -100,6 +102,47 @@ When FUNCTION is specified, the point is moved to its start."
   (let ((window (selected-window)))
     (or (window-parameter window 'edts-find-history-ring)
         (set-window-parameter window 'edts-find-history-ring (make-ring 20)))))
+
+(defun edts-who-calls ()
+  (interactive)
+  (let ((node (edts-project-buffer-node-name))
+        (mfa  (ferl-mfa-at-point)))
+    (if mfa
+        (apply #'edts-find-callers (cons node mfa))
+        (error "No call at point."))))
+
+(defvar edts-found-caller-items nil
+  "The callers found during the last call to edts-who-calls")
+
+(defun edts-find-callers (node module function arity)
+  "Jump to any all functions calling `module':`function'/`arity' in the
+current buffer's project."
+  (let* ((callers (edts-get-who-calls node module function arity))
+         (caller-items (mapcar #'edts-function-popup-item callers)))
+    (edts-do-find-callers caller-items)))
+
+(defun edts-do-find-callers (caller-items)
+  (if caller-items
+      (let* ((choice       (popup-menu* caller-items))
+             (module       (cdr (assoc 'module   choice)))
+             (function     (cdr (assoc 'function choice)))
+             (arity        (cdr (assoc 'arity    choice))))
+        (setq edts-found-caller-items caller-items)
+        (edts-find-source module function arity))
+      (error "No callers found")))
+
+(defun edts-last-who-calls ()
+  "Redo previous call to edts-who-calls"
+  (interactive)
+  (edts-do-find-callers edts-found-caller-items))
+
+(defun edts-function-popup-item (item)
+  "Formats an association list describing a function as a string"
+  (let* ((module   (cdr (assoc 'module   item)))
+         (function (cdr (assoc 'function item)))
+         (arity    (cdr (assoc 'arity    item)))
+         (str (format "%s:%s/%s" module function arity)))
+    (popup-make-item str :value item)))
 
 
 (provide 'edts-navigate)

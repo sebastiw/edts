@@ -75,7 +75,6 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info0 = orddict:fetch(info, Ctx),
-  io:format("Info0 ~p~n", [Info0]),
   Data = {array, [{struct, [{module, M}, {function, F}, {arity, A}]} ||
                              {M, F, A} <- Info0]},
   {mochijson2:encode(Data), ReqData, Ctx}.

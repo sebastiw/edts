@@ -149,9 +149,13 @@ start() ->
   end,
   analyze().
 
-who_calls(M0, F0, A0) ->
-  {ok, Analysis} = xref:q(edts_xref, "XC || X"),
-  [In || {In, {M, F, A}} <- Analysis, M =:= M0, F =:= F0, A =:= A0].
+who_calls(M, F, A) ->
+  Str = lists:flatten(io_lib:format("(XXL)(Lin)(E || ~p)", [{M, F, A}])),
+  case xref:q(edts_xref, Str) of
+    {ok, []} -> [];
+    {ok, Calls} ->
+      [Caller || {{{Caller, _}, {_Callee, _}}, _} <- Calls]
+  end.
 
 %%%_* Internal functions =======================================================
 
