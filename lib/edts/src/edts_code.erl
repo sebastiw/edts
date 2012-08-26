@@ -71,6 +71,7 @@ compile_and_load(Path, Options0) ->
     {ok, Mod, Bin, Warnings} ->
       code:purge(Mod),
       {module, Mod} = code:load_binary(Mod, Path, Bin),
+      spawn(fun() -> update() end),
       {ok, format_errors(warning, Warnings)};
     {error, Errors, Warnings} ->
       {error, format_errors(error, Errors) ++ format_errors(warning, Warnings)}
@@ -179,17 +180,14 @@ modules() ->
 start() ->
   case xref:start(?SERVER) of
     {ok, _Pid}                       -> init();
-    {error, {already_started, _Pid}} -> update()
+    {error, {already_started, _Pid}} -> ok
   end,
-  analyze().
+  update().
 
 who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(XXL)(Lin)(E || ~p)", [{M, F, A}])),
-  case xref:q(edts_code, Str) of
-    {ok, []} -> [];
-    {ok, Calls} ->
-      [Caller || {{{Caller, _}, {_Callee, _}}, _} <- Calls]
-  end.
+  Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
+  {ok, Calls} = xref:q(edts_code, Str),
+  [Caller || {Caller, _Callee} <- Calls].
 
 %%%_* Internal functions =======================================================
 
@@ -243,11 +241,8 @@ reload_module(M) ->
 %%------------------------------------------------------------------------------
 update() ->
   {ok, _Modules} = xref:update(?SERVER),
+  xref:q(?SERVER, "E"),
   ok.
-
-%% Query the server to cache values.
-analyze() ->
-  modules().
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
