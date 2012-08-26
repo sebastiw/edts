@@ -27,20 +27,54 @@
 
 %%%_* Exports ==================================================================
 
--export([ get_function_info/3
+-export([ compile_and_load/1
+        , get_function_info/3
         , get_module_info/1
         , get_module_info/2
         , modules/0
         , start/0
         , who_calls/3]).
 
-%%%_* Includes =================================================================
-
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Equivalent to compile_and_load(Module, []).
+%% @end
+-spec compile_and_load(Module::module()) ->
+                          {ok, {module(), binary(), [term()]}}
+                        | {ok, {module(), binary()}}
+                        | {error, [term()], [term()]}.
+%%------------------------------------------------------------------------------
+compile_and_load(Module) ->
+  compile_and_load(Module, []).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Compiles Module with Options and returns a list of any errors and warnings.
+%% If there are no errors, the module will be loaded. Compilation options
+%% always include [binary, return, debug_info]. Any options passed in will be
+%% added to these.
+%% @end
+-spec compile_and_load(Module::module(), [compile:option()]) ->
+                          {ok, {module(), [term()]}}
+                        | {error, {[term()], [term()]}}.
+%%------------------------------------------------------------------------------
+compile_and_load(Path, Options0) ->
+  AbsPath = filename:absname(Path),
+  Options = Options0 ++ [binary, return, debug_info, {i, get_include_dirs()}],
+  case compile:file(AbsPath, Options) of
+    {ok, Mod, Bin, Warnings} ->
+      code:purge(Mod),
+      {module, Mod} = code:load_binary(Mod, Path, Bin),
+      {ok, format_errors(warning, Warnings)};
+    {error, Errors, Warnings} ->
+      {error, format_errors(error, Errors) ++ format_errors(warning, Warnings)}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -160,6 +194,23 @@ who_calls(M, F, A) ->
 %%%_* Internal functions =======================================================
 
 %%------------------------------------------------------------------------------
+%% @doc
+%% Translates the code-path to a list if include-directories for compilation
+%% @end
+-spec get_include_dirs() -> [string()].
+%%------------------------------------------------------------------------------
+
+get_include_dirs() ->
+  F = fun(Path) ->
+          case filename:basename(Path) of
+            "ebin" -> filename:join(filename:dirname(Path), "include");
+            _      -> Path
+          end
+      end,
+  lists:map(F, code:get_path()).
+
+
+%%------------------------------------------------------------------------------
 %% @doc Initializes the server.
 -spec init() -> ok.
 %%------------------------------------------------------------------------------
@@ -197,6 +248,22 @@ update() ->
 %% Query the server to cache values.
 analyze() ->
   modules().
+
+%%------------------------------------------------------------------------------
+%% @doc Format compiler errors and warnings.
+-spec format_errors( ErrType % warning | error
+                   , Errors::[{ File::string(), [term()]}]) ->
+                       [{ErrType,
+                         File::string(),
+                         Line::non_neg_integer(),
+                         Description::string()}].
+%%------------------------------------------------------------------------------
+
+format_errors(Type, Errors) ->
+   [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
+     || {Line, Source, Error} <- Errors0]
+       || {File, Errors0} <- Errors].
+
 
 %%------------------------------------------------------------------------------
 %% @doc Get the file and line of a function from abstract code.

@@ -27,8 +27,10 @@
 
 (defun ferl-point-end-of-function ()
   "If point is inside an Erlang function, return the end position of that
-   function, otherwise nil.
-   NB. Doesn't work if point is at the functions final character (full stop)."
+   function, otherwise nil."
+  ;; Fixme
+  ;; Doesn't work if point is at the functions final character (full stop).
+  ;; Crashes on unbalanced panrentheses.
   (save-excursion (erlang-end-of-function) (point)))
 
 (defun ferl-beginning-of-function ()
