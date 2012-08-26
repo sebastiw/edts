@@ -34,13 +34,8 @@
 (defun ferl-beginning-of-function ()
   "Return the first point of the first erlang function before point."
   ;; fixme rewrite with looking-at
-  (let ((old-point (point))
-        (beginning (progn (erlang-beginning-of-function) (point)))
-        (end       (ferl-point-end-of-function)))
-    (if (< end old-point)
-        (progn (goto-char old-point))
-        (progn (goto-char beginning)))))
-
+  (unless (looking-at (concat "^" erlang-atom-regexp "\\s-*("))
+    (erlang-beginning-of-function)))
 
 (defun ferl-goto-previous-function ()
   (interactive)
