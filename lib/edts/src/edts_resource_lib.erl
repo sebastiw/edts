@@ -68,8 +68,8 @@ validate(ReqData0, Ctx0, Keys) ->
 -spec make_nodename(string()) -> node().
 %%------------------------------------------------------------------------------
 make_nodename(NameStr) ->
-    list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ net_adm:localhost()).
-
+  [_Name, Host] = string:tokens(atom_to_list(node()), "@git "),
+  list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ Host).
 
 %%%_* Internal functions =======================================================
 
