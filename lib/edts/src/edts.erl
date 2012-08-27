@@ -58,9 +58,8 @@
 compile_and_load(Node, Filename) ->
   edts_server:ensure_node_initialized(Node),
   case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
-    {badrpc, _}     -> {error, not_found};
-    {ok, Warnings}  -> Warnings;
-    {error, Errors} -> Errors
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
   end.
 
 %%------------------------------------------------------------------------------

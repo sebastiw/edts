@@ -36,6 +36,7 @@
 ;; Rest of edts
 (require 'ferl)
 (require 'edts)
+(require 'edts-code)
 (require 'edts-rest)
 (edts-ensure-server-started)
 (require 'edts-project)
@@ -84,7 +85,9 @@
    (end     . ferl-point-end-of-function))
  "Current Erlang function")
 
-(add-hook 'erlang-mode-hook #'(lambda () (auto-highlight-symbol-mode t)))
+(add-hook 'erlang-mode-hook #'(lambda ()
+                                (auto-highlight-symbol-mode t)
+                                (add-hook 'after-save-hook 'edts-code-compile-and-display t t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Auto-completion

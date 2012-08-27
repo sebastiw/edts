@@ -75,13 +75,21 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  Result = orddict:fetch(compilation_result, Ctx),
-  Errors = [{struct, [ {type, Type}
-                     , {file, list_to_binary(File)}
-                     , {line, Line}
-                     , {description, list_to_binary(Desc)}]}
-            || {Type, File, Line, Desc} <- Result],
-  {mochijson2:encode({array, Errors}), ReqData, Ctx}.
+  {Errors0, Warnings0} = orddict:fetch(compilation_result, Ctx),
+  Result = case Errors0 of
+             [] -> ok;
+             _  -> error
+           end,
+  Errors   = {array, [format_error(Error) || Error <- Errors0]},
+  Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
+  Data = {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]},
+  {mochijson2:encode(Data), ReqData, Ctx}.
+
+format_error({Type, File, Line, Desc}) ->
+  {struct, [ {type, Type}
+           , {file, list_to_binary(File)}
+           , {line, Line}
+           , {description, list_to_binary(Desc)}]}.
 
 %%%_* Internal functions =======================================================
 

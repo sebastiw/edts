@@ -158,11 +158,20 @@ buffer"
   "Fetches info about `module' on the node associated with current buffer"
   (let* ((node-name (edts-project-buffer-node-name))
          (resource (list "nodes" node-name "modules" module))
-         (res      (edts-rest-get
-                    resource
-                    (list (cons "info_level" (symbol-name level))))))
+         (args     (list (cons "info_level" (symbol-name level))))
+         (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-get-compilation-result (module file)
+  (let* ((node-name (edts-project-buffer-node-name))
+         (resource
+          (list "nodes" node-name "modules" module "compilation_result"))
+         (args (list (cons "file" file)))
+         (res (edts-rest-get resource args)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+          (cdr (assoc 'body res))
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 

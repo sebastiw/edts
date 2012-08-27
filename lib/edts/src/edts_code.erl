@@ -81,9 +81,9 @@ compile_and_load(File, Options0) ->
       code:purge(Mod),
       {module, Mod} = code:load_binary(Mod, File, Bin),
       spawn(fun() -> update() end),
-      {ok, format_errors(warning, Warnings)};
+      {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
-      {error, format_errors(error, Errors) ++ format_errors(warning, Warnings)}
+      {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
 
 %%------------------------------------------------------------------------------
