@@ -71,7 +71,9 @@ Planned features in the short term are:
   start-command - A custom command that EDTS should execute to start the
                   project's Erlang node. If this is set, the command must set
                   the node's sname to be the same as the value specified in the
-                  project's node-sname.
+                  project's node-sname. The command must also not set the
+                  erlang cookie to anything other than the default
+                  ~/.erlang.cookie.
 
   Example:
   (setq edts-projects
