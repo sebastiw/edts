@@ -74,7 +74,7 @@ When FUNCTION is specified, the point is moved to its start."
             (progn
               (ring-insert-at-beginning (edts-window-find-history-ring) mark)
               (ferl-search-function function arity))
-            (null (error "Function %s/s not found")))
+            (null (error "Function %s:%s/s not found" module function arity)))
         (let* ((node (edts-project-buffer-node-name))
                (info (edts-get-function-info node module function arity)))
           (if info
@@ -82,7 +82,8 @@ When FUNCTION is specified, the point is moved to its start."
                 (find-file-existing (cdr (assoc 'source info)))
                 (ring-insert-at-beginning (edts-window-find-history-ring) mark)
                 (goto-line (cdr (assoc 'line   info))))
-              (null (error "Function %s/s not found")))))))
+              (null
+               (error "Function %s:%s/s not found" module function arity)))))))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
