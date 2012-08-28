@@ -3,67 +3,50 @@
 ;; EDTS Setup and configuration.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(require 'cl)
-
-(defvar edts-lib-directory
-  (file-truename
-   (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "/elisp/"))
-  "Directory where edts libraries are located.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-;;
-;; Add all directory names in edts-lib-directory to load-path except . and ..
-(mapcar
- #'(lambda (path) (add-to-list 'load-path path))
- (remove-if-not #'(lambda (f)
-                    (when (file-directory-p f)
-                      (let ((file-name (file-name-nondirectory f)))
-                        (and (not (equal "." file-name))
-                             (not (equal ".." file-name))))))
-                (directory-files edts-lib-directory t)))
+(defvar edts-lib-directory
+  (concat (file-name-directory
+            (or (locate-library "edts-start") load-file-name)) "/elisp/")
+  "Directory where edts libraries are located.")
+(add-to-list 'load-path (concat edts-lib-directory "edts"))
+(add-to-list 'load-path (concat edts-lib-directory "auto-complete"))
+(add-to-list 'load-path (concat edts-lib-directory "auto-highlight-symbol-mode"))
+(add-to-list 'load-path (concat edts-lib-directory "popup-el"))
 (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir) "/bin"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Erlang mode
+;; Requires
+
+;; Prerequisites
+(require 'cl)
 (require 'erlang)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Rest of edts
+;; EDTS
 (require 'ferl)
 (require 'edts)
 (require 'edts-code)
+(require 'edts-complete)
 (require 'edts-rest)
 (require 'edts-face)
-(edts-ensure-server-started)
 (require 'edts-project)
-(edts-project-init)
 (require 'edts-navigate)
-(if (boundp 'window-persistent-parameters)
-  (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
-  (setq         window-persistent-parameters '((edts-find-history-ring . t))))
 
+;; External
+(require 'auto-highlight-symbol)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Indentation
-(add-hook 'align-load-hook
-          (lambda ()
-            (add-to-list 'align-rules-list
-                         '(erlang-align
-                           (regexp . ",\\(\\s-+\\)")
-                           (repeat . t)
-                           (modes quote (erlang-mode))))))
-
-;; Auto-activate erlang mode for some additional extensions.
-(add-to-list 'auto-mode-alist '("\\.yaws$" .     erlang-mode))
-(add-to-list 'auto-mode-alist '("\\.eterm$" .    erlang-mode))
-(add-to-list 'auto-mode-alist '("rebar.config$". erlang-mode))
+(defun edts-align-hook
+  (add-to-list 'align-rules-list
+               '(erlang-align
+                 (regexp . ",\\(\\s-+\\)")
+                 (repeat . t)
+                 (modes quote (erlang-mode)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; autohighlight-symbol-mode for erlang
-(require 'auto-highlight-symbol)
-
+;; autohighlight-symbol-mode setup for EDTS
 (defconst erlang-auto-highlight-exclusions
   (cons (quote erlang-mode)
                (concat
@@ -71,43 +54,89 @@
                 "\\|" erlang-keywords-regexp
                 "\\|\\<[[:digit:]]+\\>\\)")))
 
-(custom-set-variables
- '(ahs-exclude (cons erlang-auto-highlight-exclusions ahs-exclude)))
-
-(ahs-regist-range-plugin
- erlang-current-function
- '((name    . "erlang current function")
+(defvar erlang-current-function-ahs-plugin
+  '((name    . "erlang current function")
    (lighter . "CF")
    (face    . ahs-plugin-defalt-face)
    (start   . ferl-point-beginning-of-function)
-   (end     . ferl-point-end-of-function))
- "Current Erlang function")
-
-(add-hook 'erlang-mode-hook #'(lambda ()
-                                (auto-highlight-symbol-mode t)
-                                (add-hook 'after-save-hook 'edts-code-compile-and-display t t)))
+   (end     . ferl-point-end-of-function)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Auto-completion
-(require 'edts-complete)
+;; EDTS mode
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Erlang-specific keybindings
-(define-key erlang-mode-map (kbd "M-G")           'ferl-goto-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-b")   'ferl-goto-previous-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-f")   'ferl-goto-next-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-e")   'edts-ahs-edit-current-function)
-(define-key erlang-mode-map (kbd "C-c C-d C-S-e") 'ahs-edit-mode)
-(define-key erlang-mode-map (kbd "M-.")           'edts-find-source-under-point)
-(define-key erlang-mode-map (kbd "M-,")           'edts-find-source-unwind)
-(define-key erlang-mode-map (kbd "C-c C-d F")     'edts-find-module)
-(define-key erlang-mode-map (kbd "C-c C-d w")     'edts-who-calls)
-(define-key erlang-mode-map (kbd "C-c C-d C-w")   'edts-last-who-calls)
-(when (boundp 'erlang-extended-mode-map)
-  (define-key erlang-extended-mode-map (kbd "C-c C-d F") 'edts-find-module)
-  (define-key erlang-extended-mode-map (kbd "M-.") 'edts-find-source-under-point)
-  (define-key erlang-extended-mode-map (kbd "M-,") 'edts-find-source-unwind)
-  (define-key erlang-extended-mode-map (kbd "C-c C-d w")     'edts-who-calls)
-  (define-key erlang-extended-mode-map (kbd "C-c C-d C-w")   'edts-last-who-calls))
+(defgroup edts nil
+  "Erlang development tools"
+  :group 'convenience
+  :prefix "edts-")
+
+(defvar edts-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-n")     'edts-code-next-issue)
+    (define-key map (kbd "C-c C-p")     'edts-code-previous-issue)
+    (define-key map (kbd "C-c C-d f")   'ferl-goto-function)
+    (define-key map (kbd "C-c C-d F")   'edts-find-module)
+    (define-key map (kbd "C-c C-d w")   'edts-who-calls)
+    (define-key map (kbd "C-c C-d C-w") 'edts-last-who-calls)
+    (define-key map (kbd "C-c C-d C-b") 'ferl-goto-previous-function)
+    (define-key map (kbd "C-c C-d C-f") 'ferl-goto-next-function)
+    (define-key map (kbd "C-c C-d e")   'edts-ahs-edit-current-function)
+    (define-key map (kbd "C-c C-d C-e") 'ahs-edit-mode)
+    (define-key map (kbd "M-.")         'edts-find-source-under-point)
+    (define-key map (kbd "M-,")         'edts-find-source-unwind)
+    map)
+  "Keymap for EDTS.")
+
+(defun edts-setup ()
+  ;; Start with our own stuff
+  (edts-ensure-server-started)
+  (edts-project-init)
+  (ad-activate-regexp "edts-.*")
+  (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
+
+  ;; Auto-activate erlang mode for some additional extensions.
+  (add-to-list 'auto-mode-alist '("\\.yaws$" .     erlang-mode))
+  (add-to-list 'auto-mode-alist '("\\.eterm$" .    erlang-mode))
+  (add-to-list 'auto-mode-alist '("rebar.config$". erlang-mode))
+
+  (auto-highlight-symbol-mode t)
+  (add-to-list 'ahs-exclude erlang-auto-highlight-exclusions)
+
+  ;; Register the range plugin with ahs
+  (ahs-regist-range-plugin
+    erlang-current-function
+    erlang-current-function-ahs-plugin
+    "Current Erlang function")
+
+  ;; Indentation
+  (add-hook 'align-load-hook 'edts-align-hook)
+
+  ;; Make sure we remember our history
+  (if (boundp 'window-persistent-parameters)
+      (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
+      (setq         window-persistent-parameters '((edts-find-history-ring . t)))))
+
+
+(define-minor-mode edts-mode
+  "An easy to set up Development-environment for Erlang. See README for
+details about EDTS.
+
+EDTS also incorporates a couple of other
+minor-modes, currently auto-highlight-mode and auto-complete-mode.
+They are configured to work together with EDTS but see their respective
+documentation for information on how to configure their behaviour
+further.
+\\<edts-mode-map>"
+  :lighter "EDTS"
+  :keymap edts-mode-map
+  :group edts
+  :require erlang-mode
+  (if edts-mode
+      (edts-setup)
+      (edts-teardown)))
+
+(defun edts-erlang-mode-hook ()
+  (edts-mode t))
+
+(add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 
 (provide 'edts-start)

@@ -18,38 +18,17 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
-
-(defgroup edts-project '()
-  "Distel and erlang-extended-mode development tools."
-  :group 'tools)
-
-(defcustom edts-projects nil
-  "The list of projects."
-  :group 'edts-project)
-
 (defcustom edts-project-auto-start-node t
   "If non-nil, automagically start an erlang node whenever erlang-mode is
 activated for the first file that is located inside a project."
-  :type 'boolean)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Internal variables
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defvar edts-project-nodes nil
-  "The list of nodes.")
+  :type 'boolean
+  :group 'edts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun edts-project-init ()
-  "Initializes `edts-project'."
-  (when (member 'distel features) ;; some distel compatibility
-        (make-variable-buffer-local 'erl-nodename-cache))
-  (add-hook 'erlang-mode-hook 'edts-project-erlang-load-hook))
-
-(defun edts-project-erlang-load-hook ()
   "Buffer specific (not necessarily buffer-local) setup."
   (let* ((buffer  (current-buffer))
          (project (edts-project-buffer-project buffer)))
@@ -64,11 +43,8 @@ activated for the first file that is located inside a project."
   "Start a buffer's project's node if it is not already started."
   (let ((node-name (edts-project-node-name project)))
     (if (edts-project-node-started-p node-name)
-        (progn
-          (when (member 'distel features)
-            (edts-project-check-backend project))
-          (edts-register-node-when-ready node-name))
-      (edts-project-start-node project))))
+        (edts-register-node-when-ready node-name)
+        (edts-project-start-node project))))
 
 (defun edts-project-check-backend (project)
   "Ensure that distel modules are available on the node used by `project'"

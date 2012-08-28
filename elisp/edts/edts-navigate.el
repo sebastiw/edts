@@ -124,12 +124,14 @@ current buffer's project."
 
 (defun edts-do-find-callers (caller-items)
   (if caller-items
-      (let* ((choice       (popup-menu* caller-items))
-             (module       (cdr (assoc 'module   choice)))
-             (function     (cdr (assoc 'function choice)))
-             (arity        (cdr (assoc 'arity    choice))))
+      (progn
         (setq edts-found-caller-items caller-items)
-        (edts-find-source module function arity))
+        (let* ((choice       (popup-menu* caller-items))
+               (module       (cdr (assoc 'module   choice)))
+               (function     (cdr (assoc 'function choice)))
+               (arity        (cdr (assoc 'arity    choice))))
+          (setq edts-found-caller-items caller-items)
+          (edts-find-source module function arity)))
       (error "No callers found")))
 
 (defun edts-last-who-calls ()
