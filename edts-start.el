@@ -113,8 +113,16 @@
   ;; Make sure we remember our history
   (if (boundp 'window-persistent-parameters)
       (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
-      (setq         window-persistent-parameters '((edts-find-history-ring . t)))))
+      (setq window-persistent-parameters '((edts-find-history-ring . t)))))
 
+(defun edts-teardown ()
+  ;; Start with our own stuff
+  (ad-deactivate-regexp "edts-.*")
+  (remove-hook 'after-save-hook 'edts-code-compile-and-display t t)
+  (auto-highlight-symbol-mode nil)
+
+  ;; Indentation
+  (remove-hook 'align-load-hook 'edts-align-hook))
 
 (define-minor-mode edts-mode
   "An easy to set up Development-environment for Erlang. See README for

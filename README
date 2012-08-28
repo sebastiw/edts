@@ -25,14 +25,14 @@ plugins for them, and its own features to create an efficient development
 environment that is easy to set up.
 
 Currently EDTS provides:
+- In-buffer flymake-like compilation
 - Rudimentary project support
-- Code navigation (limited)
+- Code navigation.
 - Auto-completion, using auto-complete-mode
 - Auto-highlighting, using auto-highlight-mode
 
 Planned features in the short term are:
 - More extensive navigation
-- In-buffer flymake-like compilation
 - In-buffer xref checks
 - In-buffer running of unit tests
 - yasnippets
@@ -54,7 +54,7 @@ Planned features in the short term are:
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 
-- Configure you projects. EDTS projects are stored in the variable
+- Configure your projects. EDTS projects are stored in the variable
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
 
