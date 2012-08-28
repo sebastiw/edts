@@ -38,6 +38,7 @@
 (require 'edts)
 (require 'edts-code)
 (require 'edts-rest)
+(require 'edts-face)
 (edts-ensure-server-started)
 (require 'edts-project)
 (edts-project-init)

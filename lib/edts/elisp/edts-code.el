@@ -20,40 +20,20 @@
 ;;
 ;; Utilities compiling and running tools on code
 
+(defconst edts-code-issue-overlay-priorities
+  '((warning . 1001);auto-highlight-symbol prio + 1
+    (error   . 1002))
+  "The overlay priorities for compilation errors and warnings")
 
-;; Faces for highlighting
-(defface edts-code-error-line
-  '((((class color) (background dark)) (:background "Firebrick"))
-    (((class color) (background light)) (:background "LightPink1"))
-    (t (:bold t)))
-  "Face used for marking error lines."
-  :group 'edts)
-
-(defface edts-code-warning-line
-  '((((class color) (background dark)) (:background "dark blue"))
-    (((class color) (background light)) (:background "light blue"))
-    (t (:bold t)))
-  "Face used for marking warning lines."
-  :group 'edts)
-
-(defface edts-code-lesser-line
-  '((((class color) (background dark)) (:background "dark olive green"))
-    (((class color) (background light)) (:background "pale green"))
-    (t (:bold t)))
-  "Face used for marking lesser warning lines."
-  :group 'edts)
-
-(defface edts-code-user-specified-line
-  '((((class color) (background dark)) (:background "orange red"))
-    (((class color) (background light)) (:background "yellow"))
-    (t (:bold t)))
-  "Face used for marking lesser warning lines."
-  :group 'edts)
+(defun edts-code-overlay-priority (type)
+  "Returns the overlay priority of TYPE. Type can be either a string or
+a symbol."
+  (let ((type (if (symbolp type) type (intern type))))
+    (cdr (assoc type edts-code-issue-overlay-priorities))))
 
 (defun edts-code-compile-and-display ()
-  "Compiles current buffer on node related the that buffer's project. Optional
-parameter `compile-options' should be a list of compile options."
-  (edts-code-remove-overlays "edts-code-compile")
+  "Compiles current buffer on node related the that buffer's project."
+  (edts-face-remove-overlays "edts-code-compile")
   (let* ((module   (erlang-get-module))
          (file     (buffer-file-name))
          (comp-res (edts-get-compilation-result module file)))
@@ -69,30 +49,26 @@ parameter `compile-options' should be a list of compile options."
   "Displays overlays for `ERRORS' in current buffer."
   (mapcar
    #'(lambda (error)
-       (edts-code-display-issue-overlay error 'edts-code-error-line))
+       (edts-code-display-issue-overlay 'edts-face-error-line error))
    errors))
 
 (defun edts-code-display-warning-overlays (warnings)
-  "Displays overlays for `WARNINGS' in current buffer."
+  "Displays overlays for WARNINGS in current buffer."
   (mapcar
    #'(lambda (warning)
-       (edts-code-display-issue-overlay warning 'edts-code-warning-line))
+       (edts-code-display-issue-overlay 'edts-face-warning-line warning))
    warnings))
 
-(defun edts-code-display-issue-overlay (issue face)
-  "Displays overlay for `ISSUE' in current buffer."
-  (save-excursion
-    (let* ((line    (edts-code-find-issue-overlay-line issue))
-           (desc    (cdr (assoc 'description issue)))
-           (start   (ferl-first-car-on-line line))
-           (end     (ferl-last-car-on-line line))
-           (overlay (make-overlay start end nil t t)))
-      (overlay-put overlay 'edts-overlay t)
-      (overlay-put overlay 'face face)
-      (overlay-put overlay 'help-echo desc)
-      (overlay-put overlay 'edts-overlay-type "edts-code-compile")
-      (overlay-put overlay 'priority 100)
-      overlay)))
+(defun edts-code-display-issue-overlay (face issue)
+  "Displays overlay with FACE for ISSUE in current buffer."
+  (let* ((line         (edts-code-find-issue-overlay-line issue))
+         (issue-type   (cdr (assoc 'type issue)))
+         (desc         (cdr (assoc 'description issue)))
+         (help         (format "line %s, %s: %s" line issue-type desc))
+         (overlay-type "edts-code-compile")
+         (prio         (edts-code-overlay-priority
+                        (cdr (assoc 'type issue)))))
+    (edts-face-display-overlay face line help overlay-type prio)))
 
 (defun edts-code-find-issue-overlay-line (issue)
   "Tries to find where in current buffer to display overlay for `ISSUE'."
@@ -103,18 +79,30 @@ parameter `compile-options' should be a list of compile options."
         (save-excursion
           (goto-char (point-min))
           (let ((re (format "^-include\\(_lib\\)?(\".*%s\")." err-file)))
-          ; this is probably not 100% correct in all cases
+          ; This is probably not 100% correct in all cases
             (if (re-search-forward re nil t)
                 (line-number-at-pos)
-                0); This will to look strange, but at least we show the issue.
+                0); Will to look strange, but at least we show the issue.
             )))))
 
-(defun edts-code-remove-overlays (type)
-  "Removes all overlays with the name `TYPE'"
+(defun edts-code-next-issue ()
+  "Moves point to the next error in current buffer and prints the error."
   (interactive)
-  (dolist (ol (overlays-in (point-min) (point-max)))
-    (when (and (overlayp ol)
-               (string-equal (overlay-get ol 'edts-overlay-type) type))
-      (delete-overlay ol))))
+  (let* ((overlay (edts-face-next-overlay (point) "edts-code-compile")))
+    (if overlay
+        (progn
+          (goto-char (overlay-start overlay))
+          (message (overlay-get overlay 'help-echo)))
+        (error "EDTS: no more issues found"))))
+
+(defun edts-code-previous-issue ()
+  "Moves point to the next error in current buffer and prints the error."
+  (interactive)
+  (let* ((overlay (edts-face-previous-overlay (point) "edts-code-compile")))
+    (if overlay
+        (progn
+          (goto-char (overlay-start overlay))
+          (message (overlay-get overlay 'help-echo)))
+        (error "EDTS: no more issues found"))))
 
 (provide 'edts-code)

@@ -33,6 +33,7 @@
 
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
+  (interactive)
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
     (make-comint "edts" "./start.sh" nil (executable-find "erl"))))
@@ -85,6 +86,7 @@
 
 (defun edts-register-node (node-name)
   "Register `node-name' with the edts node"
+  (interactive "MNode-name: ")
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name

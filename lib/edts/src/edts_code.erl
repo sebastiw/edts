@@ -74,7 +74,7 @@ compile_and_load(Module, Options) when is_atom(Module)->
   compile_and_load(File, Options);
 compile_and_load(File, Options0) ->
   AbsPath     = filename:absname(File),
-  IncludeDirs = filename:dirname(File) ++ get_include_dirs(),
+  IncludeDirs = [filename:dirname(File)|get_include_dirs()],
   Options     = Options0 ++ [binary, return, debug_info, {i, IncludeDirs}],
   case compile:file(AbsPath, Options) of
     {ok, Mod, Bin, Warnings} ->
