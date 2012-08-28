@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc The main edts server
+%%% @doc function callers resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -63,12 +63,12 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = edts_resource_lib:make_nodename(wrq:path_info(nodename, ReqData)),
-  Module   = list_to_atom(wrq:path_info(module, ReqData)),
-  Function = list_to_atom(wrq:path_info(function, ReqData)),
+  Nodename = orddict:fetch(nodename, Ctx),
+  Module   = orddict:fetch(module, Ctx),
+  Function = orddict:fetch(function, Ctx),
   Arity    = orddict:fetch(arity, Ctx),
   Info     = edts:who_calls(Nodename, Module, Function, Arity),
-  Exists   = edts:node_available_p(Nodename) andalso
+  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
              not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 

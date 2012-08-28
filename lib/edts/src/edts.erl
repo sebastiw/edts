@@ -28,7 +28,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ get_function_info/4
+-export([ compile_and_load/2
+        , get_function_info/4
         , get_module_info/3
         , init_node/1
         , is_node/1
@@ -48,6 +49,21 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Compiles Module on Node and returns a list of any errors and warnings.
+%% If there are no errors, the module will be loaded.
+%% @end
+-spec compile_and_load(Node::node(), Filename::file:filename()) ->
+                          [term()] | {error, not_found}.
+%%------------------------------------------------------------------------------
+compile_and_load(Node, Filename) ->
+  edts_server:ensure_node_initialized(Node),
+  case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Returns information about Module:Function/Arity on Node.
 %% @end
 %%
@@ -55,10 +71,9 @@
                        , Module  ::module()
                        , Function::atom()
                        , Arity   ::non_neg_integer()) ->
-                           [{atom(), term()}].
+                           [{atom(), term()}] | {error, not_found}.
 %%------------------------------------------------------------------------------
 get_function_info(Node, Module, Function, Arity) ->
-  edts_server:ensure_node_initialized(Node),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, get_function_info, Args) of
     {badrpc, _} -> {error, not_found};
@@ -95,7 +110,6 @@ who_calls(Node, Module, Function, Arity) ->
                          {ok, [{atom(), term()}]}.
 %%------------------------------------------------------------------------------
 get_module_info(Node, Module, Level) ->
-  edts_server:ensure_node_initialized(Node),
   case edts_dist:call(Node, edts_code, get_module_info, [Module, Level]) of
     {badrpc, _} -> {error, not_found};
     Info  -> Info

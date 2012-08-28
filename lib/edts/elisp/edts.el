@@ -33,6 +33,7 @@
 
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
+  (interactive)
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
     (make-comint "edts" "./start.sh" nil (executable-find "erl"))))
@@ -85,6 +86,7 @@
 
 (defun edts-register-node (node-name)
   "Register `node-name' with the edts node"
+  (interactive "MNode-name: ")
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name
@@ -158,11 +160,20 @@ buffer"
   "Fetches info about `module' on the node associated with current buffer"
   (let* ((node-name (edts-project-buffer-node-name))
          (resource (list "nodes" node-name "modules" module))
-         (res      (edts-rest-get
-                    resource
-                    (list (cons "info_level" (symbol-name level))))))
+         (args     (list (cons "info_level" (symbol-name level))))
+         (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
+        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-compile-and-load (module file)
+  (let* ((node-name (edts-project-buffer-node-name))
+         (resource
+          (list "nodes" node-name "modules" module))
+         (args (list (cons "file" file)))
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+          (cdr (assoc 'body res))
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 

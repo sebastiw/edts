@@ -20,9 +20,32 @@
 ;;
 ;; Utilities for locating things and moving around in erlang source code.
 
+(defun ferl-position-at-line (line)
+  "Returns the position at the first position of LINE."
+  (save-excursion
+    (goto-char (point-min))
+    (beginning-of-line line)
+    (point)))
+
+(defun ferl-first-char-on-line-at (pos)
+  "Returns the position of the first character on line at POS in
+current-buffer."
+  (save-excursion
+    (goto-char pos)
+    (back-to-indentation)
+    (point)))
+
+(defun ferl-last-char-on-line-at (pos)
+  "Returns the position of the last character on line at POS in
+current-buffer"
+  (save-excursion
+    (goto-char pos)
+    (move-end-of-line nil)
+    (re-search-backward "^\\|[^[:space:]]")))
+
 (defun ferl-point-beginning-of-function ()
-  "If point is inside an Erlang function, return the starting position of that
-   function, otherwise nil."
+  "If point is inside an Erlang function, return the starting position
+of that function, otherwise nil."
   (save-excursion (ferl-beginning-of-function) (point)))
 
 (defun ferl-point-end-of-function ()
