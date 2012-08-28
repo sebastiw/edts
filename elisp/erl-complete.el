@@ -20,21 +20,21 @@
 (require 'auto-complete-config)
 (require 'ferl)
 
-(require 'erl-complete-variable-source)
-(require 'erl-complete-local-function-source)
-(require 'erl-complete-imported-function-source)
-(require 'erl-complete-built-in-function-source)
-(require 'erl-complete-exported-function-source)
-(require 'erl-complete-module-source)
-(require 'erl-complete-macro-source)
-(require 'erl-complete-record-source)
+(require 'edts-complete-variable-source)
+(require 'edts-complete-local-function-source)
+(require 'edts-complete-imported-function-source)
+(require 'edts-complete-built-in-function-source)
+(require 'edts-complete-exported-function-source)
+(require 'edts-complete-module-source)
+(require 'edts-complete-macro-source)
+(require 'edts-complete-record-source)
 
 (ac-config-default)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
 
-(defun erl-complete-point-inside-quotes ()
+(defun edts-complete-point-inside-quotes ()
   "Returns 'double if point is inside double quotes, 'single if point is inside
 single quotes and 'none otherwise. Relies on font-lock-string-face to work."
   (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
@@ -64,7 +64,7 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
             (t                                                'none))))))))
 
 
-(defun erl-complete-single-quote-terminate (str)
+(defun edts-complete-single-quote-terminate (str)
   "Removes any single quotes at start and end of `str' and adds one at the end
 if not already present"
   (when      (string-match "^'" str) (setq str (substring str 1)))
@@ -77,7 +77,7 @@ if not already present"
     (when pos (goto-char pos))
     (thing-at-point 'symbol)))
 
-(defun erl-complete-term-preceding-char ()
+(defun edts-complete-term-preceding-char ()
   "Returns the character preceding symbol, or if that is a single-quote, the
 character before that."
   (let* ((char  (char-before ac-point)))
@@ -88,16 +88,16 @@ character before that."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
 
-(defun erl-complete-erlang-mode-hook ()
-  "Buffer-setup for erl-complete."
-  (setq ac-sources '(erl-complete-variable-source
-                     erl-complete-local-function-source
-                     erl-complete-imported-function-source
-                     erl-complete-exported-function-source
-                     erl-complete-built-in-function-source
-                     erl-complete-module-source
-                     erl-complete-macro-source
-                     erl-complete-record-source))
+(defun edts-complete-erlang-mode-hook ()
+  "Buffer-setup for edts-complete."
+  (setq ac-sources '(edts-complete-variable-source
+                     edts-complete-local-function-source
+                     edts-complete-imported-function-source
+                     edts-complete-exported-function-source
+                     edts-complete-built-in-function-source
+                     edts-complete-module-source
+                     edts-complete-macro-source
+                     edts-complete-record-source))
 
   ;; this is to allow completion inside quoted atoms. As a side-effect we
   ;; get completion inside strings, which must be handled in the sources
@@ -105,7 +105,7 @@ character before that."
   (make-local-variable 'ac-disable-faces)
   (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
   )
-(add-hook 'erlang-mode-hook 'erl-complete-erlang-mode-hook)
+(add-hook 'erlang-mode-hook 'edts-complete-erlang-mode-hook)
 
 ;; Default settings
 (setq ac-ignore-case 'smart)
@@ -115,4 +115,4 @@ character before that."
 
 (add-to-list 'ac-modes 'erlang-mode)
 
-(provide 'erl-complete)
+(provide 'edts-complete)

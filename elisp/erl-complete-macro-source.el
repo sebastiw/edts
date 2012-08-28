@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
-;; auto-complete source for built-in erlang functions.
+;; auto-complete source for erlang macros.
 
 (require 'auto-complete)
 (require 'ferl)
@@ -23,10 +23,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
-(defvar erl-complete-built-in-function-source
-  '((candidates . erl-complete-built-in-function-candidates)
+(defvar edts-complete-macro-source
+  '((candidates . edts-complete-macro-candidates)
     (document   . nil)
-    (symbol     . "f")
+    (symbol     . "?")
     (requires   . nil)
     (limit      . nil)
     ))
@@ -34,38 +34,34 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defun erl-complete-built-in-function-candidates ()
-  (case (erl-complete-point-inside-quotes)
+(defun edts-complete-macro-candidates ()
+  (case (edts-complete-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (erl-complete-single-quoted-built-in-function-candidates))
-    ('none          (erl-complete-normal-built-in-function-candidates))))
+    ('single-quoted (edts-complete-single-quoted-macro-candidates))
+    ('none          (edts-complete-normal-macro-candidates))))
 
-(defun erl-complete-normal-built-in-function-candidates ()
-  "Produces the completion list for normal (unqoted) local functions."
-  (when (erl-complete-built-in-function-p)
-    erlang-int-bifs))
+(defun edts-complete-normal-macro-candidates ()
+  "Produces the completion list for normal (unqoted) macros. Unimplemented"
+  ;; (when (edts-complete-macro-p)
+  ;;   ...)
+  nil)
 
-(defun erl-complete-single-quoted-built-in-function-candidates ()
+(defun edts-complete-single-quoted-macro-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'erl-complete-single-quote-terminate
-   erl-complete-normal-built-in-function-candidates))
+   #'edts-complete-single-quote-terminate
+   edts-complete-normal-macro-candidates))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
 ;;
 
-(defun erl-complete-built-in-function-p ()
+(defun edts-complete-macro-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
-  (let ((preceding (erl-complete-term-preceding-char)))
-    (and
-     (not (equal ?? preceding))
-     (not (equal ?# preceding))
-     ; qualified calls to built-in functions are handled by the
-     ; exported-function source
-     (not (equal ?: preceding))
-     (string-match erlang-atom-regexp ac-prefix))))
+  (and
+   (equal ?? (edts-complete-term-preceding-char))
+   (string-match erlang-atom-regexp ac-prefix)))
 
-(provide 'erl-complete-built-in-function-source)
+(provide 'edts-complete-macro-source)

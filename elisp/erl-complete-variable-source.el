@@ -23,8 +23,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
-(defvar erl-complete-variable-source
-  '((candidates . erl-complete-variable-candidates)
+(defvar edts-complete-variable-source
+  '((candidates . edts-complete-variable-candidates)
     (document   . nil)
     (symbol     . "v")
     (requires   . nil)
@@ -34,16 +34,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defun erl-complete-variable-candidates ()
-  (case (erl-complete-point-inside-quotes)
+(defun edts-complete-variable-candidates ()
+  (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('single-quoted nil) ; No single-quoted variables
-    ('none          (erl-complete-normal-variable-candidates))))
+    ('none          (edts-complete-normal-variable-candidates))))
 
-(defun erl-complete-normal-variable-candidates ()
+(defun edts-complete-normal-variable-candidates ()
   "Generates the auto-complete candidate list for variables. Matches variables
 mentioned in current function, before current point."
-  (when (erl-complete-variable-p)
+  (when (edts-complete-variable-p)
     (save-excursion
       (let ((old-point  (point))
             (candidates ()))
@@ -57,14 +57,14 @@ mentioned in current function, before current point."
 ;; Conditions
 ;;
 
-(defun erl-complete-variable-p ()
+(defun edts-complete-variable-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with an
 variable."
   (let ((case-fold-search nil)
-        (preceding        (erl-complete-term-preceding-char)))
+        (preceding        (edts-complete-term-preceding-char)))
     (and
      (not (equal ?? preceding))
      (not (equal ?# preceding))
      (string-match erlang-variable-regexp ac-prefix))))
 
-(provide 'erl-complete-variable-source)
+(provide 'edts-complete-variable-source)

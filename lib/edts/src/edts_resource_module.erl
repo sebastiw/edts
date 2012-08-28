@@ -52,9 +52,8 @@
 
 
 %% Webmachine callbacks
-init(Config) ->
-  {{trace, "/tmp"}, Config}.
-  %% {ok, orddict:new()}.
+init(_Config) ->
+  {ok, orddict:new()}.
 
 allow_missing_post(ReqData, Ctx) ->
   {true, ReqData, Ctx}.

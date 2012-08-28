@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
-;; auto-complete source for erlang macros.
+;; auto-complete source for erlang records.
 
 (require 'auto-complete)
 (require 'ferl)
@@ -23,10 +23,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
-(defvar erl-complete-macro-source
-  '((candidates . erl-complete-macro-candidates)
+(defvar edts-complete-record-source
+  '((candidates . edts-complete-record-candidates)
     (document   . nil)
-    (symbol     . "?")
+    (symbol     . "#")
     (requires   . nil)
     (limit      . nil)
     ))
@@ -34,34 +34,34 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defun erl-complete-macro-candidates ()
-  (case (erl-complete-point-inside-quotes)
+(defun edts-complete-record-candidates ()
+  (case (edts-complete-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (erl-complete-single-quoted-macro-candidates))
-    ('none          (erl-complete-normal-macro-candidates))))
+    ('single-quoted (edts-complete-single-quoted-record-candidates))
+    ('none          (edts-complete-normal-record-candidates))))
 
-(defun erl-complete-normal-macro-candidates ()
-  "Produces the completion list for normal (unqoted) macros. Unimplemented"
-  ;; (when (erl-complete-macro-p)
+(defun edts-complete-normal-record-candidates ()
+  "Produces the completion list for normal (unqoted) records. Unimplemented"
+  ;; (when (edts-complete-record-p)
   ;;   ...)
   nil)
 
-(defun erl-complete-single-quoted-macro-candidates ()
+(defun edts-complete-single-quoted-record-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'erl-complete-single-quote-terminate
-   erl-complete-normal-macro-candidates))
+   #'edts-complete-single-quote-terminate
+   edts-complete-normal-record-candidates))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
 ;;
 
-(defun erl-complete-macro-p ()
+(defun edts-complete-record-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
   (and
-   (equal ?? (erl-complete-term-preceding-char))
+   (equal ?# (edts-complete-term-preceding-char))
    (string-match erlang-atom-regexp ac-prefix)))
 
-(provide 'erl-complete-macro-source)
+(provide 'edts-complete-record-source)

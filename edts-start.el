@@ -92,7 +92,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Auto-completion
-(require 'erl-complete)
+(require 'edts-complete)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Erlang-specific keybindings

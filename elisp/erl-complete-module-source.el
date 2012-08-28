@@ -23,8 +23,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
-(defvar erl-complete-module-source
-  '((candidates . erl-complete-module-candidates)
+(defvar edts-complete-module-source
+  '((candidates . edts-complete-module-candidates)
     (document   . nil)
     (symbol     . "m")
     (requires   . nil)
@@ -35,40 +35,40 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defvar erl-complete-module-cache nil
+(defvar edts-complete-module-cache nil
   "The current list of module completions.")
-(ac-clear-variable-after-save 'erl-complete-module-cache)
+(ac-clear-variable-after-save 'edts-complete-module-cache)
 
-(defun erl-complete-module-candidates ()
-  (case (erl-complete-point-inside-quotes)
+(defun edts-complete-module-candidates ()
+  (case (edts-complete-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (erl-complete-single-quoted-module-candidates))
-    ('none          (erl-complete-normal-module-candidates))))
+    ('single-quoted (edts-complete-single-quoted-module-candidates))
+    ('none          (edts-complete-normal-module-candidates))))
 
-(defun erl-complete-normal-module-candidates ()
+(defun edts-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
-  (when (erl-complete-module-p)
-    (or erl-complete-module-cache
-        (setq erl-complete-module-cache (edts-get-modules)))))
+  (when (edts-complete-module-p)
+    (or edts-complete-module-cache
+        (setq edts-complete-module-cache (edts-get-modules)))))
 
-(defun erl-complete-single-quoted-module-candidates ()
+(defun edts-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'erl-complete-single-quote-terminate
-   erl-complete-normal-module-candidates))
+   #'edts-complete-single-quote-terminate
+   edts-complete-normal-module-candidates))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
 ;;
 
-(defun erl-complete-module-p ()
+(defun edts-complete-module-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a module."
-  (let ((preceding (erl-complete-term-preceding-char)))
+  (let ((preceding (edts-complete-term-preceding-char)))
     (and
      (not (equal ?? preceding))
      (not (equal ?# preceding))
      (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
-(provide 'erl-complete-module-source)
+(provide 'edts-complete-module-source)
