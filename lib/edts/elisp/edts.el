@@ -166,13 +166,13 @@ buffer"
         (cdr (assoc 'body res))
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-compilation-result (module file)
+(defun edts-compile-and-load (module file)
   (let* ((node-name (edts-project-buffer-node-name))
          (resource
-          (list "nodes" node-name "modules" module "compilation_result"))
+          (list "nodes" node-name "modules" module))
          (args (list (cons "file" file)))
-         (res (edts-rest-get resource args)))
-    (if (equal (assoc 'result res) '(result "200" "OK"))
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
           (cdr (assoc 'body res))
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 

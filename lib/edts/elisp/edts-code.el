@@ -36,7 +36,7 @@ a symbol."
   (edts-face-remove-overlays "edts-code-compile")
   (let* ((module   (erlang-get-module))
          (file     (buffer-file-name))
-         (comp-res (edts-get-compilation-result module file)))
+         (comp-res (edts-compile-and-load module file)))
     (when comp-res
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))

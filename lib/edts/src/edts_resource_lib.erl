@@ -87,7 +87,6 @@ make_nodename(NameStr) ->
   list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ Host).
 
 %%%_* Internal functions =======================================================
-atom_to_exists_p(file)     -> fun file_exists_p/2;
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2.
 
@@ -135,21 +134,16 @@ exported_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Check if file exists.
-%% @end
--spec file_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
-%%------------------------------------------------------------------------------
-file_exists_p(ReqData, _Ctx) ->
-  filelib:is_file(wrq:get_qs_value("file", ReqData)).
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Validate path to a file.
 %% @end
 -spec file_validate(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
 file_validate(ReqData, _Ctx) ->
-  {ok, wrq:get_qs_value("file", ReqData)}.
+  File = wrq:get_qs_value("file", ReqData),
+  case filelib:is_file(File) of
+    true  -> {ok, File};
+    false -> error
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

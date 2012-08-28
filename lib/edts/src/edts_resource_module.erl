@@ -29,14 +29,19 @@
 
 %% API
 %% Webmachine callbacks
--export([ allowed_methods/2
+-export([ allow_missing_post/2
+        , allowed_methods/2
+        , content_types_accepted/2
         , content_types_provided/2
+        , create_path/2
         , init/1
         , malformed_request/2
+        , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([to_json/2]).
+-export([ from_json/2
+        , to_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -47,11 +52,19 @@
 
 
 %% Webmachine callbacks
-init(_Config) ->
-  {ok, orddict:new()}.
+init(Config) ->
+  {{trace, "/tmp"}, Config}.
+  %% {ok, orddict:new()}.
+
+allow_missing_post(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
 
 allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
+  {['GET', 'POST'], ReqData, Ctx}.
+
+content_types_accepted(ReqData, Ctx) ->
+  Map = [ {"application/json", from_json}],
+  {Map, ReqData, Ctx}.
 
 content_types_provided(ReqData, Ctx) ->
   Map = [ {"application/json", to_json}
@@ -59,20 +72,43 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
+create_path(ReqData, Ctx) ->
+  {wrq:path(ReqData), ReqData, Ctx}.
+
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, info_level]).
+  Validate = case wrq:method(ReqData) of
+               'GET'  -> [nodename, module, info_level];
+               'POST' -> [nodename, module, file]
+             end,
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
+
+post_is_create(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Module   = orddict:fetch(module, Ctx),
-  Level    = orddict:fetch(info_level, Ctx),
-  Info     = edts:get_module_info(Nodename, Module, Level),
+  InfoLevel =
+    case wrq:method(ReqData) of
+      'GET'  -> orddict:fetch(info_level, Ctx);
+      'POST' -> basic
+    end,
+  Info     = edts:get_module_info(Nodename, Module, InfoLevel),
   Exists   =
-    edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
-    not (Info =:= {error, not_found}),
+    (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
+     not (Info =:= {error, not_found})),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
+from_json(ReqData, Ctx) ->
+  Nodename = orddict:fetch(nodename, Ctx),
+  Filename = orddict:fetch(file, Ctx),
+  {Result, {Errors0, Warnings0}} = edts:compile_and_load(Nodename, Filename),
+  Errors   = {array, [format_error(Error) || Error <- Errors0]},
+  Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
+  Data = {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]},
+  {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
+
 to_json(ReqData, Ctx) ->
   Info = orddict:fetch(info, Ctx),
   Data = {struct, lists:foldl(fun format/2, [], Info)},
@@ -110,6 +146,12 @@ format(_, Acc) ->
 
 
 %%%_* Internal functions =======================================================
+
+format_error({Type, File, Line, Desc}) ->
+  {struct, [ {type, Type}
+           , {file, list_to_binary(File)}
+           , {line, Line}
+           , {description, list_to_binary(Desc)}]}.
 
 
 %%%_* Emacs ============================================================
