@@ -1,9 +1,9 @@
-[submodule "lib/auto-highlight-symbol-mode"]
-	path = lib/auto-highlight-symbol-mode
-	url = https://github.com/tjarvstrand/auto-highlight-symbol-mode.git
-[submodule "lib/auto-complete"]
-	path = lib/auto-complete
+[submodule "elisp/auto-complete"]
+	path = elisp/auto-complete
 	url = https://github.com/tjarvstrand/auto-complete.git
-[submodule "lib/popup-el"]
-	path = lib/popup-el
+[submodule "elisp/auto-highlight-symbol-mode"]
+	path = elisp/auto-highlight-symbol-mode
+	url = https://github.com/tjarvstrand/auto-highlight-symbol-mode.git
+[submodule "elisp/popup-el"]
+	path = elisp/popup-el
 	url = https://github.com/tjarvstrand/popup-el.git

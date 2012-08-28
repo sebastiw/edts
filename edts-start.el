@@ -8,9 +8,8 @@
 (defvar edts-lib-directory
   (file-truename
    (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "/lib/"))
+            (or (locate-library "edts-start") load-file-name)) "/elisp/"))
   "Directory where edts libraries are located.")
-(add-to-list 'load-path (concat "lib/edts/elisp/"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
@@ -24,9 +23,7 @@
                         (and (not (equal "." file-name))
                              (not (equal ".." file-name))))))
                 (directory-files edts-lib-directory t)))
-(add-to-list 'load-path (concat edts-lib-directory "edts/elisp/"))
-(add-to-list 'exec-path (concat (directory-file-name erlang-root-dir)
-                                "/bin"))
+(add-to-list 'exec-path (concat (directory-file-name erlang-root-dir) "/bin"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Erlang mode
