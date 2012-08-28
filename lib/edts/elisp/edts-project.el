@@ -125,18 +125,19 @@ corresponds to 'buffer'."
   (edts-project-node-started-p (edts-project-buffer-node-name buffer)))
 
 (defun edts-project-node-started-p (node-name)
-  "Returns non-nil if there is an edts-project erlang node with name `node-name'
-running on localhost."
+  "Returns non-nil if there is an edts-project erlang node with name
+`node-name' running on localhost."
   (edts-node-running node-name))
 
 (defun edts-project-ensure-node-not-started (node-name)
-  "Signals an error if a node of name `node-name' is running on localhost."
+  "Signals an error if a node of name `node-name' is running on
+localhost."
   (when (edts-project-node-started-p node-name)
-    (error "-- Node already up. --")))
+    (error "Node already up")))
 
 (defun edts-project-name (project)
-  "Returns the name of the edts-project `project'. No default value, come on you
-have to do *something* yourself!"
+  "Returns the name of the edts-project `project'. No default value,
+come on you have to do *something* yourself!"
   (edts-project-property 'name project))
 
 (defun edts-project-root (project)
@@ -144,12 +145,13 @@ have to do *something* yourself!"
   (edts-project-property 'root project))
 
 (defun edts-project-lib-dirs (project)
-  "Returns the edts-project `project's library directories."
-  (edts-project-property 'lib-dirs project))
+  "Returns the edts-project `project's library directories. Defaults to
+(\"lib\")"
+  (or (edts-project-property 'lib-dirs project) '("lib")))
 
 (defun edts-project-node-name (project)
-  "Returns the edts-project `project's erlang node-name. Currently only short
-names are supported."
+  "Returns the edts-project `project's erlang node-name. Currently only
+short names are supported."
   (or (edts-project-property 'node-sname project) (edts-project-name project)))
 
 (defun edts-project-start-command (project)
@@ -188,28 +190,28 @@ otherwise nil. If buffer is omitted, it defaults to the current buffer."
   (edts-project-file-project (buffer-file-name buffer)))
 
 (defun edts-project-file-project (&optional file-name)
-  "Returns the edts-project that the file with `file-name' is part of, if any,
-otherwise nil. If `file-name' is omitted, it defaults to the file-name of the
-current buffer."
+  "Returns the edts-project that the file with `file-name' is part of,
+if any, otherwise nil. If `file-name' is omitted, it defaults to the
+file-name of the current buffer."
   (unless file-name (setq file-name (buffer-file-name)))
   (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
             edts-projects))
 
 
 (defun edts-project-file-in-project-p (project file-name)
-  "Returns non-nil if the fully qualified `file-name' is located inside the
-edts-project `project'."
+  "Returns non-nil if the fully qualified `file-name' is located
+inside the edts-project `project'."
   (file-under-path-p (edts-project-root project) file-name))
 
 (defun file-under-path-p (path file-name)
-  "Returns non-nil if the fully qualified `file-name' is located underneath
-`path'."
+  "Returns non-nil if the fully qualified `file-name' is located
+underneath `path'."
    (string-prefix-p (edts-project-normalize-path path)
                     (expand-file-name file-name)))
 
 (defun edts-project-normalize-path (path-str)
-  "Bad name. Only replaces duplicate /'s in path-str and make sure it ends
-with a '/'."
+  "Badly named function. Only replaces duplicate /'s in path-str and
+make sure it ends with a '/'."
   (replace-regexp-in-string "//+" "/"
                             (concat (expand-file-name path-str) "/")))
 

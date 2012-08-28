@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc The main edts server
+%%% @doc functions resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -63,11 +63,11 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  case edts:node_available_p(Nodename) of
+  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
     false -> {false, ReqData, Ctx};
     true ->
+      Nodename = orddict:fetch(nodename, Ctx),
+      Module = orddict:fetch(module, Ctx),
       case edts:get_module_info(Nodename, Module, detailed) of
         {error, not_found} -> {false, ReqData, Ctx};
         Info               -> {true,  ReqData, orddict:store(info, Info, Ctx)}
