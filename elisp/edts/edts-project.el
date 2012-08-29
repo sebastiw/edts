@@ -63,7 +63,6 @@ activated for the first file that is located inside a project."
     (edts-project-ensure-node-not-started node-name)
     (edts-project-make-comint-buffer buffer-name pwd command)
     (edts-register-node-when-ready node-name)
-    (edts-project-add-node node-name buffer-name)
     (when (member 'distel features)
       (let ((node-name-symbol
              (make-symbol (concat node-name "\@" system-name))))
@@ -87,13 +86,6 @@ activated for the first file that is located inside a project."
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)))
-
-(defun edts-project-add-node (node-name buffer-name)
-  "Add a new node to `edts-project-nodes'."
-  (add-to-list 'edts-project-nodes
-               (list
-                (cons 'node-name   node-name)
-                (cons 'buffer-name buffer-name))))
 
 (defun edts-project-buffer-node-started-p (&optional buffer)
   "Returns non-nil if there is an edts-project erlang node started that
