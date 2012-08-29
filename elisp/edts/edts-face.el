@@ -129,7 +129,7 @@ the highest priority any edts overlay at new point if any."
           (if (edts-face-overlay-p (car overlays) type)
               (setq prev-edts-overlay (car overlays))
               (setq overlays          (cdr overlays)))))
-      (setq prev-pos (prev-overlay-change prev-pos)))
+      (setq prev-pos (previous-overlay-change prev-pos)))
      prev-edts-overlay))
 
 (defun edts-face-overlay-p (overlay &optional type)
