@@ -121,7 +121,7 @@ the highest priority any edts overlay at new point if any."
 
 (defun edts-face-previous-overlay (pos type)
   "returns the position of the previous edts overlay of TYPE from POS"
-  (let ((prev-pos          (previous-line-overlay-change pos))
+  (let ((prev-pos          (previous-overlay-change pos))
         (prev-edts-overlay nil))
     (while (and (> prev-pos (point-min)) (not prev-edts-overlay))
       (let ((overlays (overlays-at prev-pos)))
