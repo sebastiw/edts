@@ -131,13 +131,15 @@ short names are supported."
   (cdr (assoc prop project)))
 
 (defun edts-project-code-path-expand (project)
-  "Expands `project's listed lib dirs to a full set of ebin directories,
+  "Expands `project's ebin and listed lib dirs to a full set of ebin directories,
 treating every subdirectory of each lib dir a an OTP application."
   (let ((root     (edts-project-root project))
         (lib-dirs (edts-project-lib-dirs project)))
-    (apply #'append
-           (mapcar #'(lambda (dir)
-                       (edts-project-path-expand root dir)) lib-dirs))))
+    (cons
+     (format "%s/ebin" (edts-project-normalize-path root))
+     (apply #'append
+            (mapcar #'(lambda (dir)
+                        (edts-project-path-expand root dir)) lib-dirs)))))
 
 (defun edts-project-path-expand (root dir)
   "Returns a list of all existing ebin directories in any folder directly
