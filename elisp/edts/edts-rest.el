@@ -23,7 +23,7 @@
 (require 'url)
 (require 'json)
 
-(defconst edts-rest-host "localhost"
+(defconst edts-rest-host "0"
   "The host where the edts erlang node is running.")
 
 (defconst edts-rest-port 4587

@@ -34,6 +34,8 @@
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
   (interactive)
+  (when (edts-node-running "edts")
+    (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
     (make-comint "edts" "./start.sh" nil (executable-find "erl"))))

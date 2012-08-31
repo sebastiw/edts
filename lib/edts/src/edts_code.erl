@@ -251,6 +251,7 @@ reload_module(M) ->
 update() ->
   {ok, _Modules} = xref:update(?SERVER),
   xref:q(?SERVER, "E"),
+  modules(),
   ok.
 
 %%------------------------------------------------------------------------------
