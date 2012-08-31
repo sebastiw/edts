@@ -17,7 +17,7 @@
 ;;
 ;; setup of auto-complete support for erlang.
 
-(require 'auto-complete-config)
+(require 'auto-complete)
 (require 'ferl)
 
 (require 'edts-complete-variable-source)
@@ -28,8 +28,6 @@
 (require 'edts-complete-module-source)
 (require 'edts-complete-macro-source)
 (require 'edts-complete-record-source)
-
-(ac-config-default)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -88,31 +86,39 @@ character before that."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
 
-(defun edts-complete-erlang-mode-hook ()
-  "Buffer-setup for edts-complete."
-  (setq ac-sources '(edts-complete-variable-source
-                     edts-complete-local-function-source
-                     edts-complete-imported-function-source
-                     edts-complete-exported-function-source
-                     edts-complete-built-in-function-source
-                     edts-complete-module-source
-                     edts-complete-macro-source
-                     edts-complete-record-source))
+(defconst edts-complete-sources
+  '(edts-complete-variable-source
+    edts-complete-local-function-source
+    edts-complete-imported-function-source
+    edts-complete-exported-function-source
+    edts-complete-built-in-function-source
+    edts-complete-module-source
+    edts-complete-macro-source
+    edts-complete-record-source)
+  "Sources that EDTS uses for auto-completion.")
+
+(defun edts-complete-setup ()
+  "Set edts completion defaults local to current buffer."
+  (make-local-variable 'ac-sources)
+  (make-local-variable 'ac-disable-faces)
+  (make-local-variable 'ac-ignore-case)
+  (make-local-variable 'ac-use-menu-map)
+  (make-local-variable 'ac-menu-map)
+  (make-local-variable 'ac-use-dictionary-as-stop-words)
+  (make-local-variable 'ac-disable-faces)
+
+  (setq ac-sources edts-complete-sources)
+  (setq ac-ignore-case 'smart)
+  (setq ac-use-menu-map t)
+  (setq ac-use-dictionary-as-stop-words nil)
+  (define-key ac-menu-map (kbd "C-n") 'ac-next)
+  (define-key ac-menu-map (kbd "C-p") 'ac-previous)
 
   ;; this is to allow completion inside quoted atoms. As a side-effect we
   ;; get completion inside strings, which must be handled in the sources
   ;; above.
-  (make-local-variable 'ac-disable-faces)
   (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
-  )
-(add-hook 'erlang-mode-hook 'edts-complete-erlang-mode-hook)
 
-;; Default settings
-(setq ac-ignore-case 'smart)
-(setq ac-use-menu-map t)
-(define-key ac-menu-map (kbd "C-n") 'ac-next)
-(define-key ac-menu-map (kbd "C-p") 'ac-previous)
-
-(add-to-list 'ac-modes 'erlang-mode)
+  (auto-complete-mode))
 
 (provide 'edts-complete)

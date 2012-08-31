@@ -113,7 +113,10 @@
   ;; Make sure we remember our history
   (if (boundp 'window-persistent-parameters)
       (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
-      (setq window-persistent-parameters '((edts-find-history-ring . t)))))
+      (setq window-persistent-parameters '((edts-find-history-ring . t))))
+
+  ;; Auto-completion
+  (edts-complete-setup))
 
 (defun edts-teardown ()
   ;; Start with our own stuff
