@@ -161,7 +161,6 @@ do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  ?debugFmt("Abstract:~n~p~n", [Abstract]),
   Basic            = do_get_module_info(M, basic),
 
   {source, Source} = lists:keyfind(source, 1, Basic),
@@ -173,7 +172,6 @@ do_get_module_info(M, detailed) ->
                            , {functions,   []}
                            , {records,     []}]
                            ++ Basic),
-  ?debugFmt("Cwd: ~p", [get_compile_cwd(M, Abstract)]),
   Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
   Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
   Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
