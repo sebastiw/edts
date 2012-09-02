@@ -351,25 +351,27 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
-parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
+parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}} = A, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
+  error_logger:info_msg("A ~p~n", [A]),
+  error_logger:info_msg("includes ~p~n", [orddict:fetch(includes, Acc0)]),
   BeamSource = path_flatten(orddict:fetch(source, Acc0)),
-  Source =
-    case filename:pathtype(Source0) of
+  Src =
+    case filename:pathtype(Src0) of
       absolute ->
-        path_flatten(Source0);
+        path_flatten(Src0);
       relative ->
-        path_flatten(filename:join(orddict:fetch(compile_cwd, Acc0), Source0))
+        path_flatten(filename:join(orddict:fetch(compile_cwd, Acc0), Src0))
     end,
   %% Update list of all files.
   Acc =
-    case Source of
+    case Src of
       BeamSource -> Acc0;
-      Source     -> orddict:update(includes, fun(I) -> [Source|I] end, Acc0)
+      Src        -> orddict:update(includes, fun(I) -> [Src|I] end, Acc0)
     end,
   %% Update current file.
-  orddict:store(cur_file, Source, Acc);
+  orddict:store(cur_file, Src, Acc);
 parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
                , {function, F}
@@ -380,10 +382,10 @@ parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
                ({record_field, _, {_, _, FName}, _Call}) -> FName
             end,
   RecordInfo =
-    [ {record, Recordname}
-      , {fields, lists:map(FieldsF, Fields)}
-      , {line,   Line}
-      , {source, orddict:fetch(cur_file, Acc)}],
+    [ {name, Recordname}
+    , {fields, lists:map(FieldsF, Fields)}
+    , {line,   Line}
+    , {source, orddict:fetch(cur_file, Acc)}],
   orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
 parse_abstract(_, Acc) -> Acc.
 
@@ -461,11 +463,11 @@ detailed_module_info_test_() ->
                   , [{module, lists}, {function, member}, {arity, 2}]])
      , lists:sort(proplists:get_value(imports, Info)))
   , ?_assertEqual(
-       lists:sort([ [ {record, rec}
+       lists:sort([ [ {name, rec}
                     , {fields, [ord]}
                     , {line, 11}
                     , {source, proplists:get_value(source, Info)}]
-                  , [ {record, rec2}
+                  , [ {name, rec2}
                     , {fields, [ord]}
                     , {line, 1}
                     , {source,

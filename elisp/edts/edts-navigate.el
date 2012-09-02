@@ -33,9 +33,8 @@
                (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
                (mark (copy-marker (point-marker))))
           (find-file-existing file) ; Fixme, catch error
-          (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+          (ring-insert-at-beginning (edts-window-history-ring) mark)
           (error "No module found")))))
-
 
 (defun edts-find-local-function()
   "Find a function in the current module."
@@ -62,48 +61,88 @@ determine which file to look in, with the following algorithm:
 
   Otherwise, report that the file can't be found."
   (interactive)
-  (let ((type-under-point (edts-type-under-point)))
-    (cond
-     ;; look for a include/include_lib
-     ((eq type-under-point 'header)
-      (or (edts-find-header-source (edts-header-at-point))
-          (error "No header at point.")))
-     ;; look for a M:F/A
-     ((eq type-under-point 'mfa)
-      (apply #'edts-find-source
-             (or (ferl-mfa-at-point) (error "No call at point.")))))))
+  (cond
+   ;; look for a include/include_lib
+   ((edts-header-under-point-p) (edts-find-header-source))
+   ((edts-macro-under-point-p)  (edts-find-macro-source))
+   ;; look for a M:F/A
+   ((apply #'edts-find-source
+           (or (ferl-mfa-at-point) (error "No call at point."))))))
 
-(defun edts-type-under-point ()
-  "Return which type of erlang thing we have under our pointer."
+(defun edts-header-under-point-p ()
+  "Return non nil if the form under point is an include or include_lib
+directive."
+  (save-excursion
+    (beginning-of-line)
+    (looking-at "-include\\(_lib\\)\\s-*(\\s-*.*")))
+
+(defun edts-macro-under-point-p ()
+  "Return non nil if the form under point is a macro."
   (save-excursion
     (beginning-of-thing 'symbol)
-    (cond
-     ((looking-back "-include\\(_lib(\\|(\\)\".*") 'header)
-     (t 'mfa))))
+    (equal ?? (char-before (point)))))
 
 (defun edts-header-at-point ()
-  "Return the filename for the header at point"
+  "Return the filename for the header under point."
   (save-excursion (end-of-thing 'filename) (thing-at-point 'filename)))
 
-(defun edts-find-header-source (headerfile)
-  "Open the source for the header file"
-  (let* ((mark (copy-marker (point-marker))) ;; Add us to the history list
-         (module (erlang-get-module))
-         (info (edts-get-detailed-module-info module))
-         (includes (cdr (assoc 'includes info))) ;; Get all includes
+(defun edts-find-header-source ()
+  "Open the source for the header file under point."
+  (let* ((headerfile (edts-header-at-point))
+         (mark (copy-marker (point-marker))) ;; Add us to the history list
+         (includes (edts-get-includes))
          (file (find-if #'(lambda(x) (edts-has-suffix headerfile x))
                         includes)))
     (if file
-        (progn (ring-insert-at-beginning (edts-window-find-history-ring) mark)
-               (find-file-existing file)))
-    ))
+        (progn (ring-insert-at-beginning (edts-window-history-ring) mark)
+               (find-file-existing file)
+               (goto-char (point-min)))
+        (null (error "No header at point")))))
+
+(defun edts-find-macro-source ()
+  "Jump to the macro-definition under point."
+  (let* (
+         (macro (thing-at-point 'symbol))
+         (re    (format "^-define\\s-*(\\s-*%s\\s-*," macro)))
+  (or (edts-search-current-buffer re)
+      (edts-search-includes re)
+      (error "No macro at point"))))
+
+(defun edts-search-current-buffer (re)
+  "Find the first match for RE in the current buffer. Move point there
+and make an entry in edts-window-history-ring."
+  (let ((mark  (copy-marker (point-marker))))
+    (goto-char (point-min))
+    (if (re-search-forward re nil t)
+        (progn
+          (beginning-of-line)
+          (ring-insert-at-beginning (edts-window-history-ring) mark))
+        (null (goto-char mark)))))
+
+(defun edts-search-includes (re &optional group-index)
+  "Find the first match for RE in the current buffer's include files.
+Move point there and make an entry in edts-window-history-ring."
+  (let ((mark        (copy-marker (point-marker)))
+        (group-index (or group-index 0))
+        (includes    (edts-get-includes))
+        (found       nil))
+    (with-temp-buffer
+      (save-excursion
+        (while (and includes (not found))
+          (insert-file-contents (car includes) nil nil nil t)
+          (goto-char (point-min))
+          (when (re-search-forward re nil t) (setq found (car includes)))
+          (pop includes))))
+    (when found
+      (find-file-existing found)
+      (goto-char (point-min))
+      (re-search-forward re nil t)
+      (beginning-of-line)
+      (ring-insert-at-beginning (edts-window-history-ring) mark))))
 
 (defun edts-has-suffix (suffix string)
   "returns string if string has suffix"
-  (let* ((suffix_len (length suffix))
-         (string_len (length string))
-         (base_len (- string_len suffix_len)))
-    (if (eq t (compare-strings string base_len nil suffix nil nil)) string )))
+    (string= (substring string (- 0 (length suffix))) suffix))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
@@ -114,7 +153,7 @@ When FUNCTION is specified, the point is moved to its start."
             (string-equal module "MODULE"))
         (if function
             (progn
-              (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+              (ring-insert-at-beginning (edts-window-history-ring) mark)
               (ferl-search-function function arity))
             (null (error "Function %s:%s/%s not found" module function arity)))
         (let* ((node (edts-project-buffer-node-name))
@@ -122,7 +161,7 @@ When FUNCTION is specified, the point is moved to its start."
           (if info
               (progn
                 (find-file-existing (cdr (assoc 'source info)))
-                (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+                (ring-insert-at-beginning (edts-window-history-ring) mark)
                 (goto-line (cdr (assoc 'line   info))))
               (null
                (error "Function %s:%s/%s not found" module function arity)))))))
@@ -131,7 +170,7 @@ When FUNCTION is specified, the point is moved to its start."
 (defun edts-find-source-unwind ()
   "Unwind back from uses of `edts-find-source-under-point'."
   (interactive)
-  (let ((ring (edts-window-find-history-ring)))
+  (let ((ring (edts-window-history-ring)))
     (unless (ring-empty-p ring)
       (let* ((marker (ring-remove ring))
              (buffer (marker-buffer marker)))
@@ -141,7 +180,7 @@ When FUNCTION is specified, the point is moved to its start."
           ;; If this buffer was deleted, recurse to try the next one
           (edts-find-source-unwind))))))
 
-(defun edts-window-find-history-ring ()
+(defun edts-window-history-ring ()
   (let ((window (selected-window)))
     (or (window-parameter window 'edts-find-history-ring)
         (set-window-parameter window 'edts-find-history-ring (make-ring 20)))))
