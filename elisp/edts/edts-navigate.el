@@ -20,6 +20,8 @@
 ;;
 ;; Code for navigating through a project.
 
+(require 'thingatpt)
+
 (defun edts-find-module ()
   "Find a module in the current project."
   (interactive)
@@ -47,9 +49,9 @@
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
-  "Goto the source code that defines the function being called at point.
-For remote calls, contacts an Erlang node to determine which file to
-look in, with the following algorithm:
+  "Goto the source code that:  defines the function being called at point or
+header file included at point. For remote calls, contacts an Erlang node to
+determine which file to look in, with the following algorithm:
 
   Find the directory of the module's beam file (loading it if necessary).
   Look for the source file in:
@@ -60,8 +62,48 @@ look in, with the following algorithm:
 
   Otherwise, report that the file can't be found."
   (interactive)
-  (apply #'edts-find-source
-         (or (ferl-mfa-at-point) (error "No call at point."))))
+  (let ((type-under-point (edts-type-under-point)))
+    (cond
+     ;; look for a include/include_lib
+     ((eq type-under-point 'header)
+      (or (edts-find-header-source (edts-header-at-point))
+          (error "No header at point.")))
+     ;; look for a M:F/A
+     ((eq type-under-point 'mfa)
+      (apply #'edts-find-source
+             (or (ferl-mfa-at-point) (error "No call at point.")))))))
+
+(defun edts-type-under-point ()
+  "Return which type of erlang thing we have under our pointer."
+  (save-excursion
+    (beginning-of-thing 'symbol)
+    (cond
+     ((looking-back "-include\\(_lib(\\|(\\)\".*") 'header)
+     (t 'mfa))))
+
+(defun edts-header-at-point ()
+  "Return the filename for the header at point"
+  (save-excursion (end-of-thing 'filename) (thing-at-point 'filename)))
+
+(defun edts-find-header-source (headerfile)
+  "Open the source for the header file"
+  (let* ((mark (copy-marker (point-marker))) ;; Add us to the history list
+         (module (erlang-get-module))
+         (info (edts-get-detailed-module-info module))
+         (includes (cdr (assoc 'includes info))) ;; Get all includes
+         (file (find-if #'(lambda(x) (edts-has-suffix headerfile x))
+                        includes)))
+    (if file
+        (progn (ring-insert-at-beginning (edts-window-find-history-ring) mark)
+               (find-file-existing file)))
+    ))
+
+(defun edts-has-suffix (suffix string)
+  "returns string if string has suffix"
+  (let* ((suffix_len (length suffix))
+         (string_len (length string))
+         (base_len (- string_len suffix_len)))
+    (if (eq t (compare-strings string base_len nil suffix nil nil)) string )))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
@@ -74,7 +116,7 @@ When FUNCTION is specified, the point is moved to its start."
             (progn
               (ring-insert-at-beginning (edts-window-find-history-ring) mark)
               (ferl-search-function function arity))
-            (null (error "Function %s:%s/s not found" module function arity)))
+            (null (error "Function %s:%s/%s not found" module function arity)))
         (let* ((node (edts-project-buffer-node-name))
                (info (edts-get-function-info node module function arity)))
           (if info
@@ -83,7 +125,7 @@ When FUNCTION is specified, the point is moved to its start."
                 (ring-insert-at-beginning (edts-window-find-history-ring) mark)
                 (goto-line (cdr (assoc 'line   info))))
               (null
-               (error "Function %s:%s/s not found" module function arity)))))))
+               (error "Function %s:%s/%s not found" module function arity)))))))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()

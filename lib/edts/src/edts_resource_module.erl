@@ -110,8 +110,11 @@ from_json(ReqData, Ctx) ->
 
 to_json(ReqData, Ctx) ->
   Info = orddict:fetch(info, Ctx),
-  Data = {struct, lists:foldl(fun format/2, [], Info)},
+  Data = format(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
+
+format(Info) ->
+  {struct, lists:foldl(fun format/2, [], Info)}.
 
 format({exports, Exports}, Acc) ->
   [{exports, {array, [{struct, Export} || Export <- Exports]}}|Acc];
@@ -121,23 +124,30 @@ format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
   Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
   [{time, list_to_binary(Str)}|Acc];
 format({records, Records0}, Acc) ->
-  RecFun = fun({name,   Name})   -> {name, Name};
-              ({line,   Line})   -> {line, Line};
-              ({fields, Fs})     -> {fields, {array, Fs}};
-              ({source, Source}) -> {source, list_to_binary(Source)}
-           end,
-  Records = [{struct, lists:map(RecFun, Record)} || Record <- Records0],
-  [{struct, [{records, {array, Records}}]}|Acc];
+  RecFun =
+    fun({name,   N}     , {none, Attrs}) -> {N, Attrs};
+       ({line,   Line}  , {N, Attrs})    -> {N, [{line, Line}|Attrs]};
+       ({fields, Fs}    , {N, Attrs})    -> {N, [{fields, {array, Fs}}|Attrs]};
+       ({source, Source}, {N, Attrs})    ->
+        {N, [{source, list_to_binary(Source)}|Attrs]}
+    end,
+  Records = [lists:foldl(RecFun, {none,[]}, Record) || Record <- Records0],
+  [{records, {struct, Records}}|Acc];
 format({functions, Functions0}, Acc) ->
-  FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
-              (KV) -> KV
+  FunFun = fun({function, F}   , {none, Attrs}) ->
+               {F, Attrs};
+              ({source, Source}, {N, Attrs})    ->
+               {N, [{source, list_to_binary(Source)}|Attrs]};
+              (KV, {N, Attrs})                  ->
+               {N, [KV|Attrs]}
            end,
-  Functions = [{struct, lists:map(FunFun, Function)} || Function <- Functions0],
-  [{struct, [{functions, {array, Functions}}]}|Acc];
+  Functions =
+    [lists:foldl(FunFun, {none, []}, Function)|| Function <- Functions0],
+  [{functions, {struct, Functions}}|Acc];
 format({imports, Imports}, Acc) ->
-  [{struct, [{imports, {array, Imports}}]}|Acc];
+  [{imports, {array, Imports}}|Acc];
 format({includes, Includes}, Acc) ->
-  [{struct, [{includes, [list_to_binary(I) || I <- Includes]}]}|Acc];
+  [{includes, [list_to_binary(I) || I <- Includes]}|Acc];
 format({module, _} = Module, Acc) ->
   [Module|Acc];
 format(_, Acc) ->
@@ -152,6 +162,61 @@ format_error({Type, File, Line, Desc}) ->
            , {line, Line}
            , {description, list_to_binary(Desc)}]}.
 
+
+%%%_* Tests =======================================================
+-include_lib("eunit/include/eunit.hrl").
+
+format_test_() ->
+  D = [ {exports,[[{function,bar},{arity,1}]]}
+      , {functions,[[ {module,foo}
+                    , {function,bar}
+                    , {arity,1}
+                    , {exported,true}
+                    , {source,"bar.erl"}
+                    , {line,19}
+                    ]
+                   ]}
+      , {imports,[]}
+      , {includes,["include/bar.hrl"]}
+      , {module,bar}
+      , {records,[[ {name,baz}
+                  , {fields,[foo,bar,baz]}
+                  , {line,27}
+                  , {source,"bar.erl"}]
+                 ]}
+      , {source,"bar.erl"}
+      , {time,{{2012,9,2},{10,49,34}}}
+      ],
+  ?_assertMatch({struct,
+                 [ {time     , <<"2012-9-2 10:49:34">>}
+                 , {source   , <<"bar.erl">>}
+                 , {records  , {struct,
+                                [ {baz, [ {source,<<"bar.erl">>}
+                                        , {line,27}
+                                        , {fields,{array,[foo,bar,baz]}}
+                                        ]}
+                                ]
+                               }
+                   }
+                 , {module   , bar}
+                 , {includes , [<<"include/bar.hrl">>]}
+                 , {imports  , {array,[]}}
+                 , {functions,
+                    {struct,
+                     [ {bar,
+                        [ {line,19}
+                        , {source,<<"bar.erl">>}
+                        , {exported,true}
+                        , {arity,1}
+                        , {module,foo}
+                        ]
+                       }
+                     ]
+                    }
+                   }
+                 , {exports,{array,[{struct,[{function,bar},{arity,1}]}]}}
+                 ]},
+                format(D)).
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
