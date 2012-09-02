@@ -36,7 +36,10 @@
         , get_module_info/2
         , modules/0
         , start/0
+        , stop/0
         , who_calls/3]).
+
+-export([ path_flatten/1]).
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -158,6 +161,7 @@ do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+  ?debugFmt("Abstract:~n~p~n", [Abstract]),
   Basic            = do_get_module_info(M, basic),
 
   {source, Source} = lists:keyfind(source, 1, Basic),
@@ -169,6 +173,7 @@ do_get_module_info(M, detailed) ->
                            , {functions,   []}
                            , {records,     []}]
                            ++ Basic),
+  ?debugFmt("Cwd: ~p", [get_compile_cwd(M, Abstract)]),
   Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
   Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
   Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
@@ -186,7 +191,10 @@ get_compile_cwd(M, [{attribute,1,file,{RelPath,1}}|_]) ->
 pop_dirs(Source0, Rel) ->
   L = length(filename:split(Rel)),
   Source = lists:nthtail(L,lists:reverse(filename:split(Source0))),
-  filename:join(lists:reverse(Source)).
+  case Source of
+    [] -> [];
+    _  -> filename:join(lists:reverse(Source))
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -211,6 +219,25 @@ start() ->
   end,
   update().
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Stops the edts xref-server on the local node.
+%% @end
+-spec stop() -> ok.
+%%------------------------------------------------------------------------------
+stop() ->
+  case whereis(?SERVER) of
+    undefined -> {error, not_started};
+    _Pid      -> xref:stop(?SERVER)
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns alist with all functions that call M:F/A on the local node.
+%% @end
+-spec who_calls(module(), atom(), non_neg_integer()) ->
+                   [{module(), atom(), non_neg_integer()}].
+%%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
   Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
   {ok, Calls} = xref:q(edts_code, Str),
@@ -229,11 +256,12 @@ get_include_dirs() ->
   F = fun(Path) ->
           case filename:basename(Path) of
             "ebin" -> [ filename:join(filename:dirname(Path), "include")
-                      , filename:join(filename:dirname(Path), "src")];
+                      , filename:join(filename:dirname(Path), "src")
+                      , filename:join(filename:dirname(Path), "test")];
             _      -> Path
           end
       end,
-  lists:append(lists:map(F, code:get_path())).
+  lists:flatmap(F, code:get_path()).
 
 
 %%------------------------------------------------------------------------------
@@ -242,11 +270,16 @@ get_include_dirs() ->
 %%------------------------------------------------------------------------------
 init() ->
   ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-  Paths = code:get_path(),
+  Paths = [Path || Path <- code:get_path(), filelib:is_dir(Path)],
   ok = xref:set_library_path(?SERVER, Paths),
   lists:foreach(fun(D) ->
                     case xref:add_application(?SERVER, filename:dirname(D)) of
-                      {error, _, _} -> xref:add_directory(?SERVER, D);
+                      {error, _, _} ->
+                        case filelib:is_dir(D) of
+                          true  ->
+                            xref:add_directory(?SERVER, D);
+                          false -> ok
+                        end;
                       {ok, _}       -> ok
                     end
                 end,
@@ -429,7 +462,7 @@ detailed_module_info_test_() ->
        lists:sort([ [{module, lists}, {function, any},   {arity, 2}]
                   , [{module, lists}, {function, member}, {arity, 2}]])
      , lists:sort(proplists:get_value(imports, Info)))
-   ?_assertEqual(
+  , ?_assertEqual(
        lists:sort([ [ {record, rec}
                     , {fields, [ord]}
                     , {line, 11}
@@ -442,12 +475,46 @@ detailed_module_info_test_() ->
                          filename:dirname(proplists:get_value(source, Info)),
                          "test_2.hrl")}]])
      , lists:sort(proplists:get_value(records, Info)))
-   , ?_assertEqual(
+  , ?_assertEqual(
         [ filename:join([BaseDir, "test", "test.hrl"])
         , filename:join([BaseDir, "test", "test_2.hrl"])]
       , lists:sort(proplists:get_value(includes, Info)))
   ].
 
+compile_and_load_test_() ->
+  Path = code:where_is_file("test_module.erl"),
+  [{ setup
+   , fun()  -> ok = meck:new(compile, [unstick, passthrough]) end
+   , fun(_) -> meck:unload() end
+   , [ ?_assertMatch( {ok, {[], [{warning, Path, 11, _}]}}
+                    , compile_and_load(Path))
+     , ?_assertEqual(1, length(meck_history(compile, file)))]}].
+
+get_function_info_test_() ->
+  Info = get_function_info(test_module, bar, 1),
+  [ ?_assertEqual(test_module, proplists:get_value(module,   Info))
+  , ?_assertEqual(bar,         proplists:get_value(function, Info))
+  , ?_assertEqual(1,           proplists:get_value(arity,    Info))
+  , ?_assertEqual(16,          proplists:get_value(line,     Info))
+  , ?_assertEqual(true,        proplists:get_value(exported, Info))].
+
+modules_test() ->
+  [{setup, fun start/0, fun(_) -> stop() end,
+    [?_assertMatch({ok, [_|_]}, modules())]}].
+
+reload_module_test() ->
+  meck:new(c, [unstick, passthrough]),
+  code:stick_mod(test_module),
+  reload_module(test_module),
+  ?assertEqual(0, length(meck_history(c, l))),
+  code:unstick_mod(test_module),
+  reload_module(test_module),
+  ?assertEqual(1, length(meck_history(c, l))),
+  meck:unload().
+
+meck_history(M0, F0) ->
+  [{A, R} || {Self, {M, F, A}, R} <- meck:history(M0), M =:= M0,
+             F =:= F0, Self =:= self()].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

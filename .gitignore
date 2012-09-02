@@ -2,6 +2,7 @@
 deps
 ebin
 lib/mochiweb
+lib/meck
 lib/webmachine
 erl_crash.dump
 *.o
