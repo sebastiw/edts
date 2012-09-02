@@ -351,11 +351,9 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
-parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}} = A, Acc0) ->
+parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
-  error_logger:info_msg("A ~p~n", [A]),
-  error_logger:info_msg("includes ~p~n", [orddict:fetch(includes, Acc0)]),
   BeamSource = path_flatten(orddict:fetch(source, Acc0)),
   Src =
     case filename:pathtype(Src0) of
