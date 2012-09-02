@@ -305,10 +305,15 @@ parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
   BeamSource = orddict:fetch(source, Acc0),
+  %% we want the application root here, which should be one level above
+  %% filename:dirname(BeamSource)
+  SplitBeamDir = filename:split(filename:dirname(BeamSource)),
+  AppRoot =
+    filename:join(lists:sublist(SplitBeamDir, length(SplitBeamDir) - 1)),
   Source =
     case filename:pathtype(Source0) of
       absolute -> Source0;
-      relative -> filename:join(filename:dirname(BeamSource), Source0)
+      relative -> filename:join(AppRoot, Source0)
     end,
   %% Update list of all files.
   Acc =
