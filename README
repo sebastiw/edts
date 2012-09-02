@@ -20,7 +20,7 @@ for details.
 
 The Erlang Development Tool Suite (EDTS) is meant to be a package of useful
 development tools for working with the Erlang programming language in Emacs. It
-bundles a number of useful external packages, together specialized Erlang
+bundles a number of useful external packages, together with specialized Erlang
 plugins for them, and its own features to create an efficient development
 environment that is easy to set up.
 

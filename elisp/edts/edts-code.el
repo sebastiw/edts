@@ -18,7 +18,10 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 ;;
-;; Utilities compiling and running tools on code
+;; Utilities compiling and running tools on code.
+;;
+;; All code for compilation and in-buffer highlighting is a rewrite of work
+;; done by Sebastian Weddmark Olsson.
 
 (defconst edts-code-issue-overlay-priorities
   '((warning . 1001);auto-highlight-symbol prio + 1
