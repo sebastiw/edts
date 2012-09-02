@@ -25,6 +25,9 @@
 %%%_* Module declaration =======================================================
 -module(edts_code).
 
+%%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
+
 %%%_* Exports ==================================================================
 
 -export([ compile_and_load/1
@@ -155,20 +158,35 @@ do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  Basic            = get_module_info(M, basic),
+  Basic            = do_get_module_info(M, basic),
+
   {source, Source} = lists:keyfind(source, 1, Basic),
 
-  Acc0 = orddict:from_list([ {cur_file,  Source}
-                           , {imports,   []}
-                           , {includes,  []}
-                           , {functions, []}
-                           , {records,   []}]
+  Acc0 = orddict:from_list([ {cur_file,    Source}
+                           , {compile_cwd, get_compile_cwd(M, Abstract)}
+                           , {imports,     []}
+                           , {includes,    []}
+                           , {functions,   []}
+                           , {records,     []}]
                            ++ Basic),
   Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
   Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
   Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
   Dict = orddict:erase(cur_file,  Dict2),
   orddict:to_list(Dict).
+
+get_compile_cwd(M, [{attribute,1,file,{RelPath,1}}|_]) ->
+  CompileInfo = M:module_info(compile),
+  CompileOpts = proplists:get_value(options, CompileInfo),
+  case proplists:get_value(cwd, CompileOpts, undefined) of
+    undefined -> pop_dirs(proplists:get_value(source, CompileInfo), RelPath);
+    Cwd       -> Cwd
+  end.
+
+pop_dirs(Source0, Rel) ->
+  L = length(filename:split(Rel)),
+  Source = lists:nthtail(L,lists:reverse(filename:split(Source0))),
+  filename:join(lists:reverse(Source)).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -210,11 +228,12 @@ who_calls(M, F, A) ->
 get_include_dirs() ->
   F = fun(Path) ->
           case filename:basename(Path) of
-            "ebin" -> filename:join(filename:dirname(Path), "include");
+            "ebin" -> [ filename:join(filename:dirname(Path), "include")
+                      , filename:join(filename:dirname(Path), "src")];
             _      -> Path
           end
       end,
-  lists:map(F, code:get_path()).
+  lists:append(lists:map(F, code:get_path())).
 
 
 %%------------------------------------------------------------------------------
@@ -298,17 +317,19 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     , {function, F}
     , {arity,    A}
     , {exported, lists:member({F, A}, M:module_info(exports))}
-    , {source,   orddict:fetch(source, Acc)}
+    , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
 parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
-  BeamSource = orddict:fetch(source, Acc0),
+  BeamSource = path_flatten(orddict:fetch(source, Acc0)),
   Source =
     case filename:pathtype(Source0) of
-      absolute -> Source0;
-      relative -> filename:join(filename:dirname(BeamSource), Source0)
+      absolute ->
+        path_flatten(Source0);
+      relative ->
+        path_flatten(filename:join(orddict:fetch(compile_cwd, Acc0), Source0))
     end,
   %% Update list of all files.
   Acc =
@@ -320,20 +341,113 @@ parse_abstract({attribute, _Line0, file, {Source0, _Line1}}, Acc0) ->
   orddict:store(cur_file, Source, Acc);
 parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
-             , {function, F}
-             , {arity, A}] || {F, A} <- Imports0],
+               , {function, F}
+               , {arity, A}] || {F, A} <- Imports0],
   orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
 parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
   FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
                ({record_field, _, {_, _, FName}, _Call}) -> FName
             end,
   RecordInfo =
-    [ {name,   Recordname}
+    [ {record, Recordname}
       , {fields, lists:map(FieldsF, Fields)}
       , {line,   Line}
-      , {source, orddict:fetch(source, Acc)}],
+      , {source, orddict:fetch(cur_file, Acc)}],
   orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
 parse_abstract(_, Acc) -> Acc.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% "Flatten" path by expanding all '.' and '..'
+%% end
+-spec path_flatten(string()) -> string().
+%%------------------------------------------------------------------------------
+path_flatten(Path0) ->
+  Filename = filename:basename(Path0),
+  Dirname = filename:dirname(Path0),
+  Path = path_flatten(filename:split(Dirname), [], []),
+  filename:join(Path, Filename).
+
+path_flatten([], [_|_] = Back, Acc) ->
+  filename:join(Back ++ lists:reverse(Acc));
+
+path_flatten([], _Back, Acc) ->
+  filename:join(["."|lists:reverse(Acc)]);
+
+path_flatten(["."|Rest], Back, Acc) ->
+  path_flatten(Rest, Back, Acc);
+
+path_flatten([".."|Rest], Back, [_|AccRest]) ->
+  path_flatten(Rest, Back, AccRest);
+
+path_flatten([".."|Rest], Back, Acc) ->
+  path_flatten(Rest, [".."|Back], Acc);
+
+path_flatten([_Dir|Rest], [_|Back], Acc) ->
+  path_flatten(Rest, Back, Acc);
+
+path_flatten([Dir|Rest], Back, Acc) ->
+  path_flatten(Rest, Back, [Dir|Acc]).
+
+
+
+%%%_* Unit tests ===============================================================
+
+path_flatten_test_() ->
+  [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl"))
+  , ?_assertEqual("./bar.erl",     path_flatten("./bar.erl"))
+  , ?_assertEqual("./bar.erl",     path_flatten("../foo/bar.erl"))
+  , ?_assertEqual("./bar.erl",     path_flatten(".././foo/bar.erl"))
+  , ?_assertEqual("./foo/bar.erl", path_flatten("bar/../foo/bar.erl"))
+  , ?_assertEqual("../bar.erl",    path_flatten("bar/../foo/../../bar.erl"))
+  , ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
+   ].
+
+basic_module_info_test_() ->
+  Info = get_module_info(test_module, basic),
+  [ ?_assertEqual(test_module,proplists:get_value(module, Info))
+  , ?_assertEqual([ [{function, bar},         {arity, 1}]
+                  , [{function, module_info}, {arity, 0}]
+                  , [{function, module_info}, {arity, 1}]],
+                  proplists:get_value(exports, Info))
+  , ?_assertMatch({{_, _, _}, {_, _, _}}, proplists:get_value(time, Info))
+  , ?_assertMatch(Src when is_list(Src), proplists:get_value(source, Info))].
+
+detailed_module_info_test_() ->
+  Info = get_module_info(test_module),
+  BaseDir = filename:dirname(proplists:get_value(source, module_info(compile))),
+  [
+    ?_assertEqual(test_module,proplists:get_value(module, Info))
+  , ?_assertEqual([ [{function, bar},         {arity, 1}]
+                  , [{function, module_info}, {arity, 0}]
+                  , [{function, module_info}, {arity, 1}]],
+                  proplists:get_value(exports, Info))
+  , ?_assertMatch({{_, _, _}, {_, _, _}}, proplists:get_value(time, Info))
+  , ?_assertMatch(Src when is_list(Src), proplists:get_value(source, Info))
+  , ?_assertEqual(
+       lists:sort([ [{module, lists}, {function, any},   {arity, 2}]
+                  , [{module, lists}, {function, member}, {arity, 2}]])
+     , lists:sort(proplists:get_value(imports, Info)))
+   ?_assertEqual(
+       lists:sort([ [ {record, rec}
+                    , {fields, [ord]}
+                    , {line, 11}
+                    , {source, proplists:get_value(source, Info)}]
+                  , [ {record, rec2}
+                    , {fields, [ord]}
+                    , {line, 1}
+                    , {source,
+                       filename:join(
+                         filename:dirname(proplists:get_value(source, Info)),
+                         "test_2.hrl")}]])
+     , lists:sort(proplists:get_value(records, Info)))
+   , ?_assertEqual(
+        [ filename:join([BaseDir, "test", "test.hrl"])
+        , filename:join([BaseDir, "test", "test_2.hrl"])]
+      , lists:sort(proplists:get_value(includes, Info)))
+  ].
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
