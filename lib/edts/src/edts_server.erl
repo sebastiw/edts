@@ -170,10 +170,12 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
     case ?node_find(Name, State) of
       false -> {reply, {error, not_found}, State};
       Node ->
+        lager:info("Node ~p Initialized.", [Name]),
         lists:foreach(fun rpc:yield/1, Node#node.promises),
         {reply, ok, ?node_store(Node#node{promises = []}, State)}
     end;
 handle_call({init_node, Name}, _From, State) ->
+  lager:info("Node ~p Initializing.", [Name]),
   Node = #node{name = Name, promises = edts_dist:init_node(Name)},
   {reply, ok, ?node_store(Node, State)};
 handle_call({is_node, Name}, _From, State) ->
@@ -215,11 +217,13 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, _R}}, #state{nodes = Nodes0} = State) ->
+handle_info({Pid, {promise_reply, R}}, #state{nodes = Nodes0} = State) ->
   Nodes = [Node#node{promises = lists:delete(Pid, Node#node.promises)}
            || Node <- Nodes0],
+  lager:info("Promise reply from ~p: ~p", [node(Pid), R]),
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
+  lager:info("Node down: ~p", [Node]),
   case ?node_find(Node, State) of
     false   -> {noreply, State};
     #node{} -> {noreply, ?node_delete(Node, State)}

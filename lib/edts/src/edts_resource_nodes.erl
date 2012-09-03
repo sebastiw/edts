@@ -46,6 +46,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
+  lager:debug("Call to ~p", [?MODULE]),
   {ok, []}.
 
 allowed_methods(ReqData, Ctx) ->

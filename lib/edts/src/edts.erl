@@ -56,6 +56,7 @@
                           [term()] | {error, not_found}.
 %%------------------------------------------------------------------------------
 compile_and_load(Node, Filename) ->
+  lager:debug("compile_and_load ~p on ~p", [Filename, Node]),
   edts_server:ensure_node_initialized(Node),
   case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
     {badrpc, _} -> {error, not_found};
@@ -74,6 +75,8 @@ compile_and_load(Node, Filename) ->
                            [{atom(), term()}] | {error, not_found}.
 %%------------------------------------------------------------------------------
 get_function_info(Node, Module, Function, Arity) ->
+  lager:debug("get_function info ~p:~p/~p on ~p",
+              [Module, Function, Arity, Node]),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, get_function_info, Args) of
     {badrpc, _} -> {error, not_found};
@@ -110,6 +113,7 @@ who_calls(Node, Module, Function, Arity) ->
                          {ok, [{atom(), term()}]}.
 %%------------------------------------------------------------------------------
 get_module_info(Node, Module, Level) ->
+  lager:debug("get_module_info ~p, ~p on ~p", [Module, Level, Node]),
   case edts_dist:call(Node, edts_code, get_module_info, [Module, Level]) of
     {badrpc, _} -> {error, not_found};
     Info  -> Info
