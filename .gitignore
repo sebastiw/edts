@@ -1,6 +1,7 @@
 .eunit
 deps
 ebin
+lib/lager
 lib/mochiweb
 lib/meck
 lib/webmachine
