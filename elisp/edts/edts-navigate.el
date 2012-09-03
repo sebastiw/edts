@@ -79,8 +79,11 @@ directive."
 (defun edts-macro-under-point-p ()
   "Return non nil if the form under point is a macro."
   (save-excursion
-    (beginning-of-thing 'symbol)
-    (equal ?? (char-before (point)))))
+    (or
+     (equal ?? (char-after (point)))
+     (progn
+       (beginning-of-thing 'symbol)
+       (equal ?? (char-before (point)))))))
 
 (defun edts-header-at-point ()
   "Return the filename for the header under point."
@@ -101,8 +104,9 @@ directive."
 
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
-  (let* (
-         (macro (thing-at-point 'symbol))
+  (when (equal ?? (char-after (point)))
+    (forward-char))
+  (let* ((macro (thing-at-point 'symbol))
          (re    (format "^-define\\s-*(\\s-*%s\\s-*," macro)))
   (or (edts-search-current-buffer re)
       (edts-search-includes re)
