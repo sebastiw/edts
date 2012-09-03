@@ -5,6 +5,7 @@ lib/lager
 lib/mochiweb
 lib/meck
 lib/webmachine
+log
 erl_crash.dump
 *.o
 *.beam
