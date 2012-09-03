@@ -103,7 +103,7 @@ directive."
   "Jump to the macro-definition under point."
   (let* (
          (macro (thing-at-point 'symbol))
-         (re    (format "^-define\\s-*(\\s-*%s\\s-*," macro)))
+         (re    (format "^-define\\s-*(\\s-*%s" macro)))
   (or (edts-search-current-buffer re)
       (edts-search-includes re)
       (error "No macro at point"))))
