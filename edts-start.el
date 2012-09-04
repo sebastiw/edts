@@ -26,6 +26,7 @@
 ;; EDTS
 (require 'ferl)
 (require 'edts)
+(require 'edts-log)
 (require 'edts-code)
 (require 'edts-complete)
 (require 'edts-rest)
