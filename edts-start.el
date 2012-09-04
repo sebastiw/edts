@@ -86,6 +86,17 @@
     map)
   "Keymap for EDTS.")
 
+(defcustom edts-erlang-mode-regexps
+  '("rebar.config$"
+    "rebar.config.script$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.yaws$")
+  "Additional extensions for which to auto-activate erlang-mode.")
+
 (defun edts-setup ()
   ;; Start with our own stuff
   (edts-ensure-server-started)
@@ -94,9 +105,9 @@
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
 
   ;; Auto-activate erlang mode for some additional extensions.
-  (add-to-list 'auto-mode-alist '("\\.yaws$" .     erlang-mode))
-  (add-to-list 'auto-mode-alist '("\\.eterm$" .    erlang-mode))
-  (add-to-list 'auto-mode-alist '("rebar.config$". erlang-mode))
+  (mapcar
+   #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
+   edts-erlang-mode-regexps)
 
   (auto-highlight-symbol-mode t)
   (add-to-list 'ahs-exclude erlang-auto-highlight-exclusions)
