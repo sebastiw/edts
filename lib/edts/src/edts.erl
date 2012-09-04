@@ -39,6 +39,7 @@
         , modules/1
         , node_reachable/1
         , nodes/0
+        , trace_function/3
         , who_calls/4]).
 
 %%%_* Includes =================================================================
@@ -115,6 +116,22 @@ who_calls(Node, Module, Function, Arity) ->
     Info  -> Info
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns the result of running Trace on Node, using Opts.
+%% @end
+%%
+-spec trace_function( Node   :: node()
+                    , Trace  :: send | 'receive' | string()
+                    , Opts   :: [{atom(), any()}]) ->
+                        string() | {error, not_found}.
+%%------------------------------------------------------------------------------
+trace_function(Node, Trace, Opts) ->
+  Args = [Trace, Opts],
+  case edts_dist:call(Node, edts_dbg, trace_function, Args) of
+    {badrpc, _} -> {error, not_found};
+    TraceResult -> TraceResult
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
