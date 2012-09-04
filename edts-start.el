@@ -37,15 +37,6 @@
 (require 'auto-highlight-symbol)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Indentation
-(defun edts-align-hook
-  (add-to-list 'align-rules-list
-               '(erlang-align
-                 (regexp . ",\\(\\s-+\\)")
-                 (repeat . t)
-                 (modes quote (erlang-mode)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
 (defconst erlang-auto-highlight-exclusions
   (cons (quote erlang-mode)
