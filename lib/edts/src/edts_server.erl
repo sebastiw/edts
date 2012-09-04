@@ -287,7 +287,7 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    {ok, edts_dist:start_services(Node, [edts_code])}
+    {ok, edts_dist:start_services(Node, [edts_code, edts_dbg])}
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),

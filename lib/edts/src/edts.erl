@@ -126,7 +126,9 @@ who_calls(Node, Module, Function, Arity) ->
                     , Opts   :: [{atom(), any()}]) ->
                         string() | {error, not_found}.
 %%------------------------------------------------------------------------------
-trace_function(Node, Trace, Opts) ->
+trace_function(Node, Trace, Opts0) ->
+  TraceLog = spawn_link(fun edts_dbg:do_trace/0),
+  Opts = Opts0 ++ [{print_pid, TraceLog}],
   Args = [Trace, Opts],
   case edts_dist:call(Node, edts_dbg, trace_function, Args) of
     {badrpc, _} -> {error, not_found};
