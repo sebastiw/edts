@@ -53,11 +53,10 @@ Planned features in the short term are:
   - If you want to be able automatically navigate to OTP sources from your code
     using eg. edts-find-source-under-point, you must build your OTP-release from
     source since the beam-files of the versions most commonly installed point
-    point to a path that will most likely not be correct or even exist on your
-    system.
+    to paths that will most likely not be correct or even exist on your system.
   - At the moment it is possible to navigate from project-code to OTP-code, but
     to be able to automatically navigate between OTP modules, you need to set up
-    a separated edts-project for your OTP repo.
+    a separate edts-project for your OTP repo.
 
 - Get EDTS:
 
