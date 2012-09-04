@@ -201,8 +201,13 @@ pop_dirs(Source0, Rel) ->
 -spec modules() -> [atom()].
 %%------------------------------------------------------------------------------
 modules() ->
-  xref:update(?SERVER),
-  xref:q(?SERVER, '".*" : Mod').
+  Beams = lists:append([modules_at_path(Path) || Path <- code:get_path()]),
+  Binaries = [Module || {Module, _} <- code:all_loaded()],
+  {ok, lists:usort(Binaries ++ Beams)}.
+
+modules_at_path(Path) ->
+  Beams = filelib:wildcard(filename:join(Path, "*.beam")),
+  [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
 
 %%------------------------------------------------------------------------------
 %% @doc

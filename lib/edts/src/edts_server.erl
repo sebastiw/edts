@@ -53,17 +53,6 @@
 
 -record(state, {nodes = [] :: edts_node()}).
 
--define(node_delete(Name, State),
-        State#state{
-          nodes = lists:keydelete(Name, #node.name, State#state.nodes)
-         }).
--define(node_find(Name, State),
-        lists:keyfind(Name, #node.name, State#state.nodes)).
--define(node_store(Node, State),
-        State#state{
-          nodes =
-            lists:keystore(Node#node.name, #node.name, State#state.nodes, Node)
-         }).
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
 -type state():: #state{}.
@@ -167,25 +156,26 @@ init([]) ->
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_call({ensure_node_initialized, Name}, _From, State) ->
-    case ?node_find(Name, State) of
+    case node_find(Name, State) of
       false -> {reply, {error, not_found}, State};
-      Node ->
-        lager:info("Node ~p Initialized.", [Name]),
+      #node{promises = [_|_]} = Node->
         lists:foreach(fun rpc:yield/1, Node#node.promises),
-        {reply, ok, ?node_store(Node#node{promises = []}, State)}
+        {reply, ok, node_store(Node#node{promises = []}, State)};
+      #node{} ->
+        {reply, ok, State}
     end;
 handle_call({init_node, Name}, _From, State) ->
   lager:info("Node ~p Initializing.", [Name]),
   Node = #node{name = Name, promises = edts_dist:init_node(Name)},
-  {reply, ok, ?node_store(Node, State)};
+  {reply, ok, node_store(Node, State)};
 handle_call({is_node, Name}, _From, State) ->
-  Reply = case ?node_find(Name, State) of
+  Reply = case node_find(Name, State) of
             #node{} -> true;
             false   -> false
           end,
   {reply, Reply, State};
 handle_call({node_available_p, Name}, _From, State) ->
-  Reply = case ?node_find(Name, State) of
+  Reply = case node_find(Name, State) of
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
@@ -224,9 +214,9 @@ handle_info({Pid, {promise_reply, R}}, #state{nodes = Nodes0} = State) ->
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
   lager:info("Node down: ~p", [Node]),
-  case ?node_find(Node, State) of
+  case node_find(Node, State) of
     false   -> {noreply, State};
-    #node{} -> {noreply, ?node_delete(Node, State)}
+    #node{} -> {noreply, node_delete(Node, State)}
   end;
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -255,6 +245,17 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%%_* Internal functions =======================================================
+
+node_delete(Name, State) ->
+  State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.
+
+node_find(Name, State) ->
+  lists:keyfind(Name, #node.name, State#state.nodes).
+
+node_store(Node, State) ->
+  Nodes = lists:keystore(Node#node.name, #node.name, State#state.nodes, Node),
+  State#state{nodes = Nodes}.
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

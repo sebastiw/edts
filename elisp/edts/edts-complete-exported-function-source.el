@@ -35,10 +35,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
-(defvar edts-complete-exported-function-cache nil
-  "The current list of module completions.")
-(ac-clear-variable-after-save 'edts-complete-exported-function-cache)
-
 (defun edts-complete-exported-function-candidates ()
   (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
@@ -49,10 +45,8 @@
 (defun edts-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) exported functions."
   (when (edts-complete-exported-function-p)
-    (or edts-complete-exported-function-cache
-        (let ((module (symbol-at (- ac-point 1))))
-          (setq edts-complete-exported-function-cache
-                (edts-get-module-exported-functions module))))))
+    (let ((module (symbol-at (- ac-point 1))))
+      (edts-get-module-exported-functions module))))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
