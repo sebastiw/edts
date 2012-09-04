@@ -1,4 +1,6 @@
 ;; TODO
+:: - Load all modules at start and use code-server instead of filelib
+::   to generate module-list.
 ;; - Newly created modules
 ;; - Modules outside projects
 ;; - replace following word if it is same as end of completion
@@ -14,7 +16,6 @@
 ;; - Debug output
 ;; - Restart edts node, and re-add running project-nodes if it is
 ;;   down.
-;; - Make edts a minor mode
 ;; - Tests
 
 ;; Wishlist

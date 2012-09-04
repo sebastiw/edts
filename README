@@ -41,8 +41,24 @@ Planned features in the short term are:
 
 ## Getting started ##
 
-- First of all, make sure your code is compiled using the debug_info compile
-  option.
+- First of all, make sure your ensure your environment is setup correctly:
+  - If you're not using Linux, setup Erlang mode according to the instructions
+    here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
+  - Make sure your code is compiled with the debug_info option set.
+  - If you're running multiple versions of Erlang, make sure that the version
+    you use to compile edts is also the first version in your emacs exec-path.
+    For example, if you're running Debian/Ubuntu and have installed Erlang
+    through aptitude, that will add a file /etc/emacs/site-start.d that will
+    always put the system Erlang at the head of the code path.
+  - If you want to be able automatically navigate to OTP sources from your code
+    using eg. edts-find-source-under-point, you must build your OTP-release from
+    source since the beam-files of the versions most commonly installed point
+    point to a path that will most likely not be correct or even exist on your
+    system.
+  - At the moment it is possible to navigate from project-code to OTP-code, but
+    to be able to automatically navigate between OTP modules, you need to set up
+    a separated edts-project for your OTP repo.
+
 - Get EDTS:
 
   $git clone git@github.com:tjarvstrand/edts.git
