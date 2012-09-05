@@ -2,7 +2,9 @@
 
 -export([ start/0
         , stop/0
-        , do_trace/0
+        , interpret_modules/1
+        , receive_traces/0
+        , set_breakpoint/2
         , trace_function/2 ]).
 
 start() ->
@@ -11,14 +13,19 @@ start() ->
 stop() ->
   ok.
 
+interpret_modules(Modules) ->
+  int:i(Modules).
+
+set_breakpoint(Module, Line) ->
+  int:break(Module, Line).
+
 trace_function(Trace, Opts) ->
   redbug:start(Trace, Opts).
 
-do_trace() ->
+receive_traces() ->
   receive
-    {trace_consumer, TC} = Msg-> io:format("~p~n", [Msg]),
-                                 erlang:monitor(process, TC),
-                                 trace_loop()
+    {trace_consumer, TC} -> erlang:monitor(process, TC),
+                            trace_loop()
   end.
 
 trace_loop() ->

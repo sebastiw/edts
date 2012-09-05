@@ -34,11 +34,14 @@
         , get_module_info/3
         , get_module_xref_analysis/3
         , init_node/3
+        , init_node/1
+        , interpret_modules/2
         , is_node/1
         , node_available_p/1
         , modules/1
         , node_reachable/1
         , nodes/0
+        , set_breakpoint/3
         , trace_function/3
         , who_calls/4]).
 
@@ -127,12 +130,29 @@ who_calls(Node, Module, Function, Arity) ->
                         string() | {error, not_found}.
 %%------------------------------------------------------------------------------
 trace_function(Node, Trace, Opts0) ->
-  TraceLog = spawn_link(fun edts_dbg:do_trace/0),
+  TraceLog = spawn_monitor(fun edts_dbg:receive_traces/0),
   Opts = Opts0 ++ [{print_pid, TraceLog}],
   Args = [Trace, Opts],
-  case edts_dist:call(Node, edts_dbg, trace_function, Args) of
+  Result = case edts_dist:call(Node, edts_dbg, trace_function, Args) of
+             {badrpc, _} -> {error, not_found};
+             TraceResult -> TraceResult
+           end,
+  receive
+    {'DOWN', _, _, _, Reason} -> io:format("Tracing finished: ~p~n", [Reason]),
+                                 Result
+  end.
+
+interpret_modules(Node, Modules) ->
+  case edts_dist:call(Node, edts_dbg, interpret_modules, [Modules]) of
     {badrpc, _} -> {error, not_found};
-    TraceResult -> TraceResult
+    _           -> ok
+  end.
+
+set_breakpoint(Node, Module, Line) ->
+  Args = [Module, Line],
+  case edts_dist:call(Node, edts_dbg, set_breakpoint, Args) of
+    {badrpc, _} -> {error, not_found};
+    _           -> ok
   end.
 
 %%------------------------------------------------------------------------------
