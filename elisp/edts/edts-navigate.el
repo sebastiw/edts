@@ -84,7 +84,11 @@ directive."
 
 (defun edts-header-at-point ()
   "Return the filename for the header under point."
-  (save-excursion (end-of-thing 'filename) (thing-at-point 'filename)))
+  (let ((bound (ferl-last-char-on-line-at (point))))
+    (save-excursion
+      (beginning-of-line)
+      (when (re-search-forward "-include\\(_lib\\)\\s-*(\\s-*\"\\s-*" bound t)
+        (thing-at-point 'filename)))))
 
 (defun edts-find-header-source ()
   "Open the source for the header file under point."
@@ -97,7 +101,12 @@ directive."
         (progn (ring-insert-at-beginning (edts-window-history-ring) mark)
                (find-file-existing file)
                (goto-char (point-min)))
-        (null (error "No header at point")))))
+        (null (error "No header filename at point")))))
+
+(defun edts-has-suffix (suffix string)
+  "returns string if string has suffix"
+  (string= (substring string (- 0 (length suffix))) suffix))
+
 
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
@@ -139,10 +148,6 @@ Move point there and make an entry in edts-window-history-ring."
       (re-search-forward re nil t)
       (beginning-of-line)
       (ring-insert-at-beginning (edts-window-history-ring) mark))))
-
-(defun edts-has-suffix (suffix string)
-  "returns string if string has suffix"
-    (string= (substring string (- 0 (length suffix))) suffix))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
