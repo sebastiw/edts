@@ -21,6 +21,8 @@
 ###############################################################################
 
 ERL=${1:-$(which erl)}
-PWD=$(pwd)
+EDTS_HOME="$( cd "$( dirname "$0" )" && pwd )"
 
-exec $ERL -sname edts -pa $PWD/lib/*/ebin $PWD/lib/*/deps/*/ebin -s edts_app
+cd $EDTS_HOME
+
+exec $ERL -sname edts -pa $EDTS_HOME/lib/*/ebin $EDTS_HOME/lib/*/deps/*/ebin -s edts_app
