@@ -37,19 +37,19 @@
 
 (defun edts-log-error (msg)
   "Log MSG at error-level."
-  (edts-log-message (edts-log-level-error msg)))
+  (edts-log-message edts-log-level-error msg))
 
 (defun edts-log-warning (msg)
   "Log MSG at warning-level."
-  (edts-log-message (edts-log-level-warning msg)))
+  (edts-log-message edts-log-level-warning msg))
 
 (defun edts-log-info (msg)
   "Log MSG at info-level."
-  (edts-log-message (edts-log-level-info msg)))
+  (edts-log-message edts-log-level-info msg))
 
 (defun edts-log-debug (msg)
   "Log MSG at debug-level."
-  (edts-log-message (edts-log-level-debug msg)))
+  (edts-log-message edts-log-level-debug msg))
 
 (defun edts-log-message (level msg)
   "Log MSG at LEVEL"
