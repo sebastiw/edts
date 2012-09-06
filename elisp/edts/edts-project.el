@@ -36,25 +36,18 @@ activated for the first file that is located inside a project."
       (edts-project-ensure-buffer-node-started buffer))))
 
 (defun edts-project-ensure-buffer-node-started (buffer)
-  "Start a buffer's project's node if it is not already started."
+  "Start BUFFER's project's node if it is not already started."
   (edts-project-ensure-node-started (edts-project-buffer-project buffer)))
 
 (defun edts-project-ensure-node-started (project)
-  "Start a buffer's project's node if it is not already started."
+  "Start BUFFER's project's node if it is not already started."
   (let ((node-name (edts-project-node-name project)))
     (if (edts-project-node-started-p node-name)
         (edts-register-node-when-ready node-name)
         (edts-project-start-node project))))
 
-(defun edts-project-check-backend (project)
-  "Ensure that distel modules are available on the node used by `project'"
-  (let* ((node-name-str (edts-project-buffer-node-name))
-         (node-name     (make-symbol (concat node-name-str "\@" system-name))))
-    (setq erl-nodename-cache node-name)
-    (erl-check-backend node-name nil)))
-
-(defun edts-project-start-node (&optional project)
-  "Starts a new erlang node for the project that `buffer' belongs to."
+(defun edts-project-start-node (project)
+  "Starts a new erlang node for PROJECT."
   (let* ((project-name (edts-project-name project))
          (node-name    (edts-project-node-name project))
          (buffer-name  (concat "*" project-name "*"))
@@ -70,6 +63,7 @@ activated for the first file that is located inside a project."
     (get-buffer buffer-name)))
 
 (defun edts-project-build-project-command (project)
+  "Build a command line for PROJECT"
   (let ((command (edts-project-start-command project)))
     (if command
         (delete "" (split-string command))
@@ -80,8 +74,8 @@ activated for the first file that is located inside a project."
            path)))))
 
 (defun edts-project-make-comint-buffer (buffer-name pwd command)
-  "In a comint-mode buffer Starts a node with `name' in `buf-name' adding
-`path' to the node's code-path using the -pa flag."
+  "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
+PWD and running COMMAND."
   (let* ((cmd  (car command))
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
@@ -89,50 +83,52 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-buffer-node-started-p (&optional buffer)
   "Returns non-nil if there is an edts-project erlang node started that
-corresponds to 'buffer'."
+corresponds to BUFFER."
   (edts-project-node-started-p (edts-project-buffer-node-name buffer)))
 
 (defun edts-project-node-started-p (node-name)
   "Returns non-nil if there is an edts-project erlang node with name
-`node-name' running on localhost."
+NODE-NAME running on localhost."
   (edts-node-running node-name))
 
 (defun edts-project-ensure-node-not-started (node-name)
-  "Signals an error if a node of name `node-name' is running on
+  "Signals an error if a node of name NODE-NAME is running on
 localhost."
   (when (edts-project-node-started-p node-name)
     (error "Node already up")))
 
 (defun edts-project-name (project)
-  "Returns the name of the edts-project `project'. No default value,
+  "Returns the name of the edts-project PROJECT. No default value,
 come on you have to do *something* yourself!"
   (edts-project-property 'name project))
 
 (defun edts-project-root (project)
-  "Returns the root directory of the edts-project `project'."
+  "Returns the root directory of the edts-project PROJECT."
   (edts-project-property 'root project))
 
 (defun edts-project-lib-dirs (project)
-  "Returns the edts-project `project's library directories. Defaults to
+  "Returns the edts-project PROJECT's library directories. Defaults to
 (\"lib\")"
   (or (edts-project-property 'lib-dirs project) '("lib")))
 
 (defun edts-project-node-name (project)
-  "Returns the edts-project `project's erlang node-name. Currently only
+  "Returns the edts-project PROJECT's erlang node-name. Currently only
 short names are supported."
   (or (edts-project-property 'node-sname project) (edts-project-name project)))
 
 (defun edts-project-start-command (project)
-  "Returns the edts-project `project's command for starting it's project node."
+  "Returns the edts-project PROJECT's command for starting it's project
+ node."
   (edts-project-property 'start-command project))
 
 (defun edts-project-property (prop project)
-  "Returns the value of the property of name prop from project."
+  "Returns the value of the property of name PROP from PROJECT."
   (cdr (assoc prop project)))
 
 (defun edts-project-code-path-expand (project)
-  "Expands `project's ebin and listed lib dirs to a full set of ebin directories,
-treating every subdirectory of each lib dir a an OTP application."
+  "Expands PROJECT's ebin and listed lib dirs to a full set of ebin
+directories, treating every subdirectory of each lib dir a an OTP
+application."
   (let ((root     (edts-project-root project))
         (lib-dirs (edts-project-lib-dirs project)))
     (cons
@@ -143,25 +139,25 @@ treating every subdirectory of each lib dir a an OTP application."
 
 (defun edts-project-path-expand (root dir)
   "Returns a list of all existing ebin directories in any folder directly
-beneath `root'/`dir'."
+beneath ROOT/DIR."
   (setq root (edts-project-normalize-path root))
   (file-expand-wildcards (format "%s/%s/*/ebin" root dir)))
 
 (defun edts-project-buffer-node-name (&optional buffer)
-  "Returns the erlang node-name of `buffer''s edts-project node. `buffer
+  "Returns the erlang node-name of BUFFER's edts-project node. `buffer
 defaults to current-buffer."
   (unless buffer (setq buffer (current-buffer)))
   (edts-project-node-name (edts-project-buffer-project buffer)))
 
 (defun edts-project-buffer-project (&optional buffer)
-  "Returns the edts-project that `buffer' is part of, if any,
+  "Returns the edts-project that BUFFER is part of, if any,
 otherwise nil. If buffer is omitted, it defaults to the current buffer."
   (unless buffer (setq buffer (current-buffer)))
   (edts-project-file-project (buffer-file-name buffer)))
 
 (defun edts-project-file-project (&optional file-name)
-  "Returns the edts-project that the file with `file-name' is part of,
-if any, otherwise nil. If `file-name' is omitted, it defaults to the
+  "Returns the edts-project that the file with FILE-NAME is part of,
+if any, otherwise nil. If FILE-NAME is omitted, it defaults to the
 file-name of the current buffer."
   (unless file-name (setq file-name (buffer-file-name)))
   (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
