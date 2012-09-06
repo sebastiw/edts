@@ -124,7 +124,7 @@ current buffer."
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
 current buffer."
-  (let* ((node-name (edts-project-buffer-node-name))
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name "modules"))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -134,7 +134,7 @@ current buffer."
 (defun edts-get-module-exported-functions (module)
   "Fetches all exported functions of `module' on the node associated with
 current buffer."
-  (let* ((node-name (edts-project-buffer-node-name))
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name
                          "modules" module
                          "functions"))
@@ -160,7 +160,7 @@ buffer"
 
 (defun edts-get-module-info (module level)
   "Fetches info about `module' on the node associated with current buffer"
-  (let* ((node-name (edts-project-buffer-node-name))
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
          (res      (edts-rest-get resource args)))
@@ -169,7 +169,7 @@ buffer"
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-compile-and-load (module file)
-  (let* ((node-name (edts-project-buffer-node-name))
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource
           (list "nodes" node-name "modules" module))
          (args (list (cons "file" file)))

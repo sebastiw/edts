@@ -34,6 +34,8 @@
 (require 'edts-project)
 (require 'edts-navigate)
 
+(require 'edts-test nil 'noerror)
+
 ;; External
 (require 'auto-highlight-symbol)
 
