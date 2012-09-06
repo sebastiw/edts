@@ -41,7 +41,7 @@
         , modules/1
         , node_reachable/1
         , nodes/0
-        , set_breakpoint/3
+        , toggle_breakpoint/3
         , trace_function/3
         , who_calls/4]).
 
@@ -145,14 +145,14 @@ trace_function(Node, Trace, Opts0) ->
 interpret_modules(Node, Modules) ->
   case edts_dist:call(Node, edts_dbg, interpret_modules, [Modules]) of
     {badrpc, _} -> {error, not_found};
-    _           -> ok
+    Interpreted -> Interpreted
   end.
 
-set_breakpoint(Node, Module, Line) ->
+toggle_breakpoint(Node, Module, Line) ->
   Args = [Module, Line],
-  case edts_dist:call(Node, edts_dbg, set_breakpoint, Args) of
+  case edts_dist:call(Node, edts_dbg, toggle_breakpoint, Args) of
     {badrpc, _} -> {error, not_found};
-    _           -> ok
+    Result      -> Result
   end.
 
 %%------------------------------------------------------------------------------

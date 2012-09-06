@@ -68,6 +68,18 @@
   "Face used for marking lesser warning lines."
   :group 'edts)
 
+(defface edts-face-breakpoint-enabled-line
+  '((((class color) (background dark)) (:background "purple"))
+    (((class color) (background light)) (:background "purple")))
+  "Face used for marking lines where a breakpoint is enabled."
+  :group 'edts)
+
+(defface edts-face-debug-current-line
+  '((((class color) (background dark)) (:background "dark olive green"))
+    (((class color) (background light)) (:background "pale green")))
+  "Face used for marking the current line during debugging"
+  :group 'edts)
+
 (defadvice next-line (after edts-next-line)
   "Moves point to the next line and then prints the help-echo of the highest
 priority any edts overlay at new point if any."
