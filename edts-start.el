@@ -110,9 +110,6 @@
     erlang-current-function-ahs-plugin
     "Current Erlang function")
 
-  ;; Indentation
-  (add-hook 'align-load-hook 'edts-align-hook)
-
   ;; Make sure we remember our history
   (if (boundp 'window-persistent-parameters)
       (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
