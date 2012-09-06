@@ -138,10 +138,15 @@ application."
                         (edts-project-path-expand root dir)) lib-dirs)))))
 
 (defun edts-project-path-expand (root dir)
-  "Returns a list of all existing ebin directories in any folder directly
-beneath ROOT/DIR."
-  (setq root (edts-project-normalize-path root))
-  (file-expand-wildcards (format "%s/%s/*/ebin" root dir)))
+  "Returns a list of all existing directories in any folder directly
+beneath ROOT/DIR expanded with <path>/ebin and <path>/test."
+  (let* ((norm-root (edts-project-normalize-path root))
+         (app-dirs  (file-expand-wildcards (format "%s/%s/*" root dir)))
+         (app-paths (mapcar #'(lambda (path)
+                                (list (concat path "/ebin")
+                                      (concat path "/test")))
+                            app-dirs)))
+    (apply #'append app-paths)))
 
 (defun edts-project-buffer-node-name (buffer)
   "Returns the erlang node-name of BUFFER's edts-project node."

@@ -26,12 +26,34 @@
     (node-sname    . "dev")
     (lib-dirs . ("lib" "test"))))
 
+(ert-deftest edts-project-path-expand ()
+  (flet ((file-expand-wildcards (path)
+                                (when (string= "foo/lib/*" path)
+                                    '("foo/lib/bar"))))
+    (should (equal '("foo/lib/bar/ebin" "foo/lib/bar/test")
+                   (edts-project-path-expand "foo" "lib")))))
+
+(ert-deftest edts-project-buffer-node-name-test ()
+  (let ((edts-projects (list edts-project-test-project-1)))
+    (flet ((buffer-file-name (buffer) "./foo/bar.el"))
+    (should
+     (string= "dev"
+              (edts-project-buffer-node-name (current-buffer)))))
+    (flet ((buffer-file-name (buffer) "./bar/baz.el"))
+      (should
+       (eq nil
+           (edts-project-buffer-node-name (current-buffer)))))))
+
 (ert-deftest edts-project-buffer-project-test ()
-  (flet ((buffer-file-name (buffer) "./foo/bar.el"))
-    (let ((edts-projects (list edts-project-test-project-1)))
+  (let ((edts-projects (list edts-project-test-project-1)))
+    (flet ((buffer-file-name (buffer) "./foo/bar.el"))
     (should
      (eq edts-project-test-project-1
-         (edts-project-buffer-project (current-buffer)))))))
+         (edts-project-buffer-project (current-buffer)))))
+    (flet ((buffer-file-name (buffer) "./bar/baz.el"))
+      (should
+       (eq nil
+           (edts-project-buffer-project (current-buffer)))))))
 
 (ert-deftest edts-project-file-project-test ()
   (let ((edts-projects (list edts-project-test-project-1)))
