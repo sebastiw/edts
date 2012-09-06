@@ -81,7 +81,7 @@ PWD and running COMMAND."
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)))
 
-(defun edts-project-buffer-node-started-p (&optional buffer)
+(defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
 corresponds to BUFFER."
   (edts-project-node-started-p (edts-project-buffer-node-name buffer)))
@@ -143,40 +143,34 @@ beneath ROOT/DIR."
   (setq root (edts-project-normalize-path root))
   (file-expand-wildcards (format "%s/%s/*/ebin" root dir)))
 
-(defun edts-project-buffer-node-name (&optional buffer)
-  "Returns the erlang node-name of BUFFER's edts-project node. `buffer
-defaults to current-buffer."
-  (unless buffer (setq buffer (current-buffer)))
+(defun edts-project-buffer-node-name (buffer)
+  "Returns the erlang node-name of BUFFER's edts-project node."
   (edts-project-node-name (edts-project-buffer-project buffer)))
 
-(defun edts-project-buffer-project (&optional buffer)
+(defun edts-project-buffer-project (buffer)
   "Returns the edts-project that BUFFER is part of, if any,
-otherwise nil. If buffer is omitted, it defaults to the current buffer."
-  (unless buffer (setq buffer (current-buffer)))
+otherwise nil."
   (edts-project-file-project (buffer-file-name buffer)))
 
-(defun edts-project-file-project (&optional file-name)
+(defun edts-project-file-project (file-name)
   "Returns the edts-project that the file with FILE-NAME is part of,
-if any, otherwise nil. If FILE-NAME is omitted, it defaults to the
-file-name of the current buffer."
-  (unless file-name (setq file-name (buffer-file-name)))
+if any, otherwise nil."
   (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
             edts-projects))
 
-
 (defun edts-project-file-in-project-p (project file-name)
-  "Returns non-nil if the fully qualified `file-name' is located
-inside the edts-project `project'."
-  (file-under-path-p (edts-project-root project) file-name))
+  "Returns non-nil if the fully qualified FILE-NAME is located
+inside the edts-project PROJECT."
+  (edts-project-file-under-path-p (edts-project-root project) file-name))
 
-(defun file-under-path-p (path file-name)
-  "Returns non-nil if the fully qualified `file-name' is located
-underneath `path'."
-   (string-prefix-p (edts-project-normalize-path path)
-                    (expand-file-name file-name)))
+(defun edts-project-file-under-path-p (path file-name)
+  "Returns non-nil if the fully qualified file-name is located
+underneath PATH."
+  (string-prefix-p (edts-project-normalize-path path)
+                   (expand-file-name file-name)))
 
 (defun edts-project-normalize-path (path-str)
-  "Badly named function. Only replaces duplicate /'s in path-str and
+  "Badly named function. Only replaces duplicate /'s in PATH-STR and
 make sure it ends with a '/'."
   (replace-regexp-in-string "//+" "/"
                             (concat (expand-file-name path-str) "/")))
