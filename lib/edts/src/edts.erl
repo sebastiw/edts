@@ -43,12 +43,14 @@
         , nodes/0
         , toggle_breakpoint/3
         , trace_function/3
+        , wait_for_debugger/2
         , who_calls/4]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
+-define(DEBUGGER, edts_debugger).
 
 %%%_* Types ====================================================================
 
@@ -153,6 +155,23 @@ toggle_breakpoint(Node, Module, Line) ->
   case edts_dist:call(Node, edts_dbg, toggle_breakpoint, Args) of
     {badrpc, _} -> {error, not_found};
     Result      -> Result
+  end.
+
+wait_for_debugger(_, 0) ->
+  io:format("Debugger not up. Giving up...~n"),
+  {error, attempts_exceeded};
+wait_for_debugger(Node, Attempts) ->
+  RemoteRegistered = rpc:call(Node, erlang, registered, []),
+  case lists:member(?DEBUGGER, RemoteRegistered) of
+    true ->
+      io:format("Debugger up!~n"),
+      io:format("Ordering debugger to continue...~n"),
+      {?DEBUGGER, Node} ! continue,
+      ok;
+    _    ->
+      io:format("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
+      timer:sleep(1000),
+      wait_for_debugger(Node, Attempts - 1)
   end.
 
 %%------------------------------------------------------------------------------

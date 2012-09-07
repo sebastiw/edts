@@ -67,7 +67,7 @@ malformed_request(ReqData, Ctx) ->
 
 resource_exists(ReqData, Ctx) ->
   Node     = orddict:fetch(nodename, Ctx),
-  Info     = edts_dbg:wait_for_debugger(Node, ?MAX_ATTEMPTS),
+  Info     = edts:wait_for_debugger(Node, ?MAX_ATTEMPTS),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
              not (Info =:= {error, attempts_exceeded}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
