@@ -42,7 +42,7 @@ activated for the first file that is located inside a project."
 (defun edts-project-ensure-node-started (project)
   "Start BUFFER's project's node if it is not already started."
   (let ((node-name (edts-project-node-name project)))
-    (if (edts-project-node-started-p node-name)
+    (if (edts-node-started-p node-name)
         (edts-register-node-when-ready node-name)
         (edts-project-start-node project))))
 
@@ -53,20 +53,16 @@ activated for the first file that is located inside a project."
          (buffer-name  (concat "*" project-name "*"))
          (command      (edts-project-build-project-command project))
          (pwd          (expand-file-name (edts-project-root project))))
-    (edts-project-ensure-node-not-started node-name)
+    (edts-ensure-node-not-started node-name)
     (edts-project-make-comint-buffer buffer-name pwd command)
     (edts-register-node-when-ready node-name)
-    (when (member 'distel features)
-      (let ((node-name-symbol
-             (make-symbol (concat node-name "\@" system-name))))
-        (setq erl-nodename-cache node-name-symbol)))
     (get-buffer buffer-name)))
 
 (defun edts-project-build-project-command (project)
   "Build a command line for PROJECT"
   (let ((command (edts-project-start-command project)))
     (if command
-        (delete "" (split-string command))
+          (delete "" (split-string command)) ; delete "" for xemacs.
         (let ((path (edts-project-code-path-expand project))
               (sname (edts-project-node-name project)))
           (append
@@ -84,18 +80,7 @@ PWD and running COMMAND."
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
 corresponds to BUFFER."
-  (edts-project-node-started-p (edts-project-buffer-node-name buffer)))
-
-(defun edts-project-node-started-p (node-name)
-  "Returns non-nil if there is an edts-project erlang node with name
-NODE-NAME running on localhost."
-  (edts-node-running node-name))
-
-(defun edts-project-ensure-node-not-started (node-name)
-  "Signals an error if a node of name NODE-NAME is running on
-localhost."
-  (when (edts-project-node-started-p node-name)
-    (error "Node already up")))
+  (edts-node-started-p (edts-project-buffer-node-name buffer)))
 
 (defun edts-project-name (project)
   "Returns the name of the edts-project PROJECT. No default value,
@@ -126,8 +111,8 @@ short names are supported."
   (cdr (assoc prop project)))
 
 (defun edts-project-code-path-expand (project)
-  "Expands PROJECT's ebin and listed lib dirs to a full set of ebin
-directories, treating every subdirectory of each lib dir a an OTP
+  "Expands PROJECT's ebin and listed lib dirs to a full set of ebin and
+test directories, treating every subdirectory of each lib dir a an OTP
 application."
   (let ((root     (edts-project-root project))
         (lib-dirs (edts-project-lib-dirs project)))

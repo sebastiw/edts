@@ -28,20 +28,26 @@
 
 (defun edts-ensure-server-started ()
   "Starts an edts server-node in a comint-buffer unless it is already running."
-  (unless (edts-node-running "edts")
+  (unless (edts-node-started-p "edts")
     (edts-start-server)))
 
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
   (interactive)
-  (when (edts-node-running "edts")
+  (when (edts-node-started-p "edts")
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
     (make-comint "edts" "./start.sh" nil (executable-find "erl"))))
 
-(defun edts-node-running (name)
-  "Syncronously query epmd to see whether it has a node with `name' registered."
+(defun edts-ensure-node-not-started (node-name)
+  "Signals an error if a node of name NODE-NAME is running on
+localhost."
+  (when (edts-node-started-p node-name)
+    (error "Node already started")))
+
+(defun edts-node-started-p (name)
+  "Syncronously query epmd to see whether it has a node with NAME registered."
   (condition-case ex
       (with-temp-buffer
         (let ((socket (open-network-stream
@@ -80,7 +86,7 @@
    #'edts-register-node-when-ready-function node-name retries)))
 
 (defun edts-register-node-when-ready-function (node-name retries)
-  (if (edts-node-running node-name)
+  (if (edts-node-started-p node-name)
       (edts-register-node node-name)
       (if (> retries 0)
           (edts-register-node-when-ready node-name (- retries 1))
