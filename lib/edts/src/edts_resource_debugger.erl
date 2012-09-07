@@ -66,16 +66,16 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
 resource_exists(ReqData, Ctx) ->
-  Info     = edts_dbg:wait_for_debugger(?MAX_ATTEMPTS),
+  Node     = orddict:fetch(nodename, Ctx),
+  Info     = edts_dbg:wait_for_debugger(Node, ?MAX_ATTEMPTS),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
              not (Info =:= {error, attempts_exceeded}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Info0 = orddict:fetch(info, Ctx),
-  {value, {source, S}, Other} = lists:keytake(source, 1, Info0),
-  Data = {struct, [{source, list_to_binary(S)}|Other]},
+  Info = orddict:fetch(info, Ctx),
+  Data = {struct, [{status, Info}]},
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

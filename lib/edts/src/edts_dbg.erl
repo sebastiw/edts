@@ -4,14 +4,15 @@
         , stop/0
         , interpret_modules/1
         , receive_traces/0
+        , start_debugging/1
         , toggle_breakpoint/2
         , trace_function/2
-        , wait_for_debugger/1 ]).
+        , wait_for_debugger/2 ]).
 
 -define(DEBUGGER, edts_debugger).
 
 start() ->
-  int:auto_attach(break, {?MODULE, start_debugging, []}).
+  int:auto_attach([break], {?MODULE, start_debugging, []}).
 
 stop() ->
   ok.
@@ -43,25 +44,33 @@ trace_loop() ->
                             trace_loop()
   end.
 
-start_debugging([Pid | _Args])  ->
-  erlang:register(?DEBUGGER),
+%% Hey, I just wrote you, and this is crazy, so turn into a gen_server, maybe?
+start_debugging(Pid)  ->
+  erlang:register(?DEBUGGER, self()),
+  io:format("[DEBUGGER] registered..."),
   do_debug(Pid).
 
 do_debug(Pid) ->
+  io:format(" starting...~n"),
   receive
-    _ -> do_debug(Pid)
+    continue -> io:format("[DEBUGGER] Continuing!~n"),
+                int:continue(Pid);
+    _        -> do_debug(Pid)
   end.
 
-wait_for_debugger(0) ->
+wait_for_debugger(_, 0) ->
   io:format("Debugger not up. Giving up...~n"),
   {error, attempts_exceeded};
-wait_for_debugger(Attempts) ->
-  case lists:member(?DEBUGGER, erlang:registered()) of
+wait_for_debugger(Node, Attempts) ->
+  RemoteRegistered = rpc:call(Node, erlang, registered, []),
+  case lists:member(?DEBUGGER, RemoteRegistered) of
     true ->
       io:format("Debugger up!~n"),
+      io:format("Ordering debugger to continue...~n"),
+      {?DEBUGGER, Node} ! continue,
       ok;
     _    ->
       io:format("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
       timer:sleep(1000),
-      wait_for_debugger(Attempts - 1)
+      wait_for_debugger(Node, Attempts - 1)
   end.
