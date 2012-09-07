@@ -23,8 +23,78 @@
 (defvar edts-project-test-project-1
   '((name          . "dev")
     (root          . "./foo")
-    (node-sname    . "dev")
+    (node-sname    . "dev-node")
     (lib-dirs . ("lib" "test"))))
+
+;; Incorrectly defined project
+(defvar edts-project-test-project-2
+  '((start-command . "bin/start.sh -i")))
+
+(ert-deftest edts-project-start-node-test ()
+  (flet ((edts-node-started-p (node-name) t))
+    (should-error (edt-project-start-node edts-project-test-project-1))))
+
+(ert-deftest edts-project-build-project-command-test ()
+  (flet ((edts-project-code-path-expand (project) '("./foo/test" "./foo/ebin"))
+         (executable-find (cmd) cmd))
+    (should
+     (equal '("erl" "-sname" "dev-node" "-pa" "./foo/test" "./foo/ebin")
+            (edts-project-build-project-command edts-project-test-project-1))))
+  (should
+   (equal '("bin/start.sh" "-i")
+          (edts-project-build-project-command edts-project-test-project-2))))
+
+(ert-deftest edts-project-make-comint-buffer-test ()
+  (let ((buffer (edts-project-make-comint-buffer "edts-test" "." '("erl"))))
+    (should (bufferp buffer))
+    (should (string= "edts-test" (buffer-name buffer)))
+    (should (string= "erl" (process-name (get-buffer-process buffer))))
+    (set-process-query-on-exit-flag (get-buffer-process buffer) nil)
+    (kill-process (get-buffer-process buffer))
+    (kill-buffer buffer)))
+
+(ert-deftest edts-project-buffer-node-started-p-test ()
+  (flet ((edts-node-started-p (node)
+                              (if (string= node "dev-node")
+                                  t
+                                  (error "wrong node-name")))
+         (edts-project-buffer-project (buffer) edts-project-test-project-1))
+    (should (edts-project-buffer-node-started-p (current-buffer))))
+  (flet ((edts-node-started-p (node)
+                              (if (string= node "dev-node")
+                                  nil
+                                  (error "wrong node-name")))
+         (edts-project-buffer-project (buffer) edts-project-test-project-1))
+    (should-not (edts-project-buffer-node-started-p (current-buffer)))))
+
+(ert-deftest edts-project-project-name-test ()
+  (should (string= "dev"
+                 (edts-project-name edts-project-test-project-1)))
+  (should (equal nil
+                   (edts-project-name edts-project-test-project-2))))
+
+(ert-deftest edts-project-project-root-test ()
+  (should (string= "./foo"
+                 (edts-project-root edts-project-test-project-1)))
+  (should (equal nil
+                   (edts-project-root edts-project-test-project-2))))
+
+(ert-deftest edts-project-lib-dirs-test ()
+  (should (equal '("lib" "test")
+                 (edts-project-lib-dirs edts-project-test-project-1)))
+  (should (equal '("lib")
+                   (edts-project-lib-dirs edts-project-test-project-2))))
+
+(ert-deftest edts-project-node-name-test ()
+  (should (string= "dev-node"
+              (edts-project-node-name edts-project-test-project-1)))
+  (should (eq nil
+              (edts-project-node-name edts-project-test-project-2))))
+
+(ert-deftest edts-project-start-command-test ()
+  (should (eq nil (edts-project-start-command edts-project-test-project-1)))
+  (should (string= "bin/start.sh -i"
+                   (edts-project-start-command edts-project-test-project-2))))
 
 (ert-deftest edts-project-path-expand ()
   (flet ((file-expand-wildcards (path)
@@ -37,7 +107,7 @@
   (let ((edts-projects (list edts-project-test-project-1)))
     (flet ((buffer-file-name (buffer) "./foo/bar.el"))
     (should
-     (string= "dev"
+     (string= "dev-node"
               (edts-project-buffer-node-name (current-buffer)))))
     (flet ((buffer-file-name (buffer) "./bar/baz.el"))
       (should
