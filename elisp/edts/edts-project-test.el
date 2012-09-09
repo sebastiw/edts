@@ -96,12 +96,16 @@
   (should (string= "bin/start.sh -i"
                    (edts-project-start-command edts-project-test-project-2))))
 
-(ert-deftest edts-project-path-expand ()
-  (flet ((file-expand-wildcards (path)
-                                (when (string= "foo/lib/*" path)
-                                    '("foo/lib/bar"))))
-    (should (equal '("foo/lib/bar/ebin" "foo/lib/bar/test")
-                   (edts-project-path-expand "foo" "lib")))))
+(ert-deftest edts-project-path-expand-test ()
+  (let ((home (expand-file-name "~")))
+    (flet ((file-expand-wildcards (path)
+                                  (when (string= (concat home "/foo/lib/*")
+                                                 path)
+                                    (list (concat home "/foo/lib/bar")))))
+      (should (equal (list
+                      (concat home "/foo/lib/bar/ebin")
+                      (concat home "/foo/lib/bar/test"))
+                     (edts-project-path-expand "~/foo" "lib"))))))
 
 (ert-deftest edts-project-buffer-node-name-test ()
   (let ((edts-projects (list edts-project-test-project-1)))

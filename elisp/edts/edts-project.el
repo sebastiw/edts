@@ -117,7 +117,7 @@ application."
   (let ((root     (edts-project-root project))
         (lib-dirs (edts-project-lib-dirs project)))
     (cons
-     (format "%s/ebin" (edts-project-normalize-path root))
+     (edts-project-normalize-path (format "%s/ebin"  root))
      (apply #'append
             (mapcar #'(lambda (dir)
                         (edts-project-path-expand root dir)) lib-dirs)))))
@@ -125,8 +125,8 @@ application."
 (defun edts-project-path-expand (root dir)
   "Returns a list of all existing directories in any folder directly
 beneath ROOT/DIR expanded with <path>/ebin and <path>/test."
-  (let* ((norm-root (edts-project-normalize-path root))
-         (app-dirs  (file-expand-wildcards (format "%s/%s/*" root dir)))
+  (let* ((lib-path  (edts-project-normalize-path (format "%s/%s" root dir)))
+         (app-dirs  (file-expand-wildcards (concat lib-path "*")))
          (app-paths (mapcar #'(lambda (path)
                                 (list (concat path "/ebin")
                                       (concat path "/test")))
