@@ -174,7 +174,29 @@ buffer"
         (cdr (assoc 'body res))
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-compile-and-load-async (module file callback buffer)
+  "Compile MODULE in FILE on the node associated with current buffer,
+asynchronously. When the request terminates, call CALLBACK with the
+parsed response as the single argument."
+  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+         (resource      (list "nodes" node-name "modules" module))
+         (args (list    (cons "file" file)))
+         (rest-callback #'(lambda (result callback buffer)
+                            (if (equal (assoc 'result result)
+                                       '(result "201" "Created"))
+                                (apply
+                                 callback
+                                 (list
+                                  (cdr (assoc 'body result))
+                                  buffer))
+                                (null
+                                 (message "Unexpected reply: %s"
+                                          (cdr (assoc 'result result))))))))
+    (edts-log-debug "Compiling %s async on %s" module node-name)
+    (edts-rest-post-async resource args rest-callback (list callback buffer))))
+
 (defun edts-compile-and-load (module file)
+  (edts-log-debug "Compiling %s on %s" module node-name)
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource
           (list "nodes" node-name "modules" module))

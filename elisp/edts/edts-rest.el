@@ -47,10 +47,35 @@
         (url-request-extra-headers (list edts-rest-content-type-hdr))
         (url-show-status           nil)
         (buffer (url-retrieve-synchronously url)))
+   (edts-log-debug "Sending %s-request to %s" method url)
    (when buffer
      (with-current-buffer buffer
          (edts-rest-parse-http-response)))))
 
+(defun edts-rest-post-async (resource args callback callback-args)
+  "Send a post request to resource with args"
+  (edts-rest-request-async "POST" resource args callback callback-args))
+
+(defun edts-rest-request-async (method resource args callback callback-args)
+  "Send asynchronous request to using METHOD to RESOURCE with ARGS. When
+the request terminates, call CALLBACK with the parsed response and
+CALLBACK-ARGS."
+  (let* ((url                       (edts-rest-resource-url resource args))
+         (url-request-method        method)
+         (url-request-extra-headers (list edts-rest-content-type-hdr))
+         (url-show-status           nil)
+         (callback-args             (cons callback callback-args)))
+    (edts-log-debug "Sending async %s-request to %s" method url)
+    (url-retrieve url #'edts-rest-request-callback callback-args)))
+
+(defun edts-rest-request-callback (events &rest args)
+  "Callback for asynchronous http requests."
+  (let* ((callback      (car args))
+         (callback-args (cdr args))
+         (reply         (edts-rest-parse-http-response))
+         (status        (cdr (assoc 'result reply))))
+    (edts-log-debug "Reply received, %s" status)
+    (apply callback (edts-rest-parse-http-response) callback-args)))
 
 (defun my-switch-to-url-buffer (status)
       "Switch to the buffer returned by `url-retreive'.

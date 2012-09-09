@@ -35,26 +35,26 @@
 (defconst edts-log-level-debug 3
   "EDTS debug log-level.")
 
-(defun edts-log-error (msg)
+(defun edts-log-error (msg &rest args)
   "Log MSG at error-level."
-  (edts-log-message edts-log-level-error msg))
+  (apply #'edts-log-message edts-log-level-error msg args))
 
-(defun edts-log-warning (msg)
+(defun edts-log-warning (msg &rest args)
   "Log MSG at warning-level."
-  (edts-log-message edts-log-level-warning msg))
+  (apply #'edts-log-message edts-log-level-warning msg args))
 
-(defun edts-log-info (msg)
+(defun edts-log-info (msg &rest args)
   "Log MSG at info-level."
-  (edts-log-message edts-log-level-info msg))
+  (apply #'edts-log-message edts-log-level-info msg args))
 
-(defun edts-log-debug (msg)
+(defun edts-log-debug (msg &rest args)
   "Log MSG at debug-level."
-  (edts-log-message edts-log-level-debug msg))
+  (apply #'edts-log-message edts-log-level-debug msg args))
 
-(defun edts-log-message (level msg)
+(defun edts-log-message (level msg &rest args)
   "Log MSG at LEVEL"
   (when (<= level edts-log-level)
-    (message msg)))
+    (message (concat "EDTS: " (apply #'format msg args)))))
 
 
 (provide 'edts-log)

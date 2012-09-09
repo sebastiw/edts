@@ -139,8 +139,9 @@ minor-modes, currently auto-highlight-mode and auto-complete-mode.
 They are configured to work together with EDTS but see their respective
 documentation for information on how to configure their behaviour
 further.
-\\<edts-mode-map>"
-  :lighter "EDTS"
+
+\\{edts-mode-map}"
+  :lighter " EDTS"
   :keymap edts-mode-map
   :group edts
   :require erlang-mode

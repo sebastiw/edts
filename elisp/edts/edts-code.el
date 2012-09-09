@@ -34,22 +34,41 @@ a symbol."
   (let ((type (if (symbolp type) type (intern type))))
     (cdr (assoc type edts-code-issue-overlay-priorities))))
 
+;; (defun edts-code-compile-and-display ()
+;;   "Compiles current buffer on node related the that buffer's project."
+;;   (let* ((module   (erlang-get-module))
+;;          (file     (buffer-file-name))
+;;          (comp-res (edts-compile-and-load module file)))
+;;     (when comp-res
+;;       (let ((result   (cdr (assoc 'result comp-res)))
+;;             (errors   (cdr (assoc 'errors comp-res)))
+;;             (warnings (cdr (assoc 'warnings comp-res))))
+;;         (edts-face-remove-overlays "edts-code-compile")
+;;         (edts-code-display-error-overlays errors)
+;;         (edts-code-display-warning-overlays warnings)
+;;         result))))
+
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
-  (edts-face-remove-overlays "edts-code-compile")
-  (let* ((module   (erlang-get-module))
-         (file     (buffer-file-name))
-         (comp-res (edts-compile-and-load module file)))
-    (when comp-res
+  (let ((module   (erlang-get-module))
+        (file     (buffer-file-name)))
+    (edts-compile-and-load-async
+     module file #'edts-code-handle-compilation-result (current-buffer))))
+
+(defun edts-code-handle-compilation-result (comp-res buffer)
+  (when comp-res
+    (with-current-buffer buffer
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))
             (warnings (cdr (assoc 'warnings comp-res))))
+        (edts-face-remove-overlays "edts-code-compile")
         (edts-code-display-error-overlays errors)
         (edts-code-display-warning-overlays warnings)
         result))))
 
+
 (defun edts-code-display-error-overlays (errors)
-  "Displays overlays for `ERRORS' in current buffer."
+  "Displays overlays for ERRORS in current buffer."
   (mapcar
    #'(lambda (error)
        (edts-code-display-issue-overlay 'edts-face-error-line error))
