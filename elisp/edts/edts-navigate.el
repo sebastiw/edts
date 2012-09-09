@@ -161,7 +161,7 @@ When FUNCTION is specified, the point is moved to its start."
               (ring-insert-at-beginning (edts-window-history-ring) mark)
               (ferl-search-function function arity))
             (null (error "Function %s:%s/%s not found" module function arity)))
-        (let* ((node (edts-project-buffer-node-name))
+        (let* ((node (edts-project-buffer-node-name (current-buffer)))
                (info (edts-get-function-info node module function arity)))
           (if info
               (progn
@@ -192,7 +192,7 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-who-calls ()
   (interactive)
-  (let ((node (edts-project-buffer-node-name))
+  (let ((node (edts-project-buffer-node-name (current-buffer)))
         (mfa  (ferl-mfa-at-point)))
     (if mfa
         (apply #'edts-find-callers (cons node mfa))
