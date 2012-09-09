@@ -48,8 +48,12 @@
 (defun edts-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."
   (when (edts-complete-module-p)
-    (or edts-complete-module-cache
-        (setq edts-complete-module-cache (edts-get-modules)))))
+    (edts-log-debug "completing modules")
+    (let ((completions
+           (or edts-complete-module-cache
+               (setq edts-complete-module-cache (edts-get-modules)))))
+      (edts-log-debug "completing modules done")
+      completions)))
 
 (defun edts-complete-single-quoted-module-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal

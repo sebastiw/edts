@@ -43,7 +43,10 @@
 (defun edts-complete-normal-local-function-candidates ()
   "Produces the completion list for normal (unqoted) local functions."
   (when (edts-complete-local-function-p)
-      (ferl-local-function-names)))
+    (edts-log-debug "completing local functions")
+    (let ((completions (ferl-local-function-names)))
+      (edts-log-debug "completing local functions done")
+      completions)))
 
 (defun edts-complete-single-quoted-local-function-candidates ()
   "Produces the completion for single-qoted erlang terms, Same as normal

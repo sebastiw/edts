@@ -44,14 +44,20 @@
   "Generates the auto-complete candidate list for variables. Matches variables
 mentioned in current function, before current point."
   (when (edts-complete-variable-p)
-    (save-excursion
-      (let ((old-point  (point))
-            (candidates ()))
-        (ferl-beginning-of-function)
-        (while (and (re-search-forward erlang-variable-regexp old-point t)
-                    (< (match-end 0) old-point))
-          (add-to-list 'candidates (thing-at-point 'symbol)))
-        candidates))))
+    (edts-log-debug "completing variables")
+    (let ((completions (edts-complete-variable-candidates)))
+      (edts-log-debug "completing variables done")
+      completions)))
+
+(defun edts-complete-variable-candidates ()
+  (save-excursion
+    (let ((old-point  (point))
+          (candidates ()))
+      (ferl-beginning-of-function)
+      (while (and (re-search-forward erlang-variable-regexp old-point t)
+                  (< (match-end 0) old-point))
+        (add-to-list 'candidates (thing-at-point 'symbol)))
+      candidates)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

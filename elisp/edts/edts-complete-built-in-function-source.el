@@ -43,7 +43,10 @@
 (defun edts-complete-normal-built-in-function-candidates ()
   "Produces the completion list for normal (unqoted) local functions."
   (when (edts-complete-built-in-function-p)
-    erlang-int-bifs))
+    (edts-log-debug "completing built-in functions")
+    (let ((completions erlang-int-bifs))
+      (edts-log-debug "completing built-in functions done")
+      completions)))
 
 (defun edts-complete-single-quoted-built-in-function-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal

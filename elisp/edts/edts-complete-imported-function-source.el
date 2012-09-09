@@ -43,7 +43,10 @@
 (defun edts-complete-normal-imported-function-candidates ()
   "Produces the completion list for normal (unqoted) imported functions."
   (when (edts-complete-imported-function-p)
-    (edts-complete-imported-function)))
+    (edts-log-debug "completing imported functions")
+    (let ((completions (edts-complete-imported-function)))
+      (edts-log-debug "completing imported functions done")
+      completions)))
 
 (defun edts-complete-imported-function ()
   "Generates the auto-complete candidate list for functions imported into the

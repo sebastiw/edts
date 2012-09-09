@@ -45,8 +45,11 @@
 (defun edts-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) exported functions."
   (when (edts-complete-exported-function-p)
-    (let ((module (symbol-at (- ac-point 1))))
-      (edts-get-module-exported-functions module))))
+    (edts-log-debug "completing exported functions")
+    (let* ((module (symbol-at (- ac-point 1)))
+          (completions (edts-get-module-exported-functions module)))
+      (edts-log-debug "completing exported functions done")
+      completions)))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
