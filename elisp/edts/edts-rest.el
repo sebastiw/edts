@@ -33,15 +33,15 @@
 
 
 (defun edts-rest-get (resource args)
-  "Send a get request to resource with args"
+  "Send a get request to RESOURCE with ARGS"
   (edts-rest-request "GET" resource args))
 
 (defun edts-rest-post (resource args)
-  "Send a post request to resource with args"
+  "Send a post request to RESOURCE with ARGS"
   (edts-rest-request "POST" resource args))
 
 (defun edts-rest-request (method resource args)
-  "Send a get request to resource with args"
+  "Send a get request to RESOURCE with ARGS"
  (let* ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))
@@ -53,7 +53,7 @@
          (edts-rest-parse-http-response)))))
 
 (defun edts-rest-post-async (resource args callback callback-args)
-  "Send a post request to resource with args"
+  "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "POST" resource args callback callback-args))
 
 (defun edts-rest-request-async (method resource args callback callback-args)
@@ -77,12 +77,8 @@ CALLBACK-ARGS."
     (edts-log-debug "Reply received, %s" status)
     (apply callback (edts-rest-parse-http-response) callback-args)))
 
-(defun my-switch-to-url-buffer (status)
-      "Switch to the buffer returned by `url-retreive'.
-    The buffer contains the raw HTTP response sent by the server."
-      (switch-to-buffer (current-buffer)))
-
 (defun edts-rest-parse-http-response ()
+  "Parses the contents of an http response in current buffer."
   (save-excursion
     (goto-char (point-min))
     (let* ((status     (split-string (buffer-substring (point) (point-at-eol))))
@@ -91,7 +87,8 @@ CALLBACK-ARGS."
     (if body-start
         (list
          (cons 'result result)
-         (cons 'body (edts-rest-try-decode (buffer-substring body-start (point-max))))
+         (cons 'body
+               (edts-rest-try-decode (buffer-substring body-start (point-max))))
         (list (cons 'result result)))))))
 
 (defun edts-rest-resource-url (resource args)
@@ -103,16 +100,17 @@ CALLBACK-ARGS."
     (format "http://%s:%s/%s?%s" host port path args)))
 
 (defun edts-rest-encode-arg (arg)
+  "Encode ARG as a url-argument"
   (concat (car arg) "=" (cdr arg)))
 
 (defun edts-rest-encode (data)
-  "Encode `data' as json."
+  "Encode DATA as json."
   (let ((json-object-type 'alist)
         (json-array-type  'list))
     (json-encode data)))
 
 (defun edts-rest-try-decode (string)
-  "Decode `string' from json if possible, otherwise return it as is."
+  "Decode STRING from json if possible, otherwise return it as is."
   (condition-case nil
       (unless (string-equal string "")
         (let ((json-object-type 'alist)
