@@ -79,13 +79,14 @@ compile_and_load(Module, Options) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Options);
 compile_and_load(File, Options0) ->
-  AbsPath     = filename:absname(File),
-  IncludeDirs = [filename:dirname(File)|get_include_dirs()],
-  Options     = Options0 ++ [binary, return, debug_info, {i, IncludeDirs}],
+  AbsPath = filename:absname(File),
+  Include = [filename:dirname(File)|get_include_dirs()],
+  Out     = get_compile_outdir(File),
+  Options = Options0 ++ [{outdir, Out}, return, debug_info, {i, Include}],
   case compile:file(AbsPath, Options) of
-    {ok, Mod, Bin, Warnings} ->
+    {ok, Mod, Warnings} ->
       code:purge(Mod),
-      {module, Mod} = code:load_binary(Mod, File, Bin),
+      {module, Mod} = code:load_abs(filename:rootname(File)),
       spawn(fun() -> update() end),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
@@ -247,6 +248,21 @@ who_calls(M, F, A) ->
   [Caller || {Caller, _Callee} <- Calls].
 
 %%%_* Internal functions =======================================================
+
+get_compile_outdir(File) ->
+  Mod = list_to_atom(filename:basename(filename:rootname(File))),
+  try
+    Opts = proplists:get_value(options, Mod:module_info(compile)),
+    proplists:get_value(outdir, Opts)
+  catch
+    _ ->
+      DirName = filename:dirname(File),
+      EbinDir = filename:join([DirName, "..", "ebin"]),
+      case filelib:is_file(EbinDir) of
+        true  -> EbinDir;
+        false -> DirName
+      end
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
