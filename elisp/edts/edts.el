@@ -61,7 +61,7 @@ localhost."
     ('file-error nil)))
 
 (defun edts-nodenames-from-string (string)
-  "Convert the reply from the epmd into a list of nodenames."
+  "Convert the epmd reply STRING into a list of nodenames."
   (setq string (split-string (substring string 4)))
   (let ((names  nil))
     (while string
@@ -71,14 +71,15 @@ localhost."
     names))
 
 (defun edts-build-epmd-message (msg)
-  "Build a message for the epmd. Logic taken from distel's epmd.el."
+  "Build a message for the epmd from MSG. Logic taken from distel's epmd.el."
   (let* ((len (length msg))
 (len-msb (ash len -8))
 (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
 (defun edts-register-node-when-ready (node-name &optional retries)
-  "Once `node-name' is registered with epmd, register it with the edts node."
+  "Once NODE-NAME is registered with epmd, register it with the edts
+node, optionally retrying RETRIES times."
   (let ((retries (if retries retries 20)))
   (run-with-timer
    0.5
@@ -93,7 +94,7 @@ localhost."
           (message "Error: edts could not register node '%s'" node-name))))
 
 (defun edts-register-node (node-name)
-  "Register `node-name' with the edts node"
+  "Register NODE-NAME with the edts node."
   (interactive "MNode-name: ")
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
@@ -101,7 +102,7 @@ localhost."
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-who-calls (node module function arity)
-  "Fetches a list of all function calling  `module':`function'/`arity' on `node'"
+  "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
   (let* ((node-name node)
          (resource (list "nodes" node-name
                          "modules" module
@@ -115,7 +116,7 @@ localhost."
 
 
 (defun edts-get-function-info (node module function arity)
-  "Fetches info `module' on the node associated with
+  "Fetches info MODULE on the node associated with
 current buffer."
   (let* ((node-name node)
          (resource (list "nodes" node-name
@@ -138,7 +139,7 @@ current buffer."
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-module-exported-functions (module)
-  "Fetches all exported functions of `module' on the node associated with
+  "Fetches all exported functions of MODULE on the node associated with
 current buffer."
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name
@@ -151,8 +152,8 @@ current buffer."
         (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-function-to-string (function-struct)
-  "Converts a function struct to a string. For now, just grabs the name and
-disregards arity."
+  "Convert a json FUNCTION-STRUCT to a string. For now, just grabs the
+name and disregards arity."
   (cdr (assoc 'function function-struct)))
 
 (defun edts-get-basic-module-info (module)
@@ -160,12 +161,13 @@ disregards arity."
   (edts-get-module-info module 'basic))
 
 (defun edts-get-detailed-module-info (module)
-  "Fetches detailed info about module on the node associated with current
+  "Fetches detailed info about MODULE on the node associated with current
 buffer"
   (edts-get-module-info module 'detailed))
 
 (defun edts-get-module-info (module level)
-  "Fetches info about `module' on the node associated with current buffer"
+  "Fetches info about MODULE on the node associated with current buffer.
+LEVEL is either basic or detailed."
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
@@ -196,6 +198,7 @@ parsed response as the single argument."
     (edts-rest-post-async resource args rest-callback (list callback buffer))))
 
 (defun edts-compile-and-load (module file)
+  "Compile MODULE in FILE on the node associated with current buffer."
   (edts-log-debug "Compiling %s on %s" module node-name)
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource
