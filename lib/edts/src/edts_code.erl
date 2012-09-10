@@ -86,7 +86,7 @@ compile_and_load(File, Options0) ->
   case compile:file(AbsPath, Options) of
     {ok, Mod, Warnings} ->
       code:purge(Mod),
-      {module, Mod} = code:load_abs(filename:rootname(File)),
+      {module, Mod} = code:load_abs(filename:join(Out, atom_to_list(Mod))),
       spawn(fun() -> update() end),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
