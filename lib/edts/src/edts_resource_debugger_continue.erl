@@ -65,7 +65,7 @@ content_types_accepted(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 create_path(ReqData, Ctx) ->
-  {wrq:path(ReqData, Ctx), ReqData, Ctx}.
+  {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
