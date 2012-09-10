@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_toggle_breakpoint).
+-module(edts_resource_interpret_modules).
 
 %%%_* Exports ==================================================================
 
@@ -66,8 +66,7 @@ malformed_request(ReqData, Ctx) ->
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Module   = orddict:fetch(module, Ctx),
-  Line     = orddict:fetch(line, Ctx),
-  Info     = edts:toggle_breakpoint(Nodename, Module, Line),
+  Info     = edts:interpret_modules(Nodename, Module),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
              not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.

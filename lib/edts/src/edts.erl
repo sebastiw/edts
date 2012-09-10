@@ -218,8 +218,6 @@ wait_for_debugger(Node, Attempts) ->
   case lists:member(edts_debug_server, RemoteRegistered) of
     true ->
       io:format("Debugger up!~n"),
-      io:format("Ordering debugger to continue...~n"),
-      edts_dist:call(Node, edts_debug_server, continue, []),
       ok;
     _    ->
       io:format("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
