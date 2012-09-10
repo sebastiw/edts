@@ -61,12 +61,12 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, line]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, modules]).
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  Info     = edts:interpret_modules(Nodename, Module),
+  Modules  = orddict:fetch(modules, Ctx),
+  Info     = edts:interpret_modules(Nodename, Modules),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
              not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
