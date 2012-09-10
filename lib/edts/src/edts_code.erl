@@ -114,7 +114,7 @@ compile_and_load(File, Options0) ->
       OutFile = filename:join(Out, atom_to_list(Mod)),
       {module, Mod} = code:load_abs(OutFile),
       spawn(fun() ->
-                case xref:replace_module(?SERVER, OutFile) of
+                case xref:replace_module(?SERVER, Mod, OutFile) of
                   {ok, Mod} -> ok;
                   {error, xref_base, {no_such_module, Mod}} ->
                     xref:add_module(?SERVER, OutFile)
