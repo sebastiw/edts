@@ -79,7 +79,7 @@ create_path(ReqData, Ctx) ->
 malformed_request(ReqData, Ctx) ->
   Validate = case wrq:method(ReqData) of
                'GET'  -> [nodename, module, info_level];
-               'POST' -> [nodename, module, file]
+               'POST' -> [nodename, module, file, interpret]
              end,
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
@@ -94,6 +94,14 @@ resource_exists(ReqData, Ctx) ->
       'GET'  -> orddict:fetch(info_level, Ctx);
       'POST' -> basic
     end,
+  try
+    case orddict:fetch(interpret, Ctx) of
+      [true] -> edts:interpret_modules(Nodename, [Module]);
+      _     -> ok
+    end
+  catch
+    _:_ -> ok
+  end,
   Info     = edts:get_module_info(Nodename, Module, InfoLevel),
   Exists   =
     (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso

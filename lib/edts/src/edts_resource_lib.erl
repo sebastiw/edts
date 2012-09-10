@@ -96,6 +96,7 @@ atom_to_validate(exported)     -> fun exported_validate/2;
 atom_to_validate(file)         -> fun file_validate/2;
 atom_to_validate(function)     -> fun function_validate/2;
 atom_to_validate(info_level)   -> fun info_level_validate/2;
+atom_to_validate(interpret)    -> fun interpret_validate/2;
 atom_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
 atom_to_validate(line)         -> fun line_validate/2;
 atom_to_validate(module)       -> fun module_validate/2;
@@ -178,7 +179,6 @@ info_level_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-<<<<<<< HEAD
 %% Validate a list of paths to lib directories underneath a project root already
 %% specified in Ctx.
 %% @end
@@ -194,7 +194,18 @@ lib_dirs_validate(ReqData, Ctx) ->
   LibDirs    = lists:map(fun(Dir) -> filename:join(Root, Dir) end,
                          string:tokens(LibDirsStr, ",")),
   {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
-=======
+
+
+%% Validate interpret
+%% @end
+-spec interpret_validate(wrq:req_data(), orddict:orddict()) ->
+                            {ok, true | false} | error.
+%%------------------------------------------------------------------------------
+interpret_validate(ReqData, _Ctx) ->
+  {ok, list_to_atom(wrq:get_qs_value("interpret", ReqData))}.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Validate line
 %% @end
 -spec line_validate(wrq:req_data(), orddict:orddict()) ->
@@ -202,7 +213,6 @@ lib_dirs_validate(ReqData, Ctx) ->
 %%------------------------------------------------------------------------------
 line_validate(ReqData, _Ctx) ->
   {ok, list_to_integer(wrq:get_qs_value("line", ReqData))}.
->>>>>>> Fix Webmachine resources and validation
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -213,17 +223,6 @@ line_validate(ReqData, _Ctx) ->
 %%------------------------------------------------------------------------------
 module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate modules
-%% @end
--spec modules_validate(wrq:req_data(), orddict:orddict()) ->
-                          {ok, [module()]} | error.
-%%------------------------------------------------------------------------------
-modules_validate(ReqData, _Ctx) ->
-  io:format("~p~n", [wrq:get_qs_value("module", ReqData)]),
-  {ok, [list_to_atom(wrq:get_qs_value("module", ReqData))]}.
 
 %%------------------------------------------------------------------------------
 %% @doc
