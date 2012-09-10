@@ -285,11 +285,14 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
                                       , edts_xref
                                       ]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
-    ok = edts_dist:load_modules(Node,   [edts_code, edts_xref, edts_dbg]),
+    ok = edts_dist:load_modules(Node, [ edts_code
+                                      , edts_xref
+                                      , edts_debug_server
+                                      ]),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    {ok, edts_dist:start_services(Node, [edts_code, edts_dbg])}
+    {ok, edts_dist:start_services(Node, [edts_code, edts_debug_server])}
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),

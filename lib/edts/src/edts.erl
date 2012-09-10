@@ -50,7 +50,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
--define(DEBUGGER, edts_debugger).
 
 %%%_* Types ====================================================================
 
@@ -145,14 +144,14 @@ trace_function(Node, Trace, Opts0) ->
   end.
 
 interpret_modules(Node, Modules) ->
-  case edts_dist:call(Node, edts_dbg, interpret_modules, [Modules]) of
+  case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
     {badrpc, _} -> {error, not_found};
     Interpreted -> Interpreted
   end.
 
 toggle_breakpoint(Node, Module, Line) ->
   Args = [Module, Line],
-  case edts_dist:call(Node, edts_dbg, toggle_breakpoint, Args) of
+  case edts_dist:call(Node, edts_debug_server, toggle_breakpoint, Args) of
     {badrpc, _} -> {error, not_found};
     Result      -> Result
   end.
@@ -162,11 +161,11 @@ wait_for_debugger(_, 0) ->
   {error, attempts_exceeded};
 wait_for_debugger(Node, Attempts) ->
   RemoteRegistered = rpc:call(Node, erlang, registered, []),
-  case lists:member(?DEBUGGER, RemoteRegistered) of
+  case lists:member(edts_debug_server, RemoteRegistered) of
     true ->
       io:format("Debugger up!~n"),
       io:format("Ordering debugger to continue...~n"),
-      {?DEBUGGER, Node} ! continue,
+      edts_dist:call(Node, edts_debug_server, continue, []),
       ok;
     _    ->
       io:format("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
