@@ -75,12 +75,8 @@ post_is_create(ReqData, Ctx) ->
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  Line     = orddict:fetch(line, Ctx),
-  Info     = edts:toggle_breakpoint(Nodename, Module, Line),
-  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
-             not (Info =:= {error, not_found}),
-  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
+  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
+  {Exists, ReqData, Ctx}.
 
 %% Handlers
 from_json(ReqData, Ctx) ->

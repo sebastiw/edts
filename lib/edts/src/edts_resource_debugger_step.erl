@@ -32,6 +32,7 @@
 -export([ allow_missing_post/2
         , allowed_methods/2
         , content_types_accepted/2
+        , create_path/2
         , init/1
         , malformed_request/2
         , post_is_create/2
@@ -60,8 +61,11 @@ allowed_methods(ReqData, Ctx) ->
   {['POST'], ReqData, Ctx}.
 
 content_types_accepted(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json} ],
+  Map = [ {"application/json", from_json} ],
   {Map, ReqData, Ctx}.
+
+create_path(ReqData, Ctx) ->
+  {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
@@ -70,11 +74,8 @@ post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Info     = edts:step(Nodename),
-  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
-             not (Info =:= {error, not_found}),
-  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
+  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
+  {Exists, ReqData, Ctx}.
 
 %% Handlers
 from_json(ReqData, Ctx) ->

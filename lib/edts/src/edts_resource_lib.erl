@@ -212,7 +212,7 @@ interpret_validate(ReqData, _Ctx) ->
                        {ok, non_neg_integer()} | error.
 %%------------------------------------------------------------------------------
 line_validate(ReqData, _Ctx) ->
-  {ok, list_to_integer(wrq:get_qs_value("line", ReqData))}.
+  {ok, list_to_integer(wrq:path_info(line, ReqData))}.
 
 %%------------------------------------------------------------------------------
 %% @doc

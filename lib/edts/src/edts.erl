@@ -211,16 +211,16 @@ continue(Node) ->
                            ok | {error, attempts_exceeded}.
 %%------------------------------------------------------------------------------
 wait_for_debugger(_, 0) ->
-  io:format("Debugger not up. Giving up...~n"),
+  lager:info("Debugger not up. Giving up...~n"),
   {error, attempts_exceeded};
 wait_for_debugger(Node, Attempts) ->
   RemoteRegistered = rpc:call(Node, erlang, registered, []),
   case lists:member(edts_debug_server, RemoteRegistered) of
     true ->
-      io:format("Debugger up!~n"),
+      lager:info("Debugger up!~n"),
       ok;
     _    ->
-      io:format("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
+      lager:info("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
       timer:sleep(1000),
       wait_for_debugger(Node, Attempts - 1)
   end.
