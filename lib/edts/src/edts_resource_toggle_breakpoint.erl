@@ -39,7 +39,7 @@
         , resource_exists/2]).
 
 %% Handlers
--export([to_json/2]).
+-export([from_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
