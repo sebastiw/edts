@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Function resource
+%%% @doc Debugger step resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -29,14 +29,16 @@
 
 %% API
 %% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
+-export([ allow_missing_post/2
+        , allowed_methods/2
+        , content_types_accepted/2
         , init/1
         , malformed_request/2
+        , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([to_json/2]).
+-export([from_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -51,17 +53,21 @@ init(_Config) ->
   lager:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
+allow_missing_post(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
+
 allowed_methods(ReqData, Ctx) ->
   {['POST'], ReqData, Ctx}.
 
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
+content_types_accepted(ReqData, Ctx) ->
+  Map = [ {"application/json", to_json} ],
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
+
+post_is_create(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
@@ -71,11 +77,10 @@ resource_exists(ReqData, Ctx) ->
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
-to_json(ReqData, Ctx) ->
-  Info0 = orddict:fetch(info, Ctx),
-  {value, {source, S}, Other} = lists:keytake(source, 1, Info0),
-  Data = {struct, [{source, list_to_binary(S)}|Other]},
-  {mochijson2:encode(Data), ReqData, Ctx}.
+from_json(ReqData, Ctx) ->
+  Nodename = orddict:fetch(nodename, Ctx),
+  Data = {struct, [{result, edts:step(Nodename)}]},
+  {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 %%%_* Internal functions =======================================================
 
