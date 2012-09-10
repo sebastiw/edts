@@ -86,8 +86,16 @@ compile_and_load(File, Options0) ->
   case compile:file(AbsPath, Options) of
     {ok, Mod, Warnings} ->
       code:purge(Mod),
-      {module, Mod} = code:load_abs(filename:join(Out, atom_to_list(Mod))),
-      spawn(fun() -> update() end),
+      OutFile = filename:join(Out, atom_to_list(Mod)),
+      {module, Mod} = code:load_abs(OutFile),
+      spawn(fun() ->
+                case xref:replace_module(?SERVER, OutFile) of
+                  {ok, Mod} -> ok;
+                  {error, xref_base, {no_such_module, Mod}} ->
+                    xref:add_module(?SERVER, OutFile)
+                end,
+                update()
+            end),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
@@ -256,7 +264,6 @@ get_compile_outdir(File) ->
     proplists:get_value(outdir, Opts)
   catch
     _:_ ->
-      error_logger:info_msg("bla", []),
       DirName = filename:dirname(File),
       EbinDir = filename:join([DirName, "..", "ebin"]),
       case filelib:is_file(EbinDir) of
