@@ -96,8 +96,8 @@ resource_exists(ReqData, Ctx) ->
     end,
   try
     case orddict:fetch(interpret, Ctx) of
-      [true] -> edts:interpret_modules(Nodename, [Module]);
-      _     -> ok
+      true -> edts:interpret_modules(Nodename, [Module]);
+      _    -> ok
     end
   catch
     _:_ -> ok
