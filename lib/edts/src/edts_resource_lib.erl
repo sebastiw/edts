@@ -189,7 +189,7 @@ module_validate(ReqData, _Ctx) ->
 module_exists_p(_ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Module   = orddict:fetch(module, Ctx),
-  case rpc:call(Nodename, Module, module_info, []) of
+  case edts_dist:call(Nodename, Module, module_info, []) of
     {badrpc, _} -> false;
     _ -> true
   end.

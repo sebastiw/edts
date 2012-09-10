@@ -255,7 +255,8 @@ get_compile_outdir(File) ->
     Opts = proplists:get_value(options, Mod:module_info(compile)),
     proplists:get_value(outdir, Opts)
   catch
-    _ ->
+    _:_ ->
+      error_logger:info_msg("bla", []),
       DirName = filename:dirname(File),
       EbinDir = filename:join([DirName, "..", "ebin"]),
       case filelib:is_file(EbinDir) of
