@@ -29,6 +29,7 @@
 
 %% API
 -export([ compile_and_load/2
+        , continue/1
         , get_function_info/4
         , get_module_eunit_result/2
         , get_module_info/3
@@ -41,6 +42,7 @@
         , modules/1
         , node_reachable/1
         , nodes/0
+        , step/1
         , toggle_breakpoint/3
         , trace_function/3
         , wait_for_debugger/2
@@ -143,12 +145,32 @@ trace_function(Node, Trace, Opts0) ->
                                  Result
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Interprets Modules in Node, if possible, returning the list of interpreted
+%% modules.
+%% @end
+-spec interpret_modules( Node :: node()
+                       , Modules :: [module()] ) ->
+                           [module()] | {error, not_found}.
+%%------------------------------------------------------------------------------
 interpret_modules(Node, Modules) ->
   case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
     {badrpc, _} -> {error, not_found};
     Interpreted -> Interpreted
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Toggles a breakpoint in Module:Line at Node.
+%% @end
+-spec toggle_breakpoint( Node :: node()
+                       , Module :: module()
+                       , Line :: non_neg_integer()) ->
+                           {ok, set, {Module, Line}}
+                         | {ok, unset, {Module, Line}}
+                         | {error, not_found}.
+%%------------------------------------------------------------------------------
 toggle_breakpoint(Node, Module, Line) ->
   Args = [Module, Line],
   case edts_dist:call(Node, edts_debug_server, toggle_breakpoint, Args) of
@@ -156,6 +178,38 @@ toggle_breakpoint(Node, Module, Line) ->
     Result      -> Result
   end.
 
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Step through in execution while debugging, in Node.
+%% @end
+-spec step(Node :: node()) -> ok | {error, not_found}.
+%%------------------------------------------------------------------------------
+step(Node) ->
+  case edts_dist:call(Node, edts_debug_server, step, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Continue execution until a breakpoint is hit or execution terminates.
+%% @end
+-spec continue(Node :: node()) -> ok | {error, not_found}.
+%%------------------------------------------------------------------------------
+continue(Node) ->
+  case edts_dist:call(Node, edts_debug_server, continue, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Wait for debugger to attach, for a maximum of Attempts.
+%% @end
+-spec wait_for_debugger(Node :: node(), Attempts :: non_neg_integer()) ->
+                           ok | {error, attempts_exceeded}.
+%%------------------------------------------------------------------------------
 wait_for_debugger(_, 0) ->
   io:format("Debugger not up. Giving up...~n"),
   {error, attempts_exceeded};

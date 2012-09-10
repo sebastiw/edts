@@ -34,18 +34,55 @@ start() ->
 stop() ->
   ok.
 
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Potentially attach to an interpreter process Pid. Will not
+%% reattach if already attached.
+%% @end
+-spec maybe_attach(Pid :: pid()) -> {attached, pid(), pid()}
+                                  | {already_attached, pid(), pid()}.
+%%--------------------------------------------------------------------
 maybe_attach(Pid) ->
   gen_server:call(?SERVER, {attach, Pid}).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Make Modules interpretable. Returns the list of modules which were
+%% interpretable and set as such.
+%% @end
+-spec interpret_modules(Modules :: [module()]) -> {ok, [module()]}.
+%%--------------------------------------------------------------------
 interpret_modules(Modules) ->
   gen_server:call(?SERVER, {interpret, Modules}).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Toggles a breakpoint at Module:Line.
+%% @end
+-spec toggle_breakpoint(Module :: module(), Line :: non_neg_integer()) ->
+                           {ok, set, {Module, Line}}
+                         | {ok, unset, {Module, Line}}.
+%%--------------------------------------------------------------------
 toggle_breakpoint(Module, Line) ->
   gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to continue execution until it reaches another
+%% breakpoint or execution terminates.
+%% @end
+-spec continue() -> ok.
+%%--------------------------------------------------------------------
 continue() ->
   gen_server:call(?SERVER, continue).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to step in execution.
+%% @end
+-spec step() -> ok.
+%%--------------------------------------------------------------------
 step() ->
   gen_server:call(?SERVER, step).
 
