@@ -14,7 +14,8 @@
 (add-to-list 'load-path (concat edts-lib-directory "auto-complete"))
 (add-to-list 'load-path (concat edts-lib-directory "auto-highlight-symbol-mode"))
 (add-to-list 'load-path (concat edts-lib-directory "popup-el"))
-(add-to-list 'exec-path (concat (directory-file-name erlang-root-dir) "/bin"))
+(when (boundp 'erlang-root-dir)
+  (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
