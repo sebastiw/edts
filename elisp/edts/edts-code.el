@@ -50,6 +50,7 @@ a symbol."
 
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
+  (edts-face-remove-overlays "edts-code-compile")
   (let ((module   (erlang-get-module))
         (file     (buffer-file-name)))
     (edts-compile-and-load-async
@@ -61,7 +62,6 @@ a symbol."
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))
             (warnings (cdr (assoc 'warnings comp-res))))
-        (edts-face-remove-overlays "edts-code-compile")
         (edts-code-display-error-overlays errors)
         (edts-code-display-warning-overlays warnings)
         result))))
