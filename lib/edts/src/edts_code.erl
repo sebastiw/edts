@@ -30,7 +30,8 @@
 
 %%%_* Exports ==================================================================
 
--export([ compile_and_load/1
+-export([ check_module/2
+        , compile_and_load/1
         , get_function_info/3
         , get_module_info/1
         , get_module_info/2
@@ -46,6 +47,30 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Do an xref-analysis of Module, applying Checks
+%% @end
+-spec check_module(Module::module(), Checks::xref:analysis()) ->
+                      {ok, [{ File::string()
+                            , Line::non_neg_integer()
+                            , Description::string()}]}.
+%%------------------------------------------------------------------------------
+check_module(Module, Checks) ->
+  %% Fixme, what if module is not compiled and loaded?
+  File = proplists:get_value(source, Module:module_info(compile)),
+  lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks).
+
+do_check_module(Mod0, File, undefined_function_calls) ->
+  {ok, Res} = xref:q(edts_code, "(XLin) (XC - UC)"),
+  FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}, Acc) when Mod =:= Mod0 ->
+               Desc = io_lib:format("Call to undefined function ~p:~p/~p",
+                                    [CM, CF, CA]),
+               [{error, File, Line, lists:flatten(Desc)}|Acc];
+              (_, Acc) -> Acc
+           end,
+  lists:foldl(FmtFun, [], Res).
 
 %%------------------------------------------------------------------------------
 %% @doc
