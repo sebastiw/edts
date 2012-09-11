@@ -116,11 +116,11 @@ test directories, treating every subdirectory of each lib dir a an OTP
 application."
   (let ((root     (edts-project-root project))
         (lib-dirs (edts-project-lib-dirs project)))
-    (cons
-     (edts-project-normalize-path (format "%s/ebin"  root))
      (apply #'append
+            (list (edts-project-normalize-path (format "%s/ebin"  root))
+                  (edts-project-normalize-path (format "%s/test"  root)))
             (mapcar #'(lambda (dir)
-                        (edts-project-path-expand root dir)) lib-dirs)))))
+                        (edts-project-path-expand root dir)) lib-dirs))))
 
 (defun edts-project-path-expand (root dir)
   "Returns a list of all existing directories in any folder directly
