@@ -158,10 +158,15 @@ get_module_info(M, Level) ->
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
-  Info                         = M:module_info(),
+  ?debugHere,
+  Info                         = erlang:get_module_info(M),
+  ?debugHere,
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
+  ?debugHere,
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
+  ?debugHere,
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
+  ?debugHere,
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
@@ -176,6 +181,7 @@ do_get_module_info(M, detailed) ->
 
   Acc0 = orddict:from_list([ {cur_file,    Source}
                            , {compile_cwd, get_compile_cwd(M, Abstract)}
+                           , {exports,     M:module_info(exports)}
                            , {imports,     []}
                            , {includes,    []}
                            , {functions,   []}
@@ -376,7 +382,7 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     [ {module,   M}
     , {function, F}
     , {arity,    A}
-    , {exported, lists:member({F, A}, M:module_info(exports))}
+    , {exported, lists:member({F, A}, orddict:fetch(exports, Acc))}
     , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
@@ -401,11 +407,11 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
   orddict:store(cur_file, Src, Acc);
 parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
-               , {function, F}
-               , {arity, A}] || {F, A} <- Imports0],
+             , {function, F}
+             , {arity, A}] || {F, A} <- Imports0],
   orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
 parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
-  FieldsF = fun({record_field, _, {_, _, FName}})         -> FName;
+  FieldsF = fun({record_field, _, {_, _, FName}})        -> FName;
                ({record_field, _, {_, _, FName}, _Call}) -> FName
             end,
   RecordInfo =
@@ -454,6 +460,52 @@ path_flatten([Dir|Rest], Back, Acc) ->
 
 %%%_* Unit tests ===============================================================
 
+format_errors_test_() ->
+  SetupF = fun() ->
+               meck:unload(),
+               meck:new(source),
+               meck:expect(source, format_error,
+                           fun(Error) -> atom_to_list(Error) end)
+           end,
+  CleanupF = fun(_) ->
+                 meck:unload()
+             end,
+  { setup, SetupF, CleanupF
+  , [ ?_assertEqual( [ {warning, file1, 1337, "error1"}
+                     , {warning, file1, 1338, "error2"}
+                     , {warning, file2, 1339, "error3"}
+                     , {warning, file2, 1340, "error4"} ]
+                   , format_errors( warning
+                                  , [ {file1, [ {1337, source, error1}
+                                              , {1338, source, error2}]}
+                                    , {file2, [ {1339, source, error3}
+                                              , {1340, source, error4}]} ]))
+    , ?_assertEqual( [ {error, file1, 1337, "error1"}
+                     , {error, file1, 1338, "error2"}
+                     , {error, file2, 1339, "error3"}
+                     , {error, file2, 1340, "error4"} ]
+                   , format_errors( error
+                                  , [ {file1, [ {1337, source, error1}
+                                              , {1338, source, error2}]}
+                                    , {file2, [ {1339, source, error3}
+                                              , {1340, source, error4}]} ]))
+    ]}.
+
+get_file_and_line_test_() ->
+  [ ?_assertEqual({error, not_found}, get_file_and_line(m, f, a, "foo.erl", []))
+  , ?_assertEqual( {ok, {"foo.erl", 1337}}
+                 , get_file_and_line(m, f, 0, "foo.erl",
+                                     [{function, 1337, f, 0, ''}]))
+  , ?_assertEqual( {ok, {"bar.erl", 1337}}
+                 , get_file_and_line( m, f, 0, "foo.erl"
+                                    , [ {attribute, '', file, {"bar.erl", ''}}
+                                      , {function, 1337, f, 0, ''}]))
+  , ?_assertEqual( {ok, {"foo.erl", 1337}}
+                 , get_file_and_line(m, f, 0, "foo.erl",
+                                     [ {function, 1335, f0, 0, ''}
+                                     , {function, 1337, f, 0, ''}]))
+  ].
+
 path_flatten_test_() ->
   [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl"))
   , ?_assertEqual("./bar.erl",     path_flatten("./bar.erl"))
@@ -464,84 +516,93 @@ path_flatten_test_() ->
   , ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
    ].
 
-basic_module_info_test_() ->
-  Info = get_module_info(test_module, basic),
-  [ ?_assertEqual(test_module,proplists:get_value(module, Info))
-  , ?_assertEqual([ [{function, bar},         {arity, 1}]
-                  , [{function, module_info}, {arity, 0}]
-                  , [{function, module_info}, {arity, 1}]],
-                  proplists:get_value(exports, Info))
-  , ?_assertMatch({{_, _, _}, {_, _, _}}, proplists:get_value(time, Info))
-  , ?_assertMatch(Src when is_list(Src), proplists:get_value(source, Info))].
-
-detailed_module_info_test_() ->
-  Info = get_module_info(test_module),
-  BaseDir = filename:dirname(proplists:get_value(source, module_info(compile))),
-  [
-    ?_assertEqual(test_module,proplists:get_value(module, Info))
-  , ?_assertEqual([ [{function, bar},         {arity, 1}]
-                  , [{function, module_info}, {arity, 0}]
-                  , [{function, module_info}, {arity, 1}]],
-                  proplists:get_value(exports, Info))
-  , ?_assertMatch({{_, _, _}, {_, _, _}}, proplists:get_value(time, Info))
-  , ?_assertMatch(Src when is_list(Src), proplists:get_value(source, Info))
-  , ?_assertEqual(
-       lists:sort([ [{module, lists}, {function, any},   {arity, 2}]
-                  , [{module, lists}, {function, member}, {arity, 2}]])
-     , lists:sort(proplists:get_value(imports, Info)))
-  , ?_assertEqual(
-       lists:sort([ [ {name, rec}
-                    , {fields, [ord]}
-                    , {line, 11}
-                    , {source, proplists:get_value(source, Info)}]
-                  , [ {name, rec2}
-                    , {fields, [ord]}
-                    , {line, 1}
-                    , {source,
-                       filename:join(
-                         filename:dirname(proplists:get_value(source, Info)),
-                         "test_2.hrl")}]])
-     , lists:sort(proplists:get_value(records, Info)))
-  , ?_assertEqual(
-        [ filename:join([BaseDir, "test", "test.hrl"])
-        , filename:join([BaseDir, "test", "test_2.hrl"])]
-      , lists:sort(proplists:get_value(includes, Info)))
+parse_abstract_function_test_() ->
+  Mod = test,
+  Fun = bar,
+  Arity = 1,
+  Line = 1337,
+  CurFile = "/foo/test.erl",
+  Exports = [{bar, 1}],
+  Acc = orddict:from_list([ {module,    Mod}
+                          , {cur_file,  CurFile}
+                          , {exports,   Exports}
+                          , {functions, []}]),
+  Res = parse_abstract({function, Line, Fun, Arity, []}, Acc),
+  [ ?_assertEqual(
+       lists:sort([module, cur_file, exports, functions])
+     , lists:sort(orddict:fetch_keys(Res)))
+  , ?_assertEqual(Mod,     orddict:fetch(module, Res))
+  , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
+  , ?_assertEqual(Exports, orddict:fetch(exports, Res))
+  , ?_assertMatch([_],     orddict:fetch(functions, Res))
+  , ?_assertEqual(lists:sort([ {module, Mod}
+                             , {function, Fun}
+                             , {arity,    Arity}
+                             , {source,   CurFile}
+                             , {line,     Line}
+                             , {exported, true}])
+                , lists:sort(hd(orddict:fetch(functions, Res))))
   ].
 
-compile_and_load_test_() ->
-  Path = code:where_is_file("test_module.erl"),
-  [{ setup
-   , fun()  -> ok = meck:new(compile, [unstick, passthrough]) end
-   , fun(_) -> meck:unload() end
-   , [ ?_assertMatch( {ok, {[], [{warning, Path, 11, _}]}}
-                    , compile_and_load(Path))
-     , ?_assertEqual(1, length(meck_history(compile, file)))]}].
+parse_abstract_include_test_() ->
+  Line = 1337,
+  Source0 = "/foo/test.erl",
+  Source1 = "test.erl",
+  Include0 = "test.hrl",
+  CompileCwd = "/foo",
+  Acc = orddict:from_list([ {source,      Source0}
+                          , {compile_cwd, CompileCwd}
+                          , {includes,    []}]),
+  Res0 = parse_abstract({attribute, Line, file, {Source0, Line}}, Acc),
+  Res1 = parse_abstract({attribute, Line, file, {Source1, Line}}, Acc),
+  Res2 = parse_abstract({attribute, Line, file, {Include0, Line}}, Acc),
+  [ ?_assertEqual(
+       lists:sort([source, compile_cwd, includes, cur_file])
+     , lists:sort(orddict:fetch_keys(Res0)))
+  , ?_assertEqual(Source0, orddict:fetch(source, Res0))
+  , ?_assertEqual(CompileCwd, orddict:fetch(compile_cwd, Res0))
+  , ?_assertEqual([], orddict:fetch(includes, Res0))
+  , ?_assertEqual([], orddict:fetch(includes, Res1))
+  , ?_assertEqual(["/foo/test.hrl"], orddict:fetch(includes, Res2))
+  ].
 
-get_function_info_test_() ->
-  Info = get_function_info(test_module, bar, 1),
-  [ ?_assertEqual(test_module, proplists:get_value(module,   Info))
-  , ?_assertEqual(bar,         proplists:get_value(function, Info))
-  , ?_assertEqual(1,           proplists:get_value(arity,    Info))
-  , ?_assertEqual(16,          proplists:get_value(line,     Info))
-  , ?_assertEqual(true,        proplists:get_value(exported, Info))].
+parse_abstract_import_test_() ->
+  Acc = orddict:from_list([ {imports, []}]),
+  Res0 = parse_abstract({attribute, 0, import, {foo, [{bar, 1}]}}, Acc),
+  [ ?_assertEqual([imports], orddict:fetch_keys(Res0))
+  , ?_assertMatch([_], orddict:fetch(imports, Res0))
+  , ?_assertEqual( lists:sort([ {module,   foo}
+                              , {function, bar}
+                              , {arity,    1}])
+                 , lists:sort(hd(orddict:fetch(imports, Res0))))
+  ].
+
+parse_abstract_record_test_() ->
+  Fields = [ {record_field, foo, {foo, foo, field_1}}
+           , {record_field, foo, {foo, foo, field_2}, init_call}],
+  Line = 1337,
+  CurFile = "/foo/test.erl",
+  Acc = orddict:from_list([ {cur_file, CurFile}
+                          , {records, []}]),
+  Res = parse_abstract({attribute, Line, record, {rec_name, Fields}}, Acc),
+  [ ?_assertEqual(
+       lists:sort([cur_file, records])
+     , lists:sort(orddict:fetch_keys(Res)))
+  , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
+  , ?_assertMatch([_],     orddict:fetch(records, Res))
+  , ?_assertEqual( lists:sort([ {name,   rec_name}
+                             , {fields, [field_1, field_2]}
+                             , {line,   Line}
+                             , {source, CurFile}])
+                 , lists:sort(hd(orddict:fetch(records, Res))))
+  ].
+
+parse_abstract_other_test_() ->
+  [?_assertEqual(bar, parse_abstract(foo, bar))].
 
 modules_test() ->
   [{setup, fun start/0, fun(_) -> stop() end,
     [?_assertMatch({ok, [_|_]}, modules())]}].
-
-reload_module_test() ->
-  meck:new(c, [unstick, passthrough]),
-  code:stick_mod(test_module),
-  reload_module(test_module),
-  ?assertEqual(0, length(meck_history(c, l))),
-  code:unstick_mod(test_module),
-  reload_module(test_module),
-  ?assertEqual(1, length(meck_history(c, l))),
-  meck:unload().
-
-meck_history(M0, F0) ->
-  [{A, R} || {Self, {M, F, A}, R} <- meck:history(M0), M =:= M0,
-             F =:= F0, Self =:= self()].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
