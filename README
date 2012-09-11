@@ -124,7 +124,15 @@ erl-find-module, erl-find-source-under-point and erl-who-calls. As far as I
 know, those are the only Distel features that 95% of people use, but if there is
 anything from Distel that you are missing in EDTS, please let me know.
 
-If you would like to run both Distel and EDTS, just make sure that your EDTS
-setup is placed after your Distel setup in your .emacs, they should work fine
-together.
+If you are using EDTS, please remove Distel from your configuration, since
+running both can create some confusion.
+
+## Known Issues ##
+
+Some users are experiencing serious performance issues with the auto-completion
+during the first use after startup. This is usually solved by typing C-g a
+couple (two or three, it seems to vary) of times when Emacs "hangs" the first
+time. This is most likely caused by a defect in the auto-complete package, but
+any help in debugging this problem is appreciated since I haven't been able to
+reproduce this on any of my machines.
 
