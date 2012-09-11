@@ -33,6 +33,7 @@
         , validate/3]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -90,13 +91,14 @@ make_nodename(NameStr) ->
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2.
 
-atom_to_validate(arity)      -> fun arity_validate/2;
-atom_to_validate(exported)   -> fun exported_validate/2;
-atom_to_validate(file)       -> fun file_validate/2;
-atom_to_validate(function)   -> fun function_validate/2;
-atom_to_validate(info_level) -> fun info_level_validate/2;
-atom_to_validate(module)     -> fun module_validate/2;
-atom_to_validate(nodename)   -> fun nodename_validate/2.
+atom_to_validate(arity)       -> fun arity_validate/2;
+atom_to_validate(exported)    -> fun exported_validate/2;
+atom_to_validate(file)        -> fun file_validate/2;
+atom_to_validate(function)    -> fun function_validate/2;
+atom_to_validate(info_level)  -> fun info_level_validate/2;
+atom_to_validate(module)      -> fun module_validate/2;
+atom_to_validate(nodename)    -> fun nodename_validate/2;
+atom_to_validate(xref_checks) -> fun xref_checks_validate/2.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -212,6 +214,127 @@ nodename_validate(ReqData, _Ctx) ->
 %%------------------------------------------------------------------------------
 nodename_exists_p(_ReqData, Ctx) ->
   edts:node_reachable(orddict:fetch(nodename, Ctx)).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate xref_checks
+%% @end
+-spec xref_checks_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+xref_checks_validate(ReqData, _Ctx) ->
+  Allowed = [undefined_function_calls, deprecated_function_calls],
+  case wrq:get_qs_value("xref_checks", ReqData) of
+    undefined  -> {ok, [undefined_function_calls, deprecated_function_calls]};
+    Val        ->
+      Checks = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
+      case lists:all(fun(Check) -> lists:member(Check, Allowed) end, Checks) of
+        true  -> {ok, Checks};
+        false -> error
+      end
+  end.
+
+%%%_* Unit tests ===============================================================
+arity_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(arity, _) -> "0" end),
+  ?assertEqual({ok, 0}, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "1" end),
+  ?assertEqual({ok, 1}, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "-1" end),
+  ?assertEqual(error, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "a" end),
+  ?assertEqual(error, arity_validate(foo, bar)),
+  meck:unload().
+
+exported_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("exported", _) -> undefined end),
+  ?assertEqual({ok, all}, exported_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exported", _) -> "all" end),
+  ?assertEqual({ok, all}, exported_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exported", _) -> "true" end),
+  ?assertEqual({ok, true}, exported_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exported", _) -> "false" end),
+  ?assertEqual({ok, false}, exported_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exported", _) -> true end),
+  ?assertEqual(error, exported_validate(foo, bar)),
+  meck:unload().
+
+file_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  {ok, Cwd} = file:get_cwd(),
+  meck:expect(wrq, get_qs_value, fun("file", _) -> Cwd end),
+  ?assertEqual({ok, Cwd}, file_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("file", _) -> filename:join(Cwd, "asotehu") end),
+  ?assertEqual(error, file_validate(foo, bar)),
+  meck:unload().
+
+function_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(function, _) -> "foo" end),
+  ?assertEqual({ok, foo}, function_validate(foo, bar)),
+  meck:unload().
+
+info_level_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("info_level", _) -> undefined end),
+  ?assertEqual({ok, basic}, info_level_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("info_level", _) -> "basic" end),
+  ?assertEqual({ok, basic}, info_level_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("info_level", _) -> "detailed" end),
+  ?assertEqual({ok, detailed}, info_level_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("info_level", _) -> true end),
+  ?assertEqual(error, info_level_validate(foo, bar)),
+  meck:unload().
+
+module_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(module, _) -> "foo" end),
+  ?assertEqual({ok, foo}, module_validate(foo, bar)),
+  meck:unload().
+
+nodename_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(nodename, _) -> "foo" end),
+  [_Name, Hostname] = string:tokens(atom_to_list(node()), "@"),
+  ?assertEqual( {ok, list_to_atom("foo@" ++ Hostname)}
+              , nodename_validate(foo, bar)),
+  meck:unload().
+
+xref_checks_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> undefined end),
+  ?assertEqual({ok, [undefined_function_calls, deprecated_function_calls]},
+               xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("xref_checks", _) -> "undefined_function_calls" end),
+  ?assertEqual({ok, [undefined_function_calls]},
+               xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("xref_checks", _) -> "deprecated_function_calls" end),
+  ?assertEqual({ok, [deprecated_function_calls]},
+               xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("xref_checks", _) ->
+                  "deprecated_function_calls,undefined_function_calls"
+              end),
+  ?assertEqual({ok, [deprecated_function_calls, undefined_function_calls]},
+               xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> "something" end),
+  ?assertEqual(error, xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("xref_checks", _) ->
+                                     "something, undefined_function_calls" end),
+  ?assertEqual(error, xref_checks_validate(foo, bar)),
+  meck:unload().
 
 
 %%%_* Emacs ====================================================================

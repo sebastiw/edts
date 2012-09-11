@@ -183,15 +183,10 @@ get_module_info(M, Level) ->
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
-  ?debugHere,
   Info                         = erlang:get_module_info(M),
-  ?debugHere,
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
-  ?debugHere,
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
-  ?debugHere,
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
-  ?debugHere,
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
@@ -206,7 +201,6 @@ do_get_module_info(M, detailed) ->
 
   Acc0 = orddict:from_list([ {cur_file,    Source}
                            , {compile_cwd, get_compile_cwd(M, Abstract)}
-                           , {exports,     M:module_info(exports)}
                            , {imports,     []}
                            , {includes,    []}
                            , {functions,   []}
@@ -407,7 +401,7 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     [ {module,   M}
     , {function, F}
     , {arity,    A}
-    , {exported, lists:member({F, A}, orddict:fetch(exports, Acc))}
+    , {exported, lists:member({F, A}, M:module_info(exports))}
     , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
@@ -548,14 +542,18 @@ parse_abstract_function_test_() ->
   Line = 1337,
   CurFile = "/foo/test.erl",
   Exports = [{bar, 1}],
+  meck:unload(),
+  meck:new(Mod, [no_link]),
+  meck:expect(Mod, Fun, fun(_) -> ok end),
   Acc = orddict:from_list([ {module,    Mod}
                           , {cur_file,  CurFile}
                           , {exports,   Exports}
                           , {functions, []}]),
   Res = parse_abstract({function, Line, Fun, Arity, []}, Acc),
+  meck:unload(),
   [ ?_assertEqual(
-       lists:sort([module, cur_file, exports, functions])
-     , lists:sort(orddict:fetch_keys(Res)))
+       lists:sort([module, cur_file, exports, functions]),
+       lists:sort(orddict:fetch_keys(Res)))
   , ?_assertEqual(Mod,     orddict:fetch(module, Res))
   , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
   , ?_assertEqual(Exports, orddict:fetch(exports, Res))
