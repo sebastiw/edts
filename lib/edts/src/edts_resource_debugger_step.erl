@@ -80,7 +80,9 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Data = {struct, [{result, edts:step(Nodename)}]},
+  {ok, MFA, Cursor} = edts:step(Nodename),
+  Data = {struct, [{call, list_to_binary(MFA)},
+                   {cursor, list_to_binary(Cursor)}]},
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 %%%_* Internal functions =======================================================

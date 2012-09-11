@@ -154,7 +154,10 @@ handle_call(continue, _From, #dbg_state{proc = Pid} = State) ->
   {reply, ok, State};
 handle_call(step, _From, #dbg_state{proc = Pid} = State) ->
   int:step(Pid),
-  {reply, ok, State}.
+  [{_, {M, F, A}, _, {Mod, Line}}|_] = int:snapshot(),
+  MFA = io_lib:format("~p:~p(~p)", [M, F, A]),
+  Cursor = io_lib:format("~p:~p", [Mod, Line]),
+  {reply, {ok, MFA, Cursor}, State}.
 
 
 %%--------------------------------------------------------------------
@@ -195,6 +198,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
+  int:auto_attach(false),
   ok.
 
 %%--------------------------------------------------------------------
