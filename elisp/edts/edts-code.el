@@ -51,37 +51,41 @@ a symbol."
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))
             (warnings (cdr (assoc 'warnings comp-res))))
-        (edts-code-display-error-overlays errors)
-        (edts-code-display-warning-overlays warnings)
+        (edts-code-display-error-overlays "edts-code-compile" errors)
+        (edts-code-display-warning-overlays "edts-code-compile" warnings)
         result))))
 
 (defun edts-code-xref-analyze ()
   "Compiles current buffer on node related the that buffer's project."
-  (edts-face-remove-overlays "edts-code-compile")
+  (edts-face-remove-overlays "edts-code-xref")
   (let ((module   (erlang-get-module)))
     (edts-get-module-xref-analysis-async
      module edts-code-xref-checks
      #'edts-code-handle-xref-analysis-result (current-buffer))))
 
 (defun edts-code-handle-xref-analysis-result (analysis-res buffer)
-  (message "result %s" analysis-res))
+  (when analysis-res
+    (with-current-buffer buffer
+      (let ((errors (cdr (assoc 'errors analysis-res))))
+        (edts-code-display-error-overlays "edts-code-xref" errors)
+        result))))
 
 
-(defun edts-code-display-error-overlays (errors)
+(defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
   (mapcar
    #'(lambda (error)
-       (edts-code-display-issue-overlay 'edts-face-error-line error))
+       (edts-code-display-issue-overlay type 'edts-face-error-line error))
    errors))
 
-(defun edts-code-display-warning-overlays (warnings)
+(defun edts-code-display-warning-overlays (type warnings)
   "Displays overlays for WARNINGS in current buffer."
   (mapcar
    #'(lambda (warning)
        (edts-code-display-issue-overlay 'edts-face-warning-line warning))
    warnings))
 
-(defun edts-code-display-issue-overlay (face issue)
+(defun edts-code-display-issue-overlay (type face issue)
   "Displays overlay with FACE for ISSUE in current buffer."
   (let* ((line         (edts-code-find-issue-overlay-line issue))
          (issue-type   (cdr (assoc 'type issue)))
