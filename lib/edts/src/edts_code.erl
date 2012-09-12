@@ -58,9 +58,10 @@
                             , Description::string()}]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
-  %% Fixme, what if module is not compiled and loaded?
+  %% Fixme, what if module is not compiled?
   File = proplists:get_value(source, Module:module_info(compile)),
-  lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks).
+  lists:append(
+    lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
 
 do_check_module(Mod0, File, undefined_function_calls) ->
   {ok, Res} = xref:q(edts_code, "(XLin) (XC - UC)"),
@@ -71,6 +72,7 @@ do_check_module(Mod0, File, undefined_function_calls) ->
               (_, Acc) -> Acc
            end,
   lists:foldl(FmtFun, [], Res).
+
 
 %%------------------------------------------------------------------------------
 %% @doc

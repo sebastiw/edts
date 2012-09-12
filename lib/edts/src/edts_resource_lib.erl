@@ -222,9 +222,9 @@ nodename_exists_p(_ReqData, Ctx) ->
 -spec xref_checks_validate(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
 xref_checks_validate(ReqData, _Ctx) ->
-  Allowed = [undefined_function_calls, deprecated_function_calls],
+  Allowed = [undefined_function_calls],
   case wrq:get_qs_value("xref_checks", ReqData) of
-    undefined  -> {ok, [undefined_function_calls, deprecated_function_calls]};
+    undefined  -> {ok, [undefined_function_calls]};
     Val        ->
       Checks = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
       case lists:all(fun(Check) -> lists:member(Check, Allowed) end, Checks) of
@@ -313,21 +313,11 @@ xref_checks_validate_test() ->
   meck:unload(),
   meck:new(wrq),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> undefined end),
-  ?assertEqual({ok, [undefined_function_calls, deprecated_function_calls]},
+  ?assertEqual({ok, [undefined_function_calls]},
                xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value,
               fun("xref_checks", _) -> "undefined_function_calls" end),
   ?assertEqual({ok, [undefined_function_calls]},
-               xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value,
-              fun("xref_checks", _) -> "deprecated_function_calls" end),
-  ?assertEqual({ok, [deprecated_function_calls]},
-               xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value,
-              fun("xref_checks", _) ->
-                  "deprecated_function_calls,undefined_function_calls"
-              end),
-  ?assertEqual({ok, [deprecated_function_calls, undefined_function_calls]},
                xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> "something" end),
   ?assertEqual(error, xref_checks_validate(foo, bar)),
