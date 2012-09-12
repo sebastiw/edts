@@ -222,7 +222,7 @@ nodename_exists_p(_ReqData, Ctx) ->
 -spec xref_checks_validate(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
 xref_checks_validate(ReqData, _Ctx) ->
-  Allowed = [undefined_function_calls],
+  Allowed = [undefined_function_calls, unused_exports],
   case wrq:get_qs_value("xref_checks", ReqData) of
     undefined  -> {ok, [undefined_function_calls]};
     Val        ->
@@ -324,6 +324,12 @@ xref_checks_validate_test() ->
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) ->
                                      "something, undefined_function_calls" end),
   ?assertEqual(error, xref_checks_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("xref_checks", _) ->
+                  "undefined_function_calls,unused_exports"
+              end),
+  ?assertEqual({ok, [undefined_function_calls,unused_exports]},
+               xref_checks_validate(foo, bar)),
   meck:unload().
 
 
