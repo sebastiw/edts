@@ -69,9 +69,8 @@ resource_exists(ReqData, Ctx) ->
   Module   = orddict:fetch(module, Ctx),
   Checks   = orddict:fetch(xref_checks, Ctx),
   Analysis = edts:get_module_xref_analysis(Nodename, Module, Checks),
-  Exists   =
-    (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
-     not (Analysis =:= {error, not_found})),
+  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module])
+              andalso not (Analysis =:= {error, not_found})),
   {Exists, ReqData, orddict:store(analysis, Analysis, Ctx)}.
 
 to_json(ReqData, Ctx) ->
@@ -87,9 +86,64 @@ format_error({Type, File, Line, Desc}) ->
 
 %%%_* Internal functions =======================================================
 
-%%%_* Tests =======================================================
+%%%_* Tests ====================================================================
 
-%%%_* Emacs ============================================================
+init_test() ->
+  ?assertEqual({ok, orddict:new()}, init(foo)).
+
+allowed_methods_test() ->
+  ?assertEqual({['GET'], foo, bar}, allowed_methods(foo, bar)).
+
+content_types_provided_test() ->
+  ?assertEqual({[ {"application/json", to_json},
+                  {"text/html",        to_json},
+                  {"text/plain",       to_json}], foo, bar},
+              content_types_provided(foo, bar)).
+
+malformed_request_test() ->
+  meck:unload(),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, validate,
+              fun(req_data, [], [nodename, module, xref_checks]) ->
+                  {false, req_data, []};
+                 (ReqData, Ctx, _) ->
+                  {true, ReqData, Ctx}
+              end),
+  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])).
+
+resource_exists_test() ->
+  Ctx = orddict:from_list([{nodename, node},
+                           {module,   mod},
+                           {xref_checks, [undefined_function_calls]}]),
+  meck:unload(),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
+  meck:new(edts),
+  meck:expect(edts, get_module_xref_analysis, fun(_, _, _) -> [] end),
+  ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
+  ?assertEqual([], orddict:fetch(analysis,
+                                 element(3, resource_exists(req_data, Ctx)))),
+  meck:unload().
+
+to_json_test_() ->
+  Ctx = orddict:from_list([{analysis, [{t, "file", 1337, "desc"}]}]),
+  meck:unload(),
+  meck:new(mochijson2),
+  meck:expect(mochijson2, encode, fun(Data) -> Data end),
+  ?assertMatch({{struct, [{errors, {array, [_]}}]}, req_data, Ctx},
+               to_json(req_data, Ctx)),
+  meck:unload().
+
+format_error_test() ->
+  ?assertEqual({struct, [{type, t},
+                         {file, <<"file">>},
+                         {line, 1337},
+                         {description, <<"desc">>}]},
+               format_error({t, "file", 1337, "desc"})),
+  ?assertError(badarg, format_error({t, file, 1337, "desc"})).
+
+%%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
