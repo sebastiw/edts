@@ -23,6 +23,7 @@
 ;; Prerequisites
 (require 'cl)
 (require 'erlang)
+(require 'ert nil 'noerror)
 
 ;; EDTS
 (require 'ferl)
@@ -34,9 +35,6 @@
 (require 'edts-face)
 (require 'edts-project)
 (require 'edts-navigate)
-
-(when (require 'ert nil 'noerror)
-  (require 'edts-test))
 
 ;; External
 (require 'auto-highlight-symbol)
