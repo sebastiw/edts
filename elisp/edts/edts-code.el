@@ -24,7 +24,9 @@
 ;; done by Sebastian Weddmark Olsson.
 
 (defcustom edts-code-xref-checks '(undefined_function_calls)
-  "What xref checks EDTS should perform.")
+  "What xref checks EDTS should perform. A list of 0 or more of
+undefined_function_calls, unexported_functions"
+  :group 'edts)
 
 (defconst edts-code-issue-overlay-priorities
   '((warning . 1001);auto-highlight-symbol prio + 1
