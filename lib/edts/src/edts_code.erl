@@ -73,8 +73,22 @@ do_check_module(Mod0, File, undefined_function_calls) ->
                                     [CM, CF, CA]),
                {error, File, Line, lists:flatten(Desc)}
            end,
-  lists:map(FmtFun, Res).
-
+  lists:map(FmtFun, Res);
+do_check_module(Mod, File, unused_exports) ->
+  QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
+  QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Mod])),
+  Ignores   = sets:from_list(get_xref_ignores(Mod)),
+  {ok, Res} = xref:q(edts_code, QueryStr),
+  FmtFun = fun({{M, F, A}, Line}, Acc) ->
+               case sets:is_element({F, A}, Ignores) orelse
+                    ignored_test_fun_p(M, F, A) of
+                 true  -> Acc;
+                 false ->
+                   Desc = io_lib:format("Unused export ~p:~p/~p", [M, F, A]),
+                   [{error, File, Line, lists:flatten(Desc)}|Acc]
+               end
+           end,
+  lists:foldl(FmtFun, [], Res).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -286,6 +300,22 @@ who_calls(M, F, A) ->
 
 %%%_* Internal functions =======================================================
 
+ignored_test_fun_p(M, F, 0) ->
+  case lists:member({test, 0}, M:module_info(exports)) of
+    false -> false;
+    true  ->
+      FStr = atom_to_list(F),
+      lists:suffix("test", FStr) orelse lists:suffix("test_", FStr)
+  end;
+ignored_test_fun_p(_M, _F, _A) -> false.
+
+get_xref_ignores(Mod) ->
+  F = fun({ignore_xref, Ignores}, Acc) -> Ignores ++ Acc;
+         (_, Acc) -> Acc
+      end,
+  lists:foldl(F, [], Mod:module_info(attributes)).
+
+
 get_compile_outdir(File) ->
   Mod = list_to_atom(filename:basename(filename:rootname(File))),
   try
@@ -314,7 +344,7 @@ get_include_dirs() ->
             "ebin" -> [ filename:join(filename:dirname(Path), "include")
                       , filename:join(filename:dirname(Path), "src")
                       , filename:join(filename:dirname(Path), "test")];
-            _      -> Path
+            _      -> [Path]
           end
       end,
   lists:flatmap(F, code:get_path()).
