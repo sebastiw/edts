@@ -86,7 +86,7 @@ the highest priority any edts overlay at new point if any."
       overlay2))
 
 (defun edts-face-display-overlay (face line desc type prio)
-  "Displays overlay for `ISSUE' in current buffer."
+  "Displays overlay for ISSUE in current buffer."
   (save-excursion
     (let* ((pos (ferl-position-at-line   line))
            (beg (ferl-first-char-on-line-at pos))
@@ -100,7 +100,7 @@ the highest priority any edts overlay at new point if any."
       overlay)))
 
 (defun edts-face-remove-overlays (type)
-  "Removes all overlays with the name `TYPE'"
+  "Removes all overlays with the name TYPE"
   (interactive)
   (dolist (ol (overlays-in (point-min) (point-max)))
     (when (edts-face-overlay-p ol type)

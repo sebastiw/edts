@@ -39,7 +39,7 @@ a symbol."
 
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
-  (edts-face-remove-overlays "edts-code-compile")
+  (edts-face-remove-overlays '("edts-code-compile"))
   (let ((module   (erlang-get-module))
         (file     (buffer-file-name)))
     (edts-compile-and-load-async
@@ -58,7 +58,7 @@ a symbol."
 (defun edts-code-xref-analyze ()
   "Runs xref-checks for current buffer on node related the that
 buffer's project."
-  (edts-face-remove-overlays "edts-code-xref")
+  (edts-face-remove-overlays '("edts-code-xref"))
   (let ((module   (erlang-get-module)))
     (edts-get-module-xref-analysis-async
      module edts-code-xref-checks
@@ -83,7 +83,7 @@ buffer's project."
   "Displays overlays for WARNINGS in current buffer."
   (mapcar
    #'(lambda (warning)
-       (edts-code-display-issue-overlay 'edts-face-warning-line warning))
+       (edts-code-display-issue-overlay type 'edts-face-warning-line warning))
    warnings))
 
 (defun edts-code-display-issue-overlay (type face issue)
@@ -92,7 +92,7 @@ buffer's project."
          (issue-type   (cdr (assoc 'type issue)))
          (desc         (cdr (assoc 'description issue)))
          (help         (format "line %s, %s: %s" line issue-type desc))
-         (overlay-type "edts-code-compile")
+         (overlay-type type)
          (prio         (edts-code-overlay-priority
                         (cdr (assoc 'type issue)))))
     (edts-face-display-overlay face line help overlay-type prio)))
