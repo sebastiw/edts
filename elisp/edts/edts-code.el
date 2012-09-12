@@ -56,7 +56,8 @@ a symbol."
         result))))
 
 (defun edts-code-xref-analyze ()
-  "Compiles current buffer on node related the that buffer's project."
+  "Runs xref-checks for current buffer on node related the that
+buffer's project."
   (edts-face-remove-overlays "edts-code-xref")
   (let ((module   (erlang-get-module)))
     (edts-get-module-xref-analysis-async
@@ -114,7 +115,8 @@ a symbol."
 (defun edts-code-next-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
-  (let* ((overlay (edts-face-next-overlay (point) "edts-code-compile")))
+  (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
+                                                    "edts-code-xref"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
@@ -124,7 +126,8 @@ a symbol."
 (defun edts-code-previous-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
-  (let* ((overlay (edts-face-previous-overlay (point) "edts-code-compile")))
+  (let* ((overlay (edts-face-previous-overlay (point) '("edts-code-compile"
+                                                        "edts-code-xref"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
