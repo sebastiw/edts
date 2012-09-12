@@ -86,7 +86,7 @@ the highest priority any edts overlay at new point if any."
       overlay2))
 
 (defun edts-face-display-overlay (face line desc type prio)
-  "Displays overlay for `ISSUE' in current buffer."
+  "Displays overlay for ISSUE in current buffer."
   (save-excursion
     (let* ((pos (ferl-position-at-line   line))
            (beg (ferl-first-char-on-line-at pos))
@@ -100,44 +100,46 @@ the highest priority any edts overlay at new point if any."
       overlay)))
 
 (defun edts-face-remove-overlays (type)
-  "Removes all overlays with the name `TYPE'"
+  "Removes all overlays with the name TYPE"
   (interactive)
   (dolist (ol (overlays-in (point-min) (point-max)))
     (when (edts-face-overlay-p ol type)
       (delete-overlay ol))))
 
-(defun edts-face-next-overlay (pos type)
-  "returns the position of the next edts overlay of TYPE from POS."
+(defun edts-face-next-overlay (pos types)
+  "returns the position of the next edts overlay of any of TYPES from
+POS."
   (let ((next-pos          (next-overlay-change pos))
         (next-edts-overlay nil))
     (while (and (< next-pos (point-max)) (not next-edts-overlay))
       (let ((overlays (overlays-at next-pos)))
         (while (and overlays (not next-edts-overlay))
-          (if (edts-face-overlay-p (car overlays) type)
+          (if (edts-face-overlay-p (car overlays) types)
               (setq next-edts-overlay (car overlays))
               (setq overlays          (cdr overlays)))))
       (setq next-pos (next-overlay-change next-pos)))
     next-edts-overlay))
 
-(defun edts-face-previous-overlay (pos type)
-  "returns the position of the previous edts overlay of TYPE from POS"
+(defun edts-face-previous-overlay (pos types)
+  "returns the position of the previous edts overlay of any of TYPES
+from POS."
   (let ((prev-pos          (previous-overlay-change pos))
         (prev-edts-overlay nil))
     (while (and (> prev-pos (point-min)) (not prev-edts-overlay))
       (let ((overlays (overlays-at prev-pos)))
         (while (and overlays (not prev-edts-overlay))
-          (if (edts-face-overlay-p (car overlays) type)
+          (if (edts-face-overlay-p (car overlays) types)
               (setq prev-edts-overlay (car overlays))
               (setq overlays          (cdr overlays)))))
       (setq prev-pos (previous-overlay-change prev-pos)))
      prev-edts-overlay))
 
-(defun edts-face-overlay-p (overlay &optional type)
-  "Returns non-nil of OVERLAY is an edts-face-overlay of TYPE"
+(defun edts-face-overlay-p (overlay &optional types)
+  "Returns non-nil of OVERLAY is an edts-face-overlay of any of TYPES"
   (and
    (overlayp overlay)
    (overlay-get overlay 'edts-face-overlay)
-   (or (null type)
-       (equal (overlay-get overlay 'edts-face-overlay-type) type))))
+   (or (null types)
+       (member (overlay-get overlay 'edts-face-overlay-type) types))))
 
 (provide 'edts-face)

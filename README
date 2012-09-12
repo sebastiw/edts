@@ -26,6 +26,7 @@ environment that is easy to set up.
 
 Currently EDTS provides:
 - In-buffer flymake-like compilation
+- In-buffer xref checks
 - Rudimentary project support
 - Code navigation.
 - Auto-completion, using auto-complete-mode
@@ -33,7 +34,6 @@ Currently EDTS provides:
 
 Planned features in the short term are:
 - More extensive navigation
-- In-buffer xref checks
 - In-buffer running of unit tests
 - yasnippets
 - A nice interface to the erlang debugger

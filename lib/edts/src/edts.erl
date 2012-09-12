@@ -31,6 +31,7 @@
 -export([ compile_and_load/2
         , get_function_info/4
         , get_module_info/3
+        , get_module_xref_analysis/3
         , init_node/1
         , is_node/1
         , node_available_p/1
@@ -118,6 +119,26 @@ get_module_info(Node, Module, Level) ->
     {badrpc, _} -> {error, not_found};
     Info  -> Info
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns the result of xref checks of Module on Node
+%% @end
+%%
+-spec get_module_xref_analysis(Node::node(), Module::module(),
+                      Checks::[atom()]) ->
+                         {ok, [{error,
+                                File::file:filename(),
+                                non_neg_integer(),
+                                Desc::string()}]}.
+%%------------------------------------------------------------------------------
+get_module_xref_analysis(Node, Module, Checks) ->
+  lager:debug("get_module_xref_analysis ~p, ~p on ~p", [Module, Checks, Node]),
+  case edts_dist:call(Node, edts_code, check_module, [Module, Checks]) of
+    {badrpc, _} -> {error, not_found};
+    Info  -> Info
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc

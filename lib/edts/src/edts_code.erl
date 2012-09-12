@@ -30,7 +30,8 @@
 
 %%%_* Exports ==================================================================
 
--export([ compile_and_load/1
+-export([ check_module/2
+        , compile_and_load/1
         , get_function_info/3
         , get_module_info/1
         , get_module_info/2
@@ -46,6 +47,48 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Do an xref-analysis of Module, applying Checks
+%% @end
+-spec check_module(Module::module(), Checks::xref:analysis()) ->
+                      {ok, [{ Type::error
+                            , File::string()
+                            , Line::non_neg_integer()
+                            , Description::string()}]}.
+%%------------------------------------------------------------------------------
+check_module(Module, Checks) ->
+  %% Fixme, what if module is not compiled?
+  File = proplists:get_value(source, Module:module_info(compile)),
+  lists:append(
+    lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
+
+do_check_module(Mod0, File, undefined_function_calls) ->
+  QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p)",
+  QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
+  {ok, Res} = xref:q(edts_code, QueryStr),
+  FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}) when Mod =:= Mod0 ->
+               Desc = io_lib:format("Call to undefined function ~p:~p/~p",
+                                    [CM, CF, CA]),
+               {error, File, Line, lists:flatten(Desc)}
+           end,
+  lists:map(FmtFun, Res);
+do_check_module(Mod, File, unused_exports) ->
+  QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
+  QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Mod])),
+  Ignores   = sets:from_list(get_xref_ignores(Mod)),
+  {ok, Res} = xref:q(edts_code, QueryStr),
+  FmtFun = fun({{M, F, A}, Line}, Acc) ->
+               case sets:is_element({F, A}, Ignores) orelse
+                    ignored_test_fun_p(M, F, A) of
+                 true  -> Acc;
+                 false ->
+                   Desc = io_lib:format("Unused export ~p:~p/~p", [M, F, A]),
+                   [{error, File, Line, lists:flatten(Desc)}|Acc]
+               end
+           end,
+  lists:foldl(FmtFun, [], Res).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -158,9 +201,7 @@ get_module_info(M, Level) ->
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
-  ?debugHere,
   Info                         = erlang:get_module_info(M),
-  ?debugHere,
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   ?debugHere,
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
@@ -263,6 +304,22 @@ who_calls(M, F, A) ->
 
 %%%_* Internal functions =======================================================
 
+ignored_test_fun_p(M, F, 0) ->
+  case lists:member({test, 0}, M:module_info(exports)) of
+    false -> false;
+    true  ->
+      FStr = atom_to_list(F),
+      lists:suffix("test", FStr) orelse lists:suffix("test_", FStr)
+  end;
+ignored_test_fun_p(_M, _F, _A) -> false.
+
+get_xref_ignores(Mod) ->
+  F = fun({ignore_xref, Ignores}, Acc) -> Ignores ++ Acc;
+         (_, Acc) -> Acc
+      end,
+  lists:foldl(F, [], Mod:module_info(attributes)).
+
+
 get_compile_outdir(File) ->
   Mod = list_to_atom(filename:basename(filename:rootname(File))),
   try
@@ -291,7 +348,7 @@ get_include_dirs() ->
             "ebin" -> [ filename:join(filename:dirname(Path), "include")
                       , filename:join(filename:dirname(Path), "src")
                       , filename:join(filename:dirname(Path), "test")];
-            _      -> Path
+            _      -> [Path]
           end
       end,
   lists:flatmap(F, code:get_path()).
@@ -523,14 +580,18 @@ parse_abstract_function_test_() ->
   Line = 1337,
   CurFile = "/foo/test.erl",
   Exports = [{bar, 1}],
+  meck:unload(),
+  meck:new(Mod, [no_link]),
+  meck:expect(Mod, Fun, fun(_) -> ok end),
   Acc = orddict:from_list([ {module,    Mod}
                           , {cur_file,  CurFile}
                           , {exports,   Exports}
                           , {functions, []}]),
   Res = parse_abstract({function, Line, Fun, Arity, []}, Acc),
+  meck:unload(),
   [ ?_assertEqual(
-       lists:sort([module, cur_file, exports, functions])
-     , lists:sort(orddict:fetch_keys(Res)))
+       lists:sort([module, cur_file, exports, functions]),
+       lists:sort(orddict:fetch_keys(Res)))
   , ?_assertEqual(Mod,     orddict:fetch(module, Res))
   , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
   , ?_assertEqual(Exports, orddict:fetch(exports, Res))
@@ -541,7 +602,7 @@ parse_abstract_function_test_() ->
                              , {source,   CurFile}
                              , {line,     Line}
                              , {exported, true}])
-                , lists:sort(hd(orddict:fetch(functions, Res))))
+                  , lists:sort(hd(orddict:fetch(functions, Res))))
   ].
 
 parse_abstract_include_test_() ->

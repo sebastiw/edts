@@ -23,6 +23,11 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
+(defcustom edts-code-xref-checks '(undefined_function_calls)
+  "What xref checks EDTS should perform. A list of 0 or more of
+undefined_function_calls, unexported_functions"
+  :group 'edts)
+
 (defconst edts-code-issue-overlay-priorities
   '((warning . 1001);auto-highlight-symbol prio + 1
     (error   . 1002))
@@ -34,23 +39,9 @@ a symbol."
   (let ((type (if (symbolp type) type (intern type))))
     (cdr (assoc type edts-code-issue-overlay-priorities))))
 
-;; (defun edts-code-compile-and-display ()
-;;   "Compiles current buffer on node related the that buffer's project."
-;;   (let* ((module   (erlang-get-module))
-;;          (file     (buffer-file-name))
-;;          (comp-res (edts-compile-and-load module file)))
-;;     (when comp-res
-;;       (let ((result   (cdr (assoc 'result comp-res)))
-;;             (errors   (cdr (assoc 'errors comp-res)))
-;;             (warnings (cdr (assoc 'warnings comp-res))))
-;;         (edts-face-remove-overlays "edts-code-compile")
-;;         (edts-code-display-error-overlays errors)
-;;         (edts-code-display-warning-overlays warnings)
-;;         result))))
-
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
-  (edts-face-remove-overlays "edts-code-compile")
+  (edts-face-remove-overlays '("edts-code-compile"))
   (let ((module   (erlang-get-module))
         (file     (buffer-file-name)))
     (edts-compile-and-load-async
@@ -62,32 +53,48 @@ a symbol."
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))
             (warnings (cdr (assoc 'warnings comp-res))))
-        (edts-code-display-error-overlays errors)
-        (edts-code-display-warning-overlays warnings)
+        (edts-code-display-error-overlays "edts-code-compile" errors)
+        (edts-code-display-warning-overlays "edts-code-compile" warnings)
+        result))))
+
+(defun edts-code-xref-analyze ()
+  "Runs xref-checks for current buffer on node related the that
+buffer's project."
+  (edts-face-remove-overlays '("edts-code-xref"))
+  (let ((module   (erlang-get-module)))
+    (edts-get-module-xref-analysis-async
+     module edts-code-xref-checks
+     #'edts-code-handle-xref-analysis-result (current-buffer))))
+
+(defun edts-code-handle-xref-analysis-result (analysis-res buffer)
+  (when analysis-res
+    (with-current-buffer buffer
+      (let ((errors (cdr (assoc 'errors analysis-res))))
+        (edts-code-display-error-overlays "edts-code-xref" errors)
         result))))
 
 
-(defun edts-code-display-error-overlays (errors)
+(defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
   (mapcar
    #'(lambda (error)
-       (edts-code-display-issue-overlay 'edts-face-error-line error))
+       (edts-code-display-issue-overlay type 'edts-face-error-line error))
    errors))
 
-(defun edts-code-display-warning-overlays (warnings)
+(defun edts-code-display-warning-overlays (type warnings)
   "Displays overlays for WARNINGS in current buffer."
   (mapcar
    #'(lambda (warning)
-       (edts-code-display-issue-overlay 'edts-face-warning-line warning))
+       (edts-code-display-issue-overlay type 'edts-face-warning-line warning))
    warnings))
 
-(defun edts-code-display-issue-overlay (face issue)
+(defun edts-code-display-issue-overlay (type face issue)
   "Displays overlay with FACE for ISSUE in current buffer."
   (let* ((line         (edts-code-find-issue-overlay-line issue))
          (issue-type   (cdr (assoc 'type issue)))
          (desc         (cdr (assoc 'description issue)))
          (help         (format "line %s, %s: %s" line issue-type desc))
-         (overlay-type "edts-code-compile")
+         (overlay-type type)
          (prio         (edts-code-overlay-priority
                         (cdr (assoc 'type issue)))))
     (edts-face-display-overlay face line help overlay-type prio)))
@@ -110,7 +117,8 @@ a symbol."
 (defun edts-code-next-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
-  (let* ((overlay (edts-face-next-overlay (point) "edts-code-compile")))
+  (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
+                                                    "edts-code-xref"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
@@ -120,7 +128,8 @@ a symbol."
 (defun edts-code-previous-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
-  (let* ((overlay (edts-face-previous-overlay (point) "edts-code-compile")))
+  (let* ((overlay (edts-face-previous-overlay (point) '("edts-code-compile"
+                                                        "edts-code-xref"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
