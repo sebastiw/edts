@@ -52,6 +52,10 @@
      (with-current-buffer buffer
          (edts-rest-parse-http-response)))))
 
+(defun edts-rest-get-async (resource args callback callback-args)
+  "Send a post request to RESOURCE with ARGS"
+  (edts-rest-request-async "GET" resource args callback callback-args))
+
 (defun edts-rest-post-async (resource args callback callback-args)
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "POST" resource args callback callback-args))
@@ -101,7 +105,11 @@ CALLBACK-ARGS."
 
 (defun edts-rest-encode-arg (arg)
   "Encode ARG as a url-argument"
-  (concat (car arg) "=" (cdr arg)))
+  (let ((var (car arg))
+        (val (cdr arg)))
+    (if (listp val)
+        (concat var "=" (mapconcat #'identity val ","))
+        (concat var "=" val))))
 
 (defun edts-rest-encode (data)
   "Encode DATA as json."
@@ -117,5 +125,18 @@ CALLBACK-ARGS."
               (json-array-type  'list))
           (json-read-from-string string)))
     (error string)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Unit tests
+
+(when (member 'ert features)
+
+  (ert-deftest edts-rest-encode-arg-test ()
+    (should (equal "foo=bar"
+            (edts-rest-encode-arg '("foo" . "bar"))))
+    (should (equal "foo=bar"
+            (edts-rest-encode-arg '("foo" . ("bar")))))
+    (should (equal "foo=bar,baz"
+            (edts-rest-encode-arg '("foo" . ("bar" "baz")))))))
 
 (provide 'edts-rest)

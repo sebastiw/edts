@@ -91,7 +91,7 @@ node, optionally retrying RETRIES times."
       (edts-register-node node-name)
       (if (> retries 0)
           (edts-register-node-when-ready node-name (- retries 1))
-          (message "Error: edts could not register node '%s'" node-name))))
+          (edts-log-error "Error: edts could not register node '%s'" node-name))))
 
 (defun edts-register-node (node-name)
   "Register NODE-NAME with the edts node."
@@ -99,7 +99,7 @@ node, optionally retrying RETRIES times."
   (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
@@ -112,7 +112,7 @@ node, optionally retrying RETRIES times."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 
 (defun edts-get-function-info (node module function arity)
@@ -126,7 +126,7 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
@@ -136,7 +136,7 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-module-exported-functions (module)
   "Fetches all exported functions of MODULE on the node associated with
@@ -149,7 +149,7 @@ current buffer."
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (mapcar #'edts-function-to-string
                 (cdr (assoc 'functions (cdr (assoc 'body res)))))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-function-to-string (function-struct)
   "Convert a json FUNCTION-STRUCT to a string. For now, just grabs the
@@ -174,7 +174,29 @@ LEVEL is either basic or detailed."
          (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-get-module-xref-analysis-async (module checks callback buffer)
+  "Compile MODULE in FILE on the node associated with current buffer,
+asynchronously. When the request terminates, call CALLBACK with the
+parsed response as the single argument."
+  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+         (resource      (list "nodes" node-name "modules" module "xref_analysis"))
+         (args (list    (cons "xref_checks" (mapcar #'symbol-name checks))))
+         (rest-callback #'(lambda (result callback buffer)
+                            (if (equal (assoc 'result result)
+                                       '(result "200" "OK"))
+                                (apply
+                                 callback
+                                 (list
+                                  (cdr (assoc 'body result))
+                                  buffer))
+                                (null
+                                 (edts-log-error
+                                  "Unexpected reply: %s"
+                                  (cdr (assoc 'result result))))))))
+    (edts-log-debug "fetching xref-analysis of %s async on %s" module node-name)
+    (edts-rest-get-async resource args rest-callback (list callback buffer))))
 
 (defun edts-compile-and-load-async (module file callback buffer)
   "Compile MODULE in FILE on the node associated with current buffer,
@@ -192,8 +214,9 @@ parsed response as the single argument."
                                   (cdr (assoc 'body result))
                                   buffer))
                                 (null
-                                 (message "Unexpected reply: %s"
-                                          (cdr (assoc 'result result))))))))
+                                 (edts-log-error
+                                  "Unexpected reply: %s"
+                                  (cdr (assoc 'result result))))))))
     (edts-log-debug "Compiling %s async on %s" module node-name)
     (edts-rest-post-async resource args rest-callback (list callback buffer))))
 
@@ -207,7 +230,7 @@ parsed response as the single argument."
          (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
           (cdr (assoc 'body res))
-        (null (message "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-includes ()
   "Get all includes of module in current-buffer from the node

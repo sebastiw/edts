@@ -23,6 +23,9 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
+(defcustom edts-code-xref-checks '(undefined_function_calls)
+  "What xref checks EDTS should perform.")
+
 (defconst edts-code-issue-overlay-priorities
   '((warning . 1001);auto-highlight-symbol prio + 1
     (error   . 1002))
@@ -33,20 +36,6 @@
 a symbol."
   (let ((type (if (symbolp type) type (intern type))))
     (cdr (assoc type edts-code-issue-overlay-priorities))))
-
-;; (defun edts-code-compile-and-display ()
-;;   "Compiles current buffer on node related the that buffer's project."
-;;   (let* ((module   (erlang-get-module))
-;;          (file     (buffer-file-name))
-;;          (comp-res (edts-compile-and-load module file)))
-;;     (when comp-res
-;;       (let ((result   (cdr (assoc 'result comp-res)))
-;;             (errors   (cdr (assoc 'errors comp-res)))
-;;             (warnings (cdr (assoc 'warnings comp-res))))
-;;         (edts-face-remove-overlays "edts-code-compile")
-;;         (edts-code-display-error-overlays errors)
-;;         (edts-code-display-warning-overlays warnings)
-;;         result))))
 
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
@@ -65,6 +54,17 @@ a symbol."
         (edts-code-display-error-overlays errors)
         (edts-code-display-warning-overlays warnings)
         result))))
+
+(defun edts-code-xref-analyze ()
+  "Compiles current buffer on node related the that buffer's project."
+  (edts-face-remove-overlays "edts-code-compile")
+  (let ((module   (erlang-get-module)))
+    (edts-get-module-xref-analysis-async
+     module edts-code-xref-checks
+     #'edts-code-handle-xref-analysis-result (current-buffer))))
+
+(defun edts-code-handle-xref-analysis-result (analysis-res buffer)
+  (message "result %s" analysis-res))
 
 
 (defun edts-code-display-error-overlays (errors)
