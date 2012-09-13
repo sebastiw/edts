@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc modules resource
+%%% @doc Wrapper for lager.
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,59 +23,39 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_modules).
+-module(edts_log).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1
-        , malformed_request/2
-        , resource_exists/2]).
-
-%% Handlers
--export([to_json/2]).
+-export([debug/2,
+         info/2,
+         notice/2,
+         warning/2,
+         error/2,
+         critical/2,
+         alert/2,
+         emergency/2]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
 
 %%%_* Defines ==================================================================
+
 %%%_* Types ====================================================================
+
 %%%_* API ======================================================================
-
-
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, orddict:new()}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
-
-resource_exists(ReqData, Ctx) ->
-  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
-
-%% Handlers
-
-to_json(ReqData, Ctx) ->
-  {ok, Modules} = edts:modules(orddict:fetch(nodename, Ctx)),
-  {mochijson2:encode(Modules), ReqData, Ctx}.
+debug(    Fmt, Args) -> lager:debug(    Fmt, Args).
+info(     Fmt, Args) -> lager:info(     Fmt, Args).
+notice(   Fmt, Args) -> lager:notice(   Fmt, Args).
+warning(  Fmt, Args) -> lager:notice(   Fmt, Args).
+error(    Fmt, Args) -> lager:error(    Fmt, Args).
+critical( Fmt, Args) -> lager:critical( Fmt, Args).
+alert(    Fmt, Args) -> lager:alert(    Fmt, Args).
+emergency(Fmt, Args) -> lager:emergency(Fmt, Args).
 
 %%%_* Internal functions =======================================================
 
-
-%%%_* Emacs ============================================================
+%%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2

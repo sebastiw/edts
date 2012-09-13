@@ -50,7 +50,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allow_missing_post(ReqData, Ctx) ->

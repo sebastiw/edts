@@ -48,7 +48,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
@@ -64,6 +64,7 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
+  error_logger:info_message("hej"),
   case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
     false -> {false, ReqData, Ctx};
     true ->
@@ -71,11 +72,14 @@ resource_exists(ReqData, Ctx) ->
       Module = orddict:fetch(module, Ctx),
       case edts:get_module_info(Nodename, Module, detailed) of
         {error, not_found} -> {false, ReqData, Ctx};
-        Info               -> {true,  ReqData, orddict:store(info, Info, Ctx)}
+        Info               ->
+          error_logger:info_message("hej"),
+          {true,  ReqData, orddict:store(info, Info, Ctx)}
       end
   end.
 
 to_json(ReqData, Ctx) ->
+  error_logger:info_message("hej"),
   Exported = orddict:fetch(exported, Ctx),
   Info     = orddict:fetch(info, Ctx),
   {functions, Functions} = lists:keyfind(functions, 1, Info),
