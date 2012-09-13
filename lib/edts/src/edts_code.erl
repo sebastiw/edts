@@ -59,7 +59,6 @@
                             , Description::string()}]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
-  %% Fixme, what if module is not compiled?
   File = proplists:get_value(source, Module:module_info(compile)),
   lists:append(
     lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
@@ -203,11 +202,8 @@ get_module_info(M, Level) ->
 do_get_module_info(M, basic) ->
   Info                         = erlang:get_module_info(M),
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
-  ?debugHere,
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
-  ?debugHere,
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
-  ?debugHere,
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
