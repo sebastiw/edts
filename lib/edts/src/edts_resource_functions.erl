@@ -72,13 +72,11 @@ resource_exists(ReqData, Ctx) ->
       case edts:get_module_info(Nodename, Module, detailed) of
         {error, not_found} -> {false, ReqData, Ctx};
         Info               ->
-          error_logger:info_message("hej"),
           {true,  ReqData, orddict:store(info, Info, Ctx)}
       end
   end.
 
 to_json(ReqData, Ctx) ->
-  error_logger:info_message("hej"),
   Exported = orddict:fetch(exported, Ctx),
   Info     = orddict:fetch(info, Ctx),
   {functions, Functions} = lists:keyfind(functions, 1, Info),
