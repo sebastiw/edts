@@ -64,7 +64,6 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
-  error_logger:info_message("hej"),
   case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
     false -> {false, ReqData, Ctx};
     true ->
