@@ -80,7 +80,7 @@ to_json(ReqData, Ctx) ->
   Exported = orddict:fetch(exported, Ctx),
   Info     = orddict:fetch(info, Ctx),
   {functions, Functions} = lists:keyfind(functions, 1, Info),
-  Data = format(Exported, Functions), [], Info,
+  Data = format(Exported, Functions),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 format(Exported, Functions0) ->

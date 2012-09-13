@@ -435,7 +435,7 @@ parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
     [ {module,   M}
     , {function, F}
     , {arity,    A}
-    , {exported, lists:member({F, A}, orddict:fetch(exports, Acc))}
+    , {exported, lists:member({F, A}, M:module_info(exports))}
     , {source,   orddict:fetch(cur_file, Acc)}
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
