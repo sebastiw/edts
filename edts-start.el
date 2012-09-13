@@ -69,6 +69,7 @@
     (define-key map (kbd "C-c C-p")     'edts-code-previous-issue)
     (define-key map (kbd "C-c C-d f")   'ferl-goto-function)
     (define-key map (kbd "C-c C-d F")   'edts-find-module)
+    (define-key map (kbd "C-c C-d H")   'edts-find-doc)
     (define-key map (kbd "C-c C-d w")   'edts-who-calls)
     (define-key map (kbd "C-c C-d C-w") 'edts-last-who-calls)
     (define-key map (kbd "C-c C-d C-b") 'ferl-goto-previous-function)

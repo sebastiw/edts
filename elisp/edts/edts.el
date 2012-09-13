@@ -20,6 +20,39 @@
 ;;
 ;; Misc edts-related functionality.
 
+(defcustom edts-erl-command (executable-find "erl")
+  "Location of the erl-executable to use when launching the main EDTS-
+node."
+  :group 'edts)
+
+(defconst edts-erl-root
+  (file-name-directory
+   (directory-file-name
+    (file-name-directory (file-truename edts-erl-command))))
+  "Location of the Erlang root directory")
+
+(defcustom edts-erl-doc-root
+  (concat (file-name-as-directory edts-erl-root) "man/")
+  "Location of the Erlang documentation in html-format."
+  :type  'directory
+  :group 'edts)
+
+(defun edts-find-doc ()
+  "Find and show the html documentation for a function."
+  (interactive)
+  (let* ((module (ido-completing-read "Module: " (edts-get-modules)))
+         (fun-structs (edts-get-module-exported-functions module))
+         (fun-strings  (mapcar #'edts-function-to-string fun-structs))
+         (function (ido-completing-read "Function: " (cons "-Top of Chapter-"
+                                                           fun-strings))))
+    (edts-doc-find-man-entry edts-erl-doc-root module function)))
+
+(defun edts-argument-regexp (arity)
+  "Make a regexp matching ARITY arguments."
+  (if (equal arity 0)
+      "[[:space:]]*"
+      (concat ".*" (apply #'concat (make-list (- arity 1) ",.*")))))
+
 (defun edts-ahs-edit-current-function ()
   "Activate ahs-edit-mode with erlang-current-function range-plugin"
   (interactive)
@@ -38,7 +71,7 @@
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh" nil (executable-find "erl"))))
+    (make-comint "edts" "./start.sh" nil edts-erl-command)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -114,7 +147,6 @@ node, optionally retrying RETRIES times."
         (cdr (assoc 'body res))
         (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-
 (defun edts-get-function-info (node module function arity)
   "Fetches info MODULE on the node associated with
 current buffer."
@@ -147,14 +179,15 @@ current buffer."
                          "functions"))
          (res      (edts-rest-get resource '(("exported" . "true")))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-        (mapcar #'edts-function-to-string
-                (cdr (assoc 'functions (cdr (assoc 'body res)))))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+          (cdr (assoc 'functions (cdr (assoc 'body res))))
+        (null (edts-log-error "Unexpected reply: %s"
+                              (cdr (assoc 'result res)))))))
 
 (defun edts-function-to-string (function-struct)
-  "Convert a json FUNCTION-STRUCT to a string. For now, just grabs the
-name and disregards arity."
-  (cdr (assoc 'function function-struct)))
+  "Convert FUNCTION-STRUCT to a string of <function>/<arity>."
+  (format "%s/%s"
+          (cdr (assoc 'function function-struct))
+          (cdr (assoc 'arity    function-struct))))
 
 (defun edts-get-basic-module-info (module)
   "Fetches basic info about module on the node associated with current buffer"
@@ -237,6 +270,17 @@ parsed response as the single argument."
 associated with that buffer."
   (let ((info (edts-get-detailed-module-info (erlang-get-module))))
     (cdr (assoc 'includes info)))) ;; Get all includes
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Unit tests
+
+(when (member 'ert features)
+
+  (ert-deftest edts-erl-root-test ()
+    (flet ((executable-find (exec) "/usr/bin/erl")
+           (file-truename (file)   "/usr/lib/erlang/bin/erl"))
+      (should
+       (equal "/usr/lib/erlang/" edts-erl-root)))))
 
 
 (provide 'edts)

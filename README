@@ -64,6 +64,25 @@ Planned features in the short term are:
   $cd edts
   $make
 
+- Get the documentation installed.
+
+  The Erlang man-pages are assumed to be located in the man-directory of your
+  erlang installations root-directory. If you don't know where this is, you can
+  find out by entering something like "readlink -f `which erl`" in a terminal.
+  You'll see something like "/usr/lib/erlang/bin/erl" in which case
+  "/usr/lib/erlang" would be your erlang root-dir. This is the usual place to
+  install documentation when using tools like eg. aptitude.
+
+  Alternatively, you can download your distribution's man-pages from:
+  http://www.erlang.org/download.html
+
+  Unpack and point edts-erl-doc-root to man-directory inside, eg.:
+  (setq edts-erl-doc-root "/home/my-user/doc/otp_doc_man_R15B02/man")
+
+  NB. Finding documentation currently only works for OTP modules, even though
+  your project's local modules and function will show up in the completion
+  list.
+
 - Make sure EDTS is loaded and started in your .emacs:
 
   (add-to-list 'load-path "<path-to-edts-repo>")

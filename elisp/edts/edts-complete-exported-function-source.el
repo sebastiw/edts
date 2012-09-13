@@ -49,7 +49,12 @@
     (let* ((module (symbol-at (- ac-point 1)))
           (completions (edts-get-module-exported-functions module)))
       (edts-log-debug "completing exported functions done")
-      completions)))
+      (mapcar #'edts-complete-exported-function-to-string completions))))
+
+(defun edts-complete-exported-function-to-string (function-struct)
+  "Convert FUNCTION-STRUCT to a string. For now, just grabs the
+name and disregards arity."
+  (cdr (assoc 'function function-struct)))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal

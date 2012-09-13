@@ -169,7 +169,7 @@ make sure it ends with a '/'."
 ;; Unit tests
 
 (when (member 'ert features)
-  
+
   (defvar edts-project-test-project-1
     '((name          . "dev")
       (root          . "./foo")
@@ -192,11 +192,13 @@ make sure it ends with a '/'."
       (should-error (edt-project-start-node edts-project-test-project-1))))
 
   (ert-deftest edts-project-build-project-command-test ()
-    (flet ((edts-project-code-path-expand (project) '("./foo/test" "./foo/ebin"))
+    (flet ((edts-project-code-path-expand (project)
+                                          '("./foo/test" "./foo/ebin"))
            (executable-find (cmd) cmd))
       (should
-       (equal '("erl" "-sname" "dev-node" "-pa" "./foo/test" "./foo/ebin")
-              (edts-project-build-project-command edts-project-test-project-1))))
+       (equal
+        '("erl" "-sname" "dev-node" "-pa" "./foo/test" "./foo/ebin")
+        (edts-project-build-project-command edts-project-test-project-1))))
     (should
      (equal '("bin/start.sh" "-i")
             (edts-project-build-project-command edts-project-test-project-2))))
