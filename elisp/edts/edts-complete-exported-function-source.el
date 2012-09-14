@@ -25,7 +25,8 @@
 
 (defvar edts-complete-exported-function-source
   '((candidates . edts-complete-exported-function-candidates)
-    (document   . nil)
+    (action     . edts-complete-exported-function-action)
+    (document   . edts-complete-exported-function-doc)
     (symbol     . "f")
     (requires   . nil)
     (limit      . nil)
@@ -49,12 +50,11 @@
     (let* ((module (symbol-at (- ac-point 1)))
           (completions (edts-get-module-exported-functions module)))
       (edts-log-debug "completing exported functions done")
-      (mapcar #'edts-complete-exported-function-to-string completions))))
+      (mapcar #'edts-function-to-string completions))))
 
-(defun edts-complete-exported-function-to-string (function-struct)
-  "Convert FUNCTION-STRUCT to a string. For now, just grabs the
-name and disregards arity."
-  (cdr (assoc 'function function-struct)))
+(defun edts-complete-exported-function-action ()
+  "Action to take when completing an exported function."
+  (backward-delete-char 2))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
@@ -63,6 +63,12 @@ candidates, except we single-quote-terminate candidates."
    #'edts-complete-single-quote-terminate
    edts-complete-normal-module-candidates))
 
+(defun edts-complete-exported-function-doc (candidate)
+  (let* ((module (symbol-at (- ac-point 1)))
+         (split  (split-string candidate "/"))
+         (function   (car split))
+         (arity  (string-to-int (cadr split))))
+    (edts-doc-extract-man-entry edts-erl-doc-root module function arity)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

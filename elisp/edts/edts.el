@@ -54,8 +54,9 @@ node."
     (edts-doc-find-man-entry edts-erl-doc-root module fun-name fun-arity)))
 
 (defun edts-function-regexp (function arity)
-  "Construct a regexp matching FUNCTION(arg1, ..., ArgARITY)."
-  (format "%s[[:space:]]*(%s)[[:space:]]*->" function (edts-argument-regexp arity)))
+  "Construct a regexp matching FUNCTION(arg1, ..., argARITY)."
+  (format "%s[[:space:]]*(%s)[[:space:]]*->"
+          function (edts-argument-regexp arity)))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments."
