@@ -17,6 +17,22 @@
 ;;
 ;; Functionality for finding and displaying Erlang documentation.
 
+(defconst edts-doc-module-regexp
+  ".*\\(\\(\\.3\\)\\|\\(\\.3erl\\.gz\\)\\)$"
+  "Regexp for finding module man-page files.")
+
+(defun edts-doc-modules (doc-root)
+  "Return a list of all modules for which there is documentation."
+  (let* ((dir     (edts-doc-man-page-dir doc-root 3))
+         (modules (directory-files dir nil edts-doc-module-regexp)))
+  (mapcar #'edts-doc-file-base-name modules)))
+
+(defun edts-doc-file-base-name (file-name)
+  "Return file-name without its extension(s)."
+  (while (string-match "\\." file-name)
+    (setq file-name (file-name-sans-extension file-name)))
+  file-name)
+
 (defun edts-doc-find-man-entry (doc-root module function)
   (edts-doc-find-module doc-root module)
   (let* ((split  (split-string function "/"))

@@ -40,7 +40,8 @@ node."
 (defun edts-find-doc ()
   "Find and show the html documentation for a function."
   (interactive)
-  (let* ((module (ido-completing-read "Module: " (edts-get-modules)))
+  (let* ((modules (edts-doc-modules edts-erl-doc-root))
+         (module (ido-completing-read "Module: " modules))
          (fun-structs (edts-get-module-exported-functions module))
          (fun-strings  (mapcar #'edts-function-to-string fun-structs))
          (function (ido-completing-read "Function: " (cons "-Top of Chapter-"
