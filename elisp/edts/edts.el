@@ -37,19 +37,29 @@ node."
   :type  'directory
   :group 'edts)
 
+(defun edts-query (prompt choices)
+  "Query the user for a choice"
+  (ido-completing-read prompt choices))
+
 (defun edts-find-doc ()
   "Find and show the html documentation for a function."
   (interactive)
-  (let* ((modules (edts-doc-modules edts-erl-doc-root))
-         (module (ido-completing-read "Module: " modules))
-         (fun-structs (edts-get-module-exported-functions module))
-         (fun-strings  (mapcar #'edts-function-to-string fun-structs))
-         (function (ido-completing-read "Function: " (cons "-Top of Chapter-"
-                                                           fun-strings))))
-    (edts-doc-find-man-entry edts-erl-doc-root module function)))
+  (let* ((module (edts-query "Module: " (edts-doc-modules edts-erl-doc-root)))
+         (fun-strings (mapcar #'edts-function-to-string
+                              (edts-get-module-exported-functions module)))
+         (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings)))
+         (split  (split-string fun "/"))
+         (fun-name   (car split))
+         (fun-arity  (string-to-int (cadr split))))
+    (edts-doc-find-man-entry edts-erl-doc-root module fun-name fun-arity)))
+
+(defun edts-function-regexp (function arity)
+  "Construct a regexp matching FUNCTION(arg1, ..., ArgARITY)."
+  (format "^[[:space:]]+%s ?(%s)[[:space:]]*->"
+          function (edts-argument-regexp arity)))
 
 (defun edts-argument-regexp (arity)
-  "Make a regexp matching ARITY arguments."
+  "Contstruct a regexp matching ARITY arguments."
   (if (equal arity 0)
       "[[:space:]]*"
       (concat ".*" (apply #'concat (make-list (- arity 1) ",.*")))))

@@ -33,15 +33,12 @@
     (setq file-name (file-name-sans-extension file-name)))
   file-name)
 
-(defun edts-doc-find-man-entry (doc-root module function)
+(defun edts-doc-find-man-entry (doc-root module function arity)
+  "Find the man-page entry for MODULE:FUNCTION in DOC-ROOT. FUNCTION is
+assumed to be a string in the format <name>/<arity>."
   (edts-doc-find-module doc-root module)
-  (let* ((split  (split-string function "/"))
-         (name   (car split))
-         (arity  (string-to-int (cadr split)))
-         (arg-re (edts-argument-regexp arity)))
-    (re-search-forward
-     (format "^[[:space:]]+%s ?(%s)[[:space:]]*->" name arg-re))
-    (beginning-of-line))))
+  (re-search-forward (edts-function-regexp function arity))
+  (beginning-of-line)))
 
 (defun edts-doc-find-module (doc-root module)
   "Find and show the html documentation for MODULE under DOC-ROOT."
