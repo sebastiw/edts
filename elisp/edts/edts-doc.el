@@ -33,6 +33,34 @@
     (setq file-name (file-name-sans-extension file-name)))
   file-name)
 
+(defun edts-doc-extract-man-entry (doc-root module function arity)
+  "Extract and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
+  (with-temp-buffer
+    (insert-file-contents (edts-doc-locate-file doc-root module 3))
+    ;; woman-decode-region disregards the to-value and always keeps
+    ;; going until end-of-buffer. It also always checks for the presence
+    ;; of .TH and .SH tags at the beginning of the buffer (even if this
+    ;; is outside the scope of the current region to decode). To
+    ;; circumvent this, we start by deleting everything after the
+    ;; section of interest, then decode that section ('til
+    ;; end-of-buffer) and finally we delete everything before the
+    ;; section of interest.
+    (re-search-forward (edts-doc-function-man-regexp function arity))
+    (delete-region (+ (match-end 0) 1) (point-max))
+    (woman-decode-region (point-min) (point-max))
+    (goto-char (point-min))
+    (re-search-forward (edts-function-regexp function arity))
+    (delete-region (point-min) (match-beginning 0))
+    (set-left-margin (point-min) (point-max) 0)
+    (delete-to-left-margin (point-min) (point-max))
+    (buffer-string)))
+
+(defun edts-doc-function-man-regexp (function arity)
+  "Construct a regexp matching FUNCTION/ARITY section in an Erlang
+man-page."
+  (format "\\.B\n%s[[:ascii:]]*?\n\n\\.LP\n\\.nf"
+          (edts-function-regexp function arity)))
+
 (defun edts-doc-find-man-entry (doc-root module function arity)
   "Find and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
   (edts-doc-find-module doc-root module)
