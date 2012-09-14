@@ -42,7 +42,7 @@ node."
   (ido-completing-read prompt choices))
 
 (defun edts-find-doc ()
-  "Find and show the html documentation for a function."
+  "Find and show the man-page documentation for a function."
   (interactive)
   (let* ((module (edts-query "Module: " (edts-doc-modules edts-erl-doc-root)))
          (fun-strings (mapcar #'edts-function-to-string
@@ -55,14 +55,13 @@ node."
 
 (defun edts-function-regexp (function arity)
   "Construct a regexp matching FUNCTION(arg1, ..., ArgARITY)."
-  (format "^[[:space:]]+%s ?(%s)[[:space:]]*->"
-          function (edts-argument-regexp arity)))
+  (format "%s[[:space:]]*(%s)[[:space:]]*->" function (edts-argument-regexp arity)))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments."
   (if (equal arity 0)
       "[[:space:]]*"
-      (concat ".*" (apply #'concat (make-list (- arity 1) ",.*")))))
+      (concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*")))))
 
 (defun edts-ahs-edit-current-function ()
   "Activate ahs-edit-mode with erlang-current-function range-plugin"

@@ -25,7 +25,7 @@
   "Return a list of all modules for which there is documentation."
   (let* ((dir     (edts-doc-man-page-dir doc-root 3))
          (modules (directory-files dir nil edts-doc-module-regexp)))
-  (mapcar #'edts-doc-file-base-name modules)))
+    (mapcar #'edts-doc-file-base-name modules)))
 
 (defun edts-doc-file-base-name (file-name)
   "Return file-name without its extension(s)."
@@ -34,19 +34,21 @@
   file-name)
 
 (defun edts-doc-find-man-entry (doc-root module function arity)
-  "Find the man-page entry for MODULE:FUNCTION in DOC-ROOT. FUNCTION is
-assumed to be a string in the format <name>/<arity>."
+  "Find and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
   (edts-doc-find-module doc-root module)
-  (re-search-forward (edts-function-regexp function arity))
-  (beginning-of-line)))
+  (re-search-forward (concat "^[[:space:]]*"
+                             (edts-function-regexp function arity)))
+  (beginning-of-line))
 
 (defun edts-doc-find-module (doc-root module)
   "Find and show the html documentation for MODULE under DOC-ROOT."
-  (let* ((dir  (edts-doc-man-page-dir doc-root 3))
-         (file (locate-file module (list dir) '(".3" ".3.gz" ".3erl.gz"))))
-    (if file
-        (woman-find-file file)
-        (edts-log-error "No documentation found for %s" module))))
+  (condition-case ex
+      (woman-find-file (edts-doc-locate-file doc-root module 3))
+      ('error (edts-log-error "No documentation found for %s" module))))
+
+(defun edts-doc-locate-file (doc-root file page)
+  (let ((dir (edts-doc-man-page-dir doc-root page)))
+  (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
 
 (defun edts-doc-man-page-dir (doc-root man-page)
   "Get the directory of MAN-PAGE under ROOT-DIR."
