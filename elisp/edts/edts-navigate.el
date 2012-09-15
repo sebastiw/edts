@@ -65,6 +65,7 @@ determine which file to look in, with the following algorithm:
    ;; look for a include/include_lib
    ((edts-header-under-point-p) (edts-find-header-source))
    ((edts-macro-under-point-p)  (edts-find-macro-source))
+   ((edts-record-under-point-p) (edts-find-record-source))
    ;; look for a M:F/A
    ((apply #'edts-find-source
            (or (ferl-mfa-at-point) (error "No call at point."))))))
@@ -81,6 +82,12 @@ directive."
   (save-excursion
     (beginning-of-thing 'symbol)
     (equal ?? (char-before (point)))))
+
+(defun edts-record-under-point-p ()
+  "Return non-nil if the form under point is a record"
+    (save-excursion
+    (beginning-of-thing 'symbol)
+    (equal ?# (char-before (point)))))
 
 (defun edts-header-at-point ()
   "Return the filename for the header under point."
@@ -107,11 +114,29 @@ directive."
   "returns string if string has suffix"
   (string= (substring string (- 0 (length suffix))) suffix))
 
+(defun edts-find-record-source ()
+  "Jump to the record-definition under point."
+  (let* ((mark (copy-marker (point-marker)))
+         (rec-name (thing-at-point 'symbol))
+         (info (edts-get-detailed-module-info (erlang-get-module)))
+         (records (cdr (assoc 'records info)))
+         (record (edts-nav-find-record rec-name records)))
+    (if record
+        (progn
+          (ring-insert-at-beginning (edts-window-history-ring) mark)
+          (find-file-existing (cdr (assoc 'source record)))
+          (goto-line (cdr (assoc 'line   record))))
+      (null (error "No header filename at point")))))
+
+(defun edts-nav-find-record (rec-name records)
+  "find record-struct with REC-NAME in RECORDS."
+  (find-if #'(lambda (rec)(string= rec-name (cdr (assoc 'record rec))))
+           records))
+
 
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
-  (let* (
-         (macro (thing-at-point 'symbol))
+  (let* ((macro (thing-at-point 'symbol))
          (re    (format "-define\\s-*(%s[\s\n]*[(,]" macro)))
   (or (edts-search-current-buffer re)
       (edts-search-includes re)
@@ -173,7 +198,7 @@ When FUNCTION is specified, the point is moved to its start."
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
-  "Unwind back from uses of `edts-find-source-under-point'."
+  "Unwind back from uses of `edts-navigate'-commands."
   (interactive)
   (let ((ring (edts-window-history-ring)))
     (unless (ring-empty-p ring)
