@@ -207,10 +207,16 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, R}}, #state{nodes = Nodes0} = State) ->
-  Nodes = [Node#node{promises = lists:delete(Pid, Node#node.promises)}
-           || Node <- Nodes0],
-  edts_log:info("Promise reply from ~p: ~p", [node(Pid), R]),
+handle_info({Pid, {promise_reply, {R, Nodename}}}, State) ->
+  %% [Node = #node{promises = Promises}] =
+  %%   [N || N = #node{promises = Promises}<- Nodes0, lists:member(Pid, Promises)],
+  #node{promises = Promises} = Node =
+    lists:keyfind(Nodename, #node.name, State#state.nodes),
+  Nodes = lists:keyreplace(Nodename,
+                           #node.name,
+                           State#state.nodes,
+                           Node#node{promises = lists:delete(Pid, Promises)}),
+  edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
   edts_log:info("Node down: ~p", [Node]),

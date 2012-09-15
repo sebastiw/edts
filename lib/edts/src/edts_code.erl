@@ -265,14 +265,15 @@ modules_at_path(Path) ->
 %% @doc
 %% Starts the edts xref-server on the local node.
 %% @end
--spec start() -> ok.
+-spec start() -> {ok, node()}.
 %%------------------------------------------------------------------------------
 start() ->
   case xref:start(?SERVER) of
     {ok, _Pid}                       -> init();
     {error, {already_started, _Pid}} -> ok
   end,
-  update().
+  update(),
+  {ok, node()}.
 
 %%------------------------------------------------------------------------------
 %% @doc
