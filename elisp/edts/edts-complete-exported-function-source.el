@@ -33,6 +33,9 @@
     (cache)
     ))
 
+(defun edts-complete-normal-exported-function-last-candidates nil
+  "The result from the last completion call.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
 
@@ -47,10 +50,12 @@
   "Produces the completion list for normal (unqoted) exported functions."
   (when (edts-complete-exported-function-p)
     (edts-log-debug "completing exported functions")
-    (let* ((module (symbol-at (- ac-point 1)))
-          (completions (edts-get-module-exported-functions module)))
+    (let* ((module (symbol-at (- ac-point 1))))
       (edts-log-debug "completing exported functions done")
-      (mapcar #'edts-function-to-string completions))))
+      (setq edts-complete-normal-exported-function-last-candidates
+            (edts-get-module-exported-functions module))
+      (mapcar #'edts-function-to-string
+              edts-complete-normal-exported-function-last-candidates))))
 
 (defun edts-complete-exported-function-action ()
   "Action to take when completing an exported function."
@@ -64,11 +69,16 @@ candidates, except we single-quote-terminate candidates."
    edts-complete-normal-module-candidates))
 
 (defun edts-complete-exported-function-doc (candidate)
-  (let* ((module (symbol-at (- ac-point 1)))
-         (split  (split-string candidate "/"))
-         (function   (car split))
-         (arity  (string-to-int (cadr split))))
-    (edts-doc-extract-man-entry edts-erl-doc-root module function arity)))
+  "Find the documentation for CANDIDATE."
+  (let* ((module   (symbol-at (- ac-point 1)))
+         (split    (split-string candidate "/"))
+         (function (car split))
+         (arity    (string-to-int (cadr split))))
+    (condition-case ex
+        (edts-doc-extract-man-entry edts-erl-doc-root module function arity)
+        ('error (edts-extract-doc-from-source module function arity)))))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

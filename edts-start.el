@@ -31,6 +31,7 @@
 (require 'edts-log)
 (require 'edts-code)
 (require 'edts-complete)
+(require 'edts-doc)
 (require 'edts-rest)
 (require 'edts-face)
 (require 'edts-project)

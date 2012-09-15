@@ -44,7 +44,8 @@ node."
 (defun edts-find-doc ()
   "Find and show the man-page documentation for a function."
   (interactive)
-  (let* ((module (edts-query "Module: " (edts-doc-modules edts-erl-doc-root)))
+  (let* ((module
+          (edts-query "Module: " (edts-doc-man-modules edts-erl-doc-root)))
          (fun-strings (mapcar #'edts-function-to-string
                               (edts-get-module-exported-functions module)))
          (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings)))
@@ -52,6 +53,11 @@ node."
          (fun-name   (car split))
          (fun-arity  (string-to-int (cadr split))))
     (edts-doc-find-man-entry edts-erl-doc-root module fun-name fun-arity)))
+
+(defun edts-extract-doc-from-source (module function arity)
+  "Find documentation for MODULE:FUNCTION/ARITY"
+  (let ((source (cdr (assoc 'source (edts-get-basic-module-info module)))))
+    (edts-doc-extract-function-information-from-source source function arity)))
 
 (defun edts-function-regexp (function arity)
   "Construct a regexp matching FUNCTION(arg1, ..., argARITY)."

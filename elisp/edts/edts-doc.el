@@ -21,7 +21,7 @@
   ".*\\(\\(\\.3\\)\\|\\(\\.3erl\\.gz\\)\\)$"
   "Regexp for finding module man-page files.")
 
-(defun edts-doc-modules (doc-root)
+(defun edts-doc-man-modules (doc-root)
   "Return a list of all modules for which there is documentation."
   (let* ((dir     (edts-doc-man-page-dir doc-root 3))
          (modules (directory-files dir nil edts-doc-module-regexp)))
@@ -36,7 +36,7 @@
 (defun edts-doc-extract-man-entry (doc-root module function arity)
   "Extract and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
   (with-temp-buffer
-    (insert-file-contents (edts-doc-locate-file doc-root module 3))
+    (insert-file-contents (edts-doc-locate-man-file doc-root module 3))
     ;; woman-decode-region disregards the to-value and always keeps
     ;; going until end-of-buffer. It also always checks for the presence
     ;; of .TH and .SH tags at the beginning of the buffer (even if this
@@ -61,6 +61,19 @@ man-page."
   (format "\\.B\n%s[[:ascii:]]*?\n\n\\.LP\n\\.nf"
           (edts-function-regexp function arity)))
 
+(defun edts-doc-spec-regexp (function arity)
+  (format
+   (concat
+    "^-spec[[:space:]\n]*\\(%s[[:space:]\n]*(%s)[[:space:]\n]*->"
+    "[[:space:]\n]*[[:ascii:]]+?\\.\\)")
+   function (edts-argument-regexp arity)))
+
+(defun edts-doc-any-function-regexp ()
+  (format
+   "^%s[[:space:]\n]*([[:ascii:]]??*)[[:space:]\n]*->[[:ascii:]]+?*\\."
+   erlang-atom-regexp))
+
+
 (defun edts-doc-find-man-entry (doc-root module function arity)
   "Find and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
   (edts-doc-find-module doc-root module)
@@ -69,12 +82,12 @@ man-page."
   (beginning-of-line))
 
 (defun edts-doc-find-module (doc-root module)
-  "Find and show the html documentation for MODULE under DOC-ROOT."
+  "Find and show the man-page documentation for MODULE under DOC-ROOT."
   (condition-case ex
-      (woman-find-file (edts-doc-locate-file doc-root module 3))
+      (woman-find-file (edts-doc-locate-man-file doc-root module 3))
       ('error (edts-log-error "No documentation found for %s" module))))
 
-(defun edts-doc-locate-file (doc-root file page)
+(defun edts-doc-locate-man-file (doc-root file page)
   (let ((dir (edts-doc-man-page-dir doc-root page)))
   (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
 
@@ -83,51 +96,51 @@ man-page."
   (concat (file-name-as-directory doc-root) "man" (int-to-string man-page)))
 
 (defun edts-doc-expand-root (doc-root)
-  "Expands DOC-ROOT to a full set of html doc-directories.x"
+  "Expands DOC-ROOT to a full set of man-page doc-directories.x"
   (mapcar
    #'(lambda (dir) (concat (file-name-as-directory dir) "doc/html"))
   (file-expand-wildcards (concat (file-name-as-directory doc-root) "*"))))
 
-(defun edts-doc-html-to-string (string)
-  "Remove html formatting from STRING."
-  (let ((replaces '(("\\(</?p>\\)\\|\\(<br>\\)" . "\n")
-		    ("<.*??>" . "")
-		    ("&gt;" . ">")
-		    ("&lt;" . "<"))))
-    (dolist (tagpair replaces string)
-      (setq string
-            (replace-regexp-in-string (car tagpair) (cdr tagpair) string)))))
+(defun edts-doc-extract-function-information-from-source (source function arity)
+  "Extract information (spec and comments) about FUNCTION/ARITY from
+source in SOURCE."
+  (with-temp-buffer
+    (insert-file-contents source)
+    (edts-doc-extract-function-information function arity)))
 
 (defun edts-doc-extract-function-information (function arity)
-  "Extract information (spec and comments) about FUNCTION/ARITY in current
-buffer."
+  "Extract information (spec and comments) about FUNCTION/ARITY from
+source in current buffer."
   (goto-char 0)
   (re-search-forward (concat "^" (edts-function-regexp function arity)))
   (let ((end (match-beginning 0)))
-    (re-search-backward (any-function-regexp) nil t)
+    (re-search-backward (edts-doc-any-function-regexp) nil t)
     (let ((start (match-end 0)))
-    )))
+      (concat (edts-doc-extract-spec start end function arity)
+              "\n\n"
+              (edts-doc-extract-doc start end)))))
 
 (defun edts-doc-extract-spec (start end function arity)
-  "Extract spec for FUNCTION/ARITY from source. Search is bounded by
-START and END."
+  "Extract spec for FUNCTION/ARITY from source in current buffer. Search
+is bounded by START and END."
   (goto-char start)
-  (when (re-search-forward (spec-regexp function arity) end t)
+  (when (re-search-forward (edts-doc-spec-regexp function arity) end t)
     (replace-regexp-in-string
-     "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
+     "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}p\\)+"
      " "
-     (buffer-substring (match-beginning 0) (match-end 0)))))
+     (buffer-substring (match-beginning 1) (match-end 1)))))
 
 (defun edts-doc-extract-doc (start end)
   "Extract documentation from source. Search is bounded by
 START and END."
   (goto-char start)
-  (when (re-search-forward "^%% \\(@doc [[:ascii:]]+?\\)\n[^%]" end t)
+  (when (re-search-forward "^%% @doc\\([[:ascii:]]+?\\)\n[^%]" end t)
     (replace-regexp-in-string
      "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
      " "
      (buffer-substring (match-beginning 1) (match-end 1)))))
 
+(provide 'edts-doc)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
@@ -144,7 +157,7 @@ START and END."
       (should
        (equal '("/usr/lib/erlang/lib/foo/doc/html"
                 "/usr/lib/erlang/lib/bar/doc/html")
-              (edts-doc-expand-root "/usr/lib/erlang/lib"))))))
+              (edts-doc-expand-root "/usr/lib/erlang/lib")))))
 
   (ert-deftest edts-doc-html-to-string-test ()
     (should
