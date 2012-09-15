@@ -81,6 +81,8 @@ of that function, otherwise nil."
     (erlang-beginning-of-function -1)))
 
 (defun ferl-local-functions ()
+  "Enumerate all erlang functions in current buffer. Return a list of
+(function-name . starting-point)."
   (save-excursion
     (goto-char (point-min))
     (let ((funs ())

@@ -25,7 +25,7 @@
 
 (defvar edts-complete-local-function-source
   '((candidates . edts-complete-local-function-candidates)
-    (document   . nil)
+    (document   . edts-complete-local-function-doc)
     (symbol     . "f")
     (requires   . nil)
     (limit      . nil)
@@ -44,7 +44,7 @@
   "Produces the completion list for normal (unqoted) local functions."
   (when (edts-complete-local-function-p)
     (edts-log-debug "completing local functions")
-    (let ((completions (ferl-local-function-names)))
+    (let ((completions (mapcar #'car (ferl-local-functions))))
       (edts-log-debug "completing local functions done")
       completions)))
 
@@ -54,6 +54,17 @@ candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
    edts-complete-normal-local-function-candidates))
+
+(defun edts-complete-local-function-doc (candidate)
+  "Find the documentation for CANDIDATE."
+  (let* ((module   (erlang-get-module))
+         (split    (split-string candidate "/"))
+         (function (car split))
+         (arity    (string-to-int (cadr split))))
+    (condition-case ex
+        (edts-doc-extract-man-entry edts-erl-doc-root module function arity)
+      ('error (edts-extract-doc-from-source module function arity)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions
