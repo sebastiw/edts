@@ -36,8 +36,11 @@
 ;; Candidate functions
 
 (defvar edts-complete-module-cache nil
-  "The current list of module completions.")
-(ac-clear-variable-after-save 'edts-complete-module-cache)
+    "The current list of module completions.")
+(eval-and-compile
+  (make-variable-buffer-local 'edts-complete-module-cache)
+  (add-hook 'after-save-hook
+            #'(lambda () (setq edts-complete-module-cache nil))))
 
 (defun edts-complete-module-candidates ()
   (case (edts-complete-point-inside-quotes)
