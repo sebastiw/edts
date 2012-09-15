@@ -87,14 +87,16 @@ character before that."
 ;; Setup
 
 (defconst edts-complete-sources
-  '(edts-complete-variable-source
+  '(
+    edts-complete-variable-source
     edts-complete-local-function-source
     edts-complete-imported-function-source
     edts-complete-exported-function-source
     edts-complete-built-in-function-source
     edts-complete-module-source
     edts-complete-macro-source
-    edts-complete-record-source)
+    edts-complete-record-source
+    )
   "Sources that EDTS uses for auto-completion.")
 
 (defun edts-complete-setup ()
