@@ -1,4 +1,5 @@
 ;; TODO
+;; - Reasonably intelligent caching of completion results
 :: - Load all modules at start and use code-server instead of filelib
 ::   to generate module-list
 ;; - Modules outside projects

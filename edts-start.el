@@ -24,6 +24,7 @@
 (require 'cl)
 (require 'erlang)
 (require 'ert nil 'noerror)
+(require 'woman)
 
 ;; EDTS
 (require 'ferl)
