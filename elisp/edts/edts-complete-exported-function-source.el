@@ -41,7 +41,7 @@
 ;; Candidate functions
 
 (defun edts-complete-exported-function-init ()
-  "Initialize exported functions completions."
+  "Initialize exported function completions."
   (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('otherwise

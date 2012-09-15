@@ -26,13 +26,26 @@
 (defvar edts-complete-local-function-source
   '((candidates . edts-complete-local-function-candidates)
     (document   . edts-complete-local-function-doc)
+    (init       . edts-complete-local-function-init)
     (symbol     . "f")
     (requires   . nil)
     (limit      . nil)
     ))
 
+(defvar edts-complete-local-function-candidates nil
+  "Current completions for local functions.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defun edts-complete-local-function-init ()
+    "Initialize local function completions."
+  (case (edts-complete-point-inside-quotes)
+    ('double-quoted nil) ; Don't complete inside strings
+    ('otherwise
+     (edts-log-debug "Initializing local function completions")
+     (setq edts-complete-local-function-candidates
+           (mapcar #'car (ferl-local-functions))))))
 
 (defun edts-complete-local-function-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -44,9 +57,8 @@
   "Produces the completion list for normal (unqoted) local functions."
   (when (edts-complete-local-function-p)
     (edts-log-debug "completing local functions")
-    (let ((completions (mapcar #'car (ferl-local-functions))))
-      (edts-log-debug "completing local functions done")
-      completions)))
+    (edts-log-debug "completing local functions done")
+    edts-complete-local-function-candidates))
 
 (defun edts-complete-single-quoted-local-function-candidates ()
   "Produces the completion for single-qoted erlang terms, Same as normal
