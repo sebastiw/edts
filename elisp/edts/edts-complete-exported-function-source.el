@@ -27,17 +27,29 @@
   '((candidates . edts-complete-exported-function-candidates)
     (action     . edts-complete-exported-function-action)
     (document   . edts-complete-exported-function-doc)
+    (init       . edts-complete-exported-function-init)
     (symbol     . "f")
     (requires   . nil)
     (limit      . nil)
     (cache)
     ))
 
-(defun edts-complete-normal-exported-function-last-candidates nil
+(defvar edts-complete-exported-function-candidates nil
   "The result from the last completion call.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defun edts-complete-exported-function-init ()
+  "Initialize exported functions completions."
+  (case (edts-complete-point-inside-quotes)
+    ('double-quoted nil) ; Don't complete inside strings
+    ('otherwise
+     (edts-log-debug "Initializing exported function completions")
+     (let* ((module  (symbol-at (- ac-point 1)))
+            (exports (edts-get-module-exported-functions module)))
+       (setq edts-complete-exported-function-candidates
+             (mapcar #'edts-function-to-string exports))))))
 
 (defun edts-complete-exported-function-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -45,17 +57,12 @@
     ('single-quoted (edts-complete-single-quoted-exported-function-candidates))
     ('none          (edts-complete-normal-exported-function-candidates))))
 
-
 (defun edts-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) exported functions."
   (when (edts-complete-exported-function-p)
     (edts-log-debug "completing exported functions")
-    (let* ((module (symbol-at (- ac-point 1))))
-      (edts-log-debug "completing exported functions done")
-      (setq edts-complete-normal-exported-function-last-candidates
-            (edts-get-module-exported-functions module))
-      (mapcar #'edts-function-to-string
-              edts-complete-normal-exported-function-last-candidates))))
+    (edts-log-debug "completing exported functions done")
+    edts-complete-exported-function-candidates))))
 
 (defun edts-complete-exported-function-action ()
   "Action to take when completing an exported function."
