@@ -126,14 +126,13 @@ format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
   [{time, list_to_binary(Str)}|Acc];
 format({records, Records0}, Acc) ->
   RecFun =
-    fun({name,   N}     , {none, Attrs}) -> {N, Attrs};
-       ({line,   Line}  , {N, Attrs})    -> {N, [{line, Line}|Attrs]};
-       ({fields, Fs}    , {N, Attrs})    -> {N, [{fields, {array, Fs}}|Attrs]};
-       ({source, Source}, {N, Attrs})    ->
-        {N, [{source, list_to_binary(Source)}|Attrs]}
+    fun({record, _N} = Attr)    -> Attr;
+       ({line,   _Line} = Attr) -> Attr;
+       ({fields, _Fs} = Attr)   -> Attr;
+       ({source, Source})       -> {source, list_to_binary(Source)}
     end,
-  Records = [lists:foldl(RecFun, {none,[]}, Record) || Record <- Records0],
-  [{records, {struct, Records}}|Acc];
+  Records = [lists:map(RecFun, Record) || Record <- Records0],
+  [{records, {array, Records}}|Acc];
 format({functions, Functions0}, Acc) ->
   FunFun = fun({function, F}   , {none, Attrs}) ->
                {F, Attrs};

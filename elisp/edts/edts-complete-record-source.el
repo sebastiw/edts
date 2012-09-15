@@ -42,9 +42,14 @@
 
 (defun edts-complete-normal-record-candidates ()
   "Produces the completion list for normal (unqoted) records. Unimplemented"
-  ;; (when (edts-complete-record-p)
-  ;;   ...)
-  nil)
+  (when (edts-complete-record-p)
+    (edts-log-debug "completing records")
+    (flet ((rec-name (rec) (cdr (assoc 'record rec))))
+      (let* ((rec-structs (edts-get-detailed-module-info (erlang-get-module)))
+             (completions
+              (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))
+        (edts-log-debug "completing records done")
+        completions))))
 
 (defun edts-complete-single-quoted-record-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal

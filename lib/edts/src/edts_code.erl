@@ -468,7 +468,7 @@ parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
                ({record_field, _, {_, _, FName}, _Call}) -> FName
             end,
   RecordInfo =
-    [ {name, Recordname}
+    [ {record, Recordname}
     , {fields, lists:map(FieldsF, Fields)}
     , {line,   Line}
     , {source, orddict:fetch(cur_file, Acc)}],
