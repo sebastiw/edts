@@ -31,13 +31,13 @@ Currently EDTS provides:
 - Code navigation.
 - Auto-completion, using auto-complete-mode
 - Auto-highlighting, using auto-highlight-mode
+- Convenient access to Erlang documentation
 
 Planned features in the short term are:
-- More extensive navigation
+- Better support for imported functions
 - In-buffer running of unit tests
 - yasnippets
 - A nice interface to the erlang debugger
-- Convenient access to Erlang documentation
 
 ## Getting started ##
 
