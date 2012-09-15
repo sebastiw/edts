@@ -55,13 +55,17 @@ node."
 
 (defun edts-function-regexp (function arity)
   "Construct a regexp matching FUNCTION(arg1, ..., argARITY)."
-  (format "%s[[:space:]]*(%s)[[:space:]]*->"
+  (format "%s[[:space:]\n]*(%s)[[:space:]\n]*->"
           function (edts-argument-regexp arity)))
+
+(defun edts-any-function-regexp ()
+  "Construct a regexp matching any function."
+  (format "%s[[:space:]\n]*(.*)[[:space:]\n]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments."
   (if (equal arity 0)
-      "[[:space:]]*"
+      "[[:space:]\n]*"
       (concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*")))))
 
 (defun edts-ahs-edit-current-function ()

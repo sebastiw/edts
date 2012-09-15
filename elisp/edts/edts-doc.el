@@ -98,6 +98,36 @@ man-page."
       (setq string
             (replace-regexp-in-string (car tagpair) (cdr tagpair) string)))))
 
+(defun edts-doc-extract-function-information (function arity)
+  "Extract information (spec and comments) about FUNCTION/ARITY in current
+buffer."
+  (goto-char 0)
+  (re-search-forward (concat "^" (edts-function-regexp function arity)))
+  (let ((end (match-beginning 0)))
+    (re-search-backward (any-function-regexp) nil t)
+    (let ((start (match-end 0)))
+    )))
+
+(defun edts-doc-extract-spec (start end function arity)
+  "Extract spec for FUNCTION/ARITY from source. Search is bounded by
+START and END."
+  (goto-char start)
+  (when (re-search-forward (spec-regexp function arity) end t)
+    (replace-regexp-in-string
+     "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
+     " "
+     (buffer-substring (match-beginning 0) (match-end 0)))))
+
+(defun edts-doc-extract-doc (start end)
+  "Extract documentation from source. Search is bounded by
+START and END."
+  (goto-char start)
+  (when (re-search-forward "^%% \\(@doc [[:ascii:]]+?\\)\n[^%]" end t)
+    (replace-regexp-in-string
+     "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
+     " "
+     (buffer-substring (match-beginning 1) (match-end 1)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
