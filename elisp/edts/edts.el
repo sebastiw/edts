@@ -47,12 +47,15 @@ node."
   (let* ((module
           (edts-query "Module: " (edts-doc-man-modules edts-erl-doc-root)))
          (fun-strings (mapcar #'edts-function-to-string
-                              (edts-get-module-exported-functions module)))
-         (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings)))
-         (split  (split-string fun "/"))
-         (fun-name   (car split))
-         (fun-arity  (string-to-int (cadr split))))
-    (edts-doc-find-man-entry edts-erl-doc-root module fun-name fun-arity)))
+                              (edts-get-module-exports module)))
+         (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings))))
+    (if (string= fun "-Top of Chapter-")
+        (edts-doc-find-man-module edts-erl-doc-root module)
+        (let ((split  (split-string fun "/"))
+              (fun-name   (car split))
+              (fun-arity  (string-to-int (cadr split))))
+          (edts-doc-find-man-entry
+           edts-erl-doc-root module fun-name fun-arity)))))
 
 (defun edts-extract-doc-from-source (module function arity)
   "Find documentation for MODULE:FUNCTION/ARITY"
@@ -191,16 +194,16 @@ current buffer."
         (cdr (assoc 'body res))
         (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-module-exported-functions (module)
+(defun edts-get-module-exports (module)
   "Fetches all exported functions of MODULE on the node associated with
-current buffer."
+current buffer. Does not fetch detailed information about the individual
+functions."
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource (list "nodes" node-name
-                         "modules" module
-                         "functions"))
-         (res      (edts-rest-get resource '(("exported" . "true")))))
+                         "modules" module))
+         (res      (edts-rest-get resource '(("info_level" . "basic")))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-          (cdr (assoc 'functions (cdr (assoc 'body res))))
+          (cdr (assoc 'exports (cdr (assoc 'body res))))
         (null (edts-log-error "Unexpected reply: %s"
                               (cdr (assoc 'result res)))))))
 

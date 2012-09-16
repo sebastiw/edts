@@ -81,7 +81,7 @@ man-page."
                              (edts-function-regexp function arity)))
   (beginning-of-line))
 
-(defun edts-doc-find-module (doc-root module)
+(defun edts-doc-find-man-module (doc-root module)
   "Find and show the man-page documentation for MODULE under DOC-ROOT."
   (condition-case ex
       (woman-find-file (edts-doc-locate-man-file doc-root module 3))

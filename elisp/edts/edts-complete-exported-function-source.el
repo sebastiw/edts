@@ -44,10 +44,10 @@
   "Initialize exported function completions."
   (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
-    (t
+    (otherwise
      (edts-log-debug "Initializing exported function completions")
      (let* ((module  (symbol-at (- ac-point 1)))
-            (exports (edts-get-module-exported-functions module)))
+            (exports (edts-get-module-exports module)))
        (setq edts-complete-exported-function-candidates
              (mapcar #'edts-function-to-string exports))))))
 
