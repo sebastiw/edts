@@ -34,6 +34,7 @@
 
 (defvar edts-complete-record-candidates nil
   "Current completions for exported functions.")
+(make-variable-buffer-local 'edts-complete-record-candidates)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions

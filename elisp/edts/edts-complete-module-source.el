@@ -37,6 +37,8 @@
 
 (defvar edts-complete-module-cache nil
     "The current list of module completions.")
+(make-variable-buffer-local 'edts-complete-module-cache)
+
 (eval-and-compile
   (make-variable-buffer-local 'edts-complete-module-cache)
   (add-hook 'after-save-hook
