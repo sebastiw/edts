@@ -30,6 +30,12 @@
 (defvar edts-doc-man-module-cache nil
   "A cached list of available module man-pages.")
 
+(defun edts-doc-set-root (root)
+  "Sets `edts-doc-root' to ROOT and updates edts-doc-man-module-cache."
+  (setq edts-doc-root root)
+  (setq edts-doc-man-module-cache (edts-doc-man-modules))
+  t)
+
 (defun edts-doc-man-modules ()
   "Return a list of all modules for which there are man-pages under
 `edts-doc-root'."

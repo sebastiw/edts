@@ -62,7 +62,7 @@
   (when (edts-complete-exported-function-p)
     (edts-log-debug "completing exported functions")
     (edts-log-debug "completing exported functions done")
-    edts-complete-exported-function-candidates))))
+    edts-complete-exported-function-candidates))
 
 (defun edts-complete-exported-function-action ()
   "Action to take when completing an exported function."
