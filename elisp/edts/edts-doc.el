@@ -17,15 +17,27 @@
 ;;
 ;; Functionality for finding and displaying Erlang documentation.
 
+(defcustom edts-doc-root
+  (concat (file-name-as-directory edts-erl-root) "man/")
+  "Location of the Erlang documentation in html-format."
+  :type  'directory
+  :group 'edts)
+
 (defconst edts-doc-module-regexp
-  ".*\\(\\(\\.3\\)\\|\\(\\.3erl\\.gz\\)\\)$"
+  ".*\\.3\\(erl\\.gz\\)?$"
   "Regexp for finding module man-page files.")
 
-(defun edts-doc-man-modules (doc-root)
-  "Return a list of all modules for which there is documentation."
-  (let* ((dir     (edts-doc-man-page-dir doc-root 3))
-         (modules (directory-files dir nil edts-doc-module-regexp)))
-    (mapcar #'edts-doc-file-base-name modules)))
+(defvar edts-doc-man-module-cache nil
+  "A cached list of available module man-pages.")
+
+(defun edts-doc-man-modules ()
+  "Return a list of all modules for which there are man-pages under
+`edts-doc-root'."
+  (or edts-doc-man-module-cache
+      (let* ((dir     (edts-doc-man-page-dir edts-doc-root 3))
+             (modules (directory-files dir nil edts-doc-module-regexp)))
+        (setq edts-doc-man-module-cache
+              (mapcar #'edts-doc-file-base-name modules)))))
 
 (defun edts-doc-file-base-name (file-name)
   "Return file-name without its extension(s)."
@@ -33,10 +45,10 @@
     (setq file-name (file-name-sans-extension file-name)))
   file-name)
 
-(defun edts-doc-extract-man-entry (doc-root module function arity)
-  "Extract and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
+(defun edts-doc-extract-man-entry (module function arity)
+  "Extract and display the man-page entry for MODULE:FUNCTION in `edts-doc-root'."
   (with-temp-buffer
-    (insert-file-contents (edts-doc-locate-man-file doc-root module 3))
+    (insert-file-contents (edts-doc-locate-man-file edts-doc-root module 3))
     ;; woman-decode-region disregards the to-value and always keeps
     ;; going until end-of-buffer. It also always checks for the presence
     ;; of .TH and .SH tags at the beginning of the buffer (even if this
@@ -74,32 +86,35 @@ man-page."
    erlang-atom-regexp))
 
 
-(defun edts-doc-find-man-entry (doc-root module function arity)
-  "Find and display the man-page entry for MODULE:FUNCTION in DOC-ROOT."
-  (edts-doc-find-module doc-root module)
+(defun edts-doc-find-man-entry (module function arity)
+  "Find and display the man-page entry for MODULE:FUNCTION in
+`edts-doc-root'."
+  (edts-doc-find-man-module edts-doc-root module)
   (re-search-forward (concat "^[[:space:]]*"
                              (edts-function-regexp function arity)))
   (beginning-of-line))
 
-(defun edts-doc-find-man-module (doc-root module)
-  "Find and show the man-page documentation for MODULE under DOC-ROOT."
+(defun edts-doc-find-man-module (root module)
+  "Find and show the man-page documentation for MODULE under ROOT."
   (condition-case ex
-      (woman-find-file (edts-doc-locate-man-file doc-root module 3))
+      (woman-find-file (edts-doc-locate-man-file root module 3))
       ('error (edts-log-error "No documentation found for %s" module))))
 
-(defun edts-doc-locate-man-file (doc-root file page)
-  (let ((dir (edts-doc-man-page-dir doc-root page)))
-  (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
+(defun edts-doc-locate-man-file (root file page)
+  "Locate man entry for FILE on PAGE under ROOT."
+  (let ((dir (edts-doc-man-page-dir root page)))
+    (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
 
-(defun edts-doc-man-page-dir (doc-root man-page)
-  "Get the directory of MAN-PAGE under ROOT-DIR."
-  (concat (file-name-as-directory doc-root) "man" (int-to-string man-page)))
+(defun edts-doc-man-page-dir (root man-page)
+  "Get the directory of MAN-PAGE under ROOT."
+  (concat
+   (file-name-as-directory edts-doc-root) "man" (int-to-string man-page)))
 
-(defun edts-doc-expand-root (doc-root)
-  "Expands DOC-ROOT to a full set of man-page doc-directories.x"
+(defun edts-doc-expand-root ()
+  "Expands `edts-doc-root' to a full set of man-page doc-directories.x"
   (mapcar
    #'(lambda (dir) (concat (file-name-as-directory dir) "doc/html"))
-  (file-expand-wildcards (concat (file-name-as-directory doc-root) "*"))))
+  (file-expand-wildcards (concat (file-name-as-directory edts-doc-root) "*"))))
 
 (defun edts-doc-extract-function-information-from-source (source function arity)
   "Extract information (spec and comments) about FUNCTION/ARITY from
