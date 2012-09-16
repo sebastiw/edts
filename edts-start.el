@@ -126,11 +126,14 @@
 (defun edts-teardown ()
   ;; Start with our own stuff
   (ad-deactivate-regexp "edts-.*")
-  (remove-hook 'after-save-hook 'edts-code-compile-and-display t t)
-  (auto-highlight-symbol-mode nil)
+  (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
+  (auto-highlight-symbol-mode -1)
 
   ;; Indentation
   (remove-hook 'align-load-hook 'edts-align-hook))
+
+(defvar edts-mode nil
+  "The edts mode-variable.")
 
 (define-minor-mode edts-mode
   "An easy to set up Development-environment for Erlang. See README for
@@ -154,6 +157,7 @@ further.
 (defun edts-erlang-mode-hook ()
   (edts-mode t))
 
-(add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
+(eval-and-compile
+  (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 
-(provide 'edts-start)
+  (provide 'edts-start))
