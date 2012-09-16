@@ -35,7 +35,7 @@
     ))
 
 (defvar edts-complete-exported-function-candidates nil
-  "The result from the last completion call.")
+  "Current completions for exported functions.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
@@ -44,7 +44,7 @@
   "Initialize exported function completions."
   (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
-    ('otherwise
+    (t
      (edts-log-debug "Initializing exported function completions")
      (let* ((module  (symbol-at (- ac-point 1)))
             (exports (edts-get-module-exported-functions module)))

@@ -1,5 +1,5 @@
 ;; TODO
-;; - Reasonably intelligent caching of completion results
+;; - Completion inside single-quotes
 :: - Load all modules at start and use code-server instead of filelib
 ::   to generate module-list
 ;; - Modules outside projects
@@ -7,7 +7,6 @@
 ;; - (re?) load modules before trying to extract info
 ;; - set completion requirement to 1 for all sources
 ;; - macro completion
-;; - record completion
 ;; - Keep tabs on modules in projects and auto-reload ones that change
 ;; - Start an internal node if external node disappears.
 ;; - Better error handling for the rest-communication

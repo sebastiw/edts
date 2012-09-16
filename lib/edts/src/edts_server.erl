@@ -208,8 +208,6 @@ handle_cast(_Msg, State) ->
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_info({Pid, {promise_reply, {R, Nodename}}}, State) ->
-  %% [Node = #node{promises = Promises}] =
-  %%   [N || N = #node{promises = Promises}<- Nodes0, lists:member(Pid, Promises)],
   #node{promises = Promises} = Node =
     lists:keyfind(Nodename, #node.name, State#state.nodes),
   Nodes = lists:keyreplace(Nodename,

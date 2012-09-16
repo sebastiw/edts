@@ -25,14 +25,30 @@
 
 (defvar edts-complete-record-source
   '((candidates . edts-complete-record-candidates)
+    (init       . edts-complete-record-init)
     (document   . nil)
     (symbol     . "#")
     (requires   . nil)
     (limit      . nil)
     ))
 
+(defvar edts-complete-record-candidates nil
+  "Current completions for exported functions.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defun edts-complete-record-init ()
+  "Initialize record completions."
+  (case (edts-complete-point-inside-quotes)
+    ('double-quoted nil) ; Don't complete inside strings
+    (otherwise
+     (edts-log-debug "Initializing record completions")
+     (flet ((rec-name (rec) (cdr (assoc 'record rec))))
+      (let* ((rec-structs (edts-get-detailed-module-info (erlang-get-module)))
+             (candidates
+              (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))
+        (setq edts-complete-record-candidates candidates))))))
 
 (defun edts-complete-record-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -44,12 +60,8 @@
   "Produces the completion list for normal (unqoted) records. Unimplemented"
   (when (edts-complete-record-p)
     (edts-log-debug "completing records")
-    (flet ((rec-name (rec) (cdr (assoc 'record rec))))
-      (let* ((rec-structs (edts-get-detailed-module-info (erlang-get-module)))
-             (completions
-              (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))
-        (edts-log-debug "completing records done")
-        completions))))
+    (edts-log-debug "completing records done")
+    edts-complete-record-candidates))
 
 (defun edts-complete-single-quoted-record-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal

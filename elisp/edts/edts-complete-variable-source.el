@@ -45,13 +45,14 @@
 mentioned in current function, before current point."
   (when (edts-complete-variable-p)
     (edts-log-debug "completing variables")
-    (let ((completions (edts-complete-variable-candidates)))
+    (let ((completions (edts-complete-find-candidates)))
       (edts-log-debug "completing variables done")
       completions)))
 
-(defun edts-complete-variable-candidates ()
+(defun edts-complete-find-candidates ()
   (save-excursion
-    (let ((old-point  (point))
+    (let ((case-fold-search nil)
+          (old-point  (point))
           (candidates ()))
       (ferl-beginning-of-function)
       (while (and (re-search-forward erlang-variable-regexp old-point t)

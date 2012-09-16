@@ -42,7 +42,7 @@
     "Initialize local function completions."
   (case (edts-complete-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
-    ('otherwise
+    (otherwise
      (edts-log-debug "Initializing local function completions")
      (setq edts-complete-local-function-candidates
            (mapcar #'car (ferl-local-functions))))))
