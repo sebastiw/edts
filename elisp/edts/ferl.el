@@ -81,8 +81,8 @@ of that function, otherwise nil."
     (erlang-beginning-of-function -1)))
 
 (defun ferl-local-functions ()
-  "Enumerate all erlang functions in current buffer. Return a list of
-(function-name . starting-point)."
+  "Enumerate all erlang functions in current buffer. Return a list
+of (function-name . starting-point)."
   (save-excursion
     (goto-char (point-min))
     (let ((funs ())
@@ -178,22 +178,10 @@ Should be called with point directly before the opening ( or /."
 (defun ferl-search-function (function arity)
   "Goto the definition of FUNCTION/ARITY in the current buffer."
   (let ((origin (point))
-	(str (concat "\n" function "("))
-	(searching t))
-    (goto-char (point-min))
-    (while searching
-      (cond ((search-forward str nil t)
-	     (backward-char)
-	     (when (or (null arity)
-		       (eq (ferl-arity-at-point) arity))
-	       (beginning-of-line)
-	       (setq searching nil)))
-	    (t
-	     (setq searching nil)
-	     (goto-char origin)
-	     (if arity
-		 (message "Couldn't find function %S/%S" function arity)
-	       (message "Couldn't find function %S" function)))))))
+        (re (concat "^" (edts-function-regexp function arity))))
+    (if (re-search-forward re nil t)
+        (goto-char (match-beginning 0))
+        (goto-char origin))))
 
 
 (provide 'ferl)
