@@ -41,15 +41,17 @@
 
 (defun edts-complete-record-init ()
   "Initialize record completions."
-  (case (edts-complete-point-inside-quotes)
-    ('double-quoted nil) ; Don't complete inside strings
-    (otherwise
-     (edts-log-debug "Initializing record completions")
-     (flet ((rec-name (rec) (cdr (assoc 'record rec))))
-      (let* ((rec-structs (edts-get-detailed-module-info (erlang-get-module)))
-             (candidates
-              (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))
-        (setq edts-complete-record-candidates candidates))))))
+  (when (edts-complete-record-p)
+    (case (edts-complete-point-inside-quotes)
+      ('double-quoted nil) ; Don't complete inside strings
+      (otherwise
+       (edts-log-debug "Initializing record completions")
+       (flet ((rec-name (rec) (cdr (assoc 'record rec))))
+         (let* ((rec-structs (edts-get-detailed-module-info
+                              (erlang-get-module)))
+                (candidates
+                 (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))
+           (setq edts-complete-record-candidates candidates)))))))
 
 (defun edts-complete-record-candidates ()
   (case (edts-complete-point-inside-quotes)

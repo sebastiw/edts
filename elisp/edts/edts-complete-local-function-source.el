@@ -40,12 +40,13 @@
 
 (defun edts-complete-local-function-init ()
     "Initialize local function completions."
-  (case (edts-complete-point-inside-quotes)
-    ('double-quoted nil) ; Don't complete inside strings
-    (otherwise
-     (edts-log-debug "Initializing local function completions")
-     (setq edts-complete-local-function-candidates
-           (mapcar #'car (ferl-local-functions))))))
+    (when (edts-complete-local-function-p)
+      (case (edts-complete-point-inside-quotes)
+        ('double-quoted nil) ; Don't complete inside strings
+        (otherwise
+         (edts-log-debug "Initializing local function completions")
+         (setq edts-complete-local-function-candidates
+               (mapcar #'car (ferl-local-functions)))))))
 
 (defun edts-complete-local-function-candidates ()
   (case (edts-complete-point-inside-quotes)

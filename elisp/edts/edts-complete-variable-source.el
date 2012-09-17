@@ -25,14 +25,26 @@
 
 (defvar edts-complete-variable-source
   '((candidates . edts-complete-variable-candidates)
+    (init       . edts-complete-variable-init)
     (document   . nil)
     (symbol     . "v")
     (requires   . nil)
     (limit      . nil)
     ))
 
+(defvar edts-complete-variable-candidates nil
+  "Current completions for variables.")
+(make-variable-buffer-local 'edts-complete-variable-candidates)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defun edts-complete-variable-init ()
+  "Initializes the list of variable completions"
+  (when (edts-complete-variable-p)
+    (edts-log-debug "Initializing variable completions")
+    (setq edts-complete-find-variable-candidates
+          (edts-complete-find-variable-candidates))))
 
 (defun edts-complete-variable-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -45,11 +57,10 @@
 mentioned in current function, before current point."
   (when (edts-complete-variable-p)
     (edts-log-debug "completing variables")
-    (let ((completions (edts-complete-find-candidates)))
-      (edts-log-debug "completing variables done")
-      completions)))
+    (edts-log-debug "completing variables done")
+    edts-complete-variable-candidates))
 
-(defun edts-complete-find-candidates ()
+(defun edts-complete-find-variable-candidates ()
   (save-excursion
     (let ((case-fold-search nil)
           (old-point  (point))

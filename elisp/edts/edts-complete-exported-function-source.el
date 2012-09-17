@@ -41,15 +41,16 @@
 ;; Candidate functions
 
 (defun edts-complete-exported-function-init ()
-  "Initialize exported function completions."
-  (case (edts-complete-point-inside-quotes)
-    ('double-quoted nil) ; Don't complete inside strings
-    (otherwise
-     (edts-log-debug "Initializing exported function completions")
-     (let* ((module  (symbol-at (- ac-point 1)))
-            (exports (edts-get-module-exports module)))
-       (setq edts-complete-exported-function-candidates
-             (mapcar #'edts-function-to-string exports))))))
+  "Initializes the list of exported function completions."
+  (when (edts-complete-exported-function-p)
+    (case (edts-complete-point-inside-quotes)
+      ('double-quoted nil) ; Don't complete inside strings
+      (otherwise
+       (edts-log-debug "Initializing exported function completions")
+       (let* ((module  (symbol-at (- ac-point 1)))
+              (exports (edts-get-module-exports module)))
+         (setq edts-complete-exported-function-candidates
+               (mapcar #'edts-function-to-string exports)))))))
 
 (defun edts-complete-exported-function-candidates ()
   (case (edts-complete-point-inside-quotes)
