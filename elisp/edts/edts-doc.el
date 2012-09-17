@@ -52,7 +52,8 @@
   file-name)
 
 (defun edts-doc-extract-man-entry (module function arity)
-  "Extract and display the man-page entry for MODULE:FUNCTION in `edts-doc-root'."
+  "Extract and display the man-page entry for MODULE:FUNCTION in
+`edts-doc-root'."
   (with-temp-buffer
     (insert-file-contents (edts-doc-locate-man-file edts-doc-root module 3))
     ;; woman-decode-region disregards the to-value and always keeps
