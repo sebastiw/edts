@@ -166,7 +166,6 @@
 
 (defvar edts-complete-built-in-function-source
   '((candidates . edts-complete-built-in-function-candidates)
-    (action     . edts-complete-built-in-function-action)
     (document   . edts-complete-built-in-function-doc)
     (symbol     . "f")
     (requires   . nil)

@@ -25,7 +25,6 @@
 
 (defvar edts-complete-exported-function-source
   '((candidates . edts-complete-exported-function-candidates)
-    (action     . edts-complete-exported-function-action)
     (document   . edts-complete-exported-function-doc)
     (init       . edts-complete-exported-function-init)
     (symbol     . "f")
@@ -64,10 +63,6 @@
     (edts-log-debug "completing exported functions")
     (edts-log-debug "completing exported functions done")
     edts-complete-exported-function-candidates))
-
-(defun edts-complete-exported-function-action ()
-  "Action to take when completing an exported function."
-  (backward-delete-char 2))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
   "Produces the completion for single-qoted erlang modules, Same as normal
