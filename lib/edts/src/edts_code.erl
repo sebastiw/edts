@@ -665,13 +665,19 @@ modules_test() ->
     [?_assertMatch({ok, [_|_]}, modules())]}].
 
 get_compile_outdir_test_() ->
-  Opts       = proplists:get_value(options, ?MODULE:module_info(compile)),
-  ModulePath = proplists:get_value(source, Opts),
-  EbinPath   = filename:join([filename:dirname(ModulePath), "..", "ebin"]),
-  [ ?_assertEqual("foo",    get_compile_outdir("mod.erl", [{outdir, "foo"}]))
-  , ?_assertEqual("foo",    get_compile_outdir("foo/mod.erl", []))
-  , ?_assertEqual(EbinPath, get_compile_outdir(ModulePath, []))
-  ].
+  [{ setup
+   , fun () ->
+         meck:new(filelib, [passthrough, unstick]),
+         meck:expect(filelib, is_file, fun ("good/../ebin") -> true;
+                                           (_)              -> false
+                                       end)
+     end
+   , fun (_) -> meck:unload() end
+   , [ ?_assertEqual("foo", get_compile_outdir("mod.erl", [{outdir, "foo"}]))
+     , ?_assertEqual("foo", get_compile_outdir("foo/mod.erl", []))
+     , ?_assertEqual("good/../ebin", get_compile_outdir("good/mod.erl", []))
+     ]
+   }].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
