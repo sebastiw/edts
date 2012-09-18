@@ -75,7 +75,8 @@ candidates, except we single-quote-terminate candidates."
          (function (car split))
          (arity    (string-to-int (cadr split))))
     (condition-case ex
-        (edts-doc-extract-man-entry edts-erl-doc-root module function arity)
+        (edts-man-extract-function-entry
+         edts-erl-doc-root module function arity)
       ('error (edts-extract-doc-from-source module function arity)))))
 
 
