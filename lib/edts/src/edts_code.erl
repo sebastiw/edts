@@ -648,10 +648,10 @@ parse_abstract_record_test_() ->
      , lists:sort(orddict:fetch_keys(Res)))
   , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
   , ?_assertMatch([_],     orddict:fetch(records, Res))
-  , ?_assertEqual( lists:sort([ {name,   rec_name}
-                             , {fields, [field_1, field_2]}
-                             , {line,   Line}
-                             , {source, CurFile}])
+  , ?_assertEqual( lists:sort([ {record,   rec_name}
+                              , {fields, [field_1, field_2]}
+                              , {line,   Line}
+                              , {source, CurFile}])
                  , lists:sort(hd(orddict:fetch(records, Res))))
   ].
 
