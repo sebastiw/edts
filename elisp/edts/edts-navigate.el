@@ -33,8 +33,8 @@
                (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
                (mark (copy-marker (point-marker))))
           (find-file-existing file) ; Fixme, catch error
-          (ring-insert-at-beginning (edts-window-history-ring) mark)
-          (error "No module found")))))
+          (ring-insert-at-beginning (edts-window-history-ring) mark)))
+    (error "No module found")))
 
 (defun edts-find-local-function()
   "Find a function in the current module."
