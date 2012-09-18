@@ -102,9 +102,14 @@ connect_all() ->
 -spec init_node(string()) -> [rpc:key()].
 %%------------------------------------------------------------------------------
 init_node(Node) ->
-  remote_load_modules(Node,   [edts_code]),
-  remote_start_services(Node, [edts_code]).
-
+  try
+    remote_load_modules(Node,   [edts_code]),
+    remote_start_services(Node, [edts_code])
+  catch
+    C:E ->
+      edts_log:error("~p initialization crashed with error ~p:~p", [C, E]),
+      []
+  end.
 %%------------------------------------------------------------------------------
 %% @doc
 %% Converts a string to a valid erlang sname for localhost.

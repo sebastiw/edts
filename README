@@ -70,7 +70,8 @@ Planned features in the short term are:
   Alternatively, you can download your distribution's man-pages from:
   http://www.erlang.org/download.html
 
-  Unpack and point edts-erl-doc-root to man-directory inside, eg.:
+  Unpack and point edts-erl-doc-root to man-directory inside by adapting the
+  following example and putting it in your .emacs:
   (edts-doc-set-root "/home/my-user/doc/otp_doc_man_R15B02")
 
 - Get EDTS:
