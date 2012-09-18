@@ -165,9 +165,16 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
         {reply, ok, State}
     end;
 handle_call({init_node, Name}, _From, State) ->
-  edts_log:info("Node ~p Initializing.", [Name]),
-  Node = #node{name = Name, promises = edts_dist:init_node(Name)},
-  {reply, ok, node_store(Node, State)};
+  edts_log:debug("Registering ~p already initialized.", [Name]),
+  case node_find(Name, State) of
+    #node{} ->
+      edts_log:debug("~p already initialized.", [Name]),
+      {reply, ok, State};
+    false   ->
+      edts_log:debug("~p Initializing.", [Name]),
+      Node = #node{name = Name, promises = edts_dist:init_node(Name)},
+      {reply, ok, node_store(Node, State)}
+  end;
 handle_call({is_node, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
             #node{} -> true;
