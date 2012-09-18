@@ -108,20 +108,6 @@ of (function-name . starting-point)."
       funs)))
 
 ;; Borrowed from distel
-(defun ferl-mfa-at-point (&optional default-module)
-  "Return the module, function, arity of the function reference at point.
-If not module-qualified then use DEFAULT-MODULE."
-  (when (null default-module) (setq default-module (erlang-get-module)))
-  (save-excursion
-    (ferl-goto-end-of-call-name)
-    (let ((arity (ferl-arity-at-point))
-	  (mf (erlang-get-function-under-point)))
-      (if (null mf)
-	  nil
-        (destructuring-bind (module function) mf
-          (list (or module default-module) function arity))))))
-
-;; Borrowed from distel
 (defun ferl-goto-end-of-call-name ()
   "Go to the end of the function or module:function at point."
   ;; We basically just want to do forward-sexp iff we're not already
@@ -146,34 +132,78 @@ If not module-qualified then use DEFAULT-MODULE."
 Should be called with point directly before the opening ( or /."
   ;; Adapted from erlang-get-function-arity.
   (save-excursion
-    (cond ((looking-at "/")
-	   ;; form is /<n>, like the /2 in foo:bar/2
-	   (forward-char)
-	   (let ((start (point)))
-	     (if (re-search-forward "[0-9]+" nil t)
-                 (ignore-errors (car (read-from-string (match-string 0)))))))
-	  ((looking-at "[\n\r ]*(")
-	   (goto-char (match-end 0))
-	   (condition-case nil
-	       (let ((res 0)
-		     (cont t))
-		 (while cont
-		   (cond ((eobp)
-			  (setq res nil)
-			  (setq cont nil))
-			 ((looking-at "\\s *)")
-			  (setq cont nil))
-			 ((looking-at "\\s *\\($\\|%\\)")
-			  (forward-line 1))
-			 ((looking-at "\\s *,")
-			  (incf res)
-			  (goto-char (match-end 0)))
-			 (t
-			  (when (zerop res)
-			    (incf res))
-			  (forward-sexp 1))))
-		 res)
-	     (error nil))))))
+    (save-match-data
+      (cond ((looking-at "/")
+             ;; form is /<n>, like the /2 in foo:bar/2
+             (forward-char)
+             (let ((start (point)))
+               (if (re-search-forward "[0-9]+" nil t)
+                   (ignore-errors (car (read-from-string (match-string 0)))))))
+            ((looking-at "[\n\r ]*(")
+             (goto-char (match-end 0))
+             (condition-case nil
+                 (let ((res 0)
+                       (cont t))
+                   (while cont
+                     (cond ((eobp)
+                            (setq res nil)
+                            (setq cont nil))
+                           ((looking-at "\\s *)")
+                            (setq cont nil))
+                           ((looking-at "\\s *\\($\\|%\\)")
+                            (forward-line 1))
+                           ((looking-at "\\s *,")
+                            (incf res)
+                            (goto-char (match-end 0)))
+                           (t
+                            (when (zerop res)
+                              (incf res))
+                            (forward-sexp 1))))
+                   res)
+               (error nil)))))))
+
+;; Based on code from distel and erlang-mode
+;; FIXME Butt-ugly function, split to cheek-size.
+(defun ferl-mfa-at-point (&optional default-module)
+  "Return the module and function under the point, or nil.
+
+Should no explicit module name be present at the point, the
+list of imported functions is searched. If there is still no result
+use DEFAULT-MODULE."
+  (when (null default-module) (setq default-module (erlang-get-module)))
+  (save-excursion
+    (save-match-data
+      (ferl-goto-end-of-call-name)
+      (let ((arity (ferl-arity-at-point))
+            (res nil))
+        (if (eq (char-syntax (following-char)) ? )
+            (skip-chars-backward " \t"))
+        (skip-chars-backward "a-zA-Z0-9_:'")
+        (cond ((looking-at
+                (eval-when-compile
+                  (concat erlang-atom-regexp ":" erlang-atom-regexp)))
+               (setq res (list
+                          (erlang-remove-quotes
+                           (erlang-buffer-substring
+                            (match-beginning 1) (match-end 1)))
+                          (erlang-remove-quotes
+                           (erlang-buffer-substring
+                            (match-beginning (1+ erlang-atom-regexp-matches))
+                            (match-end (1+ erlang-atom-regexp-matches)))))))
+              ((looking-at erlang-atom-regexp)
+               (let ((fk (erlang-remove-quotes
+                          (erlang-buffer-substring
+                           (match-beginning 0) (match-end 0))))
+                     (mod nil)
+                     (imports (erlang-get-import)))
+                 (while (and imports (null mod))
+                   (if (eq arity (cdr (assoc fk (cdr (car imports)))))
+                       (setq mod (car (car imports)))
+                     (setq imports (cdr imports))))
+                 (when (null mod)
+                   (setq mod default-module))
+                 (setq res (list mod fk arity)))))
+        res))))
 
 (defun ferl-search-function (function arity)
   "Goto the definition of FUNCTION/ARITY in the current buffer."
