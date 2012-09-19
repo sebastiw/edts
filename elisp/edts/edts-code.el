@@ -23,6 +23,9 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
+(defvar edts-code-after-compilation-hooks nil
+  "Hooks to run after compilation finishes.")
+
 (defcustom edts-code-xref-checks '(undefined_function_calls)
   "What xref checks EDTS should perform. A list of 0 or more of
 undefined_function_calls, unexported_functions"
@@ -55,6 +58,7 @@ a symbol."
             (warnings (cdr (assoc 'warnings comp-res))))
         (edts-code-display-error-overlays "edts-code-compile" errors)
         (edts-code-display-warning-overlays "edts-code-compile" warnings)
+        (run-hooks 'edts-code-after-compilation-hooks)
         result))))
 
 (defun edts-code-xref-analyze ()
