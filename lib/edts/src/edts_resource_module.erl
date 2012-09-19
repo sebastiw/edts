@@ -94,14 +94,6 @@ resource_exists(ReqData, Ctx) ->
       'GET'  -> orddict:fetch(info_level, Ctx);
       'POST' -> basic
     end,
-  try
-    case orddict:fetch(interpret, Ctx) of
-      true -> edts:interpret_modules(Nodename, [Module]);
-      _    -> ok
-    end
-  catch
-    _:_ -> ok
-  end,
   Info     = edts:get_module_info(Nodename, Module, InfoLevel),
   Exists   =
     (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
@@ -113,6 +105,15 @@ from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Filename = orddict:fetch(file, Ctx),
   {Result, {Errors0, Warnings0}} = edts:compile_and_load(Nodename, Filename),
+  try
+    case orddict:fetch(interpret, Ctx) of
+      true -> Module = orddict:fetch(module, Ctx),
+              edts:interpret_modules(Nodename, [Module]);
+      _    -> ok %%TODO: Uninterpret modules if false
+    end
+  catch
+    _:_ -> ok
+  end,
   Errors   = {array, [format_error(Error) || Error <- Errors0]},
   Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
   Data = {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]},

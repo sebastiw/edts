@@ -74,7 +74,6 @@ post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
   {Exists, ReqData, Ctx}.
 
