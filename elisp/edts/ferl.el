@@ -209,6 +209,7 @@ use DEFAULT-MODULE."
   "Goto the definition of FUNCTION/ARITY in the current buffer."
   (let ((origin (point))
         (re (concat "^" (edts-function-regexp function arity))))
+    (goto-char (point-min))
     (if (re-search-forward re nil t)
         (goto-char (match-beginning 0))
         (goto-char origin))))
