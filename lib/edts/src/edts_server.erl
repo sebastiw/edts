@@ -215,13 +215,18 @@ handle_cast(_Msg, State) ->
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_info({Pid, {promise_reply, {R, Nodename}}}, State) ->
-  #node{promises = Promises} = Node =
-    lists:keyfind(Nodename, #node.name, State#state.nodes),
-  Nodes = lists:keyreplace(Nodename,
-                           #node.name,
-                           State#state.nodes,
-                           Node#node{promises = lists:delete(Pid, Promises)}),
-  edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
+  Nodes =
+    case lists:keyfind(Nodename, #node.name, State#state.nodes) of
+      false ->
+        edts_log:info("Call from unexpected node:~p", [Nodename]),
+        State#state.nodes;
+    #node{promises = Promises} = Node ->
+        edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
+        lists:keyreplace(Nodename,
+                         #node.name,
+                         State#state.nodes,
+                         Node#node{promises = lists:delete(Pid, Promises)})
+    end,
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
   edts_log:info("Node down: ~p", [Node]),
