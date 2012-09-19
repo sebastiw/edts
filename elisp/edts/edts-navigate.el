@@ -22,29 +22,30 @@
 
 (require 'thingatpt)
 
-(defun edts-find-module ()
+;; Nameclash (sort of) with edts-find source. One of the names should be
+;; changed to indicate the differences in how they work.
+(defun edts-find-function ()
   "Find a module in the current project."
   (interactive)
   (let ((modules (edts-get-modules)))
     (if modules
-        (let* ((choice (if ido-mode
-                           (ido-completing-read "Module: " modules)
-                           (completing-read     "Module:"  modules)))
+        (let* ((choice (edts-query "Module: " modules))
                (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
                (mark (copy-marker (point-marker))))
           (find-file-existing file) ; Fixme, catch error
-          (ring-insert-at-beginning (edts-window-history-ring) mark)))
-    (error "No module found")))
+          (ring-insert-at-beginning (edts-window-history-ring) mark)
+          (edts-find-local-function))
+        (error "No module found"))))
 
 (defun edts-find-local-function()
   "Find a function in the current module."
   (interactive)
   (let* ((functions (ferl-local-functions))
          (names     (mapcar #'(lambda (el) (car el)) functions))
-         (choice    (ido-completing-read "Function: " names))
-         (start     (cdr (assoc choice functions)))
-         )
-    (goto-char start)))
+         (choice    (edts-query "Function: " (cons "-Top of Module-" names))))
+    (if (string= "-Top of Module-" choice)
+        (goto-char 0)
+        (goto-char (cdr (assoc choice functions))))))
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
