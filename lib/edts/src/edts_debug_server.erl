@@ -29,7 +29,8 @@
 %%%===================================================================
 
 start() ->
-  edts_debug_server:start_link().
+  edts_debug_server:start_link(),
+  {ok, node()}.
 
 stop() ->
   ok.
@@ -131,9 +132,10 @@ init([]) ->
 %%--------------------------------------------------------------------
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   int:attached(Pid),
-  io:format("[DEBUGGER] ~p attached to ~p~n", [self(), Pid]),
+  edts_log:info("Debugger ~p attached to ~p~n", [self(), Pid]),
   {reply, {attached, self(), Pid}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{proc = Pid} = State) ->
+  edts_log:info("Debugger ~p already attached to ~p~n", [self(), Pid]),
   {reply, {already_attached, self(), Pid}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
