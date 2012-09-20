@@ -23,7 +23,7 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
-(defvar edts-code-after-compilation-hooks nil
+(defvar edts-code-after-compilation-hook nil
   "Hooks to run after compilation finishes.")
 
 (defcustom edts-code-xref-checks '(undefined_function_calls)
@@ -58,7 +58,7 @@ a symbol."
             (warnings (cdr (assoc 'warnings comp-res))))
         (edts-code-display-error-overlays "edts-code-compile" errors)
         (edts-code-display-warning-overlays "edts-code-compile" warnings)
-        (run-hooks 'edts-code-after-compilation-hooks)
+        (run-hooks 'edts-code-after-compilation-hook)
         result))))
 
 (defun edts-code-xref-analyze ()
