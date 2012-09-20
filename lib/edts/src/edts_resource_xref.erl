@@ -110,7 +110,8 @@ malformed_request_test() ->
                   {true, ReqData, Ctx}
               end),
   ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
-  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])).
+  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  meck:unload().
 
 resource_exists_test() ->
   Ctx = orddict:from_list([{nodename, node},

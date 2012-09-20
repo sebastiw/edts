@@ -44,6 +44,7 @@
         , to_json/2]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 -include_lib("webmachine/include/webmachine.hrl").
 
 %%%_* Defines ==================================================================
@@ -114,33 +115,27 @@ to_json(ReqData, Ctx) ->
   Data = format(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
+%%%_* Internal functions =======================================================
+
 format(Info) ->
-  {struct, lists:foldl(fun format/2, [], Info)}.
+  lists:foldl(fun format/2, [], Info).
 
 format({exports, Exports}, Acc) ->
-  [{exports, {array, [{struct, Export} || Export <- Exports]}}|Acc];
+  [{exports, Exports}|Acc];
 format({source, Source}, Acc) ->
   [{source, list_to_binary(Source)}|Acc];
 format({time, {{Y, Mo, D}, {H, Mi, S}}}, Acc) ->
-  Str = lists:flatten(io_lib:format("~B-~B-~B ~B:~B:~B", [Y, Mo, D, H, Mi, S])),
+  Fmt = "~b-~2.10.0b-~2.10.0b ~2.10.0b:~2.10.0b:~2.10.0b",
+  Str = lists:flatten(io_lib:format(Fmt, [Y, Mo, D, H, Mi, S])),
   [{time, list_to_binary(Str)}|Acc];
-format({records, Records0}, Acc) ->
-  RecFun =
-    fun({record, _N} = Attr)    -> Attr;
-       ({line,   _Line} = Attr) -> Attr;
-       ({fields, _Fs} = Attr)   -> Attr;
-       ({source, Source})       -> {source, list_to_binary(Source)}
-    end,
-  Records = [lists:map(RecFun, Record) || Record <- Records0],
-  [{records, {array, Records}}|Acc];
-format({functions, Functions0}, Acc) ->
-  FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
-              (KV)               -> KV
-           end,
-  Functions = [lists:map(FunFun, Function) || Function <- Functions0],
-  [{functions, {array, Functions}}|Acc];
+format({records, Recs0}, Acc) ->
+  Recs = [lists:map(fun format_element/1, Rec) || Rec <- Recs0],
+  [{records, Recs}|Acc];
+format({functions, Funs0}, Acc) ->
+  Funs = [lists:map(fun format_element/1, Fun) || Fun <- Funs0],
+  [{functions, Funs}|Acc];
 format({imports, Imports}, Acc) ->
-  [{imports, {array, Imports}}|Acc];
+  [{imports, Imports}|Acc];
 format({includes, Includes}, Acc) ->
   [{includes, [list_to_binary(I) || I <- Includes]}|Acc];
 format({module, _} = Module, Acc) ->
@@ -148,73 +143,124 @@ format({module, _} = Module, Acc) ->
 format(_, Acc) ->
   Acc.
 
-
-%%%_* Internal functions =======================================================
+format_element({source, Source}) -> {source, list_to_binary(Source)};
+format_element(Attr)             -> Attr.
 
 format_error({Type, File, Line, Desc}) ->
-  {struct, [ {type, Type}
-           , {file, list_to_binary(File)}
-           , {line, Line}
-           , {description, list_to_binary(Desc)}]}.
+    [ {type, Type}
+    , {file, list_to_binary(File)}
+    , {line, Line}
+    , {description, list_to_binary(Desc)}].
 
 
-%%%_* Tests =======================================================
--include_lib("eunit/include/eunit.hrl").
+%%%_* Unit tests ===============================================================
+
+init_test() ->
+  ?assertEqual({ok, orddict:new()}, init(foo)).
+
+allowed_methods_test() ->
+  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
+
+content_types_provided_test() ->
+  ?assertEqual({[ {"application/json", to_json},
+                  {"text/html",        to_json},
+                  {"text/plain",       to_json}], foo, bar},
+              content_types_provided(foo, bar)).
+
+malformed_request_get_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, method, fun(_) -> 'GET' end),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, validate,
+              fun(req_data, [], [nodename, module, info_level]) ->
+                  {false, req_data, []};
+                 (ReqData, Ctx, _) ->
+                  {true, ReqData, Ctx}
+              end),
+  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  meck:unload().
+
+malformed_request_post_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, method, fun(_) -> 'POST' end),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, validate,
+              fun(req_data, [], [nodename, module, file]) ->
+                  {false, req_data, []};
+                 (ReqData, Ctx, _) ->
+                  {true, ReqData, Ctx}
+              end),
+  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  meck:unload().
+
+resource_exists_get_test() ->
+  Ctx = orddict:from_list([{nodename, node},
+                           {module,   mod}]),
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, method, fun(_) -> 'GET' end),
+  meck:new(edts),
+  meck:expect(edts, get_module_info, fun(node, mod, basic) -> [];
+                                        (node, mod, error) -> {error, not_found}
+                                     end),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, exists_p, fun(_, _, [nodename, module]) ->
+                                               true
+                                           end),
+  ?assertMatch({true, req_data, _},
+               resource_exists(req_data, [{info_level, basic}|Ctx])),
+  ?assertEqual(
+     [],
+     orddict:fetch(info, element(3,
+                                 resource_exists(req_data,
+                                                 [{info_level, basic}|Ctx])))),
+  meck:unload().
+
+format_error_test_() ->
+  ?_assertEqual([{type, t}, {file, <<"f">>}, {line, l}, {description, <<"d">>}],
+                format_error({t, "f", l, "d"})).
+
+format_element_test_() ->
+  [
+   ?_assertEqual(foo, format_element(foo)),
+   ?_assertEqual({source, <<"foo">>}, format_element({source, "foo"}))
+  ].
 
 format_test_() ->
-  D = [ {exports,[[{function,bar},{arity,1}]]}
-      , {functions,[[ {module,foo}
-                    , {function,bar}
-                    , {arity,1}
-                    , {exported,true}
-                    , {source,"bar.erl"}
-                    , {line,19}
-                    ]
-                   ]}
-      , {imports,[]}
-      , {includes,["include/bar.hrl"]}
-      , {module,bar}
-      , {records,[[ {name,baz}
-                  , {fields,[foo,bar,baz]}
-                  , {line,27}
-                  , {source,"bar.erl"}]
-                 ]}
-      , {source,"bar.erl"}
-      , {time,{{2012,9,2},{10,49,34}}}
-      ],
-  ?_assertMatch({struct,
-                 [ {time     , <<"2012-9-2 10:49:34">>}
-                 , {source   , <<"bar.erl">>}
-                 , {records  , {struct,
-                                [ {baz, [ {source,<<"bar.erl">>}
-                                        , {line,27}
-                                        , {fields,{array,[foo,bar,baz]}}
-                                        ]}
-                                ]
-                               }
-                   }
-                 , {module   , bar}
-                 , {includes , [<<"include/bar.hrl">>]}
-                 , {imports  , {array,[]}}
-                 , {functions,
-                    {struct,
-                     [ {bar,
-                        [ {line,19}
-                        , {source,<<"bar.erl">>}
-                        , {exported,true}
-                        , {arity,1}
-                        , {module,foo}
-                        ]
-                       }
-                     ]
-                    }
-                   }
-                 , {exports,{array,[{struct,[{function,bar},{arity,1}]}]}}
-                 ]},
-                format(D)).
+  [
+   ?_assertEqual([{exports, []}],
+                 format({exports, []}, [])),
+   ?_assertEqual([{exports, [foo, bar]}],
+                 format({exports, [foo, bar]}, [])),
+   ?_assertEqual([{source, <<"foo.erl">>}],
+                 format({source, "foo.erl"}, [])),
+   ?_assertEqual([{time, <<"2012-09-20 21:22:00">>}],
+                 format({time, {{2012, 9, 20}, {21, 22, 00}}}, [])),
+   ?_assertEqual([{records, []}],
+                 format({records, []}, [])),
+   ?_assertEqual([{records, [[{source, <<"foo.erl">>}]]}],
+                 format({records, [[{source, "foo.erl"}]]}, [])),
+   ?_assertEqual([{functions, []}],
+                 format({functions, []}, [])),
+   ?_assertEqual([{functions, [[{source, <<"foo.erl">>}]]}],
+                 format({functions, [[{source, "foo.erl"}]]}, [])),
+   ?_assertEqual([{imports, []}],
+                 format({imports, []}, [])),
+   ?_assertEqual([{imports, ["foo"]}],
+                 format({imports, ["foo"]}, [])),
+   ?_assertEqual([{module, mod}],
+                 format({module, mod}, [])),
+   ?_assertEqual([],
+                 format(foo, []))
+  ].
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+
