@@ -175,19 +175,20 @@ Should be called with point directly before the opening ( or /."
     (when last-c (incf arity))
     arity))
 
-(ert-deftest close-bracket-p-test ()
-  (should (close-bracket-p ?\)))
-  (should (close-bracket-p ?\]))
-  (should (close-bracket-p ?\}))
-  (should-not (close-bracket-p ?s)))
+(when (member 'ert features)
+  (ert-deftest close-bracket-p-test ()
+    (should (close-bracket-p ?\)))
+    (should (close-bracket-p ?\]))
+    (should (close-bracket-p ?\}))
+    (should-not (close-bracket-p ?s)))
 
-(ert-deftest open-bracket-p-test ()
-  (should (open-bracket-p ?\())
-  (should (open-bracket-p ?\[))
-  (should (open-bracket-p ?\{))
-  (should-not (close-bracket-p ?s)))
+  (ert-deftest open-bracket-p-test ()
+    (should (open-bracket-p ?\())
+    (should (open-bracket-p ?\[))
+    (should (open-bracket-p ?\{))
+    (should-not (close-bracket-p ?s)))
 
-(ert-deftest paren-arity-test ()
+  (ert-deftest paren-arity-test ()
     (should (eq 0 (paren-arity "")))
     (should (eq 1 (paren-arity "a")))
     (should (eq 2 (paren-arity "a,")))
@@ -206,8 +207,8 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (paren-arity "a[a,b]b, cc")))
     (should (eq 2 (paren-arity "#a{a,b}, cc"))))
 
-(ert-deftest slash-arity-test ()
-  (should (eq 2 (slash-arity "/2"))))
+  (ert-deftest slash-arity-test ()
+    (should (eq 2 (slash-arity "/2")))))
 
 ;; Based on code from distel and erlang-mode
 ;; FIXME Butt-ugly function, split to cheek-size.
