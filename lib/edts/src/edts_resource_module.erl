@@ -134,16 +134,11 @@ format({records, Records0}, Acc) ->
   Records = [lists:map(RecFun, Record) || Record <- Records0],
   [{records, {array, Records}}|Acc];
 format({functions, Functions0}, Acc) ->
-  FunFun = fun({function, F}   , {none, Attrs}) ->
-               {F, Attrs};
-              ({source, Source}, {N, Attrs})    ->
-               {N, [{source, list_to_binary(Source)}|Attrs]};
-              (KV, {N, Attrs})                  ->
-               {N, [KV|Attrs]}
+  FunFun = fun({source, Source}) -> {source, list_to_binary(Source)};
+              (KV)               -> KV
            end,
-  Functions =
-    [lists:foldl(FunFun, {none, []}, Function)|| Function <- Functions0],
-  [{functions, {struct, Functions}}|Acc];
+  Functions = [lists:map(FunFun, Function) || Function <- Functions0],
+  [{functions, {array, Functions}}|Acc];
 format({imports, Imports}, Acc) ->
   [{imports, {array, Imports}}|Acc];
 format({includes, Includes}, Acc) ->
