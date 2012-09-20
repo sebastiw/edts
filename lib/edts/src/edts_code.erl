@@ -64,7 +64,7 @@ check_module(Module, Checks) ->
     lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
 
 do_check_module(Mod0, File, undefined_function_calls) ->
-  QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p)",
+  QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
   QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
   {ok, Res} = xref:q(edts_code, QueryStr),
   FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}) when Mod =:= Mod0 ->
