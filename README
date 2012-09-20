@@ -58,10 +58,10 @@ Planned features in the short term are:
     to be able to automatically navigate between OTP modules, you need to set up
     a separate edts-project for your OTP repo.
 
-- Get the Erlang documentation.
+- Get the Erlang documentation (optional).
 
   The Erlang man-pages are assumed to be located in the man-directory of your
-  erlang installations root-directory. If you don't know where this is, you can
+  erlang installation's root-directory. If you don't know where this is, you can
   find out by entering something like "readlink -f `which erl`" in a terminal.
   You'll see something like "/usr/lib/erlang/bin/erl" in which case
   "/usr/lib/erlang" would be your erlang root-dir. This is the usual place to
@@ -70,7 +70,7 @@ Planned features in the short term are:
   Alternatively, you can download your distribution's man-pages from:
   http://www.erlang.org/download.html
 
-  Unpack and point edts-erl-doc-root to man-directory inside by adapting the
+  Unpack and point edts' doc-root to the man-directory inside by adapting the
   following example and putting it in your .emacs:
   (edts-doc-set-root "/home/my-user/doc/otp_doc_man_R15B02")
 
