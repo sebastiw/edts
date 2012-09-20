@@ -125,42 +125,89 @@ of (function-name . starting-point)."
   (when (eq (char-after) ?:)
     (forward-sexp)))
 
-;; borrowed from distel
-;;; FIXME: Merge with erlang.el!
 (defun ferl-arity-at-point ()
   "Get the number of arguments in a function reference.
 Should be called with point directly before the opening ( or /."
-  ;; Adapted from erlang-get-function-arity.
   (save-excursion
     (save-match-data
-      (cond ((looking-at "/")
-             ;; form is /<n>, like the /2 in foo:bar/2
-             (forward-char)
-             (let ((start (point)))
-               (if (re-search-forward "[0-9]+" nil t)
-                   (ignore-errors (car (read-from-string (match-string 0)))))))
-            ((looking-at "[\n\r ]*(")
-             (goto-char (match-end 0))
-             (condition-case nil
-                 (let ((res 0)
-                       (cont t))
-                   (while cont
-                     (cond ((eobp)
-                            (setq res nil)
-                            (setq cont nil))
-                           ((looking-at "\\s *)")
-                            (setq cont nil))
-                           ((looking-at "\\s *\\($\\|%\\)")
-                            (forward-line 1))
-                           ((looking-at "\\s *,")
-                            (incf res)
-                            (goto-char (match-end 0)))
-                           (t
-                            (when (zerop res)
-                              (incf res))
-                            (forward-sexp 1))))
-                   res)
-               (error nil)))))))
+      (if (looking-at "/")
+          (progn
+            (re-search-forward "/[0-9]+")
+            (ferl-slash-arity (match-string 0)))
+        (progn
+          (re-search-forward "(\\(.*\\))+")
+          (ferl-paren-arity (match-string 1)))))))
+
+
+(defun ferl-slash-arity (str)
+  "Return the arity of an argument-string after a slash."
+  (string-to-int (substring str 1)))
+
+(defun ferl-paren-arity (str)
+  "Return the arity of an argument string within a parenthesis."
+  (let ((arity     0)
+        (last-c nil)
+        (in-ignore nil)
+        (brackets  nil))
+    (loop for c across str do
+          (cond
+           ;; inside string or comment
+           ((and (eq c in-ignore) (not (eq ?\\ last-c)))
+            (setq in-ignore nil)) ;; terminate string
+           ((and (eq ?\% in-ignore) (eq ?\n c) (not (eq ?\\ last-c)))
+            (setq in-ignore nil));; terminate comment
+           (in-ignore
+            (setq last-c c)) ;; ignore character
+
+           ;; inside brackets
+           ((and (member c (member c '(?\) ?\] ?\}))) brackets)
+            (pop brackets)) ;; terminate bracket-pair
+           (brackets
+            (setq last-c c)) ;; ignore character
+
+           ; not inside string, comment or brackets
+           ((eq ?, c)  (incf arity)) ;; count up
+           ((member c '(?\( ?\[ ?\{))
+            (push c brackets)) ;; initiate bracket-pair
+           ((member c '(?\" ?\' ?\%))
+            (setq in-ignore c)) ;; initiate string
+           (t          (setq last-c c))))
+    (when last-c (incf arity))
+    arity))
+
+(ert-deftest close-bracket-p-test ()
+  (should (close-bracket-p ?\)))
+  (should (close-bracket-p ?\]))
+  (should (close-bracket-p ?\}))
+  (should-not (close-bracket-p ?s)))
+
+(ert-deftest open-bracket-p-test ()
+  (should (open-bracket-p ?\())
+  (should (open-bracket-p ?\[))
+  (should (open-bracket-p ?\{))
+  (should-not (close-bracket-p ?s)))
+
+(ert-deftest paren-arity-test ()
+    (should (eq 0 (paren-arity "")))
+    (should (eq 1 (paren-arity "a")))
+    (should (eq 2 (paren-arity "a,")))
+    (should (eq 2 (paren-arity "a,a")))
+    (should (eq 2 (paren-arity ",a")))
+    (should (eq 3 (paren-arity "aa,bb,cc")))
+
+    (should (eq 1 (paren-arity "\"aa,bb\"")))
+    (should (eq 2 (paren-arity "\"aa,bb\", cc")))
+    (should (eq 2 (paren-arity "\"a'a,b'b\", cc")))
+    (should (eq 1 (paren-arity "'aa,bb'")))
+    (should (eq 2 (paren-arity "'aa,bb', cc")))
+    (should (eq 2 (paren-arity "'a\"a,b\"b', cc")))
+    (should (eq 2 (paren-arity "a%a,b\nb, cc")))
+    (should (eq 2 (paren-arity "\"a\\\"a,bb\", cc")))
+    (should (eq 2 (paren-arity "a[a,b]b, cc")))
+    (should (eq 2 (paren-arity "#a{a,b}, cc"))))
+
+(ert-deftest slash-arity-test ()
+  (should (eq 2 (slash-arity "/2"))))
 
 ;; Based on code from distel and erlang-mode
 ;; FIXME Butt-ugly function, split to cheek-size.
@@ -208,11 +255,19 @@ use DEFAULT-MODULE."
 (defun ferl-search-function (function arity)
   "Goto the definition of FUNCTION/ARITY in the current buffer."
   (let ((origin (point))
-        (re (concat "^" (edts-function-regexp function arity))))
+        (re (concat "^" function "\s*("))
+        (match nil))
     (goto-char (point-min))
-    (if (re-search-forward re nil t)
-        (goto-char (match-beginning 0))
-        (goto-char origin))))
+    (while (and (null match) (re-search-forward re nil t))
+      (goto-char (match-beginning 0))
+      (ferl-goto-end-of-call-name)
+      (when (eq arity (ferl-arity-at-point))
+        (setq match t)))
+    (if match
+        (goto-char (beginning-of-line))
+        (progn
+          (goto-char origin)
+          (error "function %s/%s not found" function arity)))))
 
 
 (provide 'ferl)
