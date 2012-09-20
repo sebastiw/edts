@@ -127,7 +127,7 @@ directive."
           (ring-insert-at-beginning (edts-window-history-ring) mark)
           (find-file-existing (cdr (assoc 'source record)))
           (goto-line (cdr (assoc 'line   record))))
-      (null (error "No header filename at point")))))
+      (null (error "No record at point")))))
 
 (defun edts-nav-find-record (rec-name records)
   "find record-struct with REC-NAME in RECORDS."

@@ -157,13 +157,14 @@ inside the edts-project PROJECT."
   "Returns non-nil if the fully qualified file-name is located
 underneath PATH."
   (string-prefix-p (edts-project-normalize-path path)
-                   (expand-file-name file-name)))
+                   (file-truename (expand-file-name file-name))))
 
 (defun edts-project-normalize-path (path-str)
   "Badly named function. Only replaces duplicate /'s in PATH-STR and
 make sure it ends with a '/'."
-  (replace-regexp-in-string "//+" "/"
-                            (concat (expand-file-name path-str) "/")))
+  (file-truename
+   (replace-regexp-in-string
+    "//+" "/" (concat (expand-file-name path-str) "/"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
