@@ -45,7 +45,7 @@
         , step/1
         , toggle_breakpoint/3
         , uninterpret_modules/2
-        , wait_for_debugger/2
+        , wait_for_debugger/1
         , who_calls/4]).
 
 %%%_* Includes =================================================================
@@ -198,24 +198,16 @@ continue(Node) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Wait for debugger to attach, for a maximum of Attempts.
+%% Wait for debugger to attach.
 %% @end
--spec wait_for_debugger(Node :: node(), Attempts :: non_neg_integer()) ->
-                           ok | {error, attempts_exceeded}.
+-spec wait_for_debugger(Node :: node()) ->
+                           {ok, {module(), non_neg_integer()}}
+                         | {error, not_found}.
 %%------------------------------------------------------------------------------
-wait_for_debugger(_, 0) ->
-  lager:info("Debugger not up. Giving up...~n"),
-  {error, attempts_exceeded};
-wait_for_debugger(Node, Attempts) ->
-  RemoteRegistered = rpc:call(Node, erlang, registered, []),
-  case lists:member(edts_debug_server, RemoteRegistered) of
-    true ->
-      lager:info("Debugger up!~n"),
-      ok;
-    _    ->
-      lager:info("Debugger not up yet... Trying ~p more time(s)~n", [Attempts]),
-      timer:sleep(1000),
-      wait_for_debugger(Node, Attempts - 1)
+wait_for_debugger(Node) ->
+  case edts_dist:call(Node, edts_debug_server, wait_for_debugger, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
   end.
 
 %%------------------------------------------------------------------------------

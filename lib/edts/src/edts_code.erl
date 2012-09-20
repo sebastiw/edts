@@ -119,6 +119,7 @@ compile_and_load(File, Opts) ->
   %% at all for other analyses (xref etc.).
   case compile:file(AbsPath, [binary, debug_info, return|Opts]) of
     {ok, Mod, Bin, Warnings} ->
+      WasInterpreted = maybe_uninterpret_module(Mod),
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
@@ -127,6 +128,7 @@ compile_and_load(File, Opts) ->
           {module, Mod} = code:load_abs(OutFile),
           update_xref(),
           add_path(OutDir),
+          maybe_interpret_module(Module, WasInterpreted),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -136,6 +138,18 @@ compile_and_load(File, Opts) ->
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
+
+maybe_uninterpret_module(Module) ->
+  case edts_debug_server:is_interpreted(Module) of
+    true -> edts_debug_server:uninterpret_module(Module),
+            true;
+    _    -> false
+  end.
+
+maybe_interpret_module(Module, true) ->
+  edts_debug_server:interpret_modules([Module]);
+maybe_interpret_module(_Module, _WasInterpreted) ->
+  ok.
 
 %%------------------------------------------------------------------------------
 %% @doc

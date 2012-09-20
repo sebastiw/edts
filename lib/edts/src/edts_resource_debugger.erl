@@ -42,7 +42,6 @@
 -include_lib("webmachine/include/webmachine.hrl").
 
 %%%_* Defines ==================================================================
--define(MAX_ATTEMPTS, 5).
 
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
@@ -67,16 +66,19 @@ malformed_request(ReqData, Ctx) ->
 
 resource_exists(ReqData, Ctx) ->
   Node     = orddict:fetch(nodename, Ctx),
-  Info     = edts:wait_for_debugger(Node, ?MAX_ATTEMPTS),
+  Info     = edts:wait_for_debugger(Node),
   Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
-             not (Info =:= {error, attempts_exceeded}),
+             not (Info =:= {error, not_found}),
   {Exists, ReqData, orddict:store(info, Info, Ctx)}.
 
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info = orddict:fetch(info, Ctx),
-  Data = {struct, [{status, Info}]},
+  Data = format(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
+
+format({ok, {Module, Line}}) ->
+  {struct, [{module, Module}, {line, Line}]}.
 
 %%%_* Internal functions =======================================================
 

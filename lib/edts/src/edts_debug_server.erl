@@ -13,16 +13,21 @@
 %% API
 -export([start/0, stop/0, start_link/0, maybe_attach/1,
         interpret_modules/1, toggle_breakpoint/2,
-        uninterpret_modules/1, continue/0, step/0 ]).
+        uninterpret_modules/1, wait_for_debugger/0, continue/0, step/0 ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+%% Exported for spawning
+-export([ start_debugging/1 ]).
+
 -define(SERVER, ?MODULE).
 
 -record(dbg_state, {
-          proc = unattached :: unattached | pid()
+          debugger = undefined :: undefined | pid(),
+          proc = unattached    :: unattached | pid(),
+          listeners = []       :: [term()]
          }).
 
 %%%===================================================================
@@ -46,7 +51,13 @@ stop() ->
                                   | {already_attached, pid(), pid()}.
 %%--------------------------------------------------------------------
 maybe_attach(Pid) ->
-  gen_server:call(?SERVER, {attach, Pid}).
+  case gen_server:call(?SERVER, {attach, Pid}) of
+    {ok, attach} ->
+      AttPid = spawn_link(?MODULE, start_debugging, [Pid]),
+      {attached, AttPid, Pid};
+    {error, already_attached, AttPid} ->
+      {already_attached, AttPid, Pid}
+  end.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -77,6 +88,16 @@ toggle_breakpoint(Module, Line) ->
 %%--------------------------------------------------------------------
 uninterpret_modules(Modules) ->
   gen_server:call(?SERVER, {uninterpret, Modules}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Waits for debugging to be triggered by a breakpoint and returns
+%% relevant module and line information.
+%% @end
+-spec wait_for_debugger() -> {ok, {module(), non_neg_integer()}}.
+%%--------------------------------------------------------------------
+wait_for_debugger() ->
+  gen_server:call(?SERVER, wait_for_debugger, infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -141,12 +162,9 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
-  int:attached(Pid),
-  io:format("Debugger ~p attached to ~p~n", [self(), Pid]),
-  {reply, {attached, self(), Pid}, State#dbg_state{proc = Pid}};
-handle_call({attach, Pid}, _From, #dbg_state{proc = Pid} = State) ->
-  io:format("Debugger ~p already attached to ~p~n", [self(), Pid]),
-  {reply, {already_attached, self(), Pid}, State};
+  {reply, {ok, attach}, State#dbg_state{proc = Pid}};
+handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
+  {reply, {already_attached, Dbg, Pid}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
   Reply = {ok, [int:i(M) || M <- Modules, int:interpretable(M)]},
@@ -164,6 +182,10 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
 handle_call({uninterpret, Modules}, _From, State) ->
   [int:n(M) || M <- Modules],
   {reply, ok, State};
+
+handle_call(wait_for_debugger, From, State) ->
+  Listeners = State#dbg_state.listeners,
+  {noreply, State#dbg_state{listeners = [From|Listeners]}};
 
 handle_call(continue, _From, #dbg_state{proc = Pid} = State) ->
   int:continue(Pid),
@@ -183,6 +205,11 @@ handle_call(step, _From, #dbg_state{proc = Pid} = State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({register_attached, Pid}, State) ->
+  {noreply, State#dbg_state{debugger = Pid}};
+handle_cast({notify, Info}, #dbg_state{listeners = Listeners} = State) ->
+  notify(Info, Listeners),
+  {noreply, State};
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
@@ -232,13 +259,38 @@ code_change(_OldVsn, State, _Extra) ->
 get_state() ->
   do_get_state(int:snapshot()).
 
-do_get_state([{_, {M, F, A}, _, {Mod, Line}}|_]) ->
-  MFA = io_lib:format("~p:~p(~p)", [M, F, A]),
-  Cursor = io_lib:format("~p:~p", [Mod, Line]),
-  {ok, MFA, Cursor};
+do_get_state([{_, _, _, {Mod, Line}}|_]) ->
+  {ok, Mod, Line};
 do_get_state([{_, _, idle, _}]) ->
   {ok, "done", "idle"}.
 
+notify({break, {_Module, _Line} = Info}) ->
+  gen_server:cast(?SERVER, {notify, Info}).
+
+notify(_, []) ->
+  ok;
+notify(Info, [Client|R]) ->
+  gen_server:reply(Client, {ok, Info}),
+  notify(Info, R).
+
+register_attached(Pid) ->
+  gen_server:cast(?SERVER, {register_attached, Pid}).
+
+start_debugging(Pid) ->
+  register_attached(self()),
+  int:attached(Pid),
+  io:format("Debugger ~p attached to ~p~n", [self(), Pid]),
+  debug_loop().
+
+debug_loop() ->
+  receive
+    {_Meta, {break_at, Module, Line, _Cur}} = ->
+      notify({break, {Module, Line}}),
+      debug_loop();
+    _ = Msg ->
+      io:format("Unexpected message: ~p~n", [Msg]),
+      debug_loop()
+  end.
 
 %%%====================================================================
 %%% Unit tests

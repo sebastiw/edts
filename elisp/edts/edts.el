@@ -382,6 +382,52 @@ associated with that buffer."
   (let ((info (edts-get-detailed-module-info (erlang-get-module))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
+(defun edts-wait-for-debugger ()
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "wait_for_debugger"))
+         (args '())
+         (rest-callback #'(lambda (result)
+                            (if (equal (assoc 'result result)
+                                       '(result "200" "OK"))
+                                (let* ((body (cdr (assoc 'body result)))
+                                       (module (cdr (assoc 'module body)))
+                                       (line (cdr (assoc 'line body))))
+                                  (edts-enter-debug-mode (concat module ".erl") line))))))
+    (edts-rest-get-async resource args rest-callback '())))
+
+(defun edts-toggle-breakpoint (module line)
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "toggle_breakpoint" module line))
+         (args '())
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-step-into ()
+  "When debugging, perform a step-into"
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "step"))
+         (args '())
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-continue ()
+  "When debugging, continue execution until the next breakpoint or termination"
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "continue"))
+         (args '())
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
