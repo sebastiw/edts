@@ -44,7 +44,7 @@
         , nodes/0
         , step/1
         , toggle_breakpoint/3
-        , trace_function/3
+        , uninterpret_modules/2
         , wait_for_debugger/2
         , who_calls/4]).
 
@@ -122,28 +122,6 @@ who_calls(Node, Module, Function, Arity) ->
     Info  -> Info
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns the result of running Trace on Node, using Opts.
-%% @end
-%%
--spec trace_function( Node   :: node()
-                    , Trace  :: send | 'receive' | string()
-                    , Opts   :: [{atom(), any()}]) ->
-                        string() | {error, not_found}.
-%%------------------------------------------------------------------------------
-trace_function(Node, Trace, Opts0) ->
-  TraceLog = spawn_monitor(fun edts_dbg:receive_traces/0),
-  Opts = Opts0 ++ [{print_pid, TraceLog}],
-  Args = [Trace, Opts],
-  Result = case edts_dist:call(Node, edts_dbg, trace_function, Args) of
-             {badrpc, _} -> {error, not_found};
-             TraceResult -> TraceResult
-           end,
-  receive
-    {'DOWN', _, _, _, Reason} -> io:format("Tracing finished: ~p~n", [Reason]),
-                                 Result
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -158,6 +136,21 @@ interpret_modules(Node, Modules) ->
   case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
     {badrpc, _} -> {error, not_found};
     Interpreted -> Interpreted
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Uninterpret Modules in Node.
+%% @end
+-spec uninterpret_modules( Node :: node()
+                         , Modules :: [module()] ) ->
+                             ok | {error, not_found}.
+%%------------------------------------------------------------------------------
+uninterpret_modules(Node, Modules) ->
+  case edts_dist:call(Node,
+                      edts_debug_server, uninterpret_modules, [Modules]) of
+    {badrpc, _} -> {error, not_found};
+    ok          -> ok
   end.
 
 %%------------------------------------------------------------------------------

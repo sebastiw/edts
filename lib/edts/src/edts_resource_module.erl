@@ -105,14 +105,11 @@ from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Filename = orddict:fetch(file, Ctx),
   {Result, {Errors0, Warnings0}} = edts:compile_and_load(Nodename, Filename),
-  try
-    case orddict:fetch(interpret, Ctx) of
-      true -> Module = orddict:fetch(module, Ctx),
-              edts:interpret_modules(Nodename, [Module]);
-      _    -> ok %%TODO: Uninterpret modules if false
-    end
-  catch
-    _:_ -> ok
+  Module = orddict:fetch(module, Ctx),
+  case orddict:fetch(interpret, Ctx) of
+    true  -> edts:interpret_modules(Nodename, [Module]);
+    false -> edts:uninterpret_modules(Nodename, [Module]);
+    _     -> ok
   end,
   Errors   = {array, [format_error(Error) || Error <- Errors0]},
   Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},

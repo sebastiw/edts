@@ -347,7 +347,7 @@ asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
   (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
          (resource      (list "nodes" node-name "modules" module))
-         (args (list    (cons "file" file)))
+         (args (list    (cons "file" file) (cons "interpret" "true")))
          (rest-callback #'(lambda (result callback buffer)
                             (if (equal (assoc 'result result)
                                        '(result "201" "Created"))
@@ -369,7 +369,7 @@ parsed response as the single argument."
     (edts-log-debug "Compiling %s on %s" module node-name)
     (let* ((resource
             (list "nodes" node-name "modules" module))
-           (args (list (cons "file" file)))
+           (args (list (cons "file" file) (cons "interpret" "true")))
            (res (edts-rest-post resource args)))
       (if (equal (assoc 'result res) '(result "201" "Created"))
           (cdr (assoc 'body res))

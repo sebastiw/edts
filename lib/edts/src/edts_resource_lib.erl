@@ -202,7 +202,10 @@ lib_dirs_validate(ReqData, Ctx) ->
                             {ok, true | false} | error.
 %%------------------------------------------------------------------------------
 interpret_validate(ReqData, _Ctx) ->
-  {ok, list_to_atom(wrq:get_qs_value("interpret", ReqData))}.
+  case wrq:get_qs_value("interpret", ReqData) of
+    undefined -> {ok, false};
+    Interpret -> {ok, list_to_atom(Interpret)}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

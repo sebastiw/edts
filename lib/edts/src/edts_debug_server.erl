@@ -12,7 +12,8 @@
 
 %% API
 -export([start/0, stop/0, start_link/0, maybe_attach/1,
-        interpret_modules/1, toggle_breakpoint/2, continue/0, step/0 ]).
+        interpret_modules/1, toggle_breakpoint/2,
+        uninterpret_modules/1, continue/0, step/0 ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -67,6 +68,15 @@ interpret_modules(Modules) ->
 %%--------------------------------------------------------------------
 toggle_breakpoint(Module, Line) ->
   gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Uninterprets Modules.
+%% @end
+-spec uninterpret_modules(Modules :: [module()]) -> ok.
+%%--------------------------------------------------------------------
+uninterpret_modules(Modules) ->
+  gen_server:call(?SERVER, {uninterpret, Modules}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -132,10 +142,10 @@ init([]) ->
 %%--------------------------------------------------------------------
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   int:attached(Pid),
-  edts_log:info("Debugger ~p attached to ~p~n", [self(), Pid]),
+  io:format("Debugger ~p attached to ~p~n", [self(), Pid]),
   {reply, {attached, self(), Pid}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{proc = Pid} = State) ->
-  edts_log:info("Debugger ~p already attached to ~p~n", [self(), Pid]),
+  io:format("Debugger ~p already attached to ~p~n", [self(), Pid]),
   {reply, {already_attached, self(), Pid}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
@@ -151,15 +161,16 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
           end,
   {reply, Reply, State};
 
+handle_call({uninterpret, Modules}, _From, State) ->
+  [int:n(M) || M <- Modules],
+  {reply, ok, State};
+
 handle_call(continue, _From, #dbg_state{proc = Pid} = State) ->
   int:continue(Pid),
   {reply, ok, State};
 handle_call(step, _From, #dbg_state{proc = Pid} = State) ->
   int:step(Pid),
-  [{_, {M, F, A}, _, {Mod, Line}}|_] = int:snapshot(),
-  MFA = io_lib:format("~p:~p(~p)", [M, F, A]),
-  Cursor = io_lib:format("~p:~p", [Mod, Line]),
-  {reply, {ok, MFA, Cursor}, State}.
+  {reply, get_state(), State}.
 
 
 %%--------------------------------------------------------------------
@@ -217,6 +228,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+get_state() ->
+  do_get_state(int:snapshot()).
+
+do_get_state([{_, {M, F, A}, _, {Mod, Line}}|_]) ->
+  MFA = io_lib:format("~p:~p(~p)", [M, F, A]),
+  Cursor = io_lib:format("~p:~p", [Mod, Line]),
+  {ok, MFA, Cursor};
+do_get_state([{_, _, idle, _}]) ->
+  {ok, "done", "idle"}.
 
 
 %%%====================================================================
