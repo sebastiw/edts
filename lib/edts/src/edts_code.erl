@@ -316,18 +316,20 @@ get_xref_ignores(Mod) ->
 
 
 get_compile_outdir(File) ->
-  Mod = list_to_atom(filename:basename(filename:rootname(File))),
-  try
-    Opts = proplists:get_value(options, Mod:module_info(compile)),
-    proplists:get_value(outdir, Opts)
-  catch
-    _:_ ->
+  Mod  = list_to_atom(filename:basename(filename:rootname(File))),
+  Opts = proplists:get_value(options, Mod:module_info(compile), []),
+  get_compile_outdir(File, Opts).
+
+get_compile_outdir(File, Opts) ->
+  case proplists:get_value(outdir, Opts) of
+    undefined ->
       DirName = filename:dirname(File),
       EbinDir = filename:join([DirName, "..", "ebin"]),
       case filelib:is_file(EbinDir) of
         true  -> EbinDir;
         false -> DirName
-      end
+      end;
+    OutDir -> OutDir
   end.
 
 %%------------------------------------------------------------------------------
@@ -659,6 +661,21 @@ parse_abstract_other_test_() ->
 modules_test() ->
   [{setup, fun start/0, fun(_) -> stop() end,
     [?_assertMatch({ok, [_|_]}, modules())]}].
+
+get_compile_outdir_test_() ->
+  [{ setup
+   , fun () ->
+         meck:new(filelib, [passthrough, unstick]),
+         meck:expect(filelib, is_file, fun ("good/../ebin") -> true;
+                                           (_)              -> false
+                                       end)
+     end
+   , fun (_) -> meck:unload() end
+   , [ ?_assertEqual("foo", get_compile_outdir("mod.erl", [{outdir, "foo"}]))
+     , ?_assertEqual("foo", get_compile_outdir("foo/mod.erl", []))
+     , ?_assertEqual("good/../ebin", get_compile_outdir("good/mod.erl", []))
+     ]
+   }].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
