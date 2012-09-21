@@ -128,5 +128,5 @@ man-page."
       (should
        (equal '("/usr/lib/erlang/lib/foo/doc/html"
                 "/usr/lib/erlang/lib/bar/doc/html")
-              (edts-man-expand-root "/usr/lib/erlang/lib"))))))
+              (edts-man-expand-root))))))
 

@@ -20,7 +20,11 @@
 ;;
 ;; Code for navigating through a project.
 
+(eval-when-compile (require 'cl))
+(require 'ring)
 (require 'thingatpt)
+
+(require 'ferl)
 
 ;; Nameclash (sort of) with edts-find source. One of the names should be
 ;; changed to indicate the differences in how they work.
@@ -126,7 +130,7 @@ directive."
         (progn
           (ring-insert-at-beginning (edts-window-history-ring) mark)
           (find-file-existing (cdr (assoc 'source record)))
-          (goto-line (cdr (assoc 'line   record))))
+          (ferl-goto-line (cdr (assoc 'line   record))))
       (null (error "No record at point")))))
 
 (defun edts-nav-find-record (rec-name records)
@@ -193,7 +197,7 @@ When FUNCTION is specified, the point is moved to its start."
               (progn
                 (find-file-existing (cdr (assoc 'source info)))
                 (ring-insert-at-beginning (edts-window-history-ring) mark)
-                (goto-line (cdr (assoc 'line   info))))
+                (ferl-goto-line (cdr (assoc 'line   info))))
               (null
                (error "Function %s:%s/%s not found" module function arity)))))))
 

@@ -24,6 +24,9 @@ activated for the first file that is located inside a project."
   :type 'boolean
   :group 'edts)
 
+(defvar edts-projects nil
+  "The list of edts projects.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

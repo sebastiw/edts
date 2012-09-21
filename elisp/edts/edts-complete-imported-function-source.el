@@ -65,7 +65,7 @@ current module."
 candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
-   edts-complete-normal-imported-function-candidates))
+   (edts-complete-normal-imported-function-candidates)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

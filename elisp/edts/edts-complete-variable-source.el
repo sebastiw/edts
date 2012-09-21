@@ -43,7 +43,7 @@
   "Initializes the list of variable completions"
   (when (edts-complete-variable-p)
     (edts-log-debug "Initializing variable completions")
-    (setq edts-complete-find-variable-candidates
+    (setq edts-complete-variable-candidates
           (edts-complete-find-variable-candidates))))
 
 (defun edts-complete-variable-candidates ()

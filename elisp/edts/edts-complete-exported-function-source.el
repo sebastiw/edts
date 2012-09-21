@@ -70,14 +70,14 @@
 candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
-   edts-complete-normal-module-candidates))
+   (edts-complete-normal-module-candidates)))
 
 (defun edts-complete-exported-function-doc (candidate)
   "Find the documentation for CANDIDATE."
   (let* ((module   (symbol-at (- ac-point 1)))
          (split    (split-string candidate "/"))
          (function (car split))
-         (arity    (string-to-int (cadr split))))
+         (arity    (string-to-number (cadr split))))
     (condition-case ex
         (edts-man-extract-function-entry module function arity)
         ('error (edts-extract-doc-from-source module function arity)))))

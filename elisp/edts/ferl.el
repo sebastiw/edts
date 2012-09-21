@@ -20,6 +20,11 @@
 ;;
 ;; Utilities for locating things and moving around in erlang source code.
 
+(defun ferl-goto-line (line)
+  "Non-interactive version of goto-line."
+  (goto-char (point-min))
+  (forward-line (1- line)))
+
 (defun ferl-position-at-line (line)
   "Returns the position at the first position of LINE."
   (save-excursion
@@ -141,7 +146,7 @@ Should be called with point directly before the opening ( or /."
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."
-  (string-to-int (substring str 1)))
+  (string-to-number (substring str 1)))
 
 (defun ferl-paren-arity (str)
   "Return the arity of an argument string within a parenthesis."
@@ -188,27 +193,27 @@ Should be called with point directly before the opening ( or /."
     (should (open-bracket-p ?\{))
     (should-not (close-bracket-p ?s)))
 
-  (ert-deftest paren-arity-test ()
-    (should (eq 0 (paren-arity "")))
-    (should (eq 1 (paren-arity "a")))
-    (should (eq 2 (paren-arity "a,")))
-    (should (eq 2 (paren-arity "a,a")))
-    (should (eq 2 (paren-arity ",a")))
-    (should (eq 3 (paren-arity "aa,bb,cc")))
+  (ert-deftest ferl-paren-arity-test ()
+    (should (eq 0 (ferl-paren-arity "")))
+    (should (eq 1 (ferl-paren-arity "a")))
+    (should (eq 2 (ferl-paren-arity "a,")))
+    (should (eq 2 (ferl-paren-arity "a,a")))
+    (should (eq 2 (ferl-paren-arity ",a")))
+    (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
 
-    (should (eq 1 (paren-arity "\"aa,bb\"")))
-    (should (eq 2 (paren-arity "\"aa,bb\", cc")))
-    (should (eq 2 (paren-arity "\"a'a,b'b\", cc")))
-    (should (eq 1 (paren-arity "'aa,bb'")))
-    (should (eq 2 (paren-arity "'aa,bb', cc")))
-    (should (eq 2 (paren-arity "'a\"a,b\"b', cc")))
-    (should (eq 2 (paren-arity "a%a,b\nb, cc")))
-    (should (eq 2 (paren-arity "\"a\\\"a,bb\", cc")))
-    (should (eq 2 (paren-arity "a[a,b]b, cc")))
-    (should (eq 2 (paren-arity "#a{a,b}, cc"))))
+    (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
+    (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
+    (should (eq 2 (ferl-paren-arity "\"a'a,b'b\", cc")))
+    (should (eq 1 (ferl-paren-arity "'aa,bb'")))
+    (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
+    (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
+    (should (eq 2 (ferl-paren-arity "a%a,b\nb, cc")))
+    (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
+    (should (eq 2 (ferl-paren-arity "a[a,b]b, cc")))
+    (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
 
   (ert-deftest slash-arity-test ()
-    (should (eq 2 (slash-arity "/2")))))
+    (should (eq 2 (ferl-slash-arity "/2")))))
 
 ;; Based on code from distel and erlang-mode
 ;; FIXME Butt-ugly function, split to cheek-size.

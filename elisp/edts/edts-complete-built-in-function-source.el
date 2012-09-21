@@ -18,6 +18,7 @@
 ;; auto-complete source for built-in erlang functions.
 
 (require 'auto-complete)
+(require 'edts-man)
 (require 'ferl)
 
 (eval-and-compile
@@ -193,12 +194,12 @@
 candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
-   edts-complete-normal-built-in-function-candidates))
+   (edts-complete-normal-built-in-function-candidates)))
 
 (defun edts-complete-built-in-function-doc (candidate)
   (let* ((split  (split-string candidate "/"))
          (function   (car split))
-         (arity  (string-to-int (cadr split))))
+         (arity  (string-to-number (cadr split))))
     (edts-man-extract-function-entry "erlang" function arity)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

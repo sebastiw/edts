@@ -67,7 +67,6 @@ the highest priority any edts overlay at new point if any."
 
 (defun edts-face-max-prio-overlay (overlays)
   "Returns the edts-face-overlay with the highest priority in OVERLAYS"
-  (mapcar #'(lambda (o) (message "props %s" (overlay-properties o))) overlays)
   ; find first edts overlay.
   (while (and overlays (not (edts-face-overlay-p (car overlays))))
     (setq overlays (cdr overlays)))

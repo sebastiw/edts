@@ -71,7 +71,7 @@
 candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
-   edts-complete-normal-record-candidates))
+   (edts-complete-normal-record-candidates)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

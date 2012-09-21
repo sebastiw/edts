@@ -75,7 +75,7 @@ buffer's project."
     (with-current-buffer buffer
       (let ((errors (cdr (assoc 'errors analysis-res))))
         (edts-code-display-error-overlays "edts-code-xref" errors)
-        result))))
+        errors))))
 
 
 (defun edts-code-display-error-overlays (type errors)

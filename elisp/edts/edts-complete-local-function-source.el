@@ -66,14 +66,14 @@
 candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
-   edts-complete-normal-local-function-candidates))
+   (edts-complete-normal-local-function-candidates)))
 
 (defun edts-complete-local-function-doc (candidate)
   "Find the documentation for CANDIDATE."
   (let* ((module   (erlang-get-module))
          (split    (split-string candidate "/"))
          (function (car split))
-         (arity    (string-to-int (cadr split))))
+         (arity    (string-to-number (cadr split))))
     (condition-case ex
         (edts-man-extract-function-entry module function arity)
       ('error (edts-extract-doc-from-source module function arity)))))

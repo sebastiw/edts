@@ -48,7 +48,7 @@ node."
         (edts-man-find-module module)
         (let* ((split     (split-string fun "/"))
                (fun-name  (car split))
-               (fun-arity (string-to-int (cadr split))))
+               (fun-arity (string-to-number (cadr split))))
           (edts-man-find-function-entry module fun-name fun-arity)))))
 
 (defun edts-extract-doc-from-source (module function arity)
@@ -273,15 +273,16 @@ parsed response as the single argument."
 
 (defun edts-compile-and-load (module file)
   "Compile MODULE in FILE on the node associated with current buffer."
-  (edts-log-debug "Compiling %s on %s" module node-name)
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
-          (list "nodes" node-name "modules" module))
-         (args (list (cons "file" file)))
-         (res (edts-rest-post resource args)))
-    (if (equal (assoc 'result res) '(result "201" "Created"))
+  (let ((node-name (edts-project-buffer-node-name (current-buffer))))
+    (edts-log-debug "Compiling %s on %s" module node-name)
+    (let* ((resource
+            (list "nodes" node-name "modules" module))
+           (args (list (cons "file" file)))
+           (res (edts-rest-post resource args)))
+      (if (equal (assoc 'result res) '(result "201" "Created"))
           (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error "Unexpected reply: %s"
+                              (cdr (assoc 'result res))))))))
 
 (defun edts-get-includes ()
   "Get all includes of module in current-buffer from the node
