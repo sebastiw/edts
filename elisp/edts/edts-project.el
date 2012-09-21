@@ -18,6 +18,8 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
+(require 'cl)
+
 (defcustom edts-project-auto-start-node t
   "If non-nil, automagically start an erlang node whenever erlang-mode is
 activated for the first file that is located inside a project."
