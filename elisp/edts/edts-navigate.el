@@ -19,8 +19,7 @@
 ;; projects and communicate with the correct nodes.
 ;;
 ;; Code for navigating through a project.
-
-(eval-when-compile (require 'cl))
+(require 'cl)
 (require 'ring)
 (require 'thingatpt)
 
