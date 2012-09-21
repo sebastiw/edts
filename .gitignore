@@ -9,4 +9,5 @@ log
 erl_crash.dump
 *.o
 *.beam
+*.elc
 *.plt
