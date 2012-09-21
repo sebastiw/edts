@@ -136,10 +136,20 @@ compile_and_load(File, Options0) ->
                 end,
                 update()
             end),
-      {ok, {[], format_errors(warning, Warnings)}};
+      %% Run eunit tests on module
+      {_Summary, Tests} = euw:run_tests(Mod),
+      FunPositions      = get_function_positions(Mod),
+      Errors            = tests_to_errors(Tests, FunPositions),
+      {ok, {Errors, format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
+
+get_function_positions(Module) ->
+  ModuleInfo = edts_code:get_module_info(Module, detailed),
+  Functions  = orddict:fetch(functions, ModuleInfo),
+  dict:from_list([{proplists:get_value(function, Info),
+                   proplists:get_value(line    , Info)} || Info <- Functions]).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -392,6 +402,22 @@ update() ->
   xref:q(?SERVER, "E"),
   modules(),
   ok.
+
+tests_to_errors(Tests, FunPos) ->
+  [test_to_error(Mfa, Info, FunPos) ||
+    {{Mfa, _Line}, Info} <- Tests, Info =/= ok].
+
+test_to_error({_Mod, Fun, _Arity}, Test, FunPos) ->
+  Module   = proplists:get_value(module   , Test),
+  Line     = dict:fetch(Fun, FunPos),
+  %Line     = proplists:get_value(line     , Test),
+  Reason   = proplists:get_value(reason   , Test),
+  Expected = proplists:get_value(expected , Test),
+  Value    = proplists:get_value(value    , Test),
+  File     = atom_to_list(Module) ++ ".erl",
+  ErrorStr = lists:flatten(io_lib:format("(~p) value: ~p expected: ~p",
+                                         [Reason, Value, Expected])),
+  {error, File, Line, ErrorStr}.
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
