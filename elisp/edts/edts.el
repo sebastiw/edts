@@ -40,16 +40,16 @@ node."
   "Find and show the man-page documentation for a function."
   (interactive)
   (let* ((module
-          (edts-query "Module: " (edts-doc-man-modules)))
+          (edts-query "Module: " (edts-man-modules)))
          (fun-strings (mapcar #'edts-function-to-string
                               (edts-get-module-exports module)))
          (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings))))
     (if (string= fun "-Top of Chapter-")
-        (edts-doc-find-man-module module)
+        (edts-man-find-module module)
         (let* ((split     (split-string fun "/"))
                (fun-name  (car split))
                (fun-arity (string-to-int (cadr split))))
-          (edts-doc-find-man-entry module fun-name fun-arity)))))
+          (edts-man-find-function-entry module fun-name fun-arity)))))
 
 (defun edts-extract-doc-from-source (module function arity)
   "Find documentation for MODULE:FUNCTION/ARITY"
