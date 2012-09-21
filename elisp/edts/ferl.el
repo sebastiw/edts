@@ -237,7 +237,8 @@ use DEFAULT-MODULE."
                           (erlang-remove-quotes
                            (erlang-buffer-substring
                             (match-beginning (1+ erlang-atom-regexp-matches))
-                            (match-end (1+ erlang-atom-regexp-matches)))))))
+                            (match-end (1+ erlang-atom-regexp-matches))))
+                          arity)))
               ((looking-at erlang-atom-regexp)
                (let ((fk (erlang-remove-quotes
                           (erlang-buffer-substring
