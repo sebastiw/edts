@@ -1,5 +1,6 @@
-(defvar *edts-current-window-config*
-  (current-window-configuration))
+(defvar *edts-current-window-config* '())
+
+(defvar *edts-debug-buffer* nil)
 
 (defun edts-debug-toggle-breakpoint ()
   (interactive)
@@ -13,10 +14,17 @@
 
 (defun edts-debug-step ()
   (interactive)
-  (let* ((state (edts-step-into))
-         (line (cdr (assoc 'line state))))
-    (message "Step into %s" line)
-    (goto-line (1+ line))))
+  (let* ((reply (edts-step-into))
+         (state (cdr (assoc 'state reply))))
+    (cond ((equal state "break")
+           (let ((module (cdr (assoc 'module reply)))
+                 (line (cdr (assoc 'line reply))))
+             (message "Step into %s:%s" module line)
+             (if (not (equal (concat module ".erl") (buffer-name)))
+                 (edts-enter-debug-mode (concat module ".erl")))
+             (goto-line line)))
+          ((equal state "idle")
+           (message "Finished.")))))
 
 ;(defun edts-debug-step-over ()
 ;  (interactive)
@@ -35,17 +43,22 @@
   (setq buffer-read-only nil)
   (hl-line-mode nil)
   (erlang-mode)
-  (set-window-configuration *edts-current-window-config*))
+  (set-window-configuration (pop *edts-current-window-config*))
+  ;(kill-buffer *edts-debug-buffer*)
+  ;(setq *edts-debug-buffer* nil)
+  )
 
 (defun edts-enter-debug-mode (&optional buffer-name line)
   (interactive)
-  (setq *edts-current-window-config*
-        (current-window-configuration))
+  (push (current-window-configuration)
+        *edts-current-window-config*)
   (if (and (not (null buffer-name))
            (stringp buffer-name))
       (pop-to-buffer buffer-name nil))
   (edts-debug-mode)
-  (goto-line line)
+  (if (and (not (null line))
+           (numberp line))
+      (goto-line line))
   (hl-line-mode t))
 
 (defun edts-line-number-at-point ()
@@ -73,6 +86,9 @@
   (delete-other-windows)
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
+  ;(let ((debug-buffer (edts-wait-for-debugger)))
+  ;  (set-process-query-on-exit-flag (get-buffer-process debug-buffer) nil)
+  ;  (setq *edts-debug-buffer* debug-buffer))
   (use-local-map edts-debug-keymap))
 
 (provide 'edts-debug)

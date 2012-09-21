@@ -74,11 +74,8 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info = orddict:fetch(info, Ctx),
-  Data = format(Info),
+  Data = edts_resource_lib:handle_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
-
-format({ok, {Module, Line}}) ->
-  {struct, [{module, Module}, {line, Line}]}.
 
 %%%_* Internal functions =======================================================
 

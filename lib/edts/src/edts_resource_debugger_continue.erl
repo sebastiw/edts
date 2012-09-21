@@ -80,7 +80,8 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Data = {struct, [{result, edts:continue(Nodename)}]},
+  Info = edts:continue(Nodename),
+  Data = edts_resource_lib:handle_debugger_info(Info),
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 %%%_* Internal functions =======================================================

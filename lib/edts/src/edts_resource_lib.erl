@@ -29,6 +29,7 @@
 
 %% Application callbacks
 -export([ exists_p/3
+        , handle_debugger_info/1
         , make_nodename/1
         , validate/3]).
 
@@ -295,6 +296,22 @@ xref_checks_validate(ReqData, _Ctx) ->
         false -> error
       end
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Handles debugger replies and converts them to the appropriate json structure
+%% @end
+-spec handle_debugger_info({ok, Info :: term()}) -> term().
+%%------------------------------------------------------------------------------
+handle_debugger_info({ok, Info}) ->
+  {struct, do_handle_debugger_info(Info)}.
+
+do_handle_debugger_info({break, {Module, Line}, VarBindings}) ->
+  [{state, break}, {module, Module}, {line, Line}, {var_bindings,
+                                                   {struct, VarBindings}}];
+do_handle_debugger_info(State) ->
+  [{state, State}].
+
 
 %%%_* Unit tests ===============================================================
 arity_validate_test() ->

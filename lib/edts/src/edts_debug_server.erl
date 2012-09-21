@@ -107,7 +107,7 @@ wait_for_debugger() ->
 -spec continue() -> ok.
 %%--------------------------------------------------------------------
 continue() ->
-  gen_server:call(?SERVER, continue).
+  gen_server:call(?SERVER, continue, infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -116,7 +116,7 @@ continue() ->
 -spec step() -> ok.
 %%--------------------------------------------------------------------
 step() ->
-  gen_server:call(?SERVER, step).
+  gen_server:call(?SERVER, step, infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -187,12 +187,15 @@ handle_call(wait_for_debugger, From, State) ->
   Listeners = State#dbg_state.listeners,
   {noreply, State#dbg_state{listeners = [From|Listeners]}};
 
-handle_call(continue, _From, #dbg_state{proc = Pid} = State) ->
+handle_call(continue, From, #dbg_state{proc = Pid} = State) ->
   int:continue(Pid),
-  {reply, ok, State};
-handle_call(step, _From, #dbg_state{proc = Pid} = State) ->
+  Listeners = State#dbg_state.listeners,
+  {noreply, State#dbg_state{listeners = [From|Listeners]}};
+
+handle_call(step, From, #dbg_state{proc = Pid} = State) ->
   int:step(Pid),
-  {reply, get_state(), State}.
+  Listeners = State#dbg_state.listeners,
+  {noreply, State#dbg_state{listeners = [From|Listeners]}}.
 
 
 %%--------------------------------------------------------------------
@@ -256,15 +259,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-get_state() ->
-  do_get_state(int:snapshot()).
-
-do_get_state([{_, _, _, {Mod, Line}}|_]) ->
-  {ok, Mod, Line};
-do_get_state([{_, _, idle, _}]) ->
-  {ok, "done", "idle"}.
-
-notify({break, {_Module, _Line} = Info}) ->
+notify(Info) ->
   gen_server:cast(?SERVER, {notify, Info}).
 
 notify(_, []) ->
@@ -284,8 +279,14 @@ start_debugging(Pid) ->
 
 debug_loop() ->
   receive
-    {_Meta, {break_at, Module, Line, _Cur}} = ->
-      notify({break, {Module, Line}}),
+    {Meta, {break_at, Module, Line, _Cur}} ->
+      Bindings = int:meta(Meta, bindings, nostack),
+      notify({break, {Module, Line}, Bindings}),
+      debug_loop();
+    {_Meta, idle} ->
+      notify(idle),
+      debug_loop();
+    {_Meta, running} ->
       debug_loop();
     _ = Msg ->
       io:format("Unexpected message: ~p~n", [Msg]),
