@@ -137,13 +137,11 @@ Should be called with point directly before the opening ( or /."
     (save-match-data
       (cond
        ((looking-at "/")
-        (re-search-forward "/[0-9]+") (ferl-slash-arity (match-string 0)))
+        (re-search-forward "/[0-9]+")
+        (ferl-slash-arity (match-string 0)))
        ((looking-at "(")
-        (let ((start (+ (point) 1))
-              (end   (- (progn (forward-sexp) (point)) 1)))
-          (ferl-paren-arity (buffer-substring start end))))
-       (t
-        (error "No arity found at point."))))))
+        (ferl-paren-arity (substring (format "%s" (sexp-at-point)) 1 -1)))
+       (error "No arity found at point.")))))
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."
