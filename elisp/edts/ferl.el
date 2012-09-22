@@ -135,14 +135,15 @@ of (function-name . starting-point)."
 Should be called with point directly before the opening ( or /."
   (save-excursion
     (save-match-data
-      (if (looking-at "/")
-          (progn
-            (re-search-forward "/[0-9]+")
-            (ferl-slash-arity (match-string 0)))
-        (progn
-          (re-search-forward "(\\(.*\\))+")
-          (ferl-paren-arity (match-string 1)))))))
-
+      (cond
+       ((looking-at "/")
+        (re-search-forward "/[0-9]+") (ferl-slash-arity (match-string 0)))
+       ((looking-at "(")
+        (let ((start (+ (point) 1))
+              (end   (- (progn (forward-sexp) (point)) 1)))
+          (ferl-paren-arity (buffer-substring start end))))
+       (t
+        (error "No arity found at point."))))))
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."
@@ -271,7 +272,7 @@ use DEFAULT-MODULE."
       (when (eq arity (ferl-arity-at-point))
         (setq match t)))
     (if match
-        (goto-char (beginning-of-line))
+        (beginning-of-line)
         (progn
           (goto-char origin)
           (error "function %s/%s not found" function arity)))))
