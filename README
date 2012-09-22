@@ -85,6 +85,9 @@ Planned features in the short term are:
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 
+- Byte-compile EDTS elisp files (optional):
+  M-x edts-make RET
+
 - Configure your projects. EDTS projects are stored in the variable
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
