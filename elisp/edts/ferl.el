@@ -175,7 +175,7 @@ Should be called with point directly before the opening ( or /."
             (push c brackets)) ;; initiate bracket-pair
            ((member c '(?\" ?\' ?\%))
             (setq in-ignore c)) ;; initiate string
-           (t          (setq last-c c))))
+           (setq last-c c))) ;; otherwise ignore char
     (when last-c (incf arity))
     arity))
 
