@@ -140,7 +140,9 @@ Should be called with point directly before the opening ( or /."
         (re-search-forward "/[0-9]+")
         (ferl-slash-arity (match-string 0)))
        ((looking-at "(")
-        (ferl-paren-arity (substring (format "%s" (sexp-at-point)) 1 -1)))
+        (if (sexp-at-point)
+            (ferl-paren-arity (substring (format "%s" (sexp-at-point)) 1 -1))
+            0))
        ('otherwise
         (error "No arity found at point."))))))
 
