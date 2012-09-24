@@ -428,6 +428,28 @@ associated with that buffer."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-step-out ()
+  "When debugging, step out of the current function"
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "step_out"))
+         (args '())
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-debug-stop ()
+  "Stop debugging"
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource
+          (list "debugger" node-name "stop"))
+         (args '())
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 

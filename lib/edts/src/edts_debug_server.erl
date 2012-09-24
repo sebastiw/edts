@@ -10,10 +10,19 @@
 
 -behaviour(gen_server).
 
-%% API
--export([start/0, stop/0, start_link/0, maybe_attach/1,
-        interpret_modules/1, toggle_breakpoint/2,
-        uninterpret_modules/1, wait_for_debugger/0, continue/0, step/0 ]).
+%% server API
+-export([start/0, stop/0, start_link/0]).
+
+%% Debugger API
+-export([ continue/0
+        , interpret_modules/1
+        , maybe_attach/1
+        , step/0
+        , step_out/0
+        , stop_debug/0
+        , toggle_breakpoint/2
+        , uninterpret_modules/1
+        , wait_for_debugger/0 ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -120,6 +129,24 @@ step() ->
 
 %%--------------------------------------------------------------------
 %% @doc
+%% Order the debugger to step out of the current function.
+%% @end
+-spec step_out() -> ok.
+%%--------------------------------------------------------------------
+step_out() ->
+  gen_server:call(?SERVER, step_out, infinity).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Stop debugging
+%% @end
+-spec stop_debug() -> ok.
+%%--------------------------------------------------------------------
+stop_debug() ->
+  gen_server:call(?SERVER, stop_debug).
+
+%%--------------------------------------------------------------------
+%% @doc
 %% Starts the server
 %%
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
@@ -187,6 +214,9 @@ handle_call(wait_for_debugger, From, State) ->
   Listeners = State#dbg_state.listeners,
   {noreply, State#dbg_state{listeners = [From|Listeners]}};
 
+handle_call(_Cmd, _From, #dbg_state{proc = unattached} = State) ->
+  {reply, {error, unattached}, State};
+
 handle_call(continue, From, #dbg_state{proc = Pid} = State) ->
   int:continue(Pid),
   Listeners = State#dbg_state.listeners,
@@ -195,7 +225,17 @@ handle_call(continue, From, #dbg_state{proc = Pid} = State) ->
 handle_call(step, From, #dbg_state{proc = Pid} = State) ->
   int:step(Pid),
   Listeners = State#dbg_state.listeners,
-  {noreply, State#dbg_state{listeners = [From|Listeners]}}.
+  {noreply, State#dbg_state{listeners = [From|Listeners]}};
+
+handle_call(step_out, From, #dbg_state{proc = Pid} = State) ->
+  int:finish(Pid),
+  Listeners = State#dbg_state.listeners,
+  {noreply, State#dbg_state{listeners = [From|Listeners]}};
+
+%% Here be dragons. This isn't working (yet!)
+handle_call(stop_debug, _From, #dbg_state{proc = Pid}) ->
+  Pid ! {'EXIT', self(), stop_debugging},
+  {reply, {ok, finished}, #dbg_state{}}.
 
 
 %%--------------------------------------------------------------------
@@ -268,25 +308,41 @@ notify(Info, [Client|R]) ->
   gen_server:reply(Client, {ok, Info}),
   notify(Info, R).
 
-register_attached(Pid) ->
-  gen_server:cast(?SERVER, {register_attached, Pid}).
-
+%%--------------------------------------------------------------------
+%% @doc
+%% Register in idbg_server as a debugger process attached to Pid
+%% and enter a debugging loop to handle messages coming from the meta
+%% process.
+%% @end
+%%--------------------------------------------------------------------
 start_debugging(Pid) ->
   register_attached(self()),
   int:attached(Pid),
   io:format("Debugger ~p attached to ~p~n", [self(), Pid]),
   debug_loop().
 
+register_attached(Pid) ->
+  gen_server:cast(?SERVER, {register_attached, Pid}).
+
 debug_loop() ->
   receive
+    %% Hit a breakpoint
     {Meta, {break_at, Module, Line, _Cur}} ->
       Bindings = int:meta(Meta, bindings, nostack),
       notify({break, {Module, Line}, Bindings}),
       debug_loop();
+    %% Became idle (not executing any code under debugging)
     {_Meta, idle} ->
       notify(idle),
       debug_loop();
+    %% Came back from uninterpreted code
+    {_Meta, {re_entry, _, _}} ->
+      debug_loop();
+    %% Running code, but not telling anything really relevant
     {_Meta, running} ->
+      debug_loop();
+    %% Something attached to the debugger (most likely ourselves)
+    {_Meta, {attached, _, _, _}} ->
       debug_loop();
     _ = Msg ->
       io:format("Unexpected message: ~p~n", [Msg]),

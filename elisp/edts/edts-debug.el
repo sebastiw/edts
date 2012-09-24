@@ -1,8 +1,11 @@
-(defvar *edts-current-window-config* '())
+;; Window config stack so we can push and pop during debugging to easily
+;; change buffer
+(defvar *edts-window-config-stack* '())
 
-(defvar *edts-debug-buffer* nil)
-
+;; TODO: extend breakpoint toggling to add a breakpoint in every clause
+;; of a given function when the line at point is a function clause.
 (defun edts-debug-toggle-breakpoint ()
+  "Enables or disables breakpoint at point"
   (interactive)
   (let* ((line-number (edts-line-number-at-point))
          (state (edts-toggle-breakpoint (erlang-get-module)
@@ -13,6 +16,7 @@
              (cdr (assoc 'line state)))))
 
 (defun edts-debug-step ()
+  "Steps (into) when debugging"
   (interactive)
   (let* ((reply (edts-step-into))
          (state (cdr (assoc 'state reply))))
@@ -20,18 +24,33 @@
            (let ((module (cdr (assoc 'module reply)))
                  (line (cdr (assoc 'line reply))))
              (message "Step into %s:%s" module line)
+             ;; This isn't really what we want. We should visit-file
+             ;; (or insert file contents into a specific buffer)
              (if (not (equal (concat module ".erl") (buffer-name)))
                  (edts-enter-debug-mode (concat module ".erl")))
              (goto-line line)))
           ((equal state "idle")
            (message "Finished.")))))
 
-;(defun edts-debug-step-over ()
-;  (interactive)
-;  (edts-step-over)
-;  (message "Step over"))
+(defun edts-debug-step-out ()
+  "Steps out of the current function when debugging"
+  (interactive)
+  (let* ((reply (edts-step-out))
+         (state (cdr (assoc 'state reply))))
+    (cond ((equal state "break")
+           (let ((module (cdr (assoc 'module reply)))
+                 (line (cdr (assoc 'line reply))))
+             (message "Step out to %s:%s" module line)
+             ;; This isn't really what we want. We should visit-file
+             ;; (or insert file contents into a specific buffer)
+             (if (not (equal (concat module ".erl") (buffer-name)))
+                 (edts-enter-debug-mode (concat module ".erl")))
+             (goto-line line)))
+          ((equal state "idle")
+           (message "Finished.")))))
 
 (defun edts-debug-continue ()
+  "Continues execution when debugging"
   (interactive)
   (edts-continue)
   (hl-line-mode nil)
@@ -39,19 +58,20 @@
   (edts-wait-for-debugger))
 
 (defun edts-debug-quit ()
+  "Quits debug mode"
   (interactive)
+  ;(edts-debug-stop)
   (setq buffer-read-only nil)
-  (hl-line-mode nil)
   (erlang-mode)
-  (set-window-configuration (pop *edts-current-window-config*))
-  ;(kill-buffer *edts-debug-buffer*)
-  ;(setq *edts-debug-buffer* nil)
+  (set-window-configuration (car (last *edts-window-config-stack*)))
+  (hl-line-mode nil)
   )
 
 (defun edts-enter-debug-mode (&optional buffer-name line)
+  "Convenience function to setup and enter debug mode"
   (interactive)
   (push (current-window-configuration)
-        *edts-current-window-config*)
+        *edts-window-config-stack*)
   (if (and (not (null buffer-name))
            (stringp buffer-name))
       (pop-to-buffer buffer-name nil))
@@ -74,7 +94,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "SPC") 'edts-debug-toggle-breakpoint)
     (define-key map (kbd "s")   'edts-debug-step)
-   ;(define-key map (kbd "o")   'edts-debug-step-over)
+    (define-key map (kbd "o")   'edts-debug-step-out)
     (define-key map (kbd "c")   'edts-debug-continue)
     (define-key map (kbd "q")   'edts-debug-quit)
     map))
@@ -86,9 +106,10 @@
   (delete-other-windows)
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
-  ;(let ((debug-buffer (edts-wait-for-debugger)))
-  ;  (set-process-query-on-exit-flag (get-buffer-process debug-buffer) nil)
-  ;  (setq *edts-debug-buffer* debug-buffer))
   (use-local-map edts-debug-keymap))
+
+;; TODO: proper formatting to present in a buffer.
+(defun edts-format-bindings (bindings)
+  (format t "~A" bindings))
 
 (provide 'edts-debug)

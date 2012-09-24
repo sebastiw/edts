@@ -43,6 +43,8 @@
         , node_reachable/1
         , nodes/0
         , step/1
+        , step_out/1
+        , stop_debugger/1
         , toggle_breakpoint/3
         , uninterpret_modules/2
         , wait_for_debugger/1
@@ -176,7 +178,7 @@ toggle_breakpoint(Node, Module, Line) ->
 %% @doc
 %% Step through in execution while debugging, in Node.
 %% @end
--spec step(Node :: node()) -> ok | {error, not_found}.
+-spec step(Node :: node()) -> {ok, Info :: term()} | {error, not_found}.
 %%------------------------------------------------------------------------------
 step(Node) ->
   case edts_dist:call(Node, edts_debug_server, step, []) of
@@ -186,12 +188,36 @@ step(Node) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Step out of the current function while debugging, in Node.
+%% @end
+-spec step_out(Node :: node()) -> {ok, Info :: term()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+step_out(Node) ->
+  case edts_dist:call(Node, edts_debug_server, step_out, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Continue execution until a breakpoint is hit or execution terminates.
 %% @end
--spec continue(Node :: node()) -> ok | {error, not_found}.
+-spec continue(Node :: node()) -> {ok, Info :: term()} | {error, not_found}.
 %%------------------------------------------------------------------------------
 continue(Node) ->
   case edts_dist:call(Node, edts_debug_server, continue, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Stop debugging
+%% @end
+-spec stop_debugger(Node :: node()) -> {ok, finished} | {error, not_found}.
+%%------------------------------------------------------------------------------
+stop_debugger(Node) ->
+  case edts_dist:call(Node, edts_debug_server, stop_debug, []) of
     {badrpc, _} -> {error, not_found};
     Result      -> Result
   end.
