@@ -78,10 +78,7 @@ Planned features in the short term are:
 
   $git clone git@github.com:tjarvstrand/edts.git
   $cd edts
-  $git checkout 0.1.0
   $make
-
-  NB. You can safely ignore the warning about 'detached HEAD' state.
 
 - Make sure EDTS is loaded and started in your .emacs:
 
@@ -154,7 +151,11 @@ running both can create some confusion.
 Some users are experiencing serious performance issues with the auto-completion
 during the first use after startup. This is usually solved by typing C-g a
 couple (two or three, it seems to vary) of times when Emacs "hangs" the first
-time. This is most likely caused by a defect in the auto-complete package, but
-any help in debugging this problem is appreciated since I haven't been able to
-reproduce this on any of my machines.
+time. This is most likely caused by a defect in the emacs c-code that affects
+the auto-complete package. If you experience these issues, it's recommended to
+switch to emacs 24.2 where the problem is fixed [1], but if the problems
+persist, any help in debugging the issue would be appreciated since I have
+never myself been able to reproduce it.
+
+[1] https://github.com/auto-complete/auto-complete/issues/153
 
