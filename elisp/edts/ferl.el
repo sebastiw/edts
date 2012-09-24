@@ -141,7 +141,8 @@ Should be called with point directly before the opening ( or /."
         (ferl-slash-arity (match-string 0)))
        ((looking-at "(")
         (ferl-paren-arity (substring (format "%s" (sexp-at-point)) 1 -1)))
-       (error "No arity found at point.")))))
+       ('otherwise
+        (error "No arity found at point."))))))
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."
@@ -175,7 +176,8 @@ Should be called with point directly before the opening ( or /."
             (push c brackets)) ;; initiate bracket-pair
            ((member c '(?\" ?\' ?\%))
             (setq in-ignore c)) ;; initiate string
-           (setq last-c c))) ;; otherwise ignore char
+           ('otherwise
+            (setq last-c c)))) ;; otherwise ignore char
     (when last-c (incf arity))
     arity))
 
