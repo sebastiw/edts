@@ -379,9 +379,14 @@ init() ->
 reload_module(M) ->
   case code:is_sticky(M) of
     true  -> ok;
-    false -> c:l(M)
-  end,
-  ok.
+    false ->
+      case c:l(M) of
+        {module, M}     -> ok;
+        {error, _} = E ->
+          error_logger:error_msg("~p error l module ~p: ~p", [node(), M, E]),
+          E
+      end
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc Updates the xref server
