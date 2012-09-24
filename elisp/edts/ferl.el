@@ -166,6 +166,10 @@ Should be called with point directly before the opening ( or /."
            (in-ignore
             (setq last-c c)) ;; ignore character
 
+            ;; entering new bracket-pair
+           ((member c '(?\( ?\[ ?\{))
+            (push c brackets))
+
            ;; inside brackets
            ((and (member c (member c '(?\) ?\] ?\}))) brackets)
             (pop brackets)) ;; terminate bracket-pair
@@ -174,8 +178,6 @@ Should be called with point directly before the opening ( or /."
 
            ; not inside string, comment or brackets
            ((eq ?, c)  (incf arity)) ;; count up
-           ((member c '(?\( ?\[ ?\{))
-            (push c brackets)) ;; initiate bracket-pair
            ((member c '(?\" ?\' ?\%))
             (setq in-ignore c)) ;; initiate string
            ('otherwise
@@ -212,7 +214,8 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
     (should (eq 2 (ferl-paren-arity "a%a,b\nb, cc")))
     (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
-    (should (eq 2 (ferl-paren-arity "a[a,b]b, cc")))
+    (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
+    (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
     (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
 
   (ert-deftest slash-arity-test ()
