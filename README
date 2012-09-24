@@ -72,13 +72,16 @@ Planned features in the short term are:
 
   Unpack and point edts' doc-root to the man-directory inside by adapting the
   following example and putting it in your .emacs:
-  (edts-doc-set-root "/home/my-user/doc/otp_doc_man_R15B02")
+  (edts-man-set-root "/home/my-user/doc/otp_doc_man_R15B02")
 
 - Get EDTS:
 
   $git clone git@github.com:tjarvstrand/edts.git
   $cd edts
+  $git checkout 0.1.0
   $make
+
+  NB. You can safely ignore the warning about 'detached HEAD' state.
 
 - Make sure EDTS is loaded and started in your .emacs:
 
