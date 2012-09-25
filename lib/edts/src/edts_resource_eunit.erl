@@ -129,7 +129,7 @@ resource_exists_test() ->
                                  element(3, resource_exists(req_data, Ctx)))),
   meck:unload().
 
-to_json_test_() ->
+to_json_test() ->
   Ctx = orddict:from_list([{result, [{t, "file", 1337, "desc"}]}]),
   meck:unload(),
   meck:new(mochijson2),
