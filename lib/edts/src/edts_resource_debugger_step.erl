@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc Debugger step resource
 %%% @end
-%%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% @author João Neves <sevenjp@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012 João Neves <sevenjp@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%

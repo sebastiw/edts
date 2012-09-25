@@ -1,10 +1,11 @@
 %%%-------------------------------------------------------------------
-%%% @author João Neves <joao.neves@klarna.com>
+%%% @author João Neves <sevenjp@gmail.com>
 %%% @copyright (C) 2012, João Neves
 %%% @doc
-%%%
+%%% Erlang interpreter interface through a gen_server for communication
+%%% with external processes
 %%% @end
-%%% Created : 10 Sep 2012 by João Neves <joao.neves@klarna.com>
+%%% Created : 10 Sep 2012 by João Neves <sevenjp@gmail.com>
 %%%-------------------------------------------------------------------
 -module(edts_debug_server).
 
