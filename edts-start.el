@@ -161,7 +161,8 @@ further.
       (edts-teardown)))
 
 (defun edts-erlang-mode-hook ()
-  (edts-mode t))
+  (when (buffer-file-name)
+    (edts-mode t)))
 
 (defun edts-make ()
   "Byte-compile all elisp packages part of EDTS."
