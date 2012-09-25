@@ -57,6 +57,10 @@
                             , Description::string()}]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
+  case code:is_loaded(Module) of
+    false -> reload_module(Module);
+    true -> ok
+  end,
   File = proplists:get_value(source, Module:module_info(compile)),
   lists:append(
     lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
@@ -317,7 +321,9 @@ get_xref_ignores(Mod) ->
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
-  Opts = proplists:get_value(options, Mod:module_info(compile), []),
+  Opts = try proplists:get_value(options, Mod:module_info(compile), [])
+         catch error:undef -> []
+         end,
   get_compile_outdir(File, Opts).
 
 get_compile_outdir(File, Opts) ->
@@ -383,7 +389,7 @@ reload_module(M) ->
       case c:l(M) of
         {module, M}     -> ok;
         {error, _} = E ->
-          error_logger:error_msg("~p error l module ~p: ~p", [node(), M, E]),
+          error_logger:error_msg("~p error loading module ~p: ~p", [node(), M, E]),
           E
       end
   end.
