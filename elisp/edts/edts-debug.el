@@ -60,7 +60,7 @@
 (defun edts-debug-quit ()
   "Quits debug mode"
   (interactive)
-  ;(edts-debug-stop)
+  (edts-debug-stop)
   (setq buffer-read-only nil)
   (erlang-mode)
   (set-window-configuration (car (last *edts-window-config-stack*)))

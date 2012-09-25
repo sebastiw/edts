@@ -232,9 +232,8 @@ handle_call(step_out, From, #dbg_state{proc = Pid} = State) ->
   Listeners = State#dbg_state.listeners,
   {noreply, State#dbg_state{listeners = [From|Listeners]}};
 
-%% Here be dragons. This isn't working (yet!)
 handle_call(stop_debug, _From, #dbg_state{proc = Pid}) ->
-  Pid ! {'EXIT', self(), stop_debugging},
+  exit(Pid, kill),
   {reply, {ok, finished}, #dbg_state{}}.
 
 
