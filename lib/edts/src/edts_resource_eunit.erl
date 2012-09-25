@@ -123,7 +123,7 @@ resource_exists_test() ->
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
   meck:new(edts),
-  meck:expect(edts, get_module_eunit_result, fun(_, _, _) -> [] end),
+  meck:expect(edts, get_module_eunit_result, fun(_, _) -> {ok, []} end),
   ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
   ?assertEqual([], orddict:fetch(result,
                                  element(3, resource_exists(req_data, Ctx)))),
@@ -134,7 +134,8 @@ to_json_test_() ->
   meck:unload(),
   meck:new(mochijson2),
   meck:expect(mochijson2, encode, fun(Data) -> Data end),
-  ?assertMatch({{struct, [{errors, {array, [_]}}]}, req_data, Ctx},
+  ?assertMatch({{struct, [ {passed, {array, []}}
+                         , {failed, {array, [_]}}]}, req_data, Ctx},
                to_json(req_data, Ctx)),
   meck:unload().
 
