@@ -58,8 +58,8 @@
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
   case code:is_loaded(Module) of
-    false -> reload_module(Module);
-    true -> ok
+    false      -> reload_module(Module);
+    {file, _F} -> ok
   end,
   File = proplists:get_value(source, Module:module_info(compile)),
   lists:append(
