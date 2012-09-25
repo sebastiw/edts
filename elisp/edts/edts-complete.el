@@ -59,7 +59,7 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
             ; fontified
             ((and (equal ?\" char) string-face-p)             'single-quoted)
             ; Otherwise we're not inside quotes
-            (t                                                'none))))))))
+            ('otherwise                                       'none))))))))
 
 
 (defun edts-complete-single-quote-terminate (str)

@@ -10,12 +10,17 @@
   (concat (file-name-directory
             (or (locate-library "edts-start") load-file-name)) "/elisp/")
   "Directory where edts libraries are located.")
-(add-to-list 'load-path (concat edts-lib-directory "edts"))
-(add-to-list 'load-path (concat edts-lib-directory "auto-complete"))
-(add-to-list 'load-path (concat edts-lib-directory "auto-highlight-symbol-mode"))
-(add-to-list 'load-path (concat edts-lib-directory "popup-el"))
+
+(mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
+        '("auto-complete"
+          "auto-highlight-symbol-mode"
+          "edts"
+          "popup-el"))
+
 (when (boundp 'erlang-root-dir)
-  (add-to-list 'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
+  ;; add erl under erlang root dir to exec-path
+  (add-to-list
+   'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
@@ -156,9 +161,21 @@ further.
       (edts-teardown)))
 
 (defun edts-erlang-mode-hook ()
-  (edts-mode t))
+  (when (buffer-file-name)
+    (edts-mode t)))
 
-(eval-and-compile
-  (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
+(defun edts-make ()
+  "Byte-compile all elisp packages part of EDTS."
+  (interactive)
+  (let* ((dirs (directory-files edts-lib-directory t "^[^.]"))
+         (files (apply #'append
+                       (mapcar #'(lambda (dir)
+                                   (message "dir %s" dir)
+                                   (directory-files dir t "\\.el$")) dirs))))
+    (byte-compile-disable-warning 'cl-functions)
+    (mapc #'byte-compile-file files)
+    t))
 
-  (provide 'edts-start))
+(add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
+
+(provide 'edts-start)
