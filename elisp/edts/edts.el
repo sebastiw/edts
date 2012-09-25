@@ -383,6 +383,7 @@ associated with that buffer."
     (cdr (assoc 'includes info)))) ;; Get all includes
 
 (defun edts-wait-for-debugger ()
+  "Wait for the debugger to attach and enter debug mode (if not already in it)"
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource
           (list "debugger" node-name "wait_for_debugger"))
@@ -391,12 +392,15 @@ associated with that buffer."
                             (if (equal (assoc 'result result)
                                        '(result "200" "OK"))
                                 (let* ((body (cdr (assoc 'body result)))
+                                       (file (cdr (assoc 'file body)))
                                        (module (cdr (assoc 'module body)))
                                        (line (cdr (assoc 'line body))))
-                                  (edts-enter-debug-mode (concat module ".erl") line))))))
+                                  (edts-enter-debug-mode file line))))))
     (edts-rest-get-async resource args rest-callback '())))
 
 (defun edts-toggle-breakpoint (module line)
+  "Add/remove breakpoint in MODULE at LINE. This does not imply that MODULE becomes
+interpreted."
   (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
          (resource
           (list "debugger" node-name "toggle_breakpoint" module line))

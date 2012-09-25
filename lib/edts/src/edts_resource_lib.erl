@@ -306,9 +306,10 @@ xref_checks_validate(ReqData, _Ctx) ->
 handle_debugger_info({ok, Info}) ->
   {struct, do_handle_debugger_info(Info)}.
 
-do_handle_debugger_info({break, {Module, Line}, VarBindings}) ->
-  [{state, break}, {module, Module}, {line, Line}, {var_bindings,
-                                                   {struct, VarBindings}}];
+do_handle_debugger_info({break, File, {Module, Line}, VarBindings}) ->
+  [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
+   {var_bindings,
+    {struct, VarBindings}}];
 do_handle_debugger_info(State) ->
   [{state, State}].
 

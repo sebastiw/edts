@@ -37,6 +37,7 @@
 -record(dbg_state, {
           debugger = undefined :: undefined | pid(),
           proc = unattached    :: unattached | pid(),
+          stack = {1, 1}       :: {non_neg_integer(), non_neg_integer()},
           listeners = []       :: [term()]
          }).
 
@@ -329,7 +330,8 @@ debug_loop() ->
     %% Hit a breakpoint
     {Meta, {break_at, Module, Line, _Cur}} ->
       Bindings = int:meta(Meta, bindings, nostack),
-      notify({break, {Module, Line}, Bindings}),
+      File = int:file(Module),
+      notify({break, File, {Module, Line}, Bindings}),
       debug_loop();
     %% Became idle (not executing any code under debugging)
     {_Meta, idle} ->
