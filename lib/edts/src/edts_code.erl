@@ -271,7 +271,7 @@ modules_at_path(Path) ->
 -spec start() -> {ok, node()}.
 %%------------------------------------------------------------------------------
 start() ->
-  case xref:start(?SERVER) of
+  case edts_xref:start(?SERVER) of
     {ok, _Pid}                       -> init();
     {error, {already_started, _Pid}} -> ok
   end,
@@ -406,7 +406,7 @@ reload_module(M) ->
 -spec update() -> ok.
 %%------------------------------------------------------------------------------
 update() ->
-  {ok, _Modules} = xref:update(?SERVER),
+  {ok, _Modules} = edts_xref:update(?SERVER),
   xref:q(?SERVER, "E"),
   modules(),
   ok.
