@@ -362,21 +362,20 @@ get_include_dirs() ->
 -spec init() -> ok.
 %%------------------------------------------------------------------------------
 init() ->
+  ErlLibDir = code:lib_dir(),
+  Paths = [D || D <- code:get_path(), filelib:is_dir(D)],
   ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-  Paths = [Path || Path <- code:get_path(), filelib:is_dir(Path)],
-  ok = xref:set_library_path(?SERVER, Paths),
+  {ErlLibDirs, LibDirs} =
+    lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths),
+  ok = xref:set_library_path(?SERVER, ErlLibDirs),
   lists:foreach(fun(D) ->
-                    case xref:add_application(?SERVER, filename:dirname(D)) of
-                      {error, _, _} ->
-                        case filelib:is_dir(D) of
-                          true  ->
-                            xref:add_directory(?SERVER, D);
-                          false -> ok
-                        end;
+                    AppDir = filename:dirname(D),
+                    case xref:add_application(?SERVER, AppDir) of
+                      {error, _, _} -> xref:add_directory(?SERVER, D);
                       {ok, _}       -> ok
                     end
                 end,
-                Paths).
+                LibDirs).
 
 %%------------------------------------------------------------------------------
 %% @doc Reloads a module unless it is sticky.
