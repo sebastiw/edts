@@ -82,7 +82,7 @@
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
-    (define-key map "\C-c\C-d\C-e" 'ahs-edit-mode)
+    (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)

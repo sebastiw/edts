@@ -71,9 +71,14 @@ node."
       (concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*")))))
 
 (defun edts-ahs-edit-current-function ()
-  "Activate ahs-edit-mode with erlang-current-function range-plugin"
+  "Activate ahs-edit-mode with erlang-current-function range-plugin."
   (interactive)
   (ahs-onekey-edit-function 'erlang-current-function nil))
+
+(defun edts-ahs-edit-buffer ()
+  "Activate ahs-edit-mode with ahs-range-whole-buffer range-plugin."
+  (interactive)
+  (ahs-onekey-edit-function 'whole-buffer nil))
 
 
 (defun edts-ensure-server-started ()
