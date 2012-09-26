@@ -41,8 +41,7 @@ node."
   (interactive)
   (let* ((module
           (edts-query "Module: " (edts-man-modules)))
-         (fun-strings (mapcar #'edts-function-to-string
-                              (edts-get-module-exports module)))
+         (fun-strings (edts-man-module-function-entries module))
          (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings))))
     (if (string= fun "-Top of Chapter-")
         (edts-man-find-module module)
@@ -63,7 +62,7 @@ node."
 
 (defun edts-any-function-regexp ()
   "Construct a regexp matching any function."
-  (format "%s[[:space:]\n]*(.*)[[:space:]\n]*->" erlang-atom-regexp))
+  (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]\n]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments."
