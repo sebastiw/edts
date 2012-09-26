@@ -17,9 +17,11 @@
 ;;
 ;; Debugger interaction code for EDTS
 
+;; Window configuration to be restored when quitting debug mode
 (defvar *edts-window-config* nil)
 
 ;; List of existing (both enabled and disabled) breakpoints
+;; UNUSED right now
 (defvar *edts-debug-breakpoints* '())
 
 (defvar *edts-debug-last-visited-file* nil)
@@ -85,9 +87,24 @@
 (defun edts-enter-debug-mode (&optional file line)
   "Convenience function to setup and enter debug mode"
   (interactive)
-  (if (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
-      (setq *edts-window-config* (current-window-configuration)))
+  (edts-debug-save-window-configuration)
+  (edts-debug-enter-debug-buffer file line)
+  (edts-debug-mode))
 
+(defun edts-line-number-at-point ()
+  "Get line number at point"
+  (interactive)
+  (save-restriction
+    (widen)
+    (save-excursion
+      (beginning-of-line)
+      (1+ (count-lines 1 (point))))))
+
+(defun edts-debug-save-window-configuration ()
+  (if (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
+      (setq *edts-window-config* (current-window-configuration))))
+
+(defun edts-debug-enter-debug-buffer (file line)
   (if (and (not (null file))
            (stringp file))
       (progn (pop-to-buffer (make-debug-buffer-name file))
@@ -107,18 +124,7 @@
       (setq *edts-debug-last-visited-file* nil)))
   (if (and (not (null line))
            (numberp line))
-      (goto-line line))
-  (edts-debug-mode)
-  (hl-line-mode t))
-
-(defun edts-line-number-at-point ()
-  "Get line number at point"
-  (interactive)
-  (save-restriction
-    (widen)
-    (save-excursion
-      (beginning-of-line)
-      (1+ (count-lines 1 (point))))))
+      (goto-line line)))
 
 (defvar edts-debug-keymap
   (let ((map (make-sparse-keymap)))
@@ -136,8 +142,8 @@
   (delete-other-windows)
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
-  (setq debug-on-error t)
-  (use-local-map edts-debug-keymap))
+  (use-local-map edts-debug-keymap)
+  (hl-line-mode t))
 
 ;; TODO: proper formatting to present in a buffer.
 (defun edts-format-bindings (bindings)
