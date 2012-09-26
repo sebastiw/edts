@@ -325,9 +325,9 @@ get_compile_outdir(File) ->
   Opts = try proplists:get_value(options, Mod:module_info(compile), [])
          catch error:undef -> []
          end,
-  get_compile_outdir(File, Opts).
+  get_compile_outdir(Mod, File, Opts).
 
-get_compile_outdir(File, Opts) ->
+get_compile_outdir(Mod, File, Opts) ->
   case proplists:get_value(outdir, Opts) of
     undefined -> filename_to_outdir(File);
     OutDir    ->
@@ -682,7 +682,7 @@ modules_test() ->
 
 get_compile_outdir_test_() ->
   Good = "good/../ebin",
-  F    = fun get_compile_outdir/2,
+  F    = fun get_compile_outdir/3,
   [{ setup
    , fun () ->
          meck:new(filelib, [passthrough, unstick]),
@@ -691,10 +691,10 @@ get_compile_outdir_test_() ->
                                        end)
      end
    , fun (_) -> meck:unload() end
-   , [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}]))
-     , ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}]))
-     , ?_assertEqual("foo", F("foo/mod.erl" , []))
-     , ?_assertEqual(Good , F("good/mod.erl", []))
+   , [ ?_assertEqual(Good , F(mod, "foo/mod.erl" , [{outdir, Good}]))
+     , ?_assertEqual(Good , F(mod, "good/mod.erl", [{outdir, "foo"}]))
+     , ?_assertEqual("foo", F(mod, "foo/mod.erl" , []))
+     , ?_assertEqual(Good , F(mod, "good/mod.erl", []))
      ]
    }].
 
