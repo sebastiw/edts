@@ -126,6 +126,11 @@
       (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
 
+  ;; Ensure matching parentheses are visible above edts-faces.
+  (make-local-variable 'show-paren-priority)
+  (setq show-paren-priority
+        (+ (apply #'max (mapcar #'cdr edts-code-issue-overlay-priorities)) 1))
+
   ;; Auto-completion
   (edts-complete-setup))
 
