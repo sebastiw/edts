@@ -17,9 +17,12 @@
 ;;
 ;; Debugger interaction code for EDTS
 
-;; Window config stack so we can push and pop during debugging to easily
-;; change buffer
-(defvar *edts-window-config-stack* '())
+(defvar *edts-window-config* nil)
+
+;; List of existing (both enabled and disabled) breakpoints
+(defvar *edts-debug-breakpoints* '())
+
+(defvar *edts-debug-last-visited-file* nil)
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
@@ -27,7 +30,8 @@
   "Enables or disables breakpoint at point"
   (interactive)
   (let* ((line-number (edts-line-number-at-point))
-         (state (edts-toggle-breakpoint (erlang-get-module)
+         (state (edts-toggle-breakpoint (get-node-name-from-debug-buffer)
+                                        (erlang-get-module)
                                         (number-to-string line-number))))
     (message "Breakpoint %s at %s:%s"
              (cdr (assoc 'result state))
@@ -37,7 +41,7 @@
 (defun edts-debug-step ()
   "Steps (into) when debugging"
   (interactive)
-  (let* ((reply (edts-step-into))
+  (let* ((reply (edts-step-into (get-node-name-from-debug-buffer)))
          (state (cdr (assoc 'state reply))))
     (cond ((equal state "break")
            (let ((file (cdr (assoc 'file reply)))
@@ -51,7 +55,7 @@
 (defun edts-debug-step-out ()
   "Steps out of the current function when debugging"
   (interactive)
-  (let* ((reply (edts-step-out))
+  (let* ((reply (edts-step-out (get-node-name-from-debug-buffer)))
          (state (cdr (assoc 'state reply))))
     (cond ((equal state "break")
            (let ((file (cdr (assoc 'file reply)))
@@ -65,30 +69,40 @@
 (defun edts-debug-continue ()
   "Continues execution when debugging"
   (interactive)
-  (edts-continue)
+  (edts-continue (get-node-name-from-debug-buffer))
   (hl-line-mode nil)
   (message "Continue")
-  (edts-wait-for-debugger))
+  (edts-wait-for-debugger (get-node-name-from-debug-buffer)))
 
 (defun edts-debug-quit ()
   "Quits debug mode"
   (interactive)
-  (edts-debug-stop)
-  (kill-buffer "*EDTS-Debugger*")
+  (edts-debug-stop (get-node-name-from-debug-buffer))
+  (kill-buffer)
   (erlang-mode)
-  (set-window-configuration (car (last *edts-window-config-stack*)))
-  (hl-line-mode nil))
+  (set-window-configuration *edts-window-config*))
 
 (defun edts-enter-debug-mode (&optional file line)
   "Convenience function to setup and enter debug mode"
   (interactive)
-  (push (current-window-configuration)
-        *edts-window-config-stack*)
+  (if (not (equal major-mode "EDTS-debug"))
+      (setq *edts-window-config* (current-window-configuration)))
+
   (if (and (not (null file))
            (stringp file))
-      (progn (erase-buffer)
-             (insert-file-contents file))
-    (switch-to-buffer (make-indirect-buffer (current-buffer) "*EDTS-Debugger*" t)))
+      (progn (pop-to-buffer (make-debug-buffer-name file))
+             (if (or (null *edts-debug-last-visited-file*)
+                     (not (equal *edts-debug-last-visited-file* file)))
+                 (progn
+                   (setq buffer-read-only nil)
+                   (erase-buffer)
+                   (insert-file-contents file)
+                   (setq buffer-read-only t)))
+             (setq *edts-debug-last-visited-file* file))
+    (progn
+      (pop-to-buffer (make-indirect-buffer (current-buffer)
+                                           (make-debug-buffer-name) t))
+      (setq *edts-debug-last-visited-file* nil)))
   (if (and (not (null line))
            (numberp line))
       (goto-line line))
@@ -120,10 +134,21 @@
   (delete-other-windows)
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
+  (setq debug-on-error t)
   (use-local-map edts-debug-keymap))
 
 ;; TODO: proper formatting to present in a buffer.
 (defun edts-format-bindings (bindings)
   (format t "~A" bindings))
+
+(defun make-debug-buffer-name (&optional filename)
+  (let ((project (if (null filename)
+                     (edts-project-file-project (buffer-file-name))
+                   (edts-project-file-project filename))))
+    (format "*EDTS-Debugger <%s>*" (edts-project-node-name project))))
+
+(defun get-node-name-from-debug-buffer ()
+  (let ((match (string-match "<\\(\\w+\\)>" (buffer-name))))
+    (match-string 1 (buffer-name))))
 
 (provide 'edts-debug)

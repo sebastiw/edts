@@ -101,7 +101,6 @@ atom_to_validate(interpret)    -> fun interpret_validate/2;
 atom_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
 atom_to_validate(line)         -> fun line_validate/2;
 atom_to_validate(module)       -> fun module_validate/2;
-atom_to_validate(modules)      -> fun modules_validate/2;
 atom_to_validate(nodename)     -> fun nodename_validate/2;
 atom_to_validate(project_root) -> fun project_root_validate/2;
 atom_to_validate(xref_checks)  -> fun xref_checks_validate/2.

@@ -382,10 +382,9 @@ associated with that buffer."
   (let ((info (edts-get-detailed-module-info (erlang-get-module))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
-(defun edts-wait-for-debugger ()
+(defun edts-wait-for-debugger (node-name)
   "Wait for the debugger to attach and enter debug mode (if not already in it)"
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "wait_for_debugger"))
          (args '())
          (rest-callback #'(lambda (result)
@@ -398,11 +397,10 @@ associated with that buffer."
                                   (edts-enter-debug-mode file line))))))
     (edts-rest-get-async resource args rest-callback '())))
 
-(defun edts-toggle-breakpoint (module line)
+(defun edts-toggle-breakpoint (node-name module line)
   "Add/remove breakpoint in MODULE at LINE. This does not imply that MODULE becomes
 interpreted."
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "toggle_breakpoint" module line))
          (args '())
          (res (edts-rest-post resource args)))
@@ -410,10 +408,9 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-step-into ()
+(defun edts-step-into (node-name)
   "When debugging, perform a step-into"
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "step"))
          (args '())
          (res (edts-rest-post resource args)))
@@ -421,10 +418,9 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-continue ()
+(defun edts-continue (node-name)
   "When debugging, continue execution until the next breakpoint or termination"
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "continue"))
          (args '())
          (res (edts-rest-post resource args)))
@@ -432,10 +428,9 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-step-out ()
+(defun edts-step-out (node-name)
   "When debugging, step out of the current function"
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "step_out"))
          (args '())
          (res (edts-rest-post resource args)))
@@ -443,10 +438,9 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-debug-stop ()
+(defun edts-debug-stop (node-name)
   "Stop debugging"
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
-         (resource
+  (let* ((resource
           (list "debugger" node-name "stop"))
          (args '())
          (res (edts-rest-post resource args)))

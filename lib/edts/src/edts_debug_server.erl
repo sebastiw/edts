@@ -346,6 +346,9 @@ debug_loop() ->
     %% Something attached to the debugger (most likely ourselves)
     {_Meta, {attached, _, _, _}} ->
       debug_loop();
+    %% Process under debug terminated
+    {_Meta, {exit_at, _, _Reason, _}} ->
+      finished;
     _ = Msg ->
       io:format("Unexpected message: ~p~n", [Msg]),
       debug_loop()
