@@ -323,9 +323,11 @@ make sure it ends with a '/'."
      (not (edts-project-file-under-path-p "/bar" "/foo/bar/baz.el"))))
 
   (ert-deftest edts-project-normalize-path-test ()
-    (flet ((expand-file-name (file-name) (concat "./" file-name)))
-      (should (string= "./foo/bar/" (edts-project-normalize-path "foo//bar")))
-      (should (string= "./foo/bar/" (edts-project-normalize-path "foo/bar/"))))))
+    (let ((default-directory "/test/"))
+      (should (string= "/test/foo/bar/"
+                       (edts-project-normalize-path "foo//bar")))
+      (should (string= "/test/foo/bar/"
+                       (edts-project-normalize-path "foo/bar/"))))))
 
 
 (provide 'edts-project)
