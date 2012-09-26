@@ -117,28 +117,8 @@ man-page."
   (concat
    (file-name-as-directory edts-man-root) "man" (int-to-string man-page)))
 
-(defun edts-man-expand-root ()
-  "Expands `edts-man-root' to a full set of man-page doc-directories.x"
-  (mapcar
-   #'(lambda (dir) (concat (file-name-as-directory dir) "doc/html"))
-  (file-expand-wildcards (concat (file-name-as-directory edts-man-root) "*"))))
 
 (provide 'edts-man)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
-
-(when (member 'ert features)
-
-  (ert-deftest edts-man-expand-root-test ()
-    (flet ((file-expand-wildcards (path)
-                                  (if (string= path
-                                               "/usr/lib/erlang/lib/*")
-                                      '("/usr/lib/erlang/lib/foo"
-                                        "/usr/lib/erlang/lib/bar")
-                                    (error "Bad path"))))
-      (should
-       (equal '("/usr/lib/erlang/lib/foo/doc/html"
-                "/usr/lib/erlang/lib/bar/doc/html")
-              (edts-man-expand-root))))))
-

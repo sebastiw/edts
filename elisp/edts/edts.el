@@ -292,13 +292,4 @@ associated with that buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
-(when (member 'ert features)
-
-  (ert-deftest edts-erl-root-test ()
-    (flet ((executable-find (exec) "/usr/bin/erl")
-           (file-truename (file)   "/usr/lib/erlang/bin/erl"))
-      (should
-       (equal "/usr/lib/erlang/" edts-erl-root)))))
-
-
 (provide 'edts)
