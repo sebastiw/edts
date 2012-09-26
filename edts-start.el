@@ -129,7 +129,9 @@
   ;; Ensure matching parentheses are visible above edts-faces.
   (make-local-variable 'show-paren-priority)
   (setq show-paren-priority
-        (+ (apply #'max (mapcar #'cdr edts-code-issue-overlay-priorities)) 1))
+        (max show-paren-priority
+             (+ 1 (apply #'max
+                       (mapcar #'cdr edts-code-issue-overlay-priorities)))))
 
   ;; Auto-completion
   (edts-complete-setup))
