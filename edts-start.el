@@ -78,7 +78,7 @@
     (define-key map "\C-c\C-d\S-f" 'edts-find-function)
     (define-key map "\C-c\C-dH"    'edts-find-doc)
     (define-key map "\C-c\C-dw"    'edts-who-calls)
-    (define-key map "\C-c\C-dS-w"  'edts-last-who-calls)
+    (define-key map "\C-c\C-dW"    'edts-last-who-calls)
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
