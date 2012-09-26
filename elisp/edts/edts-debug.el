@@ -85,7 +85,7 @@
 (defun edts-enter-debug-mode (&optional file line)
   "Convenience function to setup and enter debug mode"
   (interactive)
-  (if (not (equal major-mode "EDTS-debug"))
+  (if (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
       (setq *edts-window-config* (current-window-configuration)))
 
   (if (and (not (null file))
@@ -100,8 +100,10 @@
                    (setq buffer-read-only t)))
              (setq *edts-debug-last-visited-file* file))
     (progn
-      (pop-to-buffer (make-indirect-buffer (current-buffer)
-                                           (make-debug-buffer-name) t))
+      (let ((file (buffer-file-name)))
+        (pop-to-buffer (make-debug-buffer-name file))
+        (erase-buffer)
+        (insert-file-contents file))
       (setq *edts-debug-last-visited-file* nil)))
   (if (and (not (null line))
            (numberp line))
