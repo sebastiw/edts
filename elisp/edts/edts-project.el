@@ -80,7 +80,8 @@ PWD and running COMMAND."
   (let* ((cmd  (car command))
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
-    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)))
+    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
+    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)))
 
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that

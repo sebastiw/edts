@@ -93,7 +93,8 @@ node."
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh" nil edts-erl-command)))
+    (make-comint "edts" "./start.sh" nil edts-erl-command)
+    (set-process-query-on-exit-flag (get-buffer-process "*edts*") nil)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
