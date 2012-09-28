@@ -196,7 +196,12 @@ handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {already_attached, Dbg, Pid}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
-  Reply = {ok, [int:i(M) || M <- Modules, int:interpretable(M)]},
+  Reply = {ok, lists:map(fun(Module) ->
+                             case int:interpretable(Module) of
+                               true -> int:i(Module);
+                               _    -> ok
+                             end
+                         end, Modules)},
   {reply, Reply, State};
 
 handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
