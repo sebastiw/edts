@@ -36,8 +36,6 @@
         , get_module_info/1
         , get_module_info/2
         , modules/0
-        , start/0
-        , stop/0
         , who_calls/3]).
 
 %%%_* Defines ==================================================================
@@ -50,7 +48,7 @@
 %% @doc
 %% Do an xref-analysis of Module, applying Checks
 %% @end
--spec check_module(Module::module(), Checks::xref:analysis()) ->
+-spec check_module(Module::module(), Checks::[xref:analysis()]) ->
                       {ok, [{ Type::error
                             , File::string()
                             , Line::non_neg_integer()
@@ -61,35 +59,7 @@ check_module(Module, Checks) ->
     false      -> reload_module(Module);
     {file, _F} -> ok
   end,
-  File = proplists:get_value(source, Module:module_info(compile)),
-  lists:append(
-    lists:map(fun(Check) -> do_check_module(Module, File, Check) end, Checks)).
-
-do_check_module(Mod0, File, undefined_function_calls) ->
-  QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
-  QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
-  {ok, Res} = xref:q(edts_code, QueryStr),
-  FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}) when Mod =:= Mod0 ->
-               Desc = io_lib:format("Call to undefined function ~p:~p/~p",
-                                    [CM, CF, CA]),
-               {error, File, Line, lists:flatten(Desc)}
-           end,
-  lists:map(FmtFun, Res);
-do_check_module(Mod, File, unused_exports) ->
-  QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
-  QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Mod])),
-  Ignores   = sets:from_list(get_xref_ignores(Mod)),
-  {ok, Res} = xref:q(edts_code, QueryStr),
-  FmtFun = fun({{M, F, A}, Line}, Acc) ->
-               case sets:is_element({F, A}, Ignores) orelse
-                    ignored_test_fun_p(M, F, A) of
-                 true  -> Acc;
-                 false ->
-                   Desc = io_lib:format("Unused export ~p:~p/~p", [M, F, A]),
-                   [{error, File, Line, lists:flatten(Desc)}|Acc]
-               end
-           end,
-  lists:foldl(FmtFun, [], Res).
+  edts_xref:check_module(Module, Checks).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -133,14 +103,7 @@ compile_and_load(File, Options0) ->
       code:purge(Mod),
       OutFile = filename:join(Out, atom_to_list(Mod)),
       {module, Mod} = code:load_abs(OutFile),
-      spawn(fun() ->
-                case xref:replace_module(?SERVER, Mod, OutFile) of
-                  {ok, Mod} -> ok;
-                  {error, xref_base, {no_such_module, Mod}} ->
-                    xref:add_module(?SERVER, OutFile)
-                end,
-                update()
-            end),
+      spawn(edts_xref, reload_module, [OutFile, Mod]),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
@@ -266,32 +229,6 @@ modules_at_path(Path) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Starts the edts xref-server on the local node.
-%% @end
--spec start() -> {ok, node()}.
-%%------------------------------------------------------------------------------
-start() ->
-  case edts_xref:start(?SERVER) of
-    {ok, _Pid}                       -> init();
-    {error, {already_started, _Pid}} -> ok
-  end,
-  update(),
-  {ok, node()}.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Stops the edts xref-server on the local node.
-%% @end
--spec stop() -> ok.
-%%------------------------------------------------------------------------------
-stop() ->
-  case whereis(?SERVER) of
-    undefined -> {error, not_started};
-    _Pid      -> xref:stop(?SERVER)
-  end.
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Returns alist with all functions that call M:F/A on the local node.
 %% @end
 -spec who_calls(module(), atom(), non_neg_integer()) ->
@@ -303,21 +240,6 @@ who_calls(M, F, A) ->
   [Caller || {Caller, _Callee} <- Calls].
 
 %%%_* Internal functions =======================================================
-
-ignored_test_fun_p(M, F, 0) ->
-  case lists:member({test, 0}, M:module_info(exports)) of
-    false -> false;
-    true  ->
-      FStr = atom_to_list(F),
-      lists:suffix("test", FStr) orelse lists:suffix("test_", FStr)
-  end;
-ignored_test_fun_p(_M, _F, _A) -> false.
-
-get_xref_ignores(Mod) ->
-  F = fun({ignore_xref, Ignores}, Acc) -> Ignores ++ Acc;
-         (_, Acc) -> Acc
-      end,
-  lists:foldl(F, [], Mod:module_info(attributes)).
 
 
 get_compile_outdir(File) ->
@@ -364,27 +286,6 @@ get_include_dirs() ->
       end,
   lists:flatmap(F, code:get_path()).
 
-
-%%------------------------------------------------------------------------------
-%% @doc Initializes the server.
--spec init() -> ok.
-%%------------------------------------------------------------------------------
-init() ->
-  ErlLibDir = code:lib_dir(),
-  Paths = [D || D <- code:get_path(), filelib:is_dir(D)],
-  ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-  {ErlLibDirs, LibDirs} =
-    lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths),
-  ok = xref:set_library_path(?SERVER, ErlLibDirs),
-  lists:foreach(fun(D) ->
-                    AppDir = filename:dirname(D),
-                    case xref:add_application(?SERVER, AppDir) of
-                      {error, _, _} -> xref:add_directory(?SERVER, D);
-                      {ok, _}       -> ok
-                    end
-                end,
-                LibDirs).
-
 %%------------------------------------------------------------------------------
 %% @doc Reloads a module unless it is sticky.
 -spec reload_module(M::module()) -> ok.
@@ -400,16 +301,6 @@ reload_module(M) ->
           E
       end
   end.
-
-%%------------------------------------------------------------------------------
-%% @doc Updates the xref server
--spec update() -> ok.
-%%------------------------------------------------------------------------------
-update() ->
-  {ok, _Modules} = edts_xref:update(?SERVER),
-  xref:q(?SERVER, "E"),
-  modules(),
-  ok.
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
@@ -677,8 +568,7 @@ parse_abstract_other_test_() ->
   [?_assertEqual(bar, parse_abstract(foo, bar))].
 
 modules_test() ->
-  [{setup, fun start/0, fun(_) -> stop() end,
-    [?_assertMatch({ok, [_|_]}, modules())]}].
+  [?_assertMatch({ok, [_|_]}, modules())].
 
 get_compile_outdir_test_() ->
   Good = "good/../ebin",
