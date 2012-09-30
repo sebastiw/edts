@@ -255,9 +255,8 @@ update_xref(File, Mod) ->
   edts_xref:reload_module(File, Mod),
   State         = edts_xref:get_state(),
   {ok, XrefDir} = application:get_env(edts, project_dir),
-  XrefFile      = hd(string:tokens(atom_to_list(node()), "@")) ++ ".xref",
-  XrefPath      = filename:join(XrefDir, XrefFile),
-  file:write_file(XrefPath, term_to_binary(State)).
+  XrefFile      = filename:join(XrefDir, atom_to_list(node()) ++ ".xref"),
+  file:write_file(XrefFile, term_to_binary(State)).
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
