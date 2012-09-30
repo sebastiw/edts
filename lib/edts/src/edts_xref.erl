@@ -27,25 +27,16 @@
 
 %%%_* Exports ==================================================================
 
-%% xref forwarding API
--export([add_module/2,
-         add_application/2,
-         add_directory/2,
-         q/2,
-         replace_module/3,
-         set_default/2,
-         set_library_path/2
-        ]).
-
 %% Extended xref API
 -export([start/0,
-         stop/0,
-         update/0
+         stop/0
         ]).
 
 %% API
 -export([check_module/2,
-         reload_module/2
+         get_state/0,
+         reload_module/2,
+         who_calls/3
         ]).
 
 %% Internal exports.
@@ -59,16 +50,6 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-
-%% Forwarding to xref.
-add_application(Srv, File)   -> xref:add_application(Srv, File).
-add_directory(Srv, File)     -> xref:add_directory(Srv, File).
-add_module(Srv, File)        -> xref:add_module(Srv, File).
-q(Srv, Q)                    -> xref:q(Srv, Q).
-replace_module(Srv, M, File) -> xref:replace_module(Srv, M, File).
-set_default(Srv, Opts)       -> xref:set_default(Srv, Opts).
-set_library_path(Srv, Opts) -> xref:set_library_path(Srv, Opts).
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -88,7 +69,7 @@ start() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Stops the edts xref-server on the local node.
+%% Stops the edts xref-server.
 %% @end
 -spec stop() -> ok.
 %%------------------------------------------------------------------------------
@@ -98,14 +79,19 @@ stop() ->
     _Pid      -> xref:stop(?SERVER)
   end.
 
-update() ->
-  Res = xref:update(?SERVER),
-  {status, _, _, [_, _, _, _, Misc]} = sys:get_status(?SERVER),
-  State = proplists:get_value("State", lists:append([D || {data, D} <- Misc])),
-  file:write_file("foo", term_to_binary(State)),
-  Res.
-
 %% API
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns the internal state of the edts xref-server.
+%% @end
+-spec get_state() -> term().
+%%------------------------------------------------------------------------------
+get_state() ->
+  xref:update(?SERVER),
+  {status, _, _, [_, _, _, _, Misc]} = sys:get_status(?SERVER),
+  proplists:get_value("State", lists:append([D || {data, D} <- Misc])).
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Reload the updated Mod from File into the xref callgraph..
@@ -118,7 +104,7 @@ reload_module(File, Mod) ->
     {error, xref_base, {no_such_module, Mod}} ->
       xref:add_module(?SERVER, File)
   end,
-  update().
+  xref:update().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -160,6 +146,19 @@ do_check_module(Mod, File, unused_exports) ->
                end
            end,
   lists:foldl(FmtFun, [], Res).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns alist with all functions that call M:F/A on the local node.
+%% @end
+-spec who_calls(module(), atom(), non_neg_integer()) ->
+                   [{module(), atom(), non_neg_integer()}].
+%%------------------------------------------------------------------------------
+who_calls(M, F, A) ->
+  Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
+  {ok, Calls} = xref:q(edts_code, Str),
+  [Caller || {Caller, _Callee} <- Calls].
+
 
 %%%_* INTERNAL functions =======================================================
 do_start() ->

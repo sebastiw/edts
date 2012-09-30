@@ -172,7 +172,7 @@ handle_call({init_node, Name}, _From, State) ->
       {reply, ok, State};
     false   ->
       edts_log:info("~p Initializing.", [Name]),
-      Node = #node{name = Name, promises = edts_dist:init_node(Name)},
+      Node = #node{name = Name, promises = do_init_node(Name)},
       {reply, ok, node_store(Node, State)}
   end;
 handle_call({is_node, Name}, _From, State) ->
@@ -261,6 +261,26 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%%_* Internal functions =======================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Initialize edts-related services etc. on remote node. Returns a list of keys
+%% to promises that are to be fulfilled by the remote node. These keys can later
+%% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
+%% @end
+-spec do_init_node(string()) -> [rpc:key()].
+%%------------------------------------------------------------------------------
+do_init_node(Node) ->
+  try
+    edts_dist:load_modules(Node,   [edts_code, edts_xref]),
+    {ok, ProjectDir} = application:get_env(edts, project_dir),
+    edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
+    edts_dist:start_services(Node, [edts_code])
+  catch
+    C:E ->
+      edts_log:error("~p initialization crashed with error ~p:~p", [C, E]),
+      []
+  end.
 
 node_delete(Name, State) ->
   State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.

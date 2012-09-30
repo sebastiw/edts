@@ -22,6 +22,8 @@
   (add-to-list
    'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
 
+(make-directory (concat user-emacs-directory "/edts") 'parents)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
 

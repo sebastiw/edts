@@ -30,19 +30,24 @@
 
 %%%_* Exports ==================================================================
 
--export([ check_module/2
-        , compile_and_load/1
-        , get_function_info/3
-        , get_module_info/1
-        , get_module_info/2
-        , modules/0
-        , who_calls/3]).
+-export([check_module/2,
+         compile_and_load/1,
+         get_function_info/3,
+         get_module_info/1,
+         get_module_info/2,
+         modules/0,
+         start/0,
+         who_calls/3]).
+
+%% internal exports
+-export([update_xref/2]).
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -103,7 +108,7 @@ compile_and_load(File, Options0) ->
       code:purge(Mod),
       OutFile = filename:join(Out, atom_to_list(Mod)),
       {module, Mod} = code:load_abs(OutFile),
-      spawn(edts_xref, reload_module, [OutFile, Mod]),
+      spawn(?MODULE, update_xref, [OutFile, Mod]),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
@@ -229,18 +234,30 @@ modules_at_path(Path) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Starts the edts xref-server on the local node.
+%% @end
+-spec start() -> {ok , node()} | {error, already_started}.
+%%------------------------------------------------------------------------------
+start() -> edts_xref:start().
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Returns alist with all functions that call M:F/A on the local node.
 %% @end
 -spec who_calls(module(), atom(), non_neg_integer()) ->
                    [{module(), atom(), non_neg_integer()}].
 %%------------------------------------------------------------------------------
-who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
-  {ok, Calls} = xref:q(edts_code, Str),
-  [Caller || {Caller, _Callee} <- Calls].
+who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 %%%_* Internal functions =======================================================
 
+update_xref(File, Mod) ->
+  edts_xref:reload_module(File, Mod),
+  State         = edts_xref:get_state(),
+  {ok, XrefDir} = application:get_env(edts, project_dir),
+  XrefFile      = hd(string:tokens(atom_to_list(node()), "@")) ++ ".xref",
+  XrefPath      = filename:join(XrefDir, XrefFile),
+  file:write_file(XrefPath, term_to_binary(State)).
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
@@ -297,7 +314,8 @@ reload_module(M) ->
       case c:l(M) of
         {module, M}     -> ok;
         {error, _} = E ->
-          error_logger:error_msg("~p error loading module ~p: ~p", [node(), M, E]),
+          error_logger:error_msg("~p error loading module ~p: ~p",
+                                 [node(), M, E]),
           E
       end
   end.
