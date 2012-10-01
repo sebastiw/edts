@@ -172,8 +172,12 @@ handle_call({init_node, Name}, _From, State) ->
       {reply, ok, State};
     false   ->
       edts_log:info("~p Initializing.", [Name]),
-      Node = #node{name = Name, promises = do_init_node(Name)},
-      {reply, ok, node_store(Node, State)}
+      case do_init_node(Name) of
+        {ok, Keys} ->
+          {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
+        {error, _}  = Err->
+          {reply, Err, State}
+      end
   end;
 handle_call({is_node, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
@@ -214,11 +218,11 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, {R, Nodename}}}, State) ->
+handle_info({Pid, {promise_reply, {Nodename, R} = Reply}}, State) ->
   Nodes =
     case lists:keyfind(Nodename, #node.name, State#state.nodes) of
       false ->
-        edts_log:info("Call from unexpected node:~p", [Nodename]),
+        edts_log:info("Unexpected reply from ~p: ~p", [Pid, Reply]),
         State#state.nodes;
     #node{promises = Promises} = Node ->
         edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
@@ -234,7 +238,8 @@ handle_info({nodedown, Node, _Info}, State) ->
     false   -> {noreply, State};
     #node{} -> {noreply, node_delete(Node, State)}
   end;
-handle_info(_Info, State) ->
+handle_info(Info, State) ->
+  edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.
 
 %%------------------------------------------------------------------------------
@@ -273,13 +278,15 @@ code_change(_OldVsn, State, _Extra) ->
 do_init_node(Node) ->
   try
     edts_dist:load_modules(Node,   [edts_code, edts_xref]),
-    {ok, ProjectDir} = application:get_env(edts, project_dir),
+    {ok, ProjectDir} =
+      application:get_env(edts, project_dir),
     edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    edts_dist:start_services(Node, [edts_code])
+    {ok, edts_dist:start_services(Node, [edts_code])}
   catch
     C:E ->
-      edts_log:error("~p initialization crashed with error ~p:~p", [C, E]),
-      []
+      edts_log:error("~p initialization crashed with error ~p:~p",
+                     [Node, C, E]),
+      {error, E}
   end.
 
 node_delete(Name, State) ->
