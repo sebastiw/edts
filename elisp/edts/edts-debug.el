@@ -34,9 +34,14 @@
   (let* ((line-number (edts-line-number-at-point))
          (state (edts-toggle-breakpoint (get-node-name-from-debug-buffer)
                                         (erlang-get-module)
-                                        (number-to-string line-number))))
+                                        (number-to-string line-number)))
+         (result (cdr (assoc 'result state))))
+    (if (equal result "set")
+        (edts-face-display-overlay 'edts-face-breakpoint-enabled-line
+                                   line-number "Breakpoint" 'break 10 t)
+      (edts-face-remove-overlays 'break))
     (message "Breakpoint %s at %s:%s"
-             (cdr (assoc 'result state))
+             result
              (cdr (assoc 'module state))
              (cdr (assoc 'line state)))))
 
@@ -48,9 +53,11 @@
     (cond ((equal state "break")
            (let ((file (cdr (assoc 'file reply)))
                  (module (cdr (assoc 'module reply)))
-                 (line (cdr (assoc 'line reply))))
+                 (line (cdr (assoc 'line reply)))
+                 (bindings (cdr (assoc 'var_bindings reply))))
              (message "Step into %s:%s" module line)
-             (edts-enter-debug-mode file line)))
+             (edts-enter-debug-mode file line)
+             (replace-with-bindings bindings)))
           ((equal state "idle")
            (message "Finished.")))))
 
