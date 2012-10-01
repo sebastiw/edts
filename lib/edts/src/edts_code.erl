@@ -238,7 +238,13 @@ modules_at_path(Path) ->
 %% @end
 -spec start() -> {ok , node()} | {error, already_started}.
 %%------------------------------------------------------------------------------
-start() -> edts_xref:start().
+start() ->
+  case file:read_file(xref_file()) of
+    {ok, BinState} -> edts_xref:start(binary_to_term(BinState));
+    {error, _}     -> edts_xref:start()
+  end,
+  spawn(fun save_xref_state/0),
+  {node(), ok}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -253,10 +259,20 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 update_xref(File, Mod) ->
   edts_xref:reload_module(File, Mod),
-  State         = edts_xref:get_state(),
+  save_xref_state().
+
+save_xref_state() ->
+  File = xref_file(),
+  State = edts_xref:get_state(),
+  case file:write_file(File, term_to_binary(State)) of
+    ok -> ok;
+    {error, _} = Error ->
+      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
+  end.
+
+xref_file() ->
   {ok, XrefDir} = application:get_env(edts, project_dir),
-  XrefFile      = filename:join(XrefDir, atom_to_list(node()) ++ ".xref"),
-  file:write_file(XrefFile, term_to_binary(State)).
+  filename:join(XrefDir, atom_to_list(node()) ++ ".xref").
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
