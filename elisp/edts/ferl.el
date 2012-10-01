@@ -143,8 +143,7 @@ Should be called with point directly before the opening ( or /."
         (let ((start (+ (point) 1))
               (end   (- (progn (forward-sexp) (point)) 1)))
           (ferl-paren-arity (buffer-substring start end))))
-       ('otherwise
-        (error "No arity found at point."))))))
+       ('otherwise 0)))))
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."

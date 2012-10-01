@@ -31,9 +31,9 @@ node."
     (file-name-directory (file-truename edts-erl-command))))
   "Location of the Erlang root directory")
 
-(defconst edts-data-directory (concat user-emacs-directory "/edts")
+(defconst edts-data-directory
+  (expand-file-name (concat user-emacs-directory "/edts"))
   "Where EDTS should save its data.")
-
 
 (defun edts-query (prompt choices)
   "Query the user for a choice"
