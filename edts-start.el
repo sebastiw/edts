@@ -22,8 +22,6 @@
   (add-to-list
    'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
 
-(make-directory (concat user-emacs-directory "/edts") 'parents)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
 
@@ -185,6 +183,7 @@ further.
     (mapc #'byte-compile-file files)
     t))
 
+(make-directory edts-data-directory 'parents)
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 
 (provide 'edts-start)

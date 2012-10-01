@@ -31,6 +31,9 @@ node."
     (file-name-directory (file-truename edts-erl-command))))
   "Location of the Erlang root directory")
 
+(defconst edts-data-directory (concat user-emacs-directory "/edts")
+  "Where EDTS should save its data.")
+
 
 (defun edts-query (prompt choices)
   "Query the user for a choice"
@@ -93,7 +96,7 @@ node."
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh" nil edts-erl-command)
+    (make-comint "edts" "./start.sh" nil edts-data-directory edts-erl-command)
     (set-process-query-on-exit-flag (get-buffer-process "*edts*") nil)))
 
 (defun edts-ensure-node-not-started (node-name)
