@@ -177,7 +177,6 @@ further.
   (let* ((dirs (directory-files edts-lib-directory t "^[^.]"))
          (files (apply #'append
                        (mapcar #'(lambda (dir)
-                                   (message "dir %s" dir)
                                    (directory-files dir t "\\.el$")) dirs))))
     (byte-compile-disable-warning 'cl-functions)
     (mapc #'byte-compile-file files)
