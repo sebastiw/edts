@@ -25,4 +25,4 @@ ERL=${2:-$(which erl)}
 EDTS_HOME="$( cd "$( dirname "$0" )" && pwd )"
 
 cd $EDTS_HOME
-exec $ERL -sname edts -edts proj_dir "\"$PROJDIR\"" -pa $EDTS_HOME/lib/*/ebin $EDTS_HOME/lib/*/deps/*/ebin -s edts_app
+exec $ERL -sname edts -edts project_dir "\"$PROJDIR\"" -pa $EDTS_HOME/lib/*/ebin $EDTS_HOME/lib/*/deps/*/ebin -s edts_app
