@@ -29,6 +29,7 @@
 
 %% Extended xref API
 -export([start/0,
+         start/1,
          stop/0
         ]).
 
@@ -40,7 +41,7 @@
         ]).
 
 %% Internal exports.
--export([do_start/0]).
+-export([do_start/1]).
 
 %%%_* Includes =================================================================
 
@@ -60,11 +61,41 @@
 start() ->
   case whereis(?SERVER) of
     undefined ->
-      proc_lib:start(?MODULE, do_start, []),
+      ErlLibDir = code:lib_dir(),
+      Paths = [D || D <- code:get_path(), filelib:is_dir(D)],
+      {LibDirs, AppDirs} = lists:partition(fun(Path) ->
+                                               lists:prefix(ErlLibDir, Path)
+                                           end,
+                                           Paths),
+      xref:start(?SERVER),
+      init(LibDirs, AppDirs);
+    _Pid ->
+      {error, already_started}
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Starts the edts xref-server with State on the local node.
+%% @end
+-spec start(State::term()) -> {ok , node()} | {error, already_started}.
+%%------------------------------------------------------------------------------
+start(State) ->
+  case whereis(?SERVER) of
+    undefined ->
+      proc_lib:start(?MODULE, do_start, [State]),
+      wait_for_server(),
       xref:update(?SERVER),
       {ok, node()};
     _Pid ->
       {error, already_started}
+  end.
+
+wait_for_server() ->
+  case whereis(?SERVER) of
+    undefined ->
+      timer:sleep(50),
+      wait_for_server();
+    _ -> ok
   end.
 
 %%------------------------------------------------------------------------------
@@ -104,7 +135,7 @@ reload_module(File, Mod) ->
     {error, xref_base, {no_such_module, Mod}} ->
       xref:add_module(?SERVER, File)
   end,
-  xref:update().
+  xref:update(?SERVER).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -124,7 +155,7 @@ check_module(Module, Checks) ->
 do_check_module(Mod0, File, undefined_function_calls) ->
   QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
   QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
-  {ok, Res} = xref:q(edts_code, QueryStr),
+  {ok, Res} = xref:q(?SERVER, QueryStr),
   FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}) when Mod =:= Mod0 ->
                Desc = io_lib:format("Call to undefined function ~p:~p/~p",
                                     [CM, CF, CA]),
@@ -135,7 +166,7 @@ do_check_module(Mod, File, unused_exports) ->
   QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
   QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Mod])),
   Ignores   = sets:from_list(get_xref_ignores(Mod)),
-  {ok, Res} = xref:q(edts_code, QueryStr),
+  {ok, Res} = xref:q(?SERVER, QueryStr),
   FmtFun = fun({{M, F, A}, Line}, Acc) ->
                case sets:is_element({F, A}, Ignores) orelse
                     ignored_test_fun_p(M, F, A) of
@@ -161,23 +192,10 @@ who_calls(M, F, A) ->
 
 
 %%%_* INTERNAL functions =======================================================
-do_start() ->
-  case file:read_file("foo") of
-    {ok, BinState} ->
-      erlang:register(?SERVER, self()),
-      proc_lib:init_ack({ok, self()}),
-      gen_server:enter_loop(xref, [], binary_to_term(BinState));
-    {error, _} ->
-      ErlLibDir = code:lib_dir(),
-      Paths = [D || D <- code:get_path(), filelib:is_dir(D)],
-      {LibDirs, AppDirs} = lists:partition(fun(Path) ->
-                                               lists:prefix(ErlLibDir, Path)
-                                           end,
-                                           Paths),
-      init(LibDirs, AppDirs),
-      proc_lib:init_ack({ok, self()}),
-      xref:start(?SERVER)
-  end.
+do_start(State) ->
+  erlang:register(?SERVER, self()),
+  proc_lib:init_ack({ok, self()}),
+  gen_server:enter_loop(xref, [], State).
 
 init(LibDirs, AppDirs) ->
   ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
