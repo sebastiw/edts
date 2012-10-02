@@ -91,7 +91,7 @@ character before that."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
 
-(defconst edts-complete-sources
+(defcustom edts-complete-sources
   '(
     edts-complete-variable-source
     edts-complete-local-function-source
