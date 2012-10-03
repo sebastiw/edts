@@ -44,6 +44,7 @@
 -export([do_start/1]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -203,8 +204,11 @@ init(LibDirs, AppDirs) ->
   lists:foreach(fun(D) ->
                     AppDir = filename:dirname(D),
                     case xref:add_application(?SERVER, AppDir) of
-                      {error, _, _} -> xref:add_directory(?SERVER, D);
-                      {ok, _}       -> ok
+                      {ok, _}                               -> ok;
+                      {error, _Mod, {application_clash, _}} -> ok;
+                      {error, Mod, Err}                    ->
+                        Fmt = "(~p) xref error not add ~p: ~p",
+                        error_logger:error_msg(Fmt, [node(), Mod, Err])
                     end
                 end,
                 AppDirs).
@@ -223,6 +227,45 @@ get_xref_ignores(Mod) ->
          (_, Acc) -> Acc
       end,
   lists:foldl(F, [], Mod:module_info(attributes)).
+
+%%%_* Unit tests ===============================================================
+
+start_test() ->
+  ?assertEqual(undefined, whereis(?SERVER)),
+  start(),
+  ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
+  State = get_state(),
+  xref:stop(?SERVER),
+  ?assertEqual(undefined, whereis(?SERVER)),
+  start(State),
+  State = get_state(),
+  xref:stop(?SERVER).
+
+init_test() ->
+  ?assertEqual(undefined, whereis(?SERVER)),
+  xref:start(?SERVER),
+  ?assertEqual(lists:sort([{verbose,  false},
+                           {warnings, true},
+                           {builtins, false},
+                           {recurse,  false}]),
+               lists:sort(xref:get_default(?SERVER))),
+  {ok, Cwd} = file:get_cwd(),
+  %% ?debugFmt("library ~p info ~p", [Cwd, xref:info(?SERVER, applications)]),
+  init([], []),
+  ?assertEqual({ok, []}, xref:get_library_path(?SERVER)),
+  xref:stop(?SERVER),
+  xref:start(?SERVER),
+  init([Cwd], []),
+  ?assertEqual({ok, [Cwd]}, xref:get_library_path(?SERVER)),
+  ?assertEqual([], xref:info(?SERVER, applications)),
+  xref:set_library_path(?SERVER, []),
+  ModPath = code:where_is_file(atom_to_list(?MODULE) ++ ".beam"),
+  AppPath =
+    filename:join((filename:dirname(filename:dirname(ModPath))), "ebin"),
+  DudPath = filename:dirname(AppPath),
+  ?debugFmt("applications ~p", [xref:info(?SERVER, applications)]),
+  init([], [DudPath]),
+  ?assertMatch([], xref:info(?SERVER, applications)).
 
 
 %%%_* Emacs ====================================================================
