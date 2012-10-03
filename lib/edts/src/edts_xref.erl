@@ -187,7 +187,7 @@ do_check_module(Mod, File, unused_exports) ->
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
   Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
-  {ok, Calls} = xref:q(edts_code, Str),
+  {ok, Calls} = xref:q(edts_xref, Str),
   [Caller || {Caller, _Callee} <- Calls].
 
 
