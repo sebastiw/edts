@@ -84,19 +84,10 @@ start(State) ->
   case whereis(?SERVER) of
     undefined ->
       proc_lib:start(?MODULE, do_start, [State]),
-      wait_for_server(),
       xref:update(?SERVER),
       {ok, node()};
     _Pid ->
       {error, already_started}
-  end.
-
-wait_for_server() ->
-  case whereis(?SERVER) of
-    undefined ->
-      timer:sleep(50),
-      wait_for_server();
-    _ -> ok
   end.
 
 %%------------------------------------------------------------------------------
@@ -232,14 +223,17 @@ get_xref_ignores(Mod) ->
 
 start_test() ->
   ?assertEqual(undefined, whereis(?SERVER)),
+  {error, not_started} = stop(),
   start(),
+  {error, already_started} = start(),
   ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
   State = get_state(),
   xref:stop(?SERVER),
   ?assertEqual(undefined, whereis(?SERVER)),
   start(State),
+  {error, already_started} = start(State),
   State = get_state(),
-  xref:stop(?SERVER).
+  stop().
 
 init_test() ->
   ?assertEqual(undefined, whereis(?SERVER)),
@@ -250,7 +244,6 @@ init_test() ->
                            {recurse,  false}]),
                lists:sort(xref:get_default(?SERVER))),
   {ok, Cwd} = file:get_cwd(),
-  %% ?debugFmt("library ~p info ~p", [Cwd, xref:info(?SERVER, applications)]),
   init([], []),
   ?assertEqual({ok, []}, xref:get_library_path(?SERVER)),
   xref:stop(?SERVER),
@@ -263,10 +256,54 @@ init_test() ->
   AppPath =
     filename:join((filename:dirname(filename:dirname(ModPath))), "ebin"),
   DudPath = filename:dirname(AppPath),
-  ?debugFmt("applications ~p", [xref:info(?SERVER, applications)]),
   init([], [DudPath]),
-  ?assertMatch([], xref:info(?SERVER, applications)).
+  ?assertMatch([], xref:info(?SERVER, applications)),
+  stop().
 
+who_calls_test() ->
+  start(),
+  xref:add_module(?SERVER, test_module),
+  xref:add_module(?SERVER, test_module2),
+  ?assertEqual([], who_calls(test_module2, bar, 1)),
+  ?assertEqual(
+    [{test_module, bar, 1}, {test_module, baz, 1}, {test_module2, bar, 1}],
+     who_calls(test_module, bar, 1)),
+  stop().
+
+check_undefined_functions_calls_test() ->
+  start(),
+  {ok, Cwd} = file:get_cwd(),
+  xref:add_module(?SERVER, test_module),
+  xref:add_module(?SERVER, test_module2),
+  File1 = filename:join(Cwd, "test_module.erl"),
+  File2 = filename:join(Cwd, "test_module2.erl"),
+  ?assertEqual([],
+               do_check_module(test_module, File1, undefined_function_calls)),
+  ?assertMatch([{error, File2, 33, Str}] when is_list(Str),
+               do_check_module(test_module2, File2, undefined_function_calls)),
+  stop().
+
+check_unused_exports_test() ->
+  start(),
+  {ok, Cwd} = file:get_cwd(),
+  xref:add_module(?SERVER, test_module),
+  xref:add_module(?SERVER, test_module2),
+  File1 = filename:join(Cwd, "test_module.erl"),
+  File2 = filename:join(Cwd, "test_module2.erl"),
+  ?assertEqual([],
+               do_check_module(test_module, File1, unused_exports)),
+  ?assertMatch([{error, File2, 31, Str}] when is_list(Str),
+               do_check_module(test_module2, File2, unused_exports)),
+  stop().
+
+check_module_test() ->
+  start(),
+  xref:add_module(?SERVER, test_module),
+  xref:add_module(?SERVER, test_module2),
+  Checks = [unused_exports, undefined_function_calls],
+  ?assertEqual([],     check_module(test_module, Checks)),
+  ?assertMatch([_, _], check_module(test_module2, Checks)),
+  stop().
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
