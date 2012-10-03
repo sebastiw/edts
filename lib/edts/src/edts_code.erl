@@ -123,10 +123,11 @@ compile_and_load(Module, Options) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Options);
 compile_and_load(File, Options0) ->
-  AbsPath = filename:absname(File),
-  Include = [filename:dirname(File)|get_include_dirs()],
-  Out     = get_compile_outdir(File),
-  Options = Options0 ++ [{outdir, Out}, return, debug_info, {i, Include}],
+  AbsPath  = filename:absname(File),
+  Includes = [filename:dirname(File)|get_include_dirs()],
+  Out      = get_compile_outdir(File),
+  Options  =
+    [{i, I} || I <- Includes] ++ [{outdir, Out}, return, debug_info |Options0],
   case compile:file(AbsPath, Options) of
     {ok, Mod, Warnings} ->
       code:purge(Mod),
