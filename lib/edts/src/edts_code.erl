@@ -239,12 +239,23 @@ modules_at_path(Path) ->
 -spec start() -> {ok , node()} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  case file:read_file(xref_file()) of
-    {ok, BinState} -> edts_xref:start(binary_to_term(BinState));
-    {error, _}     -> edts_xref:start()
-  end,
-  spawn(fun save_xref_state/0),
-  {node(), ok}.
+  File = xref_file(),
+  try
+    case file:read_file(File) of
+      {ok, BinState} ->
+        edts_xref:start(binary_to_term(BinState));
+      {error, enoent}     -> edts_xref:start();
+      {error, _} = Error  ->
+        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error])
+    end,
+    spawn(fun save_xref_state/0),
+    {node(), ok}
+  catch
+    C:E ->
+      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p",
+                             [File, C, E]),
+      edts_xref:start()
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
