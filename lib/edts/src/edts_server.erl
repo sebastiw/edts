@@ -45,6 +45,7 @@
         , terminate/2]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -298,9 +299,42 @@ node_store(Node, State) ->
   Nodes = lists:keystore(Node#node.name, #node.name, State#state.nodes, Node),
   State#state{nodes = Nodes}.
 
+%%%_* Unit tests ===============================================================
+
+node_store_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(#state{nodes = [N]}, node_store(N, #state{})),
+  ?assertEqual(#state{nodes = [N]}, node_store(N, #state{nodes = [N]})),
+  ?assertEqual(#state{nodes = [N2, N]}, node_store(N, #state{nodes = [N2]})).
+
+node_delete_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(#state{}, node_delete(foo, #state{})),
+  ?assertEqual(#state{}, node_delete(foo, #state{nodes = [N]})),
+  ?assertEqual(#state{nodes = [N2]}, node_delete(foo, #state{nodes = [N2]})).
+
+node_find_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(false, node_find(foo, #state{})),
+  ?assertEqual(N, node_find(foo, #state{nodes = [N]})),
+  ?assertEqual(false, node_find(foo, #state{nodes = [N2]})).
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+
+
+
+
+
+
+
+
+
+
