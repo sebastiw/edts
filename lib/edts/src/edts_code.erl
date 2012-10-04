@@ -278,23 +278,37 @@ modules_at_path(Path) ->
 run_eunit_tests(Module) ->
   {ok, format_tests(euw:run_tests(Module), Module)}.
 
-format_tests({_Summary, Tests}, Module) ->
+format_tests({ok, {_Summary, Tests}}, Module) ->
   FunPos = get_function_positions(Module),
-  [format_test(Test, FunPos) || Test <- Tests].
+  lists:flatten([format_test(Test, FunPos) || Test <- Tests]);
+format_tests({error, Reason}, Module) ->
+  error_logger:error_msg("Error in eunit test result in ~p: ~p",
+                         [Module, Reason]),
+  [].
 
-format_test({{{Mod, Fun, _Arity}, _Line}, ok}, FunPos) ->
-  File = atom_to_list(Mod) ++ ".erl",
-  Line = dict:fetch(Fun, FunPos),
-  {'passed test', File, Line, ""};
-format_test({{{Mod, Fun, _Arity}, _Line}, Info}, FunPos) ->
-  Reason   = proplists:get_value(reason,   Info),
-  Expected = proplists:get_value(expected, Info),
-  Value    = proplists:get_value(value,    Info),
-  File     = atom_to_list(Mod) ++ ".erl",
-  Line     = dict:fetch(Fun, FunPos),
-  ErrorStr = lists:flatten(io_lib:format("(~p) value: ~p expected: ~p",
-                                         [Reason, Value, Expected])),
-  {'failed test', File, Line, ErrorStr}.
+format_test({{Module, Function, _Arity}, []}, FunPos) ->
+  Line = dict:fetch(Function, FunPos),
+  {'passed test', filename(Module), Line, ""};
+format_test({{Module, Function, _Arity}, Fails}, FunPos) ->
+  Line = dict:fetch(Function, FunPos),
+  Formatted = [format_fail(Fail) || Fail <- Fails],
+  [{'failed test', filename(Module), Line, "testcase failed"} | Formatted].
+
+format_fail([{reason, _Reason}]) -> [];
+format_fail(Fail) ->
+  Reason = proplists:get_value(reason, Fail),
+  Module = proplists:get_value(module, Fail),
+  Line   = proplists:get_value(line,   Fail),
+  {'failed test', filename(Module), Line, format_reason(Reason, Fail)}.
+
+filename(Module) ->
+  atom_to_list(Module) ++ ".erl".
+
+format_reason(Reason, Fail) ->
+  Expected = proplists:get_value(expected, Fail),
+  Value    = proplists:get_value(value,    Fail),
+  lists:flatten(io_lib:format("(~p) value: ~p expected: ~p",
+                              [Reason, Value, Expected])).
 
 get_function_positions(Module) ->
   ModuleInfo = edts_code:get_module_info(Module, detailed),
