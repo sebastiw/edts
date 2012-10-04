@@ -41,6 +41,7 @@
 -export([from_json/2]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 -include_lib("webmachine/include/webmachine.hrl").
 
 %%%_* Defines ==================================================================
@@ -79,7 +80,56 @@ from_json(ReqData, Ctx) ->
 
 %%%_* Internal functions =======================================================
 
-%%%_* Emacs ============================================================
+%%%_* Unit tests ===============================================================
+
+init_test() ->
+  ?assertEqual({ok, orddict:new()}, init(foo)).
+
+allowed_methods_test() ->
+  ?assertEqual({['POST'], foo, bar}, allowed_methods(foo, bar)).
+
+allow_missing_post_test() ->
+  ?assertEqual({true, foo, bar}, allow_missing_post(foo, bar)).
+
+content_types_accepted_test() ->
+  ?assertEqual({[ {"application/json", from_json}], foo, bar},
+              content_types_accepted(foo, bar)).
+
+create_path_test() ->
+  Dict = orddict:from_list([{nodename, true}]),
+  ?assertEqual({"true", req_data, Dict}, create_path(req_data, Dict)).
+
+malformed_request_test() ->
+  meck:unload(),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, validate,
+              fun(req_data, [], [nodename]) ->
+                  {false, req_data, []};
+                 (ReqData, Ctx, _) ->
+                  {true, ReqData, Ctx}
+              end),
+  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  meck:unload().
+
+post_is_create_test() ->
+  ?assertEqual({true, foo, bar}, post_is_create(foo, bar)).
+
+from_json_test() ->
+  meck:unload(),
+  meck:new(edts),
+  meck:expect(edts, init_node, fun(true) -> ok;
+                                  (_)    -> error
+                               end),
+  Dict1 = orddict:from_list([{nodename, true}]),
+  ?assertEqual({true, req_data,  Dict1},
+               from_json(req_data, Dict1)),
+  Dict2 = orddict:from_list([{nodename, false}]),
+  ?assertError({badmatch, error}, from_json(req_data, Dict2)),
+  meck:unload().
+
+
+%%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
