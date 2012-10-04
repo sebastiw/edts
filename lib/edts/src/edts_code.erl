@@ -329,15 +329,22 @@ get_compile_outdir(File) ->
 
 get_compile_outdir(File, Opts) ->
   case proplists:get_value(outdir, Opts) of
-    undefined ->
-      DirName = filename:dirname(File),
-      EbinDir = filename:join([DirName, "..", "ebin"]),
-      case filelib:is_file(EbinDir) of
-        true  -> EbinDir;
-        false -> DirName
-      end;
-    OutDir -> OutDir
+    undefined -> filename_to_outdir(File);
+    OutDir    ->
+      case filelib:is_dir(OutDir) of
+        true  -> OutDir;
+        false -> filename_to_outdir(File)
+      end
   end.
+
+filename_to_outdir(File) ->
+  DirName = filename:dirname(File),
+  EbinDir = filename:join([DirName, "..", "ebin"]),
+  case filelib:is_dir(EbinDir) of
+    true  -> EbinDir;
+    false -> DirName
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -674,17 +681,20 @@ modules_test() ->
     [?_assertMatch({ok, [_|_]}, modules())]}].
 
 get_compile_outdir_test_() ->
+  Good = "good/../ebin",
+  F    = fun get_compile_outdir/2,
   [{ setup
    , fun () ->
          meck:new(filelib, [passthrough, unstick]),
-         meck:expect(filelib, is_file, fun ("good/../ebin") -> true;
-                                           (_)              -> false
+         meck:expect(filelib, is_dir, fun ("good/../ebin") -> true;
+                                          (_)             -> false
                                        end)
      end
    , fun (_) -> meck:unload() end
-   , [ ?_assertEqual("foo", get_compile_outdir("mod.erl", [{outdir, "foo"}]))
-     , ?_assertEqual("foo", get_compile_outdir("foo/mod.erl", []))
-     , ?_assertEqual("good/../ebin", get_compile_outdir("good/mod.erl", []))
+   , [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}]))
+     , ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}]))
+     , ?_assertEqual("foo", F("foo/mod.erl" , []))
+     , ?_assertEqual(Good , F("good/mod.erl", []))
      ]
    }].
 
