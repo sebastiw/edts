@@ -186,17 +186,6 @@ Should be called with point directly before the opening ( or /."
     arity))
 
 (when (member 'ert features)
-  (ert-deftest close-bracket-p-test ()
-    (should (close-bracket-p ?\)))
-    (should (close-bracket-p ?\]))
-    (should (close-bracket-p ?\}))
-    (should-not (close-bracket-p ?s)))
-
-  (ert-deftest open-bracket-p-test ()
-    (should (open-bracket-p ?\())
-    (should (open-bracket-p ?\[))
-    (should (open-bracket-p ?\{))
-    (should-not (close-bracket-p ?s)))
 
   (ert-deftest ferl-paren-arity-test ()
     (should (eq 0 (ferl-paren-arity "")))

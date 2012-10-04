@@ -51,6 +51,18 @@
     (setq file-name (file-name-sans-extension file-name)))
   file-name)
 
+(defun edts-man-module-function-entries (module)
+  "Return a list of all functions documented in the man-page of MODULE."
+  (let ((funs nil)
+        (re   (concat "^[[:space:]]*"(edts-any-function-regexp))))
+    (with-temp-buffer
+      (insert-file-contents (edts-man-locate-file edts-man-root module 3))
+      (goto-char 0)
+      (while (re-search-forward re nil t)
+        (push (format "%s/%s" (match-string 1)
+                      (ferl-paren-arity (match-string 2))) funs)))
+    (reverse funs)))
+
 (defun edts-man-extract-function-entry (module function arity)
   "Extract and display the man-page entry for MODULE:FUNCTION in
 `edts-man-root'."
@@ -105,28 +117,8 @@ man-page."
   (concat
    (file-name-as-directory edts-man-root) "man" (int-to-string man-page)))
 
-(defun edts-man-expand-root ()
-  "Expands `edts-man-root' to a full set of man-page doc-directories.x"
-  (mapcar
-   #'(lambda (dir) (concat (file-name-as-directory dir) "doc/html"))
-  (file-expand-wildcards (concat (file-name-as-directory edts-man-root) "*"))))
 
 (provide 'edts-man)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
-
-(when (member 'ert features)
-
-  (ert-deftest edts-man-expand-root-test ()
-    (flet ((file-expand-wildcards (path)
-                                  (if (string= path
-                                               "/usr/lib/erlang/lib/*")
-                                      '("/usr/lib/erlang/lib/foo"
-                                        "/usr/lib/erlang/lib/bar")
-                                    (error "Bad path"))))
-      (should
-       (equal '("/usr/lib/erlang/lib/foo/doc/html"
-                "/usr/lib/erlang/lib/bar/doc/html")
-              (edts-man-expand-root))))))
-

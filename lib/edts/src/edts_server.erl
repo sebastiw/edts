@@ -165,7 +165,7 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
         {reply, ok, State}
     end;
 handle_call({init_node, Name}, _From, State) ->
-  edts_log:debug("Registering ~p already initialized.", [Name]),
+  edts_log:info("Registering ~p.", [Name]),
   case node_find(Name, State) of
     #node{} ->
       edts_log:debug("~p already initialized.", [Name]),

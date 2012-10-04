@@ -80,7 +80,8 @@ PWD and running COMMAND."
   (let* ((cmd  (car command))
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
-    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)))
+    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
+    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)))
 
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
@@ -159,10 +160,11 @@ inside the edts-project PROJECT."
   (edts-project-file-under-path-p (edts-project-root project) file-name))
 
 (defun edts-project-file-under-path-p (path file-name)
-  "Returns non-nil if the fully qualified file-name is located
+  "Returns non-nil if the fully qualified FILE-NAME is located
 underneath PATH."
-  (string-prefix-p (edts-project-normalize-path path)
-                   (file-truename (expand-file-name file-name))))
+  (when (file-name-absolute-p file-name)
+    (string-prefix-p (edts-project-normalize-path path)
+                     (file-truename (expand-file-name file-name)))))
 
 (defun edts-project-normalize-path (path-str)
   "Badly named function. Only replaces duplicate /'s in PATH-STR and
@@ -178,7 +180,7 @@ make sure it ends with a '/'."
 
   (defvar edts-project-test-project-1
     '((name          . "dev")
-      (root          . "./foo")
+      (root          . "/foo")
       (node-sname    . "dev-node")
       (lib-dirs . ("lib" "test"))))
 
@@ -188,7 +190,7 @@ make sure it ends with a '/'."
 
   (defvar edts-project-test-project-3
     '((name          . "dev")
-      (root          . "./bar")
+      (root          . "/bar")
       (node-sname    . "dev-node")
       (lib-dirs . ("lib" "test"))))
 
@@ -274,11 +276,11 @@ make sure it ends with a '/'."
 
   (ert-deftest edts-project-buffer-node-name-test ()
     (let ((edts-projects (list edts-project-test-project-1)))
-      (flet ((buffer-file-name (buffer) "./foo/bar.el"))
+      (flet ((buffer-file-name (buffer) "/foo/bar.el"))
         (should
          (string= "dev-node"
                   (edts-project-buffer-node-name (current-buffer)))))
-      (flet ((buffer-file-name (buffer) "./bar/baz.el"))
+      (flet ((buffer-file-name (buffer) "/bar/baz.el"))
         (should
          (eq nil
              (edts-project-buffer-node-name (current-buffer)))))))
@@ -298,11 +300,11 @@ make sure it ends with a '/'."
     (let ((edts-projects (list edts-project-test-project-1)))
       (should
        (eq edts-project-test-project-1
-           (edts-project-file-project "./foo/bar.el"))))
+           (edts-project-file-project "/foo/bar.el"))))
     (let ((edts-projects (list edts-project-test-project-3)))
-      (should-not (edts-project-file-project "./foo/baz.el"))))
+      (should-not (edts-project-file-project "/foo/baz.el"))))
 
-  (ert-deftest edts-project-file-in-project-p ()
+  (ert-deftest edts-project-file-in-project-p-test ()
     (should
      (not (null (edts-project-file-in-project-p
                  edts-project-test-project-1
@@ -323,9 +325,11 @@ make sure it ends with a '/'."
      (not (edts-project-file-under-path-p "/bar" "/foo/bar/baz.el"))))
 
   (ert-deftest edts-project-normalize-path-test ()
-    (flet ((expand-file-name (file-name) (concat "./" file-name)))
-      (should (string= "./foo/bar/" (edts-project-normalize-path "foo//bar")))
-      (should (string= "./foo/bar/" (edts-project-normalize-path "foo/bar/"))))))
+    (let ((default-directory "/test/"))
+      (should (string= "/test/foo/bar/"
+                       (edts-project-normalize-path "foo//bar")))
+      (should (string= "/test/foo/bar/"
+                       (edts-project-normalize-path "foo/bar/"))))))
 
 
 (provide 'edts-project)

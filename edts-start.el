@@ -83,7 +83,7 @@
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
-    (define-key map "\C-c\C-d\C-e" 'ahs-edit-mode)
+    (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)
@@ -127,6 +127,13 @@
   (if (boundp 'window-persistent-parameters)
       (add-to-list 'window-persistent-parameters '(edts-find-history-ring . t))
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
+
+  ;; Ensure matching parentheses are visible above edts-faces.
+  (make-local-variable 'show-paren-priority)
+  (setq show-paren-priority
+        (max show-paren-priority
+             (+ 1 (apply #'max
+                       (mapcar #'cdr edts-code-issue-overlay-priorities)))))
 
   ;; Auto-completion
   (edts-complete-setup))

@@ -41,8 +41,7 @@ node."
   (interactive)
   (let* ((module
           (edts-query "Module: " (edts-man-modules)))
-         (fun-strings (mapcar #'edts-function-to-string
-                              (edts-get-module-exports module)))
+         (fun-strings (edts-man-module-function-entries module))
          (fun (edts-query "Function: " (cons "-Top of Chapter-" fun-strings))))
     (if (string= fun "-Top of Chapter-")
         (edts-man-find-module module)
@@ -63,7 +62,7 @@ node."
 
 (defun edts-any-function-regexp ()
   "Construct a regexp matching any function."
-  (format "%s[[:space:]\n]*(.*)[[:space:]\n]*->" erlang-atom-regexp))
+  (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]\n]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments."
@@ -72,9 +71,14 @@ node."
       (concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*")))))
 
 (defun edts-ahs-edit-current-function ()
-  "Activate ahs-edit-mode with erlang-current-function range-plugin"
+  "Activate ahs-edit-mode with erlang-current-function range-plugin."
   (interactive)
   (ahs-onekey-edit-function 'erlang-current-function nil))
+
+(defun edts-ahs-edit-buffer ()
+  "Activate ahs-edit-mode with ahs-range-whole-buffer range-plugin."
+  (interactive)
+  (ahs-onekey-edit-function 'whole-buffer nil))
 
 
 (defun edts-ensure-server-started ()
@@ -89,7 +93,8 @@ node."
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh" nil edts-erl-command)))
+    (make-comint "edts" "./start.sh" nil edts-erl-command)
+    (set-process-query-on-exit-flag (get-buffer-process "*edts*") nil)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -313,14 +318,5 @@ associated with that buffer."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
-
-(when (member 'ert features)
-
-  (ert-deftest edts-erl-root-test ()
-    (flet ((executable-find (exec) "/usr/bin/erl")
-           (file-truename (file)   "/usr/lib/erlang/bin/erl"))
-      (should
-       (equal "/usr/lib/erlang/" edts-erl-root)))))
-
 
 (provide 'edts)
