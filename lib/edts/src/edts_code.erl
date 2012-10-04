@@ -687,7 +687,7 @@ get_compile_outdir_test_() ->
    , fun () ->
          meck:new(filelib, [passthrough, unstick]),
          meck:expect(filelib, is_dir, fun ("good/../ebin") -> true;
-                                          (_)             -> false
+                                          (_)              -> false
                                        end)
      end
    , fun (_) -> meck:unload() end
