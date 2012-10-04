@@ -130,9 +130,14 @@ make_sname(Name, Hostname) ->
 load_modules(Node, Mods) ->
   lists:foreach(fun(Mod) -> load_module(Node, Mod) end, Mods).
 
-load_module(Node, Mod0) ->
-  {Mod, Bin, File} = code:get_object_code(Mod0),
-  {module, Mod0}   = call(Node, code, load_binary, [Mod, File, Bin]).
+load_module(Node, Mod) ->
+  %% Compile code on the remote in case it runs an OTP release that is
+  %% incompatible with the binary format of the EDTS node's OTP release.
+  %% Kind of ugly to have to use two rpc's but I can't find a better way to
+  %% do this.
+  {File, _Opts}  = filename:find_src(Mod),
+  {ok, Mod, Bin} = call(Node, compile, file, [File, [debug_info, binary]]),
+  {module, Mod}  = call(Node, code, load_binary, [Mod, File, Bin]).
 
 %%------------------------------------------------------------------------------
 %% @doc

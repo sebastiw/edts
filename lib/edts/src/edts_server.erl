@@ -175,7 +175,7 @@ handle_call({init_node, Name}, _From, State) ->
       case do_init_node(Name) of
         {ok, Keys} ->
           {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
-        {error, _}  = Err->
+        {error, _} = Err ->
           {reply, Err, State}
       end
   end;
@@ -284,9 +284,8 @@ do_init_node(Node) ->
     {ok, edts_dist:start_services(Node, [edts_code])}
   catch
     C:E ->
-      edts_log:error("~p initialization crashed with error ~p:~p",
-                     [Node, C, E]),
-      {error, E}
+      edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
+      E
   end.
 
 node_delete(Name, State) ->
