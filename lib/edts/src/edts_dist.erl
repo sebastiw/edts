@@ -28,7 +28,8 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ call/3
+-export([ add_paths/2
+        , call/3
         , call/4
         , connect/1
         , connect_all/0
@@ -48,6 +49,15 @@
 
 %%%_* API ======================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Adds LibDirs to the code-path on Node
+%% @end
+-spec add_paths(Node::node(), LibDirs::[file:filename()]) ->
+              ok | {badrpc, term()}.
+%%------------------------------------------------------------------------------
+add_paths(Node, LibDirs) ->
+  ok = call(Node, code, add_paths, [LibDirs]).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -123,9 +133,7 @@ make_sname(Name, Hostname) ->
 %% @doc
 %% Loads Mods on Node.
 %% @end
--spec load_modules(node(), [module()]) ->
-                      [{module, module()} | {error, Reason::term()}] |
-                      {badrpc, Reason::term()}.
+-spec load_modules(Node::node(), Mods::[module()]) -> ok.
 %%------------------------------------------------------------------------------
 load_modules(Node, Mods) ->
   lists:foreach(fun(Mod) -> load_module(Node, Mod) end, Mods).

@@ -32,7 +32,7 @@
         , get_function_info/4
         , get_module_info/3
         , get_module_xref_analysis/3
-        , init_node/1
+        , init_node/3
         , is_node/1
         , node_available_p/1
         , modules/1
@@ -162,10 +162,10 @@ get_module_xref_analysis(Node, Module, Checks) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(Node::node()) -> ok.
+-spec init_node(Node::node(), filename:filename(), [string()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node) ->
-  edts_server:init_node(Node).
+init_node(Node, ProjectRoot, LibDirs) ->
+  edts_server:init_node(Node, ProjectRoot, LibDirs).
 
 %%------------------------------------------------------------------------------
 %% @doc

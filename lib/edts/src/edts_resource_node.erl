@@ -75,7 +75,9 @@ post_is_create(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  ok = edts:init_node(orddict:fetch(nodename, Ctx)),
+  ok = edts:init_node(orddict:fetch(nodename, Ctx),
+                      orddict:fetch(project_root, Ctx),
+                      orddict:fetch(lib_dirs, Ctx)),
   {true, ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
@@ -118,13 +120,15 @@ post_is_create_test() ->
 from_json_test() ->
   meck:unload(),
   meck:new(edts),
-  meck:expect(edts, init_node, fun(true) -> ok;
-                                  (_)    -> error
+  meck:expect(edts, init_node, fun(true, r, []) -> ok;
+                                  (_, _, _)    -> error
                                end),
-  Dict1 = orddict:from_list([{nodename, true}]),
+  Dict1 =
+    orddict:from_list([{nodename, true}, {project_root, r}, {lib_dirs, []}]),
   ?assertEqual({true, req_data,  Dict1},
                from_json(req_data, Dict1)),
-  Dict2 = orddict:from_list([{nodename, false}]),
+  Dict2 =
+    orddict:from_list([{nodename, false}, {project_root, r}, {lib_dirs, []}]),
   ?assertError({badmatch, error}, from_json(req_data, Dict2)),
   meck:unload().
 

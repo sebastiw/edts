@@ -179,7 +179,8 @@ info_level_validate(ReqData, _Ctx) ->
 %% Validate a list of paths to lib directories underneath a project root already
 %% specified in Ctx.
 %% @end
--spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) ->
+                           {ok, file:filename()} | error.
 %%------------------------------------------------------------------------------
 lib_dirs_validate(ReqData, Ctx) ->
   Root       = orddict:fetch(project_root, Ctx),
@@ -241,11 +242,12 @@ nodename_exists_p(_ReqData, Ctx) ->
 %% @doc
 %% Validate path to a project root directory
 %% @end
--spec project_root_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec project_root_validate(wrq:req_data(), orddict:orddict()) ->
+                               {ok, file:filename()} | error.
 %%------------------------------------------------------------------------------
 project_root_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("project_root", ReqData) of
-    undefined -> {ok, file:get_cwd()};
+    undefined -> {ok, ""};
     Root      ->
       case filelib:is_dir(Root) of
         true  -> {ok, Root};

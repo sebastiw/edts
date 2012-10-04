@@ -30,7 +30,7 @@
 
 %% API
 -export([ ensure_node_initialized/1
-        , init_node/1
+        , init_node/3
         , is_node/1
         , node_available_p/1
         , nodes/0
@@ -87,10 +87,10 @@ ensure_node_initialized(Node) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(node()) -> ok.
+-spec init_node(node(), file:filename(), [string()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node) ->
-  gen_server:call(?SERVER, {init_node, Node}, infinity).
+init_node(Node, ProjectRoot, LibDirs) ->
+  gen_server:call(?SERVER, {init_node, Node, ProjectRoot, LibDirs}, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -165,7 +165,7 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
       #node{} ->
         {reply, ok, State}
     end;
-handle_call({init_node, Name}, _From, State) ->
+handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
   edts_log:info("Registering ~p.", [Name]),
   case node_find(Name, State) of
     #node{} ->
@@ -173,7 +173,7 @@ handle_call({init_node, Name}, _From, State) ->
       {reply, ok, State};
     false   ->
       edts_log:info("~p Initializing.", [Name]),
-      case do_init_node(Name) of
+      case do_init_node(Name, ProjectRoot, LibDirs) of
         {ok, Keys} ->
           {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
         {error, _} = Err ->
@@ -274,10 +274,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% to promises that are to be fulfilled by the remote node. These keys can later
 %% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
 %% @end
--spec do_init_node(string()) -> [rpc:key()].
+-spec do_init_node(node(), file:filename(), [string()]) -> [rpc:key()].
 %%------------------------------------------------------------------------------
-do_init_node(Node) ->
+do_init_node(Node, ProjectRoot, LibDirs) ->
   try
+    ok = edts_dist:add_paths(Node, bin_paths(ProjectRoot, LibDirs)),
     edts_dist:load_modules(Node,   [edts_code, edts_xref]),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
@@ -288,6 +289,16 @@ do_init_node(Node) ->
       edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
       E
   end.
+
+bin_paths("", _LibDirs) -> [];
+bin_paths(ProjectRoot, LibDirs) ->
+  [filename:join(ProjectRoot, "ebin"),
+   filename:join(ProjectRoot, "test")] ++
+    [libdir_bin_paths(filename:join(ProjectRoot, LibDir)) || LibDir <- LibDirs].
+
+libdir_bin_paths(Dir) ->
+  Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
+  lists:map(Fun, filelib:wildcard(filename:join(Dir, "*"))).
 
 node_delete(Name, State) ->
   State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.
@@ -328,13 +339,4 @@ node_find_test() ->
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-
-
-
-
-
-
-
-
-
 
