@@ -68,7 +68,7 @@ create_path(ReqData, Ctx) ->
   {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, project_root, lib_dirs]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -103,7 +103,7 @@ malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename]) ->
+              fun(req_data, [], [nodename, project_root, lib_dirs]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
