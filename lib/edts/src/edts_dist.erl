@@ -161,7 +161,7 @@ set_app_env(Node, App, Key, Value) ->
 %% @doc
 %% Starts Servs on Node by calling Serv:start() for each Serv.
 %% @end
--spec start_services(node(), [module()]) -> Promise::rpc:key().
+-spec start_services(node(), [module()]) -> [Promise::rpc:key()].
 %%------------------------------------------------------------------------------
 start_services(Node, Servs) ->
   lists:map(fun(Service) -> start_service(Node, Service) end, Servs).
