@@ -45,8 +45,12 @@ current-buffer."
 current-buffer"
   (save-excursion
     (goto-char pos)
-    (move-end-of-line nil)
-    (re-search-backward "^\\|[^[:space:]]")))
+    (beginning-of-line)
+    (let ((constraint (point)))
+      (move-end-of-line nil)
+      (if (re-search-backward "[^[:space:]]" constraint 'move-point)
+          (+ (point) 1)
+          (point)))))
 
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position
