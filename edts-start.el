@@ -127,11 +127,13 @@
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
 
   ;; Ensure matching parentheses are visible above edts-faces.
-  (make-local-variable 'show-paren-priority)
-  (setq show-paren-priority
-        (max show-paren-priority
-             (+ 1 (apply #'max
-                       (mapcar #'cdr edts-code-issue-overlay-priorities)))))
+  (if (boundp 'show-paren-priority)
+      (make-local-variable 'show-paren-priority)
+    (setq show-paren-priority
+          (max show-paren-priority
+               (+ 1 (apply #'max
+                           (mapcar
+                            #'cdr edts-code-issue-overlay-priorities))))))
 
   ;; Auto-completion
   (edts-complete-setup))
@@ -141,6 +143,10 @@
   (ad-deactivate-regexp "edts-.*")
   (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
   (auto-highlight-symbol-mode -1)
+
+  ;; Remove custom value for show-paren-priority
+  (if (boundp 'show-paren-priority)
+      (kill-local-variable 'show-paren-priority))
 
   ;; Indentation
   (remove-hook 'align-load-hook 'edts-align-hook))
