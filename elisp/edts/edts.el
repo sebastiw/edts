@@ -138,29 +138,34 @@ localhost."
 (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
-(defun edts-register-node-when-ready (node-name &optional retries)
+(defun edts-register-node-when-ready (node-name root libs &optional retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
   (let ((retries (if retries retries 20)))
   (run-with-timer
    0.5
    nil
-   #'edts-register-node-when-ready-function node-name retries)))
+   #'edts-register-node-when-ready-function node-name root libs retries)))
 
-(defun edts-register-node-when-ready-function (node-name retries)
+(defun edts-register-node-when-ready-function (node-name root libs retries)
   (if (edts-node-started-p node-name)
-      (edts-register-node node-name)
+      (edts-register-node node-name root libs)
       (if (> retries 0)
-          (edts-register-node-when-ready node-name (- retries 1))
-          (edts-log-error "Error: edts could not register node '%s'" node-name))))
+          (edts-register-node-when-ready node-name root libs (- retries 1))
+          (null (edts-log-error
+                 "Error: edts could not register node '%s'" node-name)))))
 
-(defun edts-register-node (node-name)
+(defun edts-register-node (node-name root libs)
   "Register NODE-NAME with the edts node."
   (interactive "MNode-name: ")
-  (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
+  (let* ((resource (list "nodes" node-name))
+         (args     (list (cons "project_root" root)
+                         (cons "lib_dirs"     libs)))
+         (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error
+               "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
