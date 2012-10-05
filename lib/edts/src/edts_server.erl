@@ -278,7 +278,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 do_init_node(Node, ProjectRoot, LibDirs) ->
   try
-    ok = edts_dist:add_paths(Node, bin_paths(ProjectRoot, LibDirs)),
+    ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     edts_dist:load_modules(Node,   [edts_code, edts_xref]),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
@@ -290,15 +290,17 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
       E
   end.
 
-bin_paths("", _LibDirs) -> [];
-bin_paths(ProjectRoot, LibDirs) ->
-  [filename:join(ProjectRoot, "ebin"),
-   filename:join(ProjectRoot, "test")] ++
-    [libdir_bin_paths(filename:join(ProjectRoot, LibDir)) || LibDir <- LibDirs].
+expand_code_paths("", _LibDirs) -> [];
+expand_code_paths(ProjectRoot, LibDirs) ->
+  RootPaths = [filename:join(ProjectRoot, "ebin"),
+               filename:join(ProjectRoot, "test")],
+  LibPaths =
+    lists:flatmap(fun(Dir) -> expand_code_path(ProjectRoot, Dir) end, LibDirs),
+  RootPaths ++ LibPaths.
 
-libdir_bin_paths(Dir) ->
+expand_code_path(Root, Dir) ->
   Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
-  lists:map(Fun, filelib:wildcard(filename:join(Dir, "*"))).
+  lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
 
 node_delete(Name, State) ->
   State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.
