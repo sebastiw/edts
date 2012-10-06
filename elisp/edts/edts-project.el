@@ -46,30 +46,34 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-ensure-node-started (project)
   "Start BUFFER's project's node if it is not already started."
-  (let ((node-name (edts-project-node-name project)))
-    (if (edts-node-started-p node-name)
-        (edts-register-node-when-ready node-name)
-        (edts-project-start-node project))))
+  (if (edts-node-started-p (edts-project-node-name project))
+      (edts-project-register-node-when-ready project)
+      (edts-project-start-node project)))
 
 (defun edts-project-start-node (project)
   "Starts a new erlang node for PROJECT."
-  (let* ((project-name (edts-project-name project))
-         (project-root (expand-file-name (edts-project-root project)))
-         (lib-dirs     (edts-project-lib-dirs project))
+  (let* ((project-root (expand-file-name (edts-project-root project)))
          (node-name    (edts-project-node-name project))
-         (buffer-name  (concat "*" project-name "*"))
-         (command      (edts-project-build-project-command project))
-         (pwd          (expand-file-name (edts-project-root project))))
+         (buffer-name  (concat "*" (edts-project-name project) "*"))
+         (command      (edts-project-build-project-command project)))
     (edts-ensure-node-not-started node-name)
-    (edts-project-make-comint-buffer buffer-name pwd command)
-    (edts-register-node-when-ready node-name project-root lib-dirs)
+    (edts-project-make-comint-buffer buffer-name project-root command)
+    (edts-project-register-node-when-ready project)
     (get-buffer buffer-name)))
+
+(defun edts-project-register-node-when-ready (project)
+  "Asynchronously register PROJECT's node with EDTS as soon at his has
+started."
+  (let* ((node-name    (edts-project-node-name project))
+         (project-root (expand-file-name (edts-project-root project)))
+         (lib-dirs     (edts-project-lib-dirs project)))
+    (edts-register-node-when-ready node-name project-root lib-dirs)))
 
 (defun edts-project-build-project-command (project)
   "Build a command line for PROJECT"
   (let ((command (edts-project-start-command project)))
     (if command
-          (delete "" (split-string command)) ; delete "" for xemacs.
+        (delete "" (split-string command)) ; delete "" for xemacs.
         (let ((sname (edts-project-node-name project)))
           (list (executable-find "erl") "-sname" sname)))))
 
