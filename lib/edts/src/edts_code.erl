@@ -271,45 +271,86 @@ modules_at_path(Path) ->
                                          | {error, Reason::any()}.
 %%------------------------------------------------------------------------------
 run_eunit_tests(Module) ->
-  {ok, format_tests(euw:run_tests(Module), Module)}.
+  case euw:run_tests(Module) of
+    {ok, {_Summary, Tests}} ->
+      {ok, lists:flatten([format_test(Test) || Test <- Tests])};
+    {error, Reason} = Error ->
+      error_logger:error_msg("Error in eunit test result in ~p: ~p",
+                             [Module, Reason]),
+      Error
+  end.
 
-format_tests({ok, {_Summary, Tests}}, Module) ->
-  FunPos = get_function_positions(Module),
-  lists:flatten([format_test(Test, FunPos) || Test <- Tests]);
-format_tests({error, Reason}, Module) ->
-  error_logger:error_msg("Error in eunit test result in ~p: ~p",
-                         [Module, Reason]),
-  [].
+format_test({Mfa, []}) ->
+  {Source, Line} = get_source_and_line(Mfa),
+  {'passed test', Source, Line, ""};
+format_test({Mfa, Fails}) ->
+  Formatted      = [format_fail(Mfa, Fail) || Fail <- Fails],
+  {Source, Line} = get_source_and_line(Mfa),
+  [{'failed test', Source, Line, "testcase failed"} | Formatted].
 
-format_test({{Module, Function, _Arity}, []}, FunPos) ->
-  Line = dict:fetch(Function, FunPos),
-  {'passed test', filename(Module), Line, ""};
-format_test({{Module, Function, _Arity}, Fails}, FunPos) ->
-  Line = dict:fetch(Function, FunPos),
-  Formatted = [format_fail(Fail) || Fail <- Fails],
-  [{'failed test', filename(Module), Line, "testcase failed"} | Formatted].
+get_source_and_line({Module, Function, Arity}) ->
+  Info             = get_function_info(Module, Function, Arity),
+  {line,   Line}   = lists:keyfind(line,   1, Info),
+  {source, Source} = lists:keyfind(source, 1, Info),
+  {Source, Line}.
 
-format_fail([{reason, _Reason}]) -> [];
-format_fail(Fail) ->
-  Reason = proplists:get_value(reason, Fail),
-  Module = proplists:get_value(module, Fail),
-  Line   = proplists:get_value(line,   Fail),
-  {'failed test', filename(Module), Line, format_reason(Reason, Fail)}.
+format_fail(_Mfa, [{reason, _Reason}]) -> [];
+format_fail({M,_F,_A} = Mfa, Info)    ->
+  Module = orddict:fetch(module, Info),
+  Line   = orddict:fetch(line,   Info),
+  case Module =:= M of
+    false -> [];
+    true  ->
+      {Source, _} = get_source_and_line(Mfa),
+      {'failed test', Source, Line, format_reason(Info)}
+  end.
 
-filename(Module) ->
-  atom_to_list(Module) ++ ".erl".
-
-format_reason(Reason, Fail) ->
-  Expected = proplists:get_value(expected, Fail),
-  Value    = proplists:get_value(value,    Fail),
-  lists:flatten(io_lib:format("(~p) value: ~p expected: ~p",
-                              [Reason, Value, Expected])).
-
-get_function_positions(Module) ->
-  ModuleInfo = edts_code:get_module_info(Module, detailed),
-  Functions  = orddict:fetch(functions, ModuleInfo),
-  dict:from_list([{proplists:get_value(function, Info),
-                   proplists:get_value(line,     Info)} || Info <- Functions]).
+format_reason(Info) ->
+  Get = fun(Key) ->
+            case orddict:find(Key, Info) of
+              {ok, Value} -> Value;
+              error       -> undefined
+            end
+        end,
+  Reason = Get(reason),
+  {FormatStr, Args} =
+    case Reason of
+      assertEqual_failed ->
+        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
+      assertNotEqual_failed ->
+        {"expected: ~p, got value: ~p", [Get(expected), Get(expected)]};
+      assertException_failed ->
+        case Get(unexpected_exception) of
+          {ExceptionType, Exception, [Mfa|_]} ->
+            { "expected exception: ~p, got exception: ~p:~p in ~p"
+            , [Get(pattern), ExceptionType, Exception, Mfa]};
+          undefined ->
+            { "expected exception: ~p, got value: ~p"
+            , [Get(pattern), Get(unexpected_success)]}
+        end;
+      assertNotException_failed ->
+        {ExceptionType, Exception, [Mfa|_]} = Get(unexpected_exception),
+        { "expected exception: ~p, got exception: ~p:~p in ~p"
+        , [Get(pattern), ExceptionType, Exception, Mfa]};
+      assertMatch_failed ->
+        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
+      assertNotMatch_failed ->
+        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
+      assertion_failed ->
+        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
+      command_failed ->
+        { "expected status: ~p, got status: ~p"
+        , [Get(expected_status), Get(status)]};
+      assertCmd_failed ->
+        { "expected status: ~p, got status: ~p"
+        , [Get(expected_status), Get(status)]};
+      assertCmdOutput_failed ->
+        { "expected output: ~p, got output: ~p"
+        , [Get(expected_output), Get(output)]};
+      Reason ->
+        {"unknown failure", []}
+    end,
+  lists:flatten(io_lib:format("(~p) " ++ FormatStr, [Reason|Args])).
 
 %%------------------------------------------------------------------------------
 %% @doc
