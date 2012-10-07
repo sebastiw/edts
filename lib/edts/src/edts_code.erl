@@ -44,6 +44,15 @@
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 %%%_* Types ====================================================================
+-type issue_type() :: error
+                    | warning
+                    | 'failed test'
+                    | 'passed test'.
+
+-type issue() :: { Type        :: issue_type()
+                 , File        :: string()
+                 , Line        :: non_neg_integer()
+                 , Description :: string()}.
 
 %%%_* API ======================================================================
 
@@ -52,10 +61,7 @@
 %% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_module(Module::module(), Checks::xref:analysis()) ->
-                      {ok, [{ Type::error
-                            , File::string()
-                            , Line::non_neg_integer()
-                            , Description::string()}]}.
+                      {ok, [issue()]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
   case code:is_loaded(Module) of
@@ -97,11 +103,7 @@ do_check_module(Mod, File, unused_exports) ->
 %% Equivalent to compile_and_load(Module, []).
 %% @end
 -spec compile_and_load(Module::file:filename() | module()) ->
-                          {ok | error,
-                           [{error | warning,
-                             File::string(),
-                             Line::non_neg_integer(),
-                             Description::string()}]}.
+                          {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   compile_and_load(Module, []).
@@ -114,11 +116,7 @@ compile_and_load(Module) ->
 %% added to these.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
-                          {ok | error,
-                           [{error | warning,
-                             File::string(),
-                             Line::non_neg_integer(),
-                             Description::string()}]}.
+                          {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module, Options) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
@@ -267,13 +265,10 @@ modules_at_path(Path) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Run eunit tests on Module and return result as "errors".
+%% Run eunit tests on Module and return result as "issues".
 %% @end
--spec run_eunit_tests(Module::module()) ->
-                         {ok, [{ Type::error
-                               , File::string()
-                               , Line::non_neg_integer()
-                               , Description::string()}]}.
+-spec run_eunit_tests(Module::module()) -> {ok, [issue()]}
+                                         | {error, Reason::any()}.
 %%------------------------------------------------------------------------------
 run_eunit_tests(Module) ->
   {ok, format_tests(euw:run_tests(Module), Module)}.
