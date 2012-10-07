@@ -145,15 +145,16 @@ check_module(Module, Checks) ->
   lists:append(lists:map(Fun, Checks)).
 
 do_check_module(Mod0, File, undefined_function_calls) ->
+  io:format("Mod ~p, File ~p~n", [Mod0, File]),
   QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
   QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
   {ok, Res} = xref:q(?SERVER, QueryStr),
-  FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, [Line]}) when Mod =:= Mod0 ->
+  FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, Lines}) when Mod =:= Mod0 ->
                Desc = io_lib:format("Call to undefined function ~p:~p/~p",
                                     [CM, CF, CA]),
-               {error, File, Line, lists:flatten(Desc)}
+               [{error, File, Line, lists:flatten(Desc)} || Line <- Lines]
            end,
-  lists:map(FmtFun, Res);
+  lists:flatmap(FmtFun, Res);
 do_check_module(Mod, File, unused_exports) ->
   QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
   QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Mod])),
