@@ -37,6 +37,42 @@ node."
       (expand-file-name "~/.emacs.d"))
   "Where EDTS should save its data.")
 
+(defvar edts-find-macro-regexp
+  "\\(\\(\\('.*'\\)\\|\\([a-zA-Z0-9_-]*\\)\\)[\\s-]*\\((.*)\\)?\\)"
+  "Regexp describing a macro name")
+
+(defconst edts-find-macro-definition-regexp
+  (format "^-define\\s-*(%s,\\s-*\\(.*\\)).$" edts-find-macro-regexp)
+  "Regexp describing a macro definition")
+
+(defun edts-find-module-macros ()
+  (let ((includes (edts-get-includes)))
+    (apply #'append (find-macros) (mapcar #'edts-find-file-macros includes))))
+
+(defun edts-find-file-macros (file-name)
+  (with-temp-buffer
+    (insert-file-contents file-name)
+    (edts-find-macros)))
+
+(defun edts-find-macros ()
+  (save-excursion
+    (save-match-data
+      (goto-char (point-min))
+      (let ((macros nil))
+        (while (re-search-forward edts-find-macro-definition-regexp nil t)
+          (let ((arity 0)
+                (macro (match-string-no-properties 1))
+                (doc   (format "%s -> %s"
+                               (match-string-no-properties 1)
+                               (match-string-no-properties 6))))
+            (when (match-string-no-properties 6)
+              (goto-char (match-beginning 6))
+              (setq arity (ferl-arity-at-point)))
+            (setq macro (format "%s/%s" macro arity))
+            (push (cons macro doc) macros)
+          (goto-char (match-end 0))))
+        macros))))
+
 (defun edts-query (prompt choices)
   "Query the user for a choice"
   (ido-completing-read prompt choices))
