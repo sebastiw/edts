@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc Provides support for running eunit tests from EDTS
 %%% @end
-%%% @author Håkan Nilsson
+%%% @author Hakan Nilsson
 %%% @copyright
-%%% Copyright 2012 Håkan Nilsson
+%%% Copyright 2012 Hakan Nilsson
 %%%
 %%% This file is part of EDTS.
 %%%
