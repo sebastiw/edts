@@ -15,8 +15,7 @@
         '("auto-complete"
           "auto-highlight-symbol-mode"
           "edts"
-          "popup-el"
-          "euw"))
+          "popup-el"))
 
 (when (boundp 'erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
