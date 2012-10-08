@@ -145,7 +145,6 @@ check_module(Module, Checks) ->
   lists:append(lists:map(Fun, Checks)).
 
 do_check_module(Mod0, File, undefined_function_calls) ->
-  io:format("Mod ~p, File ~p~n", [Mod0, File]),
   QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
   QueryStr = lists:flatten(io_lib:format(QueryFmt, [Mod0])),
   {ok, Res} = xref:q(?SERVER, QueryStr),
