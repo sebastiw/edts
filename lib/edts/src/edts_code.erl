@@ -40,7 +40,7 @@
          who_calls/3]).
 
 %% internal exports
--export([update_xref/2]).
+-export([save_xref_state/0]).
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -108,7 +108,7 @@ compile_and_load(File, Options0) ->
       code:purge(Mod),
       OutFile = filename:join(Out, atom_to_list(Mod)),
       {module, Mod} = code:load_abs(OutFile),
-      spawn(?MODULE, update_xref, [OutFile, Mod]),
+      update_xref(OutFile, Mod),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
@@ -270,7 +270,7 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 update_xref(File, Mod) ->
   edts_xref:reload_module(File, Mod),
-  save_xref_state().
+  spawn(?MODULE, save_xref_state, []).
 
 save_xref_state() ->
   File = xref_file(),

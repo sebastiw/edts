@@ -343,7 +343,7 @@ lib_dirs_validate_validate_test() ->
   ?assertEqual({ok, [Cwd, Cwd]}, lib_dirs_validate(foo, Dict)),
   meck:expect(wrq, get_qs_value,
               fun("lib_dirs", _) -> filename:join(Root, "asotehu") end),
-  ?assertEqual(error, lib_dirs_validate(foo, Dict)),
+  ?assertEqual({ok, []}, lib_dirs_validate(foo, Dict)),
   meck:unload().
 
 module_validate_test() ->

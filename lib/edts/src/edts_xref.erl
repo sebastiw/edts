@@ -62,14 +62,9 @@
 start() ->
   case whereis(?SERVER) of
     undefined ->
-      ErlLibDir = code:lib_dir(),
-      Paths = [D || D <- code:get_path(), filelib:is_dir(D)],
-      {LibDirs, AppDirs} = lists:partition(fun(Path) ->
-                                               lists:prefix(ErlLibDir, Path)
-                                           end,
-                                           Paths),
       xref:start(?SERVER),
-      init(LibDirs, AppDirs);
+      ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
+      update();
     _Pid ->
       {error, already_started}
   end.
@@ -84,7 +79,8 @@ start(State) ->
   case whereis(?SERVER) of
     undefined ->
       proc_lib:start(?MODULE, do_start, [State]),
-      xref:update(?SERVER),
+      ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
+      update(),
       {ok, node()};
     _Pid ->
       {error, already_started}
@@ -111,7 +107,7 @@ stop() ->
 -spec get_state() -> term().
 %%------------------------------------------------------------------------------
 get_state() ->
-  xref:update(?SERVER),
+  update(),
   {status, _, _, [_, _, _, _, Misc]} = sys:get_status(?SERVER),
   proplists:get_value("State", lists:append([D || {data, D} <- Misc])).
 
@@ -127,6 +123,11 @@ reload_module(File, Mod) ->
     {error, xref_base, {no_such_module, Mod}} ->
       xref:add_module(?SERVER, File)
   end,
+  update().
+
+update() ->
+  {LibDirs, AppDirs} = lib_and_app_dirs(),
+  update_paths(LibDirs, AppDirs),
   xref:update(?SERVER).
 
 %%------------------------------------------------------------------------------
@@ -189,17 +190,20 @@ do_start(State) ->
   proc_lib:init_ack({ok, self()}),
   gen_server:enter_loop(xref, [], State).
 
-init(LibDirs, AppDirs) ->
-  ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
+update_paths(LibDirs, AppDirs) ->
   ok = xref:set_library_path(?SERVER, LibDirs),
   lists:foreach(fun(D) ->
                     AppDir = filename:dirname(D),
-                    case xref:add_application(?SERVER, AppDir) of
-                      {ok, _}                               -> ok;
-                      {error, _Mod, {application_clash, _}} -> ok;
-                      {error, Mod, Err}                    ->
-                        Fmt = "(~p) xref error not add ~p: ~p",
-                        error_logger:error_msg(Fmt, [node(), Mod, Err])
+                    App    = list_to_atom(filename:basename(AppDir)),
+                    case xref:replace_application(?SERVER, App, AppDir) of
+                      {error, _Mod, {no_such_application, App}} ->
+                        case xref:add_application(?SERVER, AppDir) of
+                          {ok, _}                              -> ok;
+                          {error, Mod, Err}                    ->
+                            Fmt = "(~p) xref error ~p: ~p",
+                            error_logger:error_msg(Fmt, [node(), Mod, Err])
+                        end;
+                      {ok, App} -> ok
                     end
                 end,
                 AppDirs).
@@ -219,6 +223,11 @@ get_xref_ignores(Mod) ->
       end,
   lists:foldl(F, [], Mod:module_info(attributes)).
 
+lib_and_app_dirs() ->
+  ErlLibDir = code:lib_dir(),
+  Paths = [D || D <- code:get_path(), filelib:is_dir(D), D =/= "."],
+  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths).
+
 %%%_* Unit tests ===============================================================
 
 start_test() ->
@@ -235,7 +244,7 @@ start_test() ->
   State = get_state(),
   stop().
 
-init_test() ->
+update_paths_test() ->
   ?assertEqual(undefined, whereis(?SERVER)),
   xref:start(?SERVER),
   ?assertEqual(lists:sort([{verbose,  false},
@@ -244,11 +253,11 @@ init_test() ->
                            {recurse,  false}]),
                lists:sort(xref:get_default(?SERVER))),
   {ok, Cwd} = file:get_cwd(),
-  init([], []),
+  update_paths([], []),
   ?assertEqual({ok, []}, xref:get_library_path(?SERVER)),
   xref:stop(?SERVER),
   xref:start(?SERVER),
-  init([Cwd], []),
+  update_paths([Cwd], []),
   ?assertEqual({ok, [Cwd]}, xref:get_library_path(?SERVER)),
   ?assertEqual([], xref:info(?SERVER, applications)),
   xref:set_library_path(?SERVER, []),
@@ -256,7 +265,7 @@ init_test() ->
   AppPath =
     filename:join((filename:dirname(filename:dirname(ModPath))), "ebin"),
   DudPath = filename:dirname(AppPath),
-  init([], [DudPath]),
+  update_paths([], [DudPath]),
   ?assertMatch([], xref:info(?SERVER, applications)),
   stop().
 
