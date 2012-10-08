@@ -43,12 +43,8 @@
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 %%%_* Types ====================================================================
--type issue_type() :: error
-                    | warning
-                    | 'failed test'
-                    | 'passed test'.
 
--type issue() :: { Type        :: issue_type()
+-type issue() :: { Type        :: atom()
                  , File        :: string()
                  , Line        :: non_neg_integer()
                  , Description :: string()}.
