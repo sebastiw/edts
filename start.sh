@@ -20,9 +20,9 @@
 ### along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ###############################################################################
 
-ERL=${1:-$(which erl)}
+PROJDIR=${1:-"$HOME"}
+ERL=${2:-$(which erl)}
 EDTS_HOME="$( cd "$( dirname "$0" )" && pwd )"
 
 cd $EDTS_HOME
-
-exec $ERL -sname edts -pa $EDTS_HOME/lib/*/ebin $EDTS_HOME/lib/*/deps/*/ebin -s edts_app
+exec $ERL -sname edts -edts project_dir "\"$PROJDIR\"" -pa $EDTS_HOME/lib/*/ebin $EDTS_HOME/lib/*/deps/*/ebin -s edts_app

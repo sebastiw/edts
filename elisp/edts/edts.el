@@ -31,6 +31,47 @@ node."
     (file-name-directory (file-truename edts-erl-command))))
   "Location of the Erlang root directory")
 
+(defcustom edts-data-directory
+  (if (boundp 'user-emacs-directory)
+      (expand-file-name (concat user-emacs-directory "/edts"))
+      (expand-file-name "~/.emacs.d"))
+  "Where EDTS should save its data.")
+
+(defvar edts-find-macro-regexp
+  "\\(\\(\\('.*'\\)\\|\\([a-zA-Z0-9_-]*\\)\\)[\\s-]*\\((.*)\\)?\\)"
+  "Regexp describing a macro name")
+
+(defconst edts-find-macro-definition-regexp
+  (format "^-define\\s-*(%s,\\s-*\\(.*\\)).$" edts-find-macro-regexp)
+  "Regexp describing a macro definition")
+
+(defun edts-find-module-macros ()
+  (let ((includes (edts-get-includes)))
+    (apply #'append (find-macros) (mapcar #'edts-find-file-macros includes))))
+
+(defun edts-find-file-macros (file-name)
+  (with-temp-buffer
+    (insert-file-contents file-name)
+    (edts-find-macros)))
+
+(defun edts-find-macros ()
+  (save-excursion
+    (save-match-data
+      (goto-char (point-min))
+      (let ((macros nil))
+        (while (re-search-forward edts-find-macro-definition-regexp nil t)
+          (let ((arity 0)
+                (macro (match-string-no-properties 1))
+                (doc   (format "%s -> %s"
+                               (match-string-no-properties 1)
+                               (match-string-no-properties 6))))
+            (when (match-string-no-properties 6)
+              (goto-char (match-beginning 6))
+              (setq arity (ferl-arity-at-point)))
+            (setq macro (format "%s/%s" macro arity))
+            (push (cons macro doc) macros)
+          (goto-char (match-end 0))))
+        macros))))
 
 (defun edts-query (prompt choices)
   "Query the user for a choice"
@@ -93,7 +134,7 @@ node."
     (error "EDTS: Server already running"))
   (with-temp-buffer
     (cd (concat edts-lib-directory "/.."))
-    (make-comint "edts" "./start.sh" nil edts-erl-command)
+    (make-comint "edts" "./start.sh" nil edts-data-directory edts-erl-command)
     (set-process-query-on-exit-flag (get-buffer-process "*edts*") nil)))
 
 (defun edts-ensure-node-not-started (node-name)
@@ -133,29 +174,34 @@ localhost."
 (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
-(defun edts-register-node-when-ready (node-name &optional retries)
+(defun edts-register-node-when-ready (node-name root libs &optional retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
   (let ((retries (if retries retries 20)))
   (run-with-timer
    0.5
    nil
-   #'edts-register-node-when-ready-function node-name retries)))
+   #'edts-register-node-when-ready-function node-name root libs retries)))
 
-(defun edts-register-node-when-ready-function (node-name retries)
+(defun edts-register-node-when-ready-function (node-name root libs retries)
   (if (edts-node-started-p node-name)
-      (edts-register-node node-name)
+      (edts-register-node node-name root libs)
       (if (> retries 0)
-          (edts-register-node-when-ready node-name (- retries 1))
-          (edts-log-error "Error: edts could not register node '%s'" node-name))))
+          (edts-register-node-when-ready node-name root libs (- retries 1))
+          (null (edts-log-error
+                 "Error: edts could not register node '%s'" node-name)))))
 
-(defun edts-register-node (node-name)
+(defun edts-register-node (node-name root libs)
   "Register NODE-NAME with the edts node."
   (interactive "MNode-name: ")
-  (let* ((res (edts-rest-post (list "nodes" node-name) nil)))
+  (let* ((resource (list "nodes" node-name))
+         (args     (list (cons "project_root" root)
+                         (cons "lib_dirs"     libs)))
+         (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         node-name
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null (edts-log-error
+               "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."

@@ -28,9 +28,7 @@
     (document   . nil)
     (symbol     . "m")
     (requires   . nil)
-    (limit      . nil)
-    (cache)
-    ))
+    (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions

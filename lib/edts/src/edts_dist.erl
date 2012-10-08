@@ -28,13 +28,18 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ call/3
+-export([ add_paths/2
+        , call/3
         , call/4
         , connect/1
         , connect_all/0
-        , init_node/1
+        , load_modules/2
         , make_sname/1
-        , make_sname/2]).
+        , make_sname/2
+        , set_app_env/4
+        , start_services/2]).
+
+-compile({no_auto_import,[load_module/2]}).
 
 %%%_* Includes =================================================================
 
@@ -44,6 +49,15 @@
 
 %%%_* API ======================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Adds LibDirs to the code-path on Node
+%% @end
+-spec add_paths(Node::node(), LibDirs::[file:filename()]) ->
+              ok | {badrpc, term()}.
+%%------------------------------------------------------------------------------
+add_paths(Node, LibDirs) ->
+  ok = call(Node, code, add_paths, [LibDirs]).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -92,26 +106,6 @@ connect_all() ->
                 end,
                 Nodes).
 
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Initialize edts-related services etc. on remote node. Returns a list of keys
-%% to promises that are to be fulfilled by the remote node. These keys can later
-%% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
-%% @end
--spec init_node(string()) -> [rpc:key()].
-%%------------------------------------------------------------------------------
-init_node(Node) ->
-  try
-    remote_load_modules(Node,   [ edts_code
-                                , edts_eunit
-                                ]),
-    remote_start_services(Node, [edts_code])
-  catch
-    C:E ->
-      edts_log:error("~p initialization crashed with error ~p:~p", [C, E]),
-      []
-  end.
 %%------------------------------------------------------------------------------
 %% @doc
 %% Converts a string to a valid erlang sname for localhost.
@@ -135,21 +129,48 @@ make_sname(Name, Hostname) ->
     _C:Reason -> {error, Reason}
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Loads Mods on Node.
+%% @end
+-spec load_modules(Node::node(), Mods::[module()]) -> ok.
+%%------------------------------------------------------------------------------
+load_modules(Node, Mods) ->
+  lists:foreach(fun(Mod) -> load_module(Node, Mod) end, Mods).
+
+load_module(Node, Mod) ->
+  %% Compile code on the remote in case it runs an OTP release that is
+  %% incompatible with the binary format of the EDTS node's OTP release.
+  %% Kind of ugly to have to use two rpc's but I can't find a better way to
+  %% do this.
+  {File, _Opts}  = filename:find_src(Mod),
+  {ok, Mod, Bin} = call(Node, compile, file, [File, [debug_info, binary]]),
+  {module, Mod}  = call(Node, code, load_binary, [Mod, File, Bin]).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Sets the environment variable Key for App on Node to Value.
+%% @end
+-spec set_app_env(node(), App::atom(), Key::atom(), Value::term()) ->
+                     ok | {badrpc, Reason::term()}.
+%%------------------------------------------------------------------------------
+set_app_env(Node, App, Key, Value) ->
+  rpc:call(Node, application, set_env, [App, Key, Value]).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Starts Servs on Node by calling Serv:start() for each Serv.
+%% @end
+-spec start_services(node(), [module()]) -> [Promise::rpc:key()].
+%%------------------------------------------------------------------------------
+start_services(Node, Servs) ->
+  lists:map(fun(Service) -> start_service(Node, Service) end, Servs).
+
+start_service(Node, Service) ->
+  rpc:async_call(Node, Service, start, []).
 
 %%%_* Internal functions =======================================================
 
-remote_load_modules(Node, Mods) ->
-  lists:foreach(fun(Mod) -> remote_load_module(Node, Mod) end, Mods).
-
-remote_load_module(Node, Mod0) ->
-  {Mod, Bin, File} = code:get_object_code(Mod0),
-  {module, Mod0}   = call(Node, code, load_binary, [Mod, File, Bin]).
-
-remote_start_services(Node, Servs) ->
-  lists:map(fun(Service) -> remote_start_service(Node, Service) end, Servs).
-
-remote_start_service(Node, Service) ->
-  rpc:async_call(Node, Service, start, []).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

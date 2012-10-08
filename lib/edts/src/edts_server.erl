@@ -30,7 +30,7 @@
 
 %% API
 -export([ ensure_node_initialized/1
-        , init_node/1
+        , init_node/3
         , is_node/1
         , node_available_p/1
         , nodes/0
@@ -45,6 +45,7 @@
         , terminate/2]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -86,10 +87,10 @@ ensure_node_initialized(Node) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(node()) -> ok.
+-spec init_node(node(), file:filename(), [string()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node) ->
-  gen_server:call(?SERVER, {init_node, Node}, infinity).
+init_node(Node, ProjectRoot, LibDirs) ->
+  gen_server:call(?SERVER, {init_node, Node, ProjectRoot, LibDirs}, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -164,16 +165,20 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
       #node{} ->
         {reply, ok, State}
     end;
-handle_call({init_node, Name}, _From, State) ->
+handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
   edts_log:info("Registering ~p.", [Name]),
   case node_find(Name, State) of
     #node{} ->
-      edts_log:debug("~p already initialized.", [Name]),
+      edts_log:info("~p already initialized.", [Name]),
       {reply, ok, State};
     false   ->
-      edts_log:debug("~p Initializing.", [Name]),
-      Node = #node{name = Name, promises = edts_dist:init_node(Name)},
-      {reply, ok, node_store(Node, State)}
+      edts_log:info("~p Initializing.", [Name]),
+      case do_init_node(Name, ProjectRoot, LibDirs) of
+        {ok, Keys} ->
+          {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
+        {error, _} = Err ->
+          {reply, Err, State}
+      end
   end;
 handle_call({is_node, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
@@ -214,11 +219,11 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, {R, Nodename}}}, State) ->
+handle_info({Pid, {promise_reply, {Nodename, R} = Reply}}, State) ->
   Nodes =
     case lists:keyfind(Nodename, #node.name, State#state.nodes) of
       false ->
-        edts_log:info("Call from unexpected node:~p", [Nodename]),
+        edts_log:info("Unexpected reply from ~p: ~p", [Pid, Reply]),
         State#state.nodes;
     #node{promises = Promises} = Node ->
         edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
@@ -234,7 +239,8 @@ handle_info({nodedown, Node, _Info}, State) ->
     false   -> {noreply, State};
     #node{} -> {noreply, node_delete(Node, State)}
   end;
-handle_info(_Info, State) ->
+handle_info(Info, State) ->
+  edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.
 
 %%------------------------------------------------------------------------------
@@ -262,6 +268,39 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%%_* Internal functions =======================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Initialize edts-related services etc. on remote node. Returns a list of keys
+%% to promises that are to be fulfilled by the remote node. These keys can later
+%% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
+%% @end
+-spec do_init_node(node(), file:filename(), [string()]) -> [rpc:key()].
+%%------------------------------------------------------------------------------
+do_init_node(Node, ProjectRoot, LibDirs) ->
+  try
+    ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
+    {ok, ProjectDir} =
+      application:get_env(edts, project_dir),
+    ok = edts_dist:load_modules(Node, [edts_code, edts_xref, edts_eunit]),
+    ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
+    {ok, edts_dist:start_services(Node, [edts_code])}
+  catch
+    C:E ->
+      edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
+      E
+  end.
+
+expand_code_paths("", _LibDirs) -> [];
+expand_code_paths(ProjectRoot, LibDirs) ->
+  RootPaths = [filename:join(ProjectRoot, "ebin"),
+               filename:join(ProjectRoot, "test")],
+  F = fun(Dir) -> expand_code_path(ProjectRoot, Dir) end,
+  RootPaths ++ lists:flatmap(F, LibDirs).
+
+expand_code_path(Root, Dir) ->
+  Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
+  lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
+
 node_delete(Name, State) ->
   State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.
 
@@ -272,9 +311,171 @@ node_store(Node, State) ->
   Nodes = lists:keystore(Node#node.name, #node.name, State#state.nodes, Node),
   State#state{nodes = Nodes}.
 
+%%%_* Unit tests ===============================================================
+
+ensure_node_initialized_test() ->
+  S1 = #state{},
+  ?assertEqual({reply, {error, not_found}, S1},
+               handle_call({ensure_node_initialized, foo}, self(), S1)),
+  meck:new(rpc, [unstick]),
+  meck:expect(rpc, yield, fun(dummy) -> ok end),
+  N2 = #node{name = foo, promises = [dummy]},
+  S2 = #state{nodes = [N2]},
+  ?assertEqual({reply, ok, S2#state{nodes = [N2#node{promises = []}]}},
+               handle_call({ensure_node_initialized, foo}, self(), S2)),
+  N3 = #node{name = foo, promises = []},
+  S3 = #state{nodes = [N3]},
+  ?assertEqual({reply, ok, S3},
+               handle_call({ensure_node_initialized, foo}, self(), S3)),
+  meck:unload().
+
+init_node_test() ->
+  N1 = #node{name = foo},
+  S1 = #state{},
+  S2 = #state{nodes = [N1]},
+
+  PrevEnv = application:get_env(edts, project_dir),
+  application:set_env(edts, project_dir, "foo_dir"),
+
+  meck:new(edts_dist),
+  meck:expect(edts_dist, add_paths,      fun(foo, _) -> ok end),
+  meck:expect(edts_dist, load_modules,   fun(foo, _) -> ok end),
+  meck:expect(edts_dist, set_app_env,    fun(foo, _, _, _) -> ok end),
+  meck:expect(edts_dist, start_services, fun(foo, _) -> [dummy] end),
+  ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
+               handle_call({init_node, N1#node.name, "", []}, self(), S1)),
+  ?assertEqual({reply, ok, S2}, % Node already initialized.
+               handle_call({init_node, N1#node.name, "", []}, self(), S2)),
+
+  meck:expect(edts_dist, add_paths,
+              fun(foo, _) -> error({error, some_error}) end),
+  ?assertEqual({reply, {error, some_error}, S1},
+               handle_call({init_node, N1#node.name, "", []}, self(), S1)),
+
+  case PrevEnv of
+    undefined -> ok;
+    {ok, Env} -> application:set_env(edts, project_dir, Env)
+  end,
+  meck:unload().
+
+is_node_test() ->
+  N1 = #node{name = foo, promises = [dummy]},
+  N2 = #node{name = bar},
+  S1 = #state{nodes = [N1]},
+  ?assertEqual({reply, true, S1},
+               handle_call({is_node, N1#node.name}, self(), S1)),
+  ?assertEqual({reply, false, S1},
+               handle_call({is_node, N2#node.name}, self(), S1)).
+
+node_available_p_test() ->
+  N1 = #node{name = foo, promises = [dummy]},
+  N2 = #node{name = bar},
+  S1 = #state{nodes = [N1]},
+  S2 = #state{nodes = [N2]},
+  ?assertEqual({reply, false, S1},
+               handle_call({node_available_p, N1#node.name}, self(), S1)),
+  ?assertEqual({reply, false, S2},
+               handle_call({node_available_p, N1#node.name}, self(), S2)),
+  ?assertEqual({reply, true, S2},
+               handle_call({node_available_p, N2#node.name}, self(), S2)).
+
+nodes_test() ->
+  N1 = #node{name = foo, promises = [dummy]},
+  N2 = #node{name = bar},
+  S1 = #state{nodes = [N1]},
+  S2 = #state{nodes = [N2]},
+  ?assertEqual({reply, {ok, [N1#node.name]}, S1},
+               handle_call(nodes, self(), S1)),
+  ?assertEqual({reply, {ok, [N2#node.name]}, S2},
+               handle_call(nodes, self(), S2)).
+
+ignored_call_test() ->
+  S1 = #state{},
+  ?assertEqual(handle_call(foo, self(), S1), {reply, ignored, S1}),
+  ?assertEqual(handle_call(bar, self(), S1), {reply, ignored, S1}).
+
+handle_cast_test() ->
+  ?assertEqual({noreply, bar}, handle_cast(foo, bar)),
+  ?assertEqual({noreply, foo}, handle_cast(bar, foo)).
+
+nodedown_test() ->
+  N1 = #node{name = foo, promises = [dummy]},
+  N2 = #node{name = bar},
+  S1 = #state{nodes = [N1]},
+  ?assertEqual({noreply, S1},
+               handle_info({nodedown, N2#node.name, dummy}, S1)),
+  ?assertEqual({noreply, #state{}},
+               handle_info({nodedown, N1#node.name, dummy}, S1)).
+
+promise_reply_test() ->
+  N1 = #node{name = foo, promises = [dummy]},
+  N2 = #node{name = bar},
+  Pid = dummy,
+  S1 = #state{nodes = [N1]},
+  ?assertEqual({noreply, S1},
+               handle_info({Pid, {promise_reply, {N2#node.name, ok}}}, S1)),
+  ?assertEqual({noreply, #state{nodes = [N1#node{promises = []}]}},
+               handle_info({Pid, {promise_reply, {N1#node.name, ok}}}, S1)).
+
+unhandled_message_test() ->
+  ?assertEqual({noreply, bar}, handle_info(foo, bar)),
+  ?assertEqual({noreply, foo}, handle_info(bar, foo)).
+
+
+terminate_test() ->
+  ?assertEqual(ok, terminate(foo, bar)),
+  ?assertEqual(ok, terminate(bar, foo)).
+
+code_change_test() ->
+  ?assertEqual({ok, foo}, code_change("vsn", foo, extra)),
+  ?assertEqual({ok, extra}, code_change("vsn", extra, foo)).
+
+expand_code_paths_test() ->
+  ?assertEqual([], expand_code_paths("", ["/foo"])),
+  ?assertEqual(["/foo/ebin", "/foo/test"], expand_code_paths("/foo", [])).
+
+expand_code_path_test() ->
+  meck:new(filelib, [passthrough, unstick]),
+  meck:expect(filelib, wildcard,
+              fun(Path) ->
+                  Dirname = filename:dirname(Path),
+                  [filename:join(Dirname, "foo"), filename:join(Dirname, "bar")]
+              end),
+  Root = "/foo",
+  Lib  = "lib",
+  ?assertEqual([filename:join([Root, "lib", "foo", "ebin"]),
+                filename:join([Root, "lib", "foo", "test"]),
+                filename:join([Root, "lib", "bar", "ebin"]),
+                filename:join([Root, "lib", "bar", "test"])],
+               expand_code_path(Root, Lib)),
+  meck:unload().
+
+
+node_find_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(false, node_find(foo, #state{})),
+  ?assertEqual(N, node_find(foo, #state{nodes = [N]})),
+  ?assertEqual(false, node_find(foo, #state{nodes = [N2]})).
+
+node_delete_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(#state{}, node_delete(foo, #state{})),
+  ?assertEqual(#state{}, node_delete(foo, #state{nodes = [N]})),
+  ?assertEqual(#state{nodes = [N2]}, node_delete(foo, #state{nodes = [N2]})).
+
+node_store_test() ->
+  N = #node{name = foo},
+  N2 = #node{name = bar},
+  ?assertEqual(#state{nodes = [N]}, node_store(N, #state{})),
+  ?assertEqual(#state{nodes = [N]}, node_store(N, #state{nodes = [N]})),
+  ?assertEqual(#state{nodes = [N2, N]}, node_store(N, #state{nodes = [N2]})).
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+

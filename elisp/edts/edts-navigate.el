@@ -137,11 +137,10 @@ directive."
   (find-if #'(lambda (rec)(string= rec-name (cdr (assoc 'record rec))))
            records))
 
-
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
   (let* ((macro (thing-at-point 'symbol))
-         (re    (format "-define\\s-*(%s[\s\n]*[(,]" macro)))
+         (re    (format "-define\\s-*(%s\\s-*[(,]" macro)))
   (or (edts-search-current-buffer re)
       (edts-search-includes re)
       (error "No macro at point"))))
@@ -233,6 +232,7 @@ When FUNCTION is specified, the point is moved to its start."
 (defun edts-find-callers (node module function arity)
   "Jump to any all functions calling `module':`function'/`arity' in the
 current buffer's project."
+  (edts-log-info "Finding callers of %s:%s/%s" module function arity)
   (let* ((callers (edts-get-who-calls node module function arity))
          (caller-items (mapcar #'edts-function-popup-item callers)))
     (edts-do-find-callers caller-items)))
@@ -252,6 +252,7 @@ current buffer's project."
 (defun edts-last-who-calls ()
   "Redo previous call to edts-who-calls"
   (interactive)
+  (edts-log-info "Re-doing last edts-who-calls")
   (edts-do-find-callers edts-found-caller-items))
 
 (defun edts-function-popup-item (item)

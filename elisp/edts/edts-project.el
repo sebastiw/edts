@@ -46,33 +46,36 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-ensure-node-started (project)
   "Start BUFFER's project's node if it is not already started."
-  (let ((node-name (edts-project-node-name project)))
-    (if (edts-node-started-p node-name)
-        (edts-register-node-when-ready node-name)
-        (edts-project-start-node project))))
+  (if (edts-node-started-p (edts-project-node-name project))
+      (edts-project-register-node-when-ready project)
+      (edts-project-start-node project)))
 
 (defun edts-project-start-node (project)
   "Starts a new erlang node for PROJECT."
-  (let* ((project-name (edts-project-name project))
+  (let* ((project-root (expand-file-name (edts-project-root project)))
          (node-name    (edts-project-node-name project))
-         (buffer-name  (concat "*" project-name "*"))
-         (command      (edts-project-build-project-command project))
-         (pwd          (expand-file-name (edts-project-root project))))
+         (buffer-name  (concat "*" (edts-project-name project) "*"))
+         (command      (edts-project-build-project-command project)))
     (edts-ensure-node-not-started node-name)
-    (edts-project-make-comint-buffer buffer-name pwd command)
-    (edts-register-node-when-ready node-name)
+    (edts-project-make-comint-buffer buffer-name project-root command)
+    (edts-project-register-node-when-ready project)
     (get-buffer buffer-name)))
+
+(defun edts-project-register-node-when-ready (project)
+  "Asynchronously register PROJECT's node with EDTS as soon at his has
+started."
+  (let* ((node-name    (edts-project-node-name project))
+         (project-root (expand-file-name (edts-project-root project)))
+         (lib-dirs     (edts-project-lib-dirs project)))
+    (edts-register-node-when-ready node-name project-root lib-dirs)))
 
 (defun edts-project-build-project-command (project)
   "Build a command line for PROJECT"
   (let ((command (edts-project-start-command project)))
     (if command
-          (delete "" (split-string command)) ; delete "" for xemacs.
-        (let ((path (edts-project-code-path-expand project))
-              (sname (edts-project-node-name project)))
-          (append
-           (list (executable-find "erl") "-sname" sname "-pa")
-           path)))))
+        (delete "" (split-string command)) ; delete "" for xemacs.
+        (let ((sname (edts-project-node-name project)))
+          (list (executable-find "erl") "-sname" sname)))))
 
 (defun edts-project-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
@@ -81,7 +84,8 @@ PWD and running COMMAND."
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
-    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)))
+    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
+    (get-buffer buffer-name)))
 
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
@@ -200,12 +204,10 @@ make sure it ends with a '/'."
       (should-error (edt-project-start-node edts-project-test-project-1))))
 
   (ert-deftest edts-project-build-project-command-test ()
-    (flet ((edts-project-code-path-expand (project)
-                                          '("./foo/test" "./foo/ebin"))
-           (executable-find (cmd) cmd))
+    (flet ((executable-find (cmd) cmd))
       (should
        (equal
-        '("erl" "-sname" "dev-node" "-pa" "./foo/test" "./foo/ebin")
+        '("erl" "-sname" "dev-node")
         (edts-project-build-project-command edts-project-test-project-1))))
     (should
      (equal '("bin/start.sh" "-i")
@@ -241,7 +243,7 @@ make sure it ends with a '/'."
                    (edts-project-name edts-project-test-project-2))))
 
   (ert-deftest edts-project-project-root-test ()
-    (should (string= "./foo"
+    (should (string= "/foo"
                      (edts-project-root edts-project-test-project-1)))
     (should (equal nil
                    (edts-project-root edts-project-test-project-2))))
@@ -287,7 +289,7 @@ make sure it ends with a '/'."
 
   (ert-deftest edts-project-buffer-project-test ()
     (let ((edts-projects (list edts-project-test-project-1)))
-      (flet ((buffer-file-name (buffer) "./foo/bar.el"))
+      (flet ((buffer-file-name (buffer) "/foo/bar.el"))
         (should
          (eq edts-project-test-project-1
              (edts-project-buffer-project (current-buffer)))))
@@ -308,11 +310,11 @@ make sure it ends with a '/'."
     (should
      (not (null (edts-project-file-in-project-p
                  edts-project-test-project-1
-                 "./foo/bar.el"))))
+                 "/foo/bar.el"))))
     (should
      (not (null (edts-project-file-in-project-p
                  edts-project-test-project-1
-                 "./foo/bar/baz.el"))))
+                 "/foo/bar/baz.el"))))
     (should
      (null (edts-project-file-in-project-p
             edts-project-test-project-1

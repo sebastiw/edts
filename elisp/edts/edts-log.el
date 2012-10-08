@@ -20,7 +20,7 @@
 ;;
 ;; Logging stuff.
 
-(defvar edts-log-level 0
+(defvar edts-log-level 2
   "The current EDTS log-level.")
 
 (defconst edts-log-level-error 0

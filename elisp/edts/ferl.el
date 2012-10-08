@@ -45,8 +45,12 @@ current-buffer."
 current-buffer"
   (save-excursion
     (goto-char pos)
-    (move-end-of-line nil)
-    (re-search-backward "^\\|[^[:space:]]")))
+    (beginning-of-line)
+    (let ((constraint (point)))
+      (move-end-of-line nil)
+      (if (re-search-backward "[^[:space:]]" constraint 'move-point)
+          (+ (point) 1)
+          (point)))))
 
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position
@@ -143,8 +147,7 @@ Should be called with point directly before the opening ( or /."
         (let ((start (+ (point) 1))
               (end   (- (progn (forward-sexp) (point)) 1)))
           (ferl-paren-arity (buffer-substring start end))))
-       ('otherwise
-        (error "No arity found at point."))))))
+       ('otherwise 0)))))
 
 (defun ferl-slash-arity (str)
   "Return the arity of an argument-string after a slash."

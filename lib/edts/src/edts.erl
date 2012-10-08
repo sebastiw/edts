@@ -33,7 +33,7 @@
         , get_module_eunit_result/2
         , get_module_info/3
         , get_module_xref_analysis/3
-        , init_node/1
+        , init_node/3
         , is_node/1
         , node_available_p/1
         , modules/1
@@ -61,7 +61,10 @@ compile_and_load(Node, Filename) ->
   edts_log:debug("compile_and_load ~p on ~p", [Filename, Node]),
   edts_server:ensure_node_initialized(Node),
   case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
-    {badrpc, _} -> {error, not_found};
+    {badrpc, E} ->
+      Fmt = "Error in remote call edts_code:compile_and_load/1 on ~p: ~p",
+      edts_log:error(Fmt, [Node, E]),
+      {error, not_found};
     Result      -> Result
   end.
 
@@ -81,7 +84,10 @@ get_function_info(Node, Module, Function, Arity) ->
               [Module, Function, Arity, Node]),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, get_function_info, Args) of
-    {badrpc, _} -> {error, not_found};
+    {badrpc, E} ->
+      Fmt = "Error in remote call edts_code:get_function_info/3 on ~p: ~p",
+      edts_log:error(Fmt, [Node, E]),
+      {error, not_found};
     Info  -> Info
   end.
 
@@ -97,10 +103,14 @@ get_function_info(Node, Module, Function, Arity) ->
                    [{module(), atom(), term()}].
 %%------------------------------------------------------------------------------
 who_calls(Node, Module, Function, Arity) ->
+  edts_log:debug("who_calls ~p:~p/~p on ~p", [Module, Function, Arity, Node]),
   edts_server:ensure_node_initialized(Node),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, who_calls, Args) of
-    {badrpc, _} -> {error, not_found};
+    {badrpc, E} ->
+      Fmt = "Error in remote call edts_code:who_calls/2 on ~p: ~p",
+      edts_log:error(Fmt, [Node, E]),
+      {error, not_found};
     Info  -> Info
   end.
 
@@ -117,7 +127,10 @@ who_calls(Node, Module, Function, Arity) ->
 get_module_info(Node, Module, Level) ->
   edts_log:debug("get_module_info ~p, ~p on ~p", [Module, Level, Node]),
   case edts_dist:call(Node, edts_code, get_module_info, [Module, Level]) of
-    {badrpc, _} -> {error, not_found};
+    {badrpc, E} ->
+      Fmt = "Error in remote call edts_code:get_module_info/2 on ~p: ~p",
+      edts_log:error(Fmt, [Node, E]),
+      {error, not_found};
     Info  -> Info
   end.
 
@@ -152,9 +165,13 @@ get_module_eunit_result(Node, Module) ->
                                 Desc::string()}]}.
 %%------------------------------------------------------------------------------
 get_module_xref_analysis(Node, Module, Checks) ->
-  edts_log:debug("get_module_xref_analysis ~p, ~p on ~p", [Module, Checks, Node]),
+  edts_log:debug("get_module_xref_analysis ~p, ~p on ~p",
+                 [Module, Checks, Node]),
   case edts_dist:call(Node, edts_code, check_module, [Module, Checks]) of
-    {badrpc, _} -> {error, not_found};
+    {badrpc, E} ->
+      Fmt = "Error in remote call edts_code:check_module/2 on ~p: ~p",
+      edts_log:error(Fmt, [Node, E]),
+      {error, not_found};
     Info  -> Info
   end.
 
@@ -164,10 +181,10 @@ get_module_xref_analysis(Node, Module, Checks) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(Node::node()) -> ok.
+-spec init_node(Node::node(), filename:filename(), [string()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node) ->
-  edts_server:init_node(Node).
+init_node(Node, ProjectRoot, LibDirs) ->
+  edts_server:init_node(Node, ProjectRoot, LibDirs).
 
 %%------------------------------------------------------------------------------
 %% @doc

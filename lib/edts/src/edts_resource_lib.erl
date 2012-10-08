@@ -91,14 +91,16 @@ make_nodename(NameStr) ->
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2.
 
-atom_to_validate(arity)       -> fun arity_validate/2;
-atom_to_validate(exported)    -> fun exported_validate/2;
-atom_to_validate(file)        -> fun file_validate/2;
-atom_to_validate(function)    -> fun function_validate/2;
-atom_to_validate(info_level)  -> fun info_level_validate/2;
-atom_to_validate(module)      -> fun module_validate/2;
-atom_to_validate(nodename)    -> fun nodename_validate/2;
-atom_to_validate(xref_checks) -> fun xref_checks_validate/2.
+atom_to_validate(arity)        -> fun arity_validate/2;
+atom_to_validate(exported)     -> fun exported_validate/2;
+atom_to_validate(file)         -> fun file_validate/2;
+atom_to_validate(function)     -> fun function_validate/2;
+atom_to_validate(info_level)   -> fun info_level_validate/2;
+atom_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
+atom_to_validate(module)       -> fun module_validate/2;
+atom_to_validate(nodename)     -> fun nodename_validate/2;
+atom_to_validate(project_root) -> fun project_root_validate/2;
+atom_to_validate(xref_checks)  -> fun xref_checks_validate/2.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -174,6 +176,24 @@ info_level_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Validate a list of paths to lib directories underneath a project root already
+%% specified in Ctx.
+%% @end
+-spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) ->
+                           {ok, file:filename()} | error.
+%%------------------------------------------------------------------------------
+lib_dirs_validate(ReqData, Ctx) ->
+  Root       = orddict:fetch(project_root, Ctx),
+  LibDirsStr = case wrq:get_qs_value("lib_dirs", ReqData) of
+                 undefined -> "";
+                 Str       -> Str
+               end,
+  LibDirs    = lists:map(fun(Dir) -> filename:join(Root, Dir) end,
+                         string:tokens(LibDirsStr, ",")),
+  {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Validate module
 %% @end
 -spec module_validate(wrq:req_data(), orddict:orddict()) ->
@@ -214,6 +234,24 @@ nodename_validate(ReqData, _Ctx) ->
 %%------------------------------------------------------------------------------
 nodename_exists_p(_ReqData, Ctx) ->
   edts:node_reachable(orddict:fetch(nodename, Ctx)).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate path to a project root directory
+%% @end
+-spec project_root_validate(wrq:req_data(), orddict:orddict()) ->
+                               {ok, file:filename()} | error.
+%%------------------------------------------------------------------------------
+project_root_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("project_root", ReqData) of
+    undefined -> {ok, ""};
+    Root      ->
+      case filelib:is_dir(Root) of
+        true  -> {ok, Root};
+        false -> error
+      end
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -293,6 +331,21 @@ info_level_validate_test() ->
   ?assertEqual(error, info_level_validate(foo, bar)),
   meck:unload().
 
+lib_dirs_validate_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  {ok, Cwd} = file:get_cwd(),
+  Root = filename:dirname(Cwd),
+  LibDir = filename:basename(Cwd),
+  Dict = orddict:from_list([{project_root, Root}]),
+  meck:expect(wrq, get_qs_value,
+              fun("lib_dirs", _) -> LibDir ++ "," ++ LibDir end),
+  ?assertEqual({ok, [Cwd, Cwd]}, lib_dirs_validate(foo, Dict)),
+  meck:expect(wrq, get_qs_value,
+              fun("lib_dirs", _) -> filename:join(Root, "asotehu") end),
+  ?assertEqual({ok, []}, lib_dirs_validate(foo, Dict)),
+  meck:unload().
+
 module_validate_test() ->
   meck:unload(),
   meck:new(wrq),
@@ -307,6 +360,17 @@ nodename_validate_test() ->
   [_Name, Hostname] = string:tokens(atom_to_list(node()), "@"),
   ?assertEqual( {ok, list_to_atom("foo@" ++ Hostname)}
               , nodename_validate(foo, bar)),
+  meck:unload().
+
+root_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  {ok, Cwd} = file:get_cwd(),
+  meck:expect(wrq, get_qs_value, fun("project_root", _) -> Cwd end),
+  ?assertEqual({ok, Cwd}, project_root_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value,
+              fun("project_root", _) -> filename:join(Cwd, "asotehu") end),
+  ?assertEqual(error, project_root_validate(foo, bar)),
   meck:unload().
 
 xref_checks_validate_test() ->

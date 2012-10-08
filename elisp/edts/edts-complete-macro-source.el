@@ -25,14 +25,18 @@
 
 (defvar edts-complete-macro-source
   '((candidates . edts-complete-macro-candidates)
-    (document   . nil)
-    (symbol     . "?")
+    (document   . edts-complete-macro-doc)
+    (symbol     . "M")
     (requires   . nil)
-    (limit      . nil)
-    ))
+    (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Candidate functions
+
+(defvar edts-complete-macro-cache nil
+  "The current list of record completions.")
+(make-variable-buffer-local 'edts-complete-macro-cache)
+(add-hook 'after-save-hook #'(lambda () (setq edts-complete-macro-cache nil)))
 
 (defun edts-complete-macro-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -41,10 +45,14 @@
     ('none          (edts-complete-normal-macro-candidates))))
 
 (defun edts-complete-normal-macro-candidates ()
-  "Produces the completion list for normal (unqoted) macros. Unimplemented"
-  ;; (when (edts-complete-macro-p)
-  ;;   ...)
-  nil)
+  "Produces the completion list for normal (unqoted) macros."
+  (when (edts-complete-macro-p)
+    (edts-log-debug "completing macros")
+    (let ((completions
+           (or edts-complete-macro-cache
+               (setq edts-complete-macro-cache (edts-find-module-macros)))))
+      (edts-log-debug "completing macros done")
+      (mapcar #'car completions))))
 
 (defun edts-complete-single-quoted-macro-candidates ()
   "Produces the completion for single-qoted erlang bifs, Same as normal
@@ -52,6 +60,10 @@ candidates, except we single-quote-terminate candidates."
   (mapcar
    #'edts-complete-single-quote-terminate
    (edts-complete-normal-macro-candidates)))
+
+(defun edts-complete-macro-doc (candidate)
+  "Find the documentation for CANDIDATE."
+  (cdr (assoc candidate edts-complete-macro-cache)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

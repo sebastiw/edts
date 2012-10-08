@@ -79,7 +79,7 @@
     (define-key map "\C-c\C-d\S-f" 'edts-find-function)
     (define-key map "\C-c\C-dH"    'edts-find-doc)
     (define-key map "\C-c\C-dw"    'edts-who-calls)
-    (define-key map "\C-c\C-dS-w"  'edts-last-who-calls)
+    (define-key map "\C-c\C-dW"    'edts-last-who-calls)
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
@@ -129,11 +129,13 @@
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
 
   ;; Ensure matching parentheses are visible above edts-faces.
-  (make-local-variable 'show-paren-priority)
-  (setq show-paren-priority
-        (max show-paren-priority
-             (+ 1 (apply #'max
-                       (mapcar #'cdr edts-code-issue-overlay-priorities)))))
+  (if (boundp 'show-paren-priority)
+      (make-local-variable 'show-paren-priority)
+    (setq show-paren-priority
+          (max show-paren-priority
+               (+ 1 (apply #'max
+                           (mapcar
+                            #'cdr edts-code-issue-overlay-priorities))))))
 
   ;; Auto-completion
   (edts-complete-setup))
@@ -143,6 +145,10 @@
   (ad-deactivate-regexp "edts-.*")
   (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
   (auto-highlight-symbol-mode -1)
+
+  ;; Remove custom value for show-paren-priority
+  (if (boundp 'show-paren-priority)
+      (kill-local-variable 'show-paren-priority))
 
   ;; Indentation
   (remove-hook 'align-load-hook 'edts-align-hook))
@@ -179,12 +185,12 @@ further.
   (let* ((dirs (directory-files edts-lib-directory t "^[^.]"))
          (files (apply #'append
                        (mapcar #'(lambda (dir)
-                                   (message "dir %s" dir)
                                    (directory-files dir t "\\.el$")) dirs))))
     (byte-compile-disable-warning 'cl-functions)
     (mapc #'byte-compile-file files)
     t))
 
+(make-directory edts-data-directory 'parents)
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 
 (provide 'edts-start)
