@@ -190,10 +190,7 @@ lib_dirs_validate(ReqData, Ctx) ->
                end,
   LibDirs    = lists:map(fun(Dir) -> filename:join(Root, Dir) end,
                          string:tokens(LibDirsStr, ",")),
-  case lists:all(fun filelib:is_dir/1, LibDirs) of
-    true  -> {ok, LibDirs};
-    false -> error
-  end.
+  {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
 
 %%------------------------------------------------------------------------------
 %% @doc
