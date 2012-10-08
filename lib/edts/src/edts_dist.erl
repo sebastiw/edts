@@ -104,7 +104,7 @@ connect_all() ->
 init_node(Node) ->
   try
     remote_load_modules(Node,   [ edts_code
-                                , euw
+                                , edts_eunit
                                 ]),
     remote_start_services(Node, [edts_code])
   catch

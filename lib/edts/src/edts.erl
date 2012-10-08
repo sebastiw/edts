@@ -134,7 +134,7 @@ get_module_info(Node, Module, Level) ->
 %%------------------------------------------------------------------------------
 get_module_eunit_result(Node, Module) ->
   edts_log:debug("get_module_eunit_result ~p, ~p", [Module, Node]),
-  case edts_dist:call(Node, edts_code, run_eunit_tests, [Module]) of
+  case edts_dist:call(Node, edts_eunit, test, [Module]) of
     {badrpc, _} -> {error, not_found};
     Result      -> Result
   end.

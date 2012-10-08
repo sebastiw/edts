@@ -36,7 +36,6 @@
         , get_module_info/1
         , get_module_info/2
         , modules/0
-        , run_eunit_tests/1
         , start/0
         , stop/0
         , who_calls/3]).
@@ -262,95 +261,6 @@ modules() ->
 modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
   [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Run eunit tests on Module and return result as "issues".
-%% @end
--spec run_eunit_tests(Module::module()) -> {ok, [issue()]}
-                                         | {error, Reason::any()}.
-%%------------------------------------------------------------------------------
-run_eunit_tests(Module) ->
-  case euw:run_tests(Module) of
-    {ok, {_Summary, Tests}} ->
-      {ok, lists:flatten([format_test(Test) || Test <- Tests])};
-    {error, Reason} = Error ->
-      error_logger:error_msg("Error in eunit test result in ~p: ~p",
-                             [Module, Reason]),
-      Error
-  end.
-
-format_test({Mfa, []}) ->
-  {Source, Line} = get_source_and_line(Mfa),
-  {'passed test', Source, Line, ""};
-format_test({Mfa, Fails}) ->
-  Formatted      = [format_fail(Mfa, Fail) || Fail <- Fails],
-  {Source, Line} = get_source_and_line(Mfa),
-  [{'failed test', Source, Line, "testcase failed"} | Formatted].
-
-get_source_and_line({Module, Function, Arity}) ->
-  Info             = get_function_info(Module, Function, Arity),
-  {line,   Line}   = lists:keyfind(line,   1, Info),
-  {source, Source} = lists:keyfind(source, 1, Info),
-  {Source, Line}.
-
-format_fail(_Mfa, [{reason, _Reason}]) -> [];
-format_fail({M,_F,_A} = Mfa, Info)    ->
-  Module = orddict:fetch(module, Info),
-  Line   = orddict:fetch(line,   Info),
-  case Module =:= M of
-    false -> [];
-    true  ->
-      {Source, _} = get_source_and_line(Mfa),
-      {'failed test', Source, Line, format_reason(Info)}
-  end.
-
-format_reason(Info) ->
-  Get = fun(Key) ->
-            case orddict:find(Key, Info) of
-              {ok, Value} -> Value;
-              error       -> undefined
-            end
-        end,
-  Reason = Get(reason),
-  {FormatStr, Args} =
-    case Reason of
-      assertEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
-      assertNotEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(expected)]};
-      assertException_failed ->
-        case Get(unexpected_exception) of
-          {ExceptionType, Exception, [Mfa|_]} ->
-            { "expected exception: ~p, got exception: ~p:~p in ~p"
-            , [Get(pattern), ExceptionType, Exception, Mfa]};
-          undefined ->
-            { "expected exception: ~p, got value: ~p"
-            , [Get(pattern), Get(unexpected_success)]}
-        end;
-      assertNotException_failed ->
-        {ExceptionType, Exception, [Mfa|_]} = Get(unexpected_exception),
-        { "expected exception: ~p, got exception: ~p:~p in ~p"
-        , [Get(pattern), ExceptionType, Exception, Mfa]};
-      assertMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
-      assertNotMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
-      assertion_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
-      command_failed ->
-        { "expected status: ~p, got status: ~p"
-        , [Get(expected_status), Get(status)]};
-      assertCmd_failed ->
-        { "expected status: ~p, got status: ~p"
-        , [Get(expected_status), Get(status)]};
-      assertCmdOutput_failed ->
-        { "expected output: ~p, got output: ~p"
-        , [Get(expected_output), Get(output)]};
-      Reason ->
-        {"unknown failure", []}
-    end,
-  lists:flatten(io_lib:format("(~p) " ++ FormatStr, [Reason|Args])).
 
 %%------------------------------------------------------------------------------
 %% @doc
