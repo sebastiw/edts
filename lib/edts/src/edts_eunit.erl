@@ -247,6 +247,57 @@ debug(_FmtStr, _Args) ->
 
 %%%_* Tests ====================================================================
 
+init_test() ->
+  self() ! {start, ref},
+  ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
+
+handle_begin_test_() ->
+  [ ?_assertEqual(#state{tests=[{a, []}]},
+                  handle_begin(test, [{source, a}], #state{tests=[]}))
+  , ?_assertEqual(#state{tests=[{a, [1]}]},
+                  handle_begin(test, [{source, a}], #state{tests=[{a, [1]}]}))
+  , ?_assertEqual(#state{tests=[{a, [1]}, {b, []}]},
+                  handle_begin(test, [{source, b}], #state{tests=[{a, [1]}]}))
+  , ?_assertEqual(#state{}, handle_begin(foo, [], #state{}))
+  ].
+
+handle_end_test_() ->
+  [ ?_assertEqual(#state{tests=[{foo, []}]},
+                  handle_end(test, [], #state{tests=[{foo, []}]}))
+  , ?_assertEqual(#state{tests=[{foo, []}]},
+                  handle_end(foo, [], #state{tests=[{foo, []}]}))
+  , ?_assertEqual(#state{tests=[{foo, []}]},
+                  handle_end(foo, [{status, asdf}], #state{tests=[{foo, []}]}))
+  , ?_assertEqual(#state{tests=[{foo, [[{reason, bar}]]}]},
+                  handle_end(test, [ {status, {error, {error, bar, st}}}
+                                   , {source, foo}
+                                   ], #state{tests=[{foo, []}]}))
+  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}]]}]},
+                  handle_end(test,
+                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
+                             , {source, foo}
+                             ], #state{tests=[{foo, []}]}))
+  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}], baz]}]},
+                  handle_end(test,
+                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
+                             , {source, foo}
+                             ], #state{tests=[{foo, [baz]}]}))
+  ].
+
+terminate_test() ->
+  State = #state{ref=ref, parent=self(), tests=[foo, bar]},
+  Exp   = {result, {[{a, 1}, {b, 2}], [foo, bar]}},
+  self() ! {stop, ref, self()},
+  ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
+  ?assertEqual(Exp, receive Res -> Res end),
+  ?assertEqual({error, foo}, terminate(foo, State)).
+
+mk_fail_test_() ->
+  [ ?_assertEqual([{reason, foo}]             , mk_fail(foo))
+  , ?_assertEqual([{reason, foo}]             , mk_fail({foo, []}))
+  , ?_assertEqual([{aaa, bar}, {reason, foo}] , mk_fail({foo, [{aaa, bar}]}))
+  ].
+
 handle_cancel_test() ->
   State = #state{ref=foo, parent=bar, tests=baz},
   ?assertEqual(State, handle_cancel(l, data, State)).
