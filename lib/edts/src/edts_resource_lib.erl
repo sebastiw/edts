@@ -308,9 +308,12 @@ handle_debugger_info({ok, Info}) ->
 do_handle_debugger_info({break, File, {Module, Line}, VarBindings}) ->
   [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
    {var_bindings,
-    {struct, VarBindings}}];
+    {struct, encode(VarBindings)}}];
 do_handle_debugger_info(State) ->
   [{state, State}].
+
+encode(VarBindings) ->
+  [{Key, io_lib:format("~p", [Value])} || {Key, Value} <- VarBindings].
 
 
 %%%_* Unit tests ===============================================================

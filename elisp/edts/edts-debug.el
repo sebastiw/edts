@@ -36,10 +36,7 @@
                                         (erlang-get-module)
                                         (number-to-string line-number)))
          (result (cdr (assoc 'result state))))
-    (if (equal result "set")
-        (edts-face-display-overlay 'edts-face-breakpoint-enabled-line
-                                   line-number "Breakpoint" 'break 10 t)
-      (edts-face-remove-overlays 'break))
+    (update-breakpoints)
     (message "Breakpoint %s at %s:%s"
              result
              (cdr (assoc 'module state))
@@ -48,40 +45,18 @@
 (defun edts-debug-step ()
   "Steps (into) when debugging"
   (interactive)
-  (let* ((reply (edts-step-into (get-node-name-from-debug-buffer)))
-         (state (cdr (assoc 'state reply))))
-    (cond ((equal state "break")
-           (let ((file (cdr (assoc 'file reply)))
-                 (module (cdr (assoc 'module reply)))
-                 (line (cdr (assoc 'line reply)))
-                 (bindings (cdr (assoc 'var_bindings reply))))
-             (message "Step into %s:%s" module line)
-             (edts-enter-debug-mode file line)
-             (replace-with-bindings bindings)))
-          ((equal state "idle")
-           (message "Finished.")))))
+  (handle-debugger-state (edts-step-into (get-node-name-from-debug-buffer))))
 
 (defun edts-debug-step-out ()
   "Steps out of the current function when debugging"
   (interactive)
-  (let* ((reply (edts-step-out (get-node-name-from-debug-buffer)))
-         (state (cdr (assoc 'state reply))))
-    (cond ((equal state "break")
-           (let ((file (cdr (assoc 'file reply)))
-                 (module (cdr (assoc 'module reply)))
-                 (line (cdr (assoc 'line reply))))
-             (message "Step out to %s:%s" module line)
-             (edts-enter-debug-mode file line)))
-          ((equal state "idle")
-           (message "Finished.")))))
+  (handle-debugger-state (edts-step-out (get-node-name-from-debug-buffer))))
 
 (defun edts-debug-continue ()
   "Continues execution when debugging"
   (interactive)
-  (edts-continue (get-node-name-from-debug-buffer))
-  (hl-line-mode nil)
   (message "Continue")
-  (edts-wait-for-debugger (get-node-name-from-debug-buffer)))
+  (handle-debugger-state (edts-continue (get-node-name-from-debug-buffer))))
 
 (defun edts-debug-quit ()
   "Quits debug mode"
@@ -112,6 +87,7 @@
       (setq *edts-window-config* (current-window-configuration))))
 
 (defun edts-debug-enter-debug-buffer (file line)
+  "Helper function to enter a debugger buffer with the contents of FILE"
   (if (and (not (null file))
            (stringp file))
       (progn (pop-to-buffer (make-debug-buffer-name file))
@@ -131,7 +107,8 @@
       (setq *edts-debug-last-visited-file* nil)))
   (if (and (not (null line))
            (numberp line))
-      (goto-line line)))
+      (goto-line line))
+  (update-breakpoints))
 
 (defvar edts-debug-keymap
   (let ((map (make-sparse-keymap)))
@@ -155,6 +132,33 @@
 ;; TODO: proper formatting to present in a buffer.
 (defun edts-format-bindings (bindings)
   (format t "~A" bindings))
+
+(defun handle-debugger-state (reply)
+  (let ((state (cdr (assoc 'state reply))))
+    (cond ((equal state "break")
+           (let ((file (cdr (assoc 'file reply)))
+                 (module (cdr (assoc 'module reply)))
+                 (line (cdr (assoc 'line reply))))
+             (message "Break at %s:%s" module line)
+             (edts-enter-debug-mode file line)))
+          ((equal state "idle")
+           (message "Finished.")))))
+
+(defun update-breakpoints ()
+  "Display breakpoints in the buffer"
+  (edts-face-remove-overlays '("edts-breakpoint"))
+  (let* ((breaks (edts-get-breakpoints (get-node-name-from-debug-buffer))))
+    (print breaks)
+    (dolist (b breaks)
+      (let ((module (cdr (assoc 'module b)))
+            (line (cdr (assoc 'line b)))
+            (status (cdr (assoc 'status b))))
+        (if (and (equal module (erlang-get-module))
+                 (equal status "active"))
+            (edts-face-display-overlay 'edts-face-breakpoint-enabled-line
+                                       line "Breakpoint" "edts-breakpoint"
+                                       10 t))))))
+         
 
 (defun make-debug-buffer-name (&optional filename)
   (let ((project (if (null filename)

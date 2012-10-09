@@ -383,28 +383,34 @@ associated with that buffer."
     (cdr (assoc 'includes info)))) ;; Get all includes
 
 (defun edts-wait-for-debugger (node-name)
-  "Wait for the debugger to attach and enter debug mode (if not already in it)"
+  "Wait for the debugger to attach and return the current interpreter state"
   (let* ((resource
           (list "debugger" node-name "wait_for_debugger"))
          (args '())
          (rest-callback #'(lambda (result)
                             (if (equal (assoc 'result result)
                                        '(result "200" "OK"))
-                                (let* ((body (cdr (assoc 'body result)))
-                                       (file (cdr (assoc 'file body)))
-                                       (module (cdr (assoc 'module body)))
-                                       (line (cdr (assoc 'line body))))
-                                  (edts-enter-debug-mode file line))))))
+                                (cdr (assoc 'body result))))))
     (edts-rest-get-async resource args rest-callback '())))
 
 (defun edts-toggle-breakpoint (node-name module line)
   "Add/remove breakpoint in MODULE at LINE. This does not imply that MODULE becomes
 interpreted."
   (let* ((resource
-          (list "debugger" node-name "toggle_breakpoint" module line))
+          (list "debugger" node-name "breakpoints" module line))
          (args '())
          (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-get-breakpoints (node-name)
+  "Get all breakpoints and related info on NODE-NAME."
+  (let* ((resource
+          (list "debugger" node-name "breakpoints"))
+         (args '())
+         (res (edts-rest-get resource args)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 

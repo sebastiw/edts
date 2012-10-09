@@ -30,6 +30,7 @@
 %% API
 -export([ compile_and_load/2
         , continue/1
+        , get_breakpoints/1
         , get_function_info/4
         , get_module_eunit_result/2
         , get_module_info/3
@@ -74,6 +75,23 @@ compile_and_load(Node, Filename) ->
       Fmt = "Error in remote call edts_code:compile_and_load/1 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns information about all breakpoints on Node.
+%% @end
+%%
+-spec get_breakpoints(Node :: node()) -> [{ { Module  :: module()
+                                            , Line    :: non_neg_integer()
+                                            }
+                                          , Options :: [term()]
+                                          }].
+%%------------------------------------------------------------------------------
+get_breakpoints(Node) ->
+  case edts_dist:call(Node, edts_debug_server, get_breakpoints, []) of
+    {badrpc, _} -> {error, not_found};
     Result      -> Result
   end.
 

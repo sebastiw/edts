@@ -16,6 +16,7 @@
 
 %% Debugger API
 -export([ continue/0
+        , get_breakpoints/0
         , interpret_modules/1
         , maybe_attach/1
         , step/0
@@ -69,6 +70,19 @@ maybe_attach(Pid) ->
     {error, already_attached, AttPid} ->
       {already_attached, AttPid, Pid}
   end.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get all breakpoints and their status in the current interpreter
+%% @end
+-spec get_breakpoints() -> [{ { Module :: module()
+                              , Line   :: non_neg_integer()
+                              }
+                            , Options  :: [term()]
+                            }].
+%%--------------------------------------------------------------------
+get_breakpoints() ->
+  gen_server:call(?SERVER, get_breakpoints).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -214,8 +228,11 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
   {reply, Reply, State};
 
 handle_call({uninterpret, Modules}, _From, State) ->
-  [int:n(M) || M <- Modules],
+  lists:map(fun(Module) -> int:n(Module) end, Modules),
   {reply, ok, State};
+
+handle_call(get_breakpoints, _From, State) ->
+  {reply, {ok, int:all_breaks()}, State};
 
 handle_call(wait_for_debugger, From, State) ->
   Listeners = State#dbg_state.listeners,

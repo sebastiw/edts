@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Toggle breakpoint resource
+%%% @doc Breakpoint resource
 %%% @end
 %%% @author João Neves <sevenjp@gmail.com>
 %%% @copyright
@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_toggle_breakpoint).
+-module(edts_resource_breakpoint).
 
 %%%_* Exports ==================================================================
 
@@ -32,6 +32,7 @@
 -export([ allow_missing_post/2
         , allowed_methods/2
         , content_types_accepted/2
+        , content_types_provided/2
         , create_path/2
         , init/1
         , malformed_request/2
@@ -39,7 +40,8 @@
         , resource_exists/2]).
 
 %% Handlers
--export([from_json/2]).
+-export([ from_json/2
+        , to_json/2 ]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -58,17 +60,27 @@ allow_missing_post(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 allowed_methods(ReqData, Ctx) ->
-  {['POST'], ReqData, Ctx}.
+  {['GET', 'POST'], ReqData, Ctx}.
 
 content_types_accepted(ReqData, Ctx) ->
   Map = [ {"application/json", from_json} ],
+  {Map, ReqData, Ctx}.
+
+content_types_provided(ReqData, Ctx) ->
+  Map = [ {"application/json", to_json}
+        , {"text/html",        to_json}
+        , {"text/plain",       to_json} ],
   {Map, ReqData, Ctx}.
 
 create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, line]).
+  Validate = case wrq:method(ReqData) of
+               'GET'  -> [nodename];
+               'POST' -> [nodename, module, line]
+             end,
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -86,11 +98,24 @@ from_json(ReqData, Ctx) ->
   Data = {struct, [{result, Result}, {module, Module}, {line, Line}]},
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
-%%%_* Internal functions =======================================================
+to_json(ReqData, Ctx) ->
+  Nodename = orddict:fetch(nodename, Ctx),
+  {ok, Breakpoints} = edts:get_breakpoints(Nodename),
+  Data = {array, [format(B) || B <- Breakpoints]},
+  {mochijson2:encode(Data), ReqData, Ctx}.
 
+%%%_* Internal functions =======================================================
+format({{Module, Line}, [Status, Trigger, null, Condition]}) ->
+  {struct, [ {module, Module}
+           , {line, Line}
+           , {status, Status}
+           , {trigger, Trigger}
+           , {condition, io_lib:format("~p", [Condition])}
+           ]}.
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+

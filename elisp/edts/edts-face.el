@@ -125,7 +125,7 @@ the highest priority any edts overlay at new point if any."
                     (line-beginning-position)))
              (end (if (null fill-line)
                       (ferl-last-char-on-line-at  pos)
-                    (1+ (line-end-position))))
+                    (ferl-position-at-line (1+ line))))
              (overlay (make-overlay beg end nil t t)))
         (overlay-put overlay 'edts-face-overlay t)
         (overlay-put overlay 'face face)
@@ -134,13 +134,13 @@ the highest priority any edts overlay at new point if any."
         (overlay-put overlay 'priority prio)
         overlay))))
 
-(defun edts-face-remove-overlays (type)
-  "Removes all overlays with the name TYPE"
+(defun edts-face-remove-overlays (types)
+  "Removes all overlays belonging to any of TYPES"
   (interactive)
   (save-restriction
     (widen)
     (dolist (ol (overlays-in (point-min) (point-max)))
-      (when (edts-face-overlay-p ol type)
+      (when (edts-face-overlay-p ol types)
         (delete-overlay ol)))))
 
 (defun edts-face-next-overlay (pos types)
