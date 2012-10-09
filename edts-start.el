@@ -127,10 +127,13 @@
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
 
   ;; Ensure matching parentheses are visible above edts-faces.
-  (if (boundp 'show-paren-priority)
-      (make-local-variable 'show-paren-priority)
+  (when (boundp 'show-paren-priority)
+    (make-local-variable 'show-paren-priority))
+  (let ((paren-prio (or
+                     (and (boundp 'show-paren-priority) show-paren-priority)
+                     0)))
     (setq show-paren-priority
-          (max show-paren-priority
+          (max paren-prio
                (+ 1 (apply #'max
                            (mapcar
                             #'cdr edts-code-issue-overlay-priorities))))))
