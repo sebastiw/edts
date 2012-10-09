@@ -89,13 +89,14 @@
   "Keymap for EDTS.")
 
 (defcustom edts-erlang-mode-regexps
-  '("rebar.config$"
-    "rebar.config.script$"
+  '("^\\.erlang$"
     "\\.app$"
     "\\.app.src$"
+    "\\.config$"
     "\\.es$"
     "\\.escript$"
     "\\.eterm$"
+    "\\.script$"
     "\\.yaws$")
   "Additional extensions for which to auto-activate erlang-mode.")
 
