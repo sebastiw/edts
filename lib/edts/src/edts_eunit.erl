@@ -99,7 +99,7 @@ format_test({Mfa, []}, _Module) ->
   {'passed test', Source, Line, "no asserts failed"};
 format_test({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
-  Formatted = [format_fail(Mfa, Fail) || Fail <- Fails],
+  Formatted      = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
   {Source, Line} = get_source_and_line(Mfa),
   [ {'failed test', Source, Line, failed_test_str(Formatted)}
   | Formatted].
