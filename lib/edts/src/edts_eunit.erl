@@ -132,36 +132,36 @@ format_reason(Info) ->
   {FormatStr, Args} =
     case Reason of
       assertEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
+        {"expected: ~w, got value: ~w", [Get(expected), Get(value)]};
       assertNotEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(expected)]};
+        {"expected: ~w, got value: ~w", [Get(expected), Get(expected)]};
       assertException_failed ->
         case Get(unexpected_exception) of
           {ExceptionType, Exception, [Mfa|_]} ->
-            { "expected exception: ~p, got exception: ~p:~p in ~w"
+            { "expected exception: ~w, got exception: ~w:~w in ~w"
             , [Get(pattern), ExceptionType, Exception, Mfa]};
           undefined ->
-            { "expected exception: ~p, got value: ~p"
+            { "expected exception: ~w, got value: ~w"
             , [Get(pattern), Get(unexpected_success)]}
         end;
       assertNotException_failed ->
         {ExceptionType, Exception, [Mfa|_]} = Get(unexpected_exception),
-        { "expected exception: ~p, got exception: ~p:~p in ~p"
+        { "expected exception: ~w, got exception: ~w:~w in ~w"
         , [Get(pattern), ExceptionType, Exception, Mfa]};
       assertMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
+        {"expected: ~w, got value: ~w", [Get(pattern), Get(value)]};
       assertNotMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
+        {"expected: ~w, got value: ~w", [Get(pattern), Get(value)]};
       assertion_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
+        {"expected: ~w, got value: ~w", [Get(expected), Get(value)]};
       command_failed ->
-        { "expected status: ~p, got status: ~p"
+        { "expected status: ~w, got status: ~w"
         , [Get(expected_status), Get(status)]};
       assertCmd_failed ->
-        { "expected status: ~p, got status: ~p"
+        { "expected status: ~w, got status: ~w"
         , [Get(expected_status), Get(status)]};
       assertCmdOutput_failed ->
-        { "expected output: ~p, got output: ~p"
+        { "expected output: ~w, got output: ~w"
         , [Get(expected_output), Get(output)]};
       Reason ->
         {"unknown failure", []}
