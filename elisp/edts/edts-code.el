@@ -121,6 +121,7 @@ buffer's project."
 (defun edts-code-next-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
+  (push-mark)
   (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
                                                     "edts-code-xref"))))
     (if overlay
@@ -132,6 +133,7 @@ buffer's project."
 (defun edts-code-previous-issue ()
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
+  (push-mark)
   (let* ((overlay (edts-face-previous-overlay (point) '("edts-code-compile"
                                                         "edts-code-xref"))))
     (if overlay
