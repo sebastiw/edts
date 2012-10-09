@@ -105,14 +105,13 @@ format_test({Mfa, Fails}, _Module) ->
   | Formatted].
 
 
-failed_test_str([]) -> "test aborted";
-failed_test_str([{_, _, Line, _}]) ->
-  io_lib:format("failed assert on line ~w", [Line]);
-failed_test_str(Formatted) ->
+failed_test_str([])             -> "test aborted";
+failed_test_str([{_,_,Line,_}]) -> format("failed assert on line ~w", [Line]);
+failed_test_str(Formatted)      ->
   Lines    = lists:sort([integer_to_list(Line) || {_,_,Line,_} <- Formatted]),
   LinesStr = string:join(Lines, ", "),
   debug("lines: ~p", [LinesStr]),
-  io_lib:format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
+  format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
 get_source_and_line({Module, Function, Arity}) ->
   Info = edts_code:get_function_info(Module, Function, Arity),
