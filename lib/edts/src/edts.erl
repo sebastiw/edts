@@ -35,7 +35,6 @@
         , get_module_info/3
         , get_module_xref_analysis/3
         , init_node/3
-        , init_node/1
         , interpret_modules/2
         , is_node/1
         , node_available_p/1
