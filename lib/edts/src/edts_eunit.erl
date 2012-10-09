@@ -132,30 +132,41 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
   end.
 
 format_reason(Info) ->
-  Get  = fun(Key) -> orddict:fetch(Key, Info) end,
-  Args = case Get(reason) of
-           assertCmdOutput_failed    -> [Get(expected_output) , Get(output)];
-           assertCmd_failed          -> [Get(expected_status) , Get(status)];
-           assertEqual_failed        -> [Get(expected)        , Get(value)];
-           assertMatch_failed        -> [Get(pattern)         , Get(value)];
-           assertNotEqual_failed     -> [Get(expected)        , Get(expected)];
-           assertNotMatch_failed     -> [Get(pattern)         , Get(value)];
-           assertion_failed          -> [Get(expected)        , Get(value)];
-           command_failed            -> [Get(expected_status) , Get(status)];
-           assertException_failed    -> format_args_assert_exception(Get);
-           assertNotException_failed -> format_args_assert_exception(Get);
-           _Reason                   -> [undefined            , undefined]
-         end,
-  lists:flatten(io_lib:format("(~p) expected: ~p, got: ~p", [Get(reason)|Args])).
+  Fetch  = fun(Key) -> case orddict:find(Key, Info) of
+                         {ok, Val} -> Val;
+                         error     -> undefined
+                       end
+           end,
+  Reason = Fetch(reason),
+  {Expected, Got} =
+    case Reason of
+      assertCmdOutput_failed    -> {Fetch(expected_output) , Fetch(output)};
+      assertCmd_failed          -> {Fetch(expected_status) , Fetch(status)};
+      assertEqual_failed        -> {Fetch(expected)        , Fetch(value)};
+      assertMatch_failed        -> {Fetch(pattern)         , Fetch(value)};
+      assertNotEqual_failed     -> {Fetch(expected)        , Fetch(expected)};
+      assertNotMatch_failed     -> {Fetch(pattern)         , Fetch(value)};
+      assertion_failed          -> {Fetch(expected)        , Fetch(value)};
+      command_failed            -> {Fetch(expected_status) , Fetch(status)};
+      assertException_failed    -> format_args_assert_exception(Fetch);
+      assertNotException_failed -> format_args_assert_exception(Fetch);
+      Reason                    -> {undefined              , undefined}
+    end,
+  format("(~p) expected: ~s, got: ~s", [Reason, to_str(Expected), to_str(Got)]).
 
-format_args_assert_exception(Get) ->
-  case Get(unexpected_exception) of
+%% We want to format with ~p, except that we don't want it to add line breaks
+to_str(X) ->
+  lists:filter(fun (C) -> C =/= $\n end, format("~p", [X])).
+
+format_args_assert_exception(Fetch) ->
+  case Fetch(unexpected_exception) of
+    undefined             -> {Fetch(pattern), Fetch(unexpected_success)};
     {ExType, Ex, [Mfa|_]} ->
-      [Get(pattern), lists:flatten(io_lib:format("~w:~w in ~w",
-                                                 [ExType, Ex, Mfa]))];
-    undefined ->
-      [Get(pattern), Get(unexpected_success)]
+      {Fetch(pattern), format("~w:~w in ~w", [ExType, Ex, Mfa])}
   end.
+
+format(FormatStr, Args) ->
+  lists:flatten(io_lib:format(FormatStr, Args)).
 
 %%%_* Listener =================================================================
 
