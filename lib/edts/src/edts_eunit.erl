@@ -139,17 +139,17 @@ format_reason(Info) ->
   Reason = Fetch(reason),
   {Expected, Got} =
     case Reason of
-      assertCmdOutput_failed    -> {Fetch(expected_output) , Fetch(output)};
-      assertCmd_failed          -> {Fetch(expected_status) , Fetch(status)};
-      assertEqual_failed        -> {Fetch(expected)        , Fetch(value)};
-      assertMatch_failed        -> {Fetch(pattern)         , Fetch(value)};
-      assertNotEqual_failed     -> {Fetch(expected)        , Fetch(expected)};
-      assertNotMatch_failed     -> {Fetch(pattern)         , Fetch(value)};
-      assertion_failed          -> {Fetch(expected)        , Fetch(value)};
-      command_failed            -> {Fetch(expected_status) , Fetch(status)};
+      assertCmdOutput_failed    -> {Fetch(expected_output), Fetch(output)};
+      assertCmd_failed          -> {Fetch(expected_status), Fetch(status)};
+      assertEqual_failed        -> {Fetch(expected),        Fetch(value)};
+      assertMatch_failed        -> {Fetch(pattern),         Fetch(value)};
+      assertNotEqual_failed     -> {Fetch(expected),        Fetch(expected)};
+      assertNotMatch_failed     -> {Fetch(pattern),         Fetch(value)};
+      assertion_failed          -> {Fetch(expected),        Fetch(value)};
+      command_failed            -> {Fetch(expected_status), Fetch(status)};
       assertException_failed    -> format_args_assert_exception(Fetch);
       assertNotException_failed -> format_args_assert_exception(Fetch);
-      Reason                    -> {undefined              , undefined}
+      Reason                    -> {undefined,              undefined}
     end,
   format("(~p) expected: ~s, got: ~s", [Reason, to_str(Expected), to_str(Got)]).
 
@@ -292,9 +292,9 @@ terminate_test() ->
   ?assertEqual({error, foo}, terminate(foo, State)).
 
 mk_fail_test_() ->
-  [ ?_assertEqual([{reason, foo}]             , mk_fail(foo))
-  , ?_assertEqual([{reason, foo}]             , mk_fail({foo, []}))
-  , ?_assertEqual([{aaa, bar}, {reason, foo}] , mk_fail({foo, [{aaa, bar}]}))
+  [ ?_assertEqual([{reason, foo}],             mk_fail(foo))
+  , ?_assertEqual([{reason, foo}],             mk_fail({foo, []}))
+  , ?_assertEqual([{aaa, bar}, {reason, foo}], mk_fail({foo, [{aaa, bar}]}))
   ].
 
 handle_cancel_test() ->
