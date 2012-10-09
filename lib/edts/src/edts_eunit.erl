@@ -132,51 +132,30 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
   end.
 
 format_reason(Info) ->
-  Get = fun(Key) ->
-            case orddict:find(Key, Info) of
-              {ok, Value} -> Value;
-              error       -> undefined
-            end
-        end,
-  Reason = Get(reason),
-  {FormatStr, Args} =
-    case Reason of
-      assertEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
-      assertNotEqual_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(expected)]};
-      assertException_failed ->
-        case Get(unexpected_exception) of
-          {ExceptionType, Exception, [Mfa|_]} ->
-            { "expected exception: ~p, got exception: ~p:~p in ~p"
-            , [Get(pattern), ExceptionType, Exception, Mfa]};
-          undefined ->
-            { "expected exception: ~p, got value: ~p"
-            , [Get(pattern), Get(unexpected_success)]}
-        end;
-      assertNotException_failed ->
-        {ExceptionType, Exception, [Mfa|_]} = Get(unexpected_exception),
-        { "expected exception: ~p, got exception: ~p:~p in ~p"
-        , [Get(pattern), ExceptionType, Exception, Mfa]};
-      assertMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
-      assertNotMatch_failed ->
-        {"expected: ~p, got value: ~p", [Get(pattern), Get(value)]};
-      assertion_failed ->
-        {"expected: ~p, got value: ~p", [Get(expected), Get(value)]};
-      command_failed ->
-        { "expected status: ~p, got status: ~p"
-        , [Get(expected_status), Get(status)]};
-      assertCmd_failed ->
-        { "expected status: ~p, got status: ~p"
-        , [Get(expected_status), Get(status)]};
-      assertCmdOutput_failed ->
-        { "expected output: ~p, got output: ~p"
-        , [Get(expected_output), Get(output)]};
-      Reason ->
-        {"unknown failure", []}
-    end,
-  lists:flatten(io_lib:format("(~p) " ++ FormatStr, [Reason|Args])).
+  Get  = fun(Key) -> orddict:fetch(Key, Info) end,
+  Args = case Get(reason) of
+           assertCmdOutput_failed    -> [Get(expected_output) , Get(output)];
+           assertCmd_failed          -> [Get(expected_status) , Get(status)];
+           assertEqual_failed        -> [Get(expected)        , Get(value)];
+           assertMatch_failed        -> [Get(pattern)         , Get(value)];
+           assertNotEqual_failed     -> [Get(expected)        , Get(expected)];
+           assertNotMatch_failed     -> [Get(pattern)         , Get(value)];
+           assertion_failed          -> [Get(expected)        , Get(value)];
+           command_failed            -> [Get(expected_status) , Get(status)];
+           assertException_failed    -> format_args_assert_exception(Get);
+           assertNotException_failed -> format_args_assert_exception(Get);
+           _Reason                   -> [undefined            , undefined]
+         end,
+  lists:flatten(io_lib:format("(~p) expected: ~p, got: ~p", [Get(reason)|Args])).
+
+format_args_assert_exception(Get) ->
+  case Get(unexpected_exception) of
+    {ExType, Ex, [Mfa|_]} ->
+      [Get(pattern), lists:flatten(io_lib:format("~w:~w in ~w",
+                                                 [ExType, Ex, Mfa]))];
+    undefined ->
+      [Get(pattern), Get(unexpected_success)]
+  end.
 
 %%%_* Listener =================================================================
 
