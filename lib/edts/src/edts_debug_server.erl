@@ -47,7 +47,7 @@
 
 start() ->
   edts_debug_server:start_link(),
-  {ok, node()}.
+  {node(), ok}.
 
 stop() ->
   ok.
