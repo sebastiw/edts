@@ -111,7 +111,7 @@ get_source_and_line({Module, Function, Arity}) ->
   {Source, Line}.
 
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
-format_fail({M,_F,_A} = Mfa, Info)    ->
+format_fail({M,_F,_A} = Mfa, Info)     ->
   Module = orddict:fetch(module, Info),
   Line   = orddict:fetch(line,   Info),
   case Module =:= M of
