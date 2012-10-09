@@ -36,7 +36,8 @@
 %% API
 -export([check_module/2,
          get_state/0,
-         reload_module/2,
+         started_p/0,
+         update/0,
          who_calls/3
         ]).
 
@@ -60,12 +61,12 @@
 -spec start() -> {ok , node()} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  case whereis(?SERVER) of
-    undefined ->
+  case started_p() of
+    false ->
       xref:start(?SERVER),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
       update();
-    _Pid ->
+    true ->
       {error, already_started}
   end.
 
@@ -76,15 +77,24 @@ start() ->
 -spec start(State::term()) -> {ok , node()} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start(State) ->
-  case whereis(?SERVER) of
-    undefined ->
+  case started_p() of
+    false ->
       proc_lib:start(?MODULE, do_start, [State]),
+      wait_until_started(),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
       update(),
       {ok, node()};
-    _Pid ->
+    true ->
       {error, already_started}
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true if the edts xref-server is running, false otherwise
+%% @end
+-spec started_p() -> boolean().
+%%------------------------------------------------------------------------------
+started_p() -> whereis(?SERVER) =/= undefined.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -110,20 +120,6 @@ get_state() ->
   update(),
   {status, _, _, [_, _, _, _, Misc]} = sys:get_status(?SERVER),
   proplists:get_value("State", lists:append([D || {data, D} <- Misc])).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Reload the updated Mod from File into the xref callgraph..
-%% @end
--spec reload_module(filename:filename(), module()) -> {ok, [module()]}.
-%%------------------------------------------------------------------------------
-reload_module(File, Mod) ->
-  case xref:replace_module(?SERVER, Mod, File) of
-    {ok, Mod} -> ok;
-    {error, xref_base, {no_such_module, Mod}} ->
-      xref:add_module(?SERVER, File)
-  end,
-  update().
 
 update() ->
   {LibDirs, AppDirs} = lib_and_app_dirs(),
@@ -190,23 +186,54 @@ do_start(State) ->
   proc_lib:init_ack({ok, self()}),
   gen_server:enter_loop(xref, [], State).
 
+wait_until_started() ->
+  case started_p() of
+    true  -> ok;
+    false ->
+      timer:sleep(200),
+      wait_until_started()
+  end.
+
 update_paths(LibDirs, AppDirs) ->
+  error_logger:error_msg("AppDirs ~p", [AppDirs]),
   ok = xref:set_library_path(?SERVER, LibDirs),
-  lists:foreach(fun(D) ->
-                    AppDir = filename:dirname(D),
-                    App    = list_to_atom(filename:basename(AppDir)),
-                    case xref:replace_application(?SERVER, App, AppDir) of
-                      {error, _Mod, {no_such_application, App}} ->
-                        case xref:add_application(?SERVER, AppDir) of
-                          {ok, _}                              -> ok;
-                          {error, Mod, Err}                    ->
-                            Fmt = "(~p) xref error ~p: ~p",
-                            error_logger:error_msg(Fmt, [node(), Mod, Err])
-                        end;
-                      {ok, App} -> ok
-                    end
-                end,
-                AppDirs).
+  ModsToLoad =
+    lists:flatmap(
+      fun(Dir) ->
+          Beams = filelib:wildcard(filename:join(Dir, "*.beam")),
+          [{list_to_atom(filename:basename(B, ".beam")), B} || B <- Beams]
+      end, AppDirs),
+  ModsLoaded = xref:info(?SERVER, modules),
+  error_logger:error_msg("To load ~p", [ModsToLoad]),
+  %% Add/update new modules
+  LoadF =
+    fun({Mod, Beam}) ->
+        case proplists:get_value(Mod, ModsLoaded) of
+          undefined -> % New module
+            case xref:add_module(?SERVER, Beam) of
+              {ok, Mod} -> ok;
+              {error, _ErrSrc, Err} ->
+                error_logger:error_msg("xref failed to add ~p: ~p", [Mod, Err])
+            end;
+          Info ->
+            Dir = filename:dirname(Beam),
+            case proplists:get_value(directory, Info) of
+              Dir     -> ok; % Same as old module
+              _OldDir -> xref:replace_module(?SERVER, Mod, Beam) % Mod has moved
+            end
+        end
+    end,
+  lists:foreach(LoadF, ModsToLoad),
+
+  %% Remove delete modules
+  UnloadF =
+    fun({Mod, _Info}) ->
+        case lists:keymember(Mod, 1, ModsToLoad) of
+          true  -> ok;
+          false -> xref:remove_module(?SERVER, Mod)
+        end
+    end,
+  lists:foreach(UnloadF, ModsLoaded).
 
 ignored_test_fun_p(M, F, 0) ->
   case lists:member({test, 0}, M:module_info(exports)) of
@@ -231,6 +258,7 @@ lib_and_app_dirs() ->
 %%%_* Unit tests ===============================================================
 
 start_test() ->
+  stop(),
   ?assertEqual(undefined, whereis(?SERVER)),
   {error, not_started} = stop(),
   start(),

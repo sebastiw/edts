@@ -48,11 +48,6 @@ Planned features in the short term are:
   - If you're not using Linux, setup Erlang mode according to the instructions
     here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
   - Make sure your code is compiled with the debug_info option set.
-  - If you're running multiple versions of Erlang, make sure that the version
-    you use to compile edts is also the first version in your emacs exec-path.
-    For example, if you're running Debian/Ubuntu and have installed Erlang
-    through aptitude, that will add a file /etc/emacs/site-start.d that will
-    always put the system Erlang at the head of the code path.
   - If you want to be able automatically navigate to OTP sources from your code
     using eg. edts-find-source-under-point, you must build your OTP-release from
     source since the beam-files of the versions most commonly installed point
@@ -102,9 +97,7 @@ Planned features in the short term are:
                   have. Defaults to same name as the project.
   lib-dirs      - A list of paths (relative to the project's root) where the
                   project's code is located. All subdirectories of lib-dirs are
-                  assumed to be otp-applications. Defaults to '("lib"). If
-                  start-command is set, that is assumed to properly set up the
-                  code-path and lib-dirs will be ignored.
+                  assumed to be otp-applications. Defaults to '("lib").
   start-command - A custom command that EDTS should execute to start the
                   project's Erlang node. If this is set, the command must set
                   the node's sname to be the same as the value specified in the

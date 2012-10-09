@@ -101,7 +101,7 @@ compile_and_load(File, Options0) ->
       code:purge(Mod),
       OutFile = filename:join(Out, atom_to_list(Mod)),
       {module, Mod} = code:load_abs(OutFile),
-      update_xref(OutFile, Mod),
+      update_xref(),
       {ok, {[], format_errors(warning, Warnings)}};
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
@@ -241,13 +241,15 @@ start() ->
       {error, _} = Error  ->
         error_logger:error_msg("Reading ~p failed with: ~p", [File, Error])
     end,
-    spawn(fun save_xref_state/0),
     {node(), ok}
   catch
     C:E ->
       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p",
                              [File, C, E]),
-      edts_xref:start()
+      case edts_xref:started_p() of
+        true  -> ok;
+        false -> edts_xref:start()
+      end
   end.
 
 %%------------------------------------------------------------------------------
@@ -261,8 +263,8 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 %%%_* Internal functions =======================================================
 
-update_xref(File, Mod) ->
-  edts_xref:reload_module(File, Mod),
+update_xref() ->
+  edts_xref:update(),
   spawn(?MODULE, save_xref_state, []).
 
 save_xref_state() ->
