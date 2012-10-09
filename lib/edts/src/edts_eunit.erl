@@ -96,13 +96,23 @@ format_test({{M,_,_}, _}, Module) when Module =/= M ->
 format_test({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
   {Source, Line} = get_source_and_line(Mfa),
-  {'passed test', Source, Line, ""};
+  {'passed test', Source, Line, "no asserts failed"};
 format_test({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
   Formatted = [format_fail(Mfa, Fail) || Fail <- Fails],
   {Source, Line} = get_source_and_line(Mfa),
-  [ {'failed test', Source, Line, "testcase failed"}
+  [ {'failed test', Source, Line, failed_test_str(Formatted)}
   | Formatted].
+
+
+failed_test_str([]) -> "test aborted";
+failed_test_str([{_, _, Line, _}]) ->
+  io_lib:format("failed assert on line ~w", [Line]);
+failed_test_str(Formatted) ->
+  Lines    = lists:sort([integer_to_list(Line) || {_,_,Line,_} <- Formatted]),
+  LinesStr = string:join(Lines, ", "),
+  debug("lines: ~p", [LinesStr]),
+  io_lib:format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
 get_source_and_line({Module, Function, Arity}) ->
   Info = edts_code:get_function_info(Module, Function, Arity),
