@@ -191,11 +191,10 @@ init(Options) ->
 handle_begin(test, Data, #state{tests=Tests} = State) ->
   debug("begin test: ~p", [Data]),
   Source = proplists:get_value(source, Data),
-  Fails = case orddict:find(Source, Tests) of
-            {ok, Fails0} -> Fails0;
-            error        -> []
-          end,
-  State#state{tests = orddict:store(Source, Fails, Tests)};
+  case orddict:is_key(Source, Tests) of
+    true  -> State;
+    false -> State#state{tests = orddict:store(Source, [], Tests)}
+  end;
 handle_begin(L, Data, State) ->
   debug("begin ~p: ~p", [L, Data]),
   State.
