@@ -30,7 +30,8 @@
 
 %%%_* Exports ==================================================================
 
--export([check_module/2,
+-export([add_paths/1,
+         check_module/2,
          compile_and_load/1,
          get_function_info/3,
          get_module_info/1,
@@ -48,6 +49,23 @@
 
 %%%_* API ======================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Add a new path to the code-path. Uniqueness is determined after shortening
+%% the path using ?MODULE:shorten_path/1, which means symbolic links could cause
+%% duplicate paths to be added.
+%% @end
+-spec add_path(filename:filename()) -> code:add_path_ret().
+%%------------------------------------------------------------------------------
+add_path(Path) -> code:add_path(shorten_path(Path)).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Call add_path/1 for each path in Paths.
+%% @end
+-spec add_paths([filename:filename()]) -> ok.
+%%------------------------------------------------------------------------------
+add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -116,7 +134,7 @@ compile_and_load(File, Opts0) ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           update_xref(),
-          code:add_path(OutDir),
+          add_path(OutDir),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -282,6 +300,21 @@ start() ->
 who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 %%%_* Internal functions =======================================================
+
+shorten_path("") -> "";
+shorten_path(P)  ->
+  case shorten_path(filename:split(P), []) of
+    [Component] -> Component;
+    Components  -> filename:join(Components)
+  end.
+
+shorten_path([],           [])         -> ["."];
+shorten_path([],           Acc)        -> lists:reverse(Acc);
+shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
+shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
+shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
+shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
+shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
 
 update_xref() ->
   edts_xref:update(),
@@ -481,6 +514,15 @@ path_flatten([Dir|Rest], Back, Acc) ->
 
 
 %%%_* Unit tests ===============================================================
+shorten_path_test_() ->
+  [ ?_assertEqual("", shorten_path("")),
+    ?_assertEqual(".", shorten_path(".")),
+    ?_assertEqual("..", shorten_path("..")),
+    ?_assertEqual("../..", shorten_path("../..")),
+    ?_assertEqual("../ebin", shorten_path("../ebin")),
+    ?_assertEqual("..", shorten_path("../ebin/..")),
+    ?_assertEqual("..", shorten_path("../ebin/./.."))
+  ].
 
 format_errors_test_() ->
   SetupF = fun() ->
