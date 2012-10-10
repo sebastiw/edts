@@ -60,8 +60,7 @@
 %%%_* API ======================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc
-%% Run eunit tests on Module and return result as "issues".
+%% @doc Run eunit tests on Module and return result as "issues".
 -spec test(Module::module()) -> {ok, [edts_code:issue()]}
                               | {error, Reason::any()}.
 %%------------------------------------------------------------------------------
