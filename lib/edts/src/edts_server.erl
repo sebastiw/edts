@@ -278,6 +278,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 do_init_node(Node, ProjectRoot, LibDirs) ->
   try
+    ok = edts_dist:load_modules(Node, [edts_code, edts_xref]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),

@@ -57,7 +57,7 @@
               ok | {badrpc, term()}.
 %%------------------------------------------------------------------------------
 add_paths(Node, LibDirs) ->
-  ok = call(Node, code, add_paths, [LibDirs]).
+  ok = call(Node, edts_code, add_paths, [LibDirs]).
 
 %%------------------------------------------------------------------------------
 %% @doc
