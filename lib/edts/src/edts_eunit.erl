@@ -102,7 +102,6 @@ format_test({Mfa, Fails}, _Module) ->
   [ {'failed test', Source, Line, failed_test_str(Formatted)}
   | Formatted].
 
-
 failed_test_str([])             -> "test aborted";
 failed_test_str([{_,_,Line,_}]) -> format("failed assert on line ~w", [Line]);
 failed_test_str(Formatted)      ->
