@@ -84,8 +84,10 @@ compile_and_load(Module) ->
 %% @doc
 %% Compiles Module with Options and returns a list of any errors and warnings.
 %% If there are no errors, the module will be loaded. Compilation options
-%% always include [binary, return, debug_info]. Any options passed in will be
-%% added to these.
+%% always include 'return', 'debug_info' and {i, Dir} (and also 'binary', but
+%% the module will be written to file by EDTS instead), for all directories
+%% where we can reasonably expect to find include-files for the current project.
+%% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
                           {ok | error,
@@ -100,22 +102,26 @@ compile_and_load(Module, Opts) when is_atom(Module)->
 compile_and_load(File, Opts0) ->
   AbsPath  = filename:absname(File),
   Includes = [filename:dirname(File)|get_include_dirs()],
-  Opts     = [{i, I} || I <- Includes] ++ [return, Opts0],
-  case compile:file(AbsPath, [strong_validation|Opts]) of
-    {ok, Mod, _Warnings} ->
+  Opts     = [{i, I} || I <- Includes] ++ [binary, debug_info, return, Opts0],
+  %% Only compile to a binary to begin with since compile-options resulting in
+  %% an output-file will cause the compile module to remove the existing beam-
+  %% file even if compilation fails, in which case we end up with no module
+  %% at all for other analyses (xref etc.).
+  case compile:file(AbsPath, Opts) of
+    {ok, Mod, Bin, Warnings} ->
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
-      case compile:file(AbsPath, [debug_info, {outdir, OutDir}]) of
-        {ok, Mod, Warnings} ->
+      case file:write_file(OutFile ++ ".beam", Bin) of
+        ok ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           update_xref(),
           code:add_path(OutDir),
           {ok, {[], format_errors(warning, Warnings)}};
-        {error, _} = Error ->
+        {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
-                                 [node(), OutFile, Error]),
-          Error
+                                 [node(), OutFile, Err]),
+          Err
       end;
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
