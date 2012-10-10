@@ -93,13 +93,11 @@ format_test({{M,_,_}, _}, Module) when Module =/= M ->
   [];
 format_test({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
-  {Source, Line} = get_source_and_line(Mfa),
-  {'passed test', Source, Line, "no asserts failed"};
+  {'passed test', get_source(Mfa), get_line(Mfa), "no asserts failed"};
 format_test({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
   Formatted      = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
-  {Source, Line} = get_source_and_line(Mfa),
-  [ {'failed test', Source, Line, failed_test_str(Formatted)}
+  [ {'failed test', get_source(Mfa), get_line(Mfa), failed_test_str(Formatted)}
   | Formatted].
 
 failed_test_str([])             -> "test aborted";
@@ -109,21 +107,23 @@ failed_test_str(Formatted)      ->
   LinesStr = string:join(Lines, ", "),
   format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
-get_source_and_line({Module, Function, Arity}) ->
+get_source({Module, Function, Arity}) ->
   Info = edts_code:get_function_info(Module, Function, Arity),
   {source, Source} = lists:keyfind(source, 1, Info),
-  {line, Line}     = lists:keyfind(line,   1, Info),
-  {Source, Line}.
+  Source.
+
+get_line({Module, Function, Arity}) ->
+  Info = edts_code:get_function_info(Module, Function, Arity),
+  {line, Line} = lists:keyfind(line, 1, Info),
+  Line.
 
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
 format_fail({M,_F,_A} = Mfa, Info)     ->
   Module = orddict:fetch(module, Info),
   Line   = orddict:fetch(line,   Info),
   case Module =:= M of
-    false -> [];
-    true  ->
-      {Source, _} = get_source_and_line(Mfa),
-      {'failed test', Source, Line, format_reason(Info)}
+    true  -> {'failed test', get_source(Mfa), Line, format_reason(Info)};
+    false -> []
   end.
 
 format_reason(Info) ->
