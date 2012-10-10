@@ -211,10 +211,8 @@ handle_end(L, Data, State) ->
   debug("end ~p: ~p", [L, Data]),
   State.
 
-mk_fail({Reason, Info}) ->
-  orddict:from_list([{reason, Reason}|Info]);
-mk_fail(Reason) ->
-  mk_fail({Reason, []}).
+mk_fail({Reason, Info}) -> orddict:from_list([{reason, Reason}|Info]);
+mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
 
 handle_cancel(L, Data, State) ->
   debug("cancel ~p: ~p", [L, Data]),
@@ -233,11 +231,9 @@ terminate(Other, _State) ->
   {error, Other}.
 
 -ifdef(DEBUG).
-debug(FmtStr, Args) ->
-  ct:pal(FmtStr, Args).
+debug(FmtStr, Args) -> ct:pal(FmtStr, Args).
 -else.
-debug(_FmtStr, _Args) ->
-  ok.
+debug(_FmtStr, _Args) -> ok.
 -endif.
 
 %%%_* Tests ====================================================================
