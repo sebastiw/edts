@@ -195,7 +195,6 @@ wait_until_started() ->
   end.
 
 update_paths(LibDirs, AppDirs) ->
-  error_logger:error_msg("AppDirs ~p", [AppDirs]),
   ok = xref:set_library_path(?SERVER, LibDirs),
   ModsToLoad =
     lists:flatmap(
@@ -204,7 +203,6 @@ update_paths(LibDirs, AppDirs) ->
           [{list_to_atom(filename:basename(B, ".beam")), B} || B <- Beams]
       end, AppDirs),
   ModsLoaded = xref:info(?SERVER, modules),
-  error_logger:error_msg("To load ~p", [ModsToLoad]),
   %% Add/update new modules
   LoadF =
     fun({Mod, Beam}) ->
