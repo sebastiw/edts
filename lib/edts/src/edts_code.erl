@@ -100,12 +100,12 @@ compile_and_load(Module, Opts) when is_atom(Module)->
 compile_and_load(File, Opts0) ->
   AbsPath  = filename:absname(File),
   Includes = [filename:dirname(File)|get_include_dirs()],
-  Opts     = [{i, I} || I <- Includes] ++ Opts0,
+  Opts     = [{i, I} || I <- Includes] ++ [return, Opts0],
   case compile:file(AbsPath, [strong_validation|Opts]) of
-    {ok, Mod} ->
+    {ok, Mod, _Warnings} ->
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
-      case compile:file(AbsPath, [return, debug_info, {outdir, OutDir}]) of
+      case compile:file(AbsPath, [debug_info, {outdir, OutDir}]) of
         {ok, Mod, Warnings} ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
