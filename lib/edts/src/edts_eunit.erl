@@ -127,27 +127,35 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
   end.
 
 format_reason(Info) ->
-  Fetch  = fun(Key) -> case orddict:find(Key, Info) of
-                         {ok, Val} -> Val;
-                         error     -> undefined
-                       end
-           end,
-  Reason = Fetch(reason),
-  {Expected, Got} =
-    case Reason of
-      assertCmdOutput_failed    -> {Fetch(expected_output), Fetch(output)};
-      assertCmd_failed          -> {Fetch(expected_status), Fetch(status)};
-      assertEqual_failed        -> {Fetch(expected),        Fetch(value)};
-      assertMatch_failed        -> {Fetch(pattern),         Fetch(value)};
-      assertNotEqual_failed     -> {Fetch(expected),        Fetch(expected)};
-      assertNotMatch_failed     -> {Fetch(pattern),         Fetch(value)};
-      assertion_failed          -> {Fetch(expected),        Fetch(value)};
-      command_failed            -> {Fetch(expected_status), Fetch(status)};
-      assertException_failed    -> format_args_assert_exception(Fetch);
-      assertNotException_failed -> format_args_assert_exception(Fetch);
-      Reason                    -> {undefined,              undefined}
-    end,
-  format("(~p) expected: ~s, got: ~s", [Reason, to_str(Expected), to_str(Got)]).
+  Fetch = fun(Key) ->
+              case orddict:find(Key, Info) of
+                {ok, Val} -> Val;
+                error     -> undefined
+              end
+          end,
+  {Expected, Got} = fmt(Fetch(reason), Fetch),
+  format("(~p) expected: ~s, got: ~s",
+         [Fetch(reason), to_str(Expected), to_str(Got)]).
+
+fmt(assertException_failed,    F) -> format_args_assert_exception(F);
+fmt(assertNotException_failed, F) -> format_args_assert_exception(F);
+fmt(assertCmdOutput_failed,    F) -> {F(expected_output), F(output)};
+fmt(assertCmd_failed,          F) -> {F(expected_status), F(status)};
+fmt(assertEqual_failed,        F) -> {F(expected),        F(value)};
+fmt(assertMatch_failed,        F) -> {F(pattern),         F(value)};
+fmt(assertNotEqual_failed,     F) -> {F(expected),        F(expected)};
+fmt(assertNotMatch_failed,     F) -> {F(pattern),         F(value)};
+fmt(assertion_failed,          F) -> {F(expected),        F(value)};
+fmt(command_failed,            F) -> {F(expected_status), F(status)};
+fmt(_Reason, _F)                  -> {undefined,          undefined}.
+
+fmt_test_() ->
+  F = fun (_) -> a end,
+  [ ?_assertEqual("(assertException_failed) expected: a, got: a)",
+                  fmt(assertException_failed, F))
+  , ?_assertEqual("(foo) expected: undefined, got: undefined",
+                  fmt(foo, F))
+  ].
 
 %% We want to format with ~p, except that we don't want it to add line breaks
 to_str(X) ->
