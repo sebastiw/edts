@@ -108,7 +108,6 @@ failed_test_str([{_,_,Line,_}]) -> format("failed assert on line ~w", [Line]);
 failed_test_str(Formatted)      ->
   Lines    = lists:sort([integer_to_list(Line) || {_,_,Line,_} <- Formatted]),
   LinesStr = string:join(Lines, ", "),
-  debug("lines: ~p", [LinesStr]),
   format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
 get_source_and_line({Module, Function, Arity}) ->
