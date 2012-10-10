@@ -47,8 +47,9 @@ a symbol."
   (edts-face-remove-overlays '("edts-code-compile"))
   (let ((module   (erlang-get-module))
         (file     (buffer-file-name)))
-    (edts-compile-and-load-async
-     module file #'edts-code-handle-compilation-result (current-buffer))))
+    (when (string= "erl" (file-name-extension file))
+      (edts-compile-and-load-async
+       module file #'edts-code-handle-compilation-result (current-buffer)))))
 
 (defun edts-code-handle-compilation-result (comp-res buffer)
   (when comp-res
@@ -64,11 +65,12 @@ a symbol."
 (defun edts-code-xref-analyze ()
   "Runs xref-checks for current buffer on node related the that
 buffer's project."
-  (edts-face-remove-overlays '("edts-code-xref"))
-  (let ((module   (erlang-get-module)))
-    (edts-get-module-xref-analysis-async
-     module edts-code-xref-checks
-     #'edts-code-handle-xref-analysis-result (current-buffer))))
+  (when (string= "erl" (file-name-extension (buffer-file-name)))
+    (edts-face-remove-overlays '("edts-code-xref"))
+    (let ((module   (erlang-get-module)))
+      (edts-get-module-xref-analysis-async
+       module edts-code-xref-checks
+       #'edts-code-handle-xref-analysis-result (current-buffer)))))
 
 (defun edts-code-handle-xref-analysis-result (analysis-res buffer)
   (when analysis-res
