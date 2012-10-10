@@ -87,22 +87,29 @@ compile_and_load(Module) ->
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
                           {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
-compile_and_load(Module, Options) when is_atom(Module)->
+compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
-  compile_and_load(File, Options);
-compile_and_load(File, Options0) ->
+  compile_and_load(File, Opts);
+compile_and_load(File, Opts0) ->
   AbsPath  = filename:absname(File),
   Includes = [filename:dirname(File)|get_include_dirs()],
-  Out      = get_compile_outdir(File),
-  Options  =
-    [{i, I} || I <- Includes] ++ [{outdir, Out}, return, debug_info |Options0],
-  case compile:file(AbsPath, Options) of
-    {ok, Mod, Warnings} ->
-      code:purge(Mod),
-      OutFile = filename:join(Out, atom_to_list(Mod)),
-      {module, Mod} = code:load_abs(OutFile),
-      update_xref(),
-      {ok, {[], format_errors(warning, Warnings)}};
+  Opts     = [{i, I} || I <- Includes] ++ [return, Opts0],
+  case compile:file(AbsPath, [strong_validation|Opts]) of
+    {ok, Mod, _Warnings} ->
+      OutDir = get_compile_outdir(File),
+      OutFile = filename:join(OutDir, atom_to_list(Mod)),
+      case compile:file(AbsPath, [debug_info, {outdir, OutDir}]) of
+        {ok, Mod, Warnings} ->
+          code:purge(Mod),
+          {module, Mod} = code:load_abs(OutFile),
+          update_xref(),
+          code:add_path(OutDir),
+          {ok, {[], format_errors(warning, Warnings)}};
+        {error, _} = Error ->
+          error_logger:error_msg("(~p) Failed to write ~p: ~p",
+                                 [node(), OutFile, Error]),
+          Error
+      end;
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
