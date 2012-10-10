@@ -87,7 +87,7 @@ buffer's project."
   (edts-code-eunit))
 
 (defun edts-code-eunit ()
-  "Runs eunit tests for current buffer on node related the that
+  "Runs eunit tests for current buffer on node related to that
 buffer's project."
   (edts-face-remove-overlays '("edts-code-eunit-passed"))
   (edts-face-remove-overlays '("edts-code-eunit"))
