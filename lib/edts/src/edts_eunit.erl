@@ -51,7 +51,6 @@
 -define(DEBUG, true).
 
 %%%_* Types ====================================================================
-
 -type eunit_info()    :: orddict:orddict().
 -type eunit_result()  :: {ok, {eunit_summary(), [eunit_test()]}}
                        | {error, any()}.
