@@ -238,6 +238,56 @@ debug(_FmtStr, _Args) -> ok.
 
 %%%_* Tests ====================================================================
 
+format_test_test_() ->
+  { setup
+  , mock_get_function_info()
+  , fun meck:unload/1
+  , [ ?_assertEqual([], format_test({{m,f,a}, []}, not_m))
+    , ?_assertEqual({'passed test', "m.erl", 1, "no asserts failed"},
+                    format_test({{m,f,a}, []}, m))
+    , ?_assertEqual([{'failed test', "m.erl", 1, "test aborted"}],
+                    format_test({{m,f,a}, [[{reason, foo}]]}, m))
+    ]
+  }.
+
+failed_test_str_test_() ->
+  [ ?_assertEqual("test aborted",            failed_test_str([]))
+  , ?_assertEqual("failed assert on line 1", failed_test_str([{a, b, 1, c}]))
+  , ?_assertEqual("2 failed asserts on lines 1, 2",
+                  failed_test_str([{a, b, 1, c}, {a, b, 2, c}]))
+  ].
+
+format_fail_test_() ->
+  { setup
+  , mock_get_function_info()
+  , fun meck:unload/1
+  , [ ?_assertEqual([], format_fail({m,f,a}, [{reason, foo}]))
+    , ?_assertEqual([], format_fail({m,f,a}, [{line, 2}, {module, not_m}]))
+    , ?_assertEqual({'failed test', "m.erl", 2,
+                     "(undefined) expected: undefined, got: undefined"},
+                    format_fail({m,f,a}, [{line, 2}, {module, m}]))
+    ]
+  }.
+
+mock_get_function_info() ->
+ fun() ->
+     F = fun(_, _, _) -> [{line, 1}, {source, "m.erl"}] end,
+     meck:new(edts_code, [passthrough]),
+     meck:expect(edts_code, get_function_info, F),
+     edts_code
+ end.
+
+format_reason_test_() ->
+  [ ?_assertEqual("(undefined) expected: undefined, got: undefined",
+                  format_reason([]))
+  , ?_assertEqual("(foo) expected: undefined, got: undefined",
+                  format_reason([{reason, foo}]))
+  , ?_assertEqual("(assertion_failed) expected: foo, got: bar",
+                  format_reason([ {expected, foo}
+                                , {reason,   assertion_failed}
+                                , {value,    bar}]))
+  ].
+
 fmt_test_() ->
   F  = fun(expected_output)    -> a;
           (expected_status)    -> a;
@@ -261,6 +311,26 @@ fmt_test_() ->
   , ?_assertEqual({a, b}, fmt(command_failed,             F))
   , ?_assertEqual({undefined, undefined}, fmt(foo,        F))
   ].
+
+to_str_test_() ->
+  [ ?_assertEqual("foo",         to_str(foo))
+  , ?_assertEqual("\"foo\"",     to_str("foo"))
+  , ?_assertEqual("\"foo\"",     to_str("foo"))
+  , ?_assertEqual("[{foo,123}]", to_str([{foo,123}]))
+  ].
+
+format_args_assert_exception_test_() ->
+  Def   = fun(unexpected_exception) -> {a, b, [{x, y, 0}]};
+             (pattern)              -> a
+          end,
+ Undef  = fun(unexpected_exception) -> undefined;
+             (pattern)              -> a;
+             (unexpected_success)   -> b
+          end,
+  [ ?_assertEqual({a, "a:b in x:y/0"}, format_args_assert_exception(Def))
+  , ?_assertEqual({a, b},              format_args_assert_exception(Undef))
+  ].
+
 init_test() ->
   self() ! {start, ref},
   ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
