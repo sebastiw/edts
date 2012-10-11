@@ -263,7 +263,7 @@ terminate(Other, _State) ->
   {error, Other}.
 
 -ifdef(DEBUG).
-debug(FmtStr, Args) -> ct:pal(FmtStr, Args).
+debug(FmtStr, Args) -> error_logger:error_msg(FmtStr, Args).
 -else.
 debug(_FmtStr, _Args) -> ok.
 -endif.
