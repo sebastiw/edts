@@ -168,10 +168,10 @@ fmt(assertion_failed,          F) -> {F(expected),        F(value)};
 fmt(command_failed,            F) -> {F(expected_status), F(status)};
 fmt(_Reason, _F)                  -> {undefined,          undefined}.
 
-%% We want to format with ~p, except that we don't want it to add line breaks
 to_str(X) ->
   lists:filter(fun (C) -> C =/= $\n end, format("~p", [X])).
 -spec to_str(term()) -> string().
+  %% We want to format with ~p, except that we don't want it to add line breaks
 
 -spec format_args_assert_exception(fun((atom()) -> term())) -> {term(), term()}.
 format_args_assert_exception(Fetch) ->
