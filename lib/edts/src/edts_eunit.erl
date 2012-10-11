@@ -102,7 +102,7 @@ run_tests(Ref, Listener) ->
 
 -spec format_test(eunit_test(), module()) -> [edts_code:issue()].
 format_test({{M,_,_}, _}, Module) when Module =/= M ->
-  debug("format test, module not matching ~p =/= ~p", [Module, M]),
+  debug("format_test: module not matching ~p =/= ~p", [Module, M]),
   [];
 format_test({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
@@ -200,7 +200,7 @@ start(Options) -> eunit_listener:start(?MODULE, Options).
 
 -spec init(proplists:proplist()) -> #state{}.
 init(Options) ->
-  debug("init with options: ~p", [Options]),
+  debug("init, waiting for start..."),
   receive
     {start, Reference} ->
       #state{ ref    = Reference
@@ -210,19 +210,19 @@ init(Options) ->
 
 -spec handle_begin(group|test, proplists:proplist(), #state{}) -> #state{}.
 handle_begin(test, Data, #state{tests=Tests} = State) ->
-  debug("begin test: ~p", [Data]),
+  debug("handle_begin test: ~p", [Data]),
   Source = proplists:get_value(source, Data),
   case orddict:is_key(Source, Tests) of
     true  -> State;
     false -> State#state{tests = orddict:store(Source, [], Tests)}
   end;
 handle_begin(L, Data, State) ->
-  debug("begin ~p: ~p", [L, Data]),
+  debug("handle_begin ~p: ~p", [L, Data]),
   State.
 
 -spec handle_end(group|test, proplists:proplist(), #state{}) -> #state{}.
 handle_end(test, Data, #state{tests=Tests} = State) ->
-  debug("end test: ~p", [Data]),
+  debug("handle_end test: ~p", [Data]),
   case proplists:get_value(status, Data, ok) of
     ok              -> State;
     {error, {_What, Error, _StackTrace}} ->
@@ -235,7 +235,7 @@ handle_end(test, Data, #state{tests=Tests} = State) ->
       State
   end;
 handle_end(L, Data, State) ->
-  debug("end ~p: ~p", [L, Data]),
+  debug("handle_end ~p: ~p", [L, Data]),
   State.
 
 -spec mk_fail({eunit_reason(), proplists:proplist()} | eunit_reason()) ->
@@ -245,7 +245,7 @@ mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
 
 -spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
 handle_cancel(L, Data, State) ->
-  debug("cancel ~p: ~p", [L, Data]),
+  debug("handle_cancel ~p: ~p", [L, Data]),
   State.
 
 -spec terminate({ok, proplists:proplist()}, #state{}) ->
