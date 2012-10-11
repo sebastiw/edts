@@ -149,14 +149,6 @@ fmt(assertion_failed,          F) -> {F(expected),        F(value)};
 fmt(command_failed,            F) -> {F(expected_status), F(status)};
 fmt(_Reason, _F)                  -> {undefined,          undefined}.
 
-fmt_test_() ->
-  F = fun (_) -> a end,
-  [ ?_assertEqual("(assertException_failed) expected: a, got: a)",
-                  fmt(assertException_failed, F))
-  , ?_assertEqual("(foo) expected: undefined, got: undefined",
-                  fmt(foo, F))
-  ].
-
 %% We want to format with ~p, except that we don't want it to add line breaks
 to_str(X) ->
   lists:filter(fun (C) -> C =/= $\n end, format("~p", [X])).
@@ -246,6 +238,29 @@ debug(_FmtStr, _Args) -> ok.
 
 %%%_* Tests ====================================================================
 
+fmt_test_() ->
+  F  = fun(expected_output)    -> a;
+          (expected_status)    -> a;
+          (expected)           -> a;
+          (pattern)            -> a;
+          (output)             -> b;
+          (status)             -> b;
+          (value)              -> b;
+          (unexpected_success) -> b;
+          (_)                  -> undefined
+       end,
+  [ ?_assertEqual({a, b}, fmt(assertException_failed,     F))
+  , ?_assertEqual({a, b}, fmt(assertNotException_failed,  F))
+  , ?_assertEqual({a, b}, fmt(assertCmdOutput_failed,     F))
+  , ?_assertEqual({a, b}, fmt(assertCmd_failed,           F))
+  , ?_assertEqual({a, b}, fmt(assertEqual_failed,         F))
+  , ?_assertEqual({a, b}, fmt(assertMatch_failed,         F))
+  , ?_assertEqual({a, a}, fmt(assertNotEqual_failed,      F))
+  , ?_assertEqual({a, b}, fmt(assertNotMatch_failed,      F))
+  , ?_assertEqual({a, b}, fmt(assertion_failed,           F))
+  , ?_assertEqual({a, b}, fmt(command_failed,             F))
+  , ?_assertEqual({undefined, undefined}, fmt(foo,        F))
+  ].
 init_test() ->
   self() ! {start, ref},
   ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
