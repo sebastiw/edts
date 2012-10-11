@@ -248,19 +248,15 @@ handle_cancel(L, Data, State) ->
   debug("cancel ~p: ~p", [L, Data]),
   State.
 
-terminate({ok, Summary}, State) ->
 -spec terminate({ok, proplists:proplist()}, #state{}) ->
                    {result, reference(), {eunit_summary, [eunit_test()]}}.
+terminate({ok, Summary}, #state{ref=Ref, parent=Parent, tests=Tests}) ->
   debug("terminate: ~p", [Summary]),
-  #state{ref=Ref, parent=Parent, tests=Tests} = State,
-  receive
-    {stop, Ref, _Pid} ->
-      debug("sending to ~p: ~p", [Parent, Tests]),
-      Parent ! {result, {orddict:from_list(Summary), Tests}}
-  end;
-terminate(Other, _State) ->
+
+  Parent ! {result, Ref, {orddict:from_list(Summary), Tests}};
+terminate(Other, #state{parent=Parent}) ->
   debug("terminate: ~p", [Other]),
-  {error, Other}.
+  Parent ! {error, Other}.
 
 -ifdef(DEBUG).
 debug(FmtStr, Args) -> error_logger:error_msg(FmtStr, Args).
