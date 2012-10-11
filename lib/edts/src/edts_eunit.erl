@@ -164,8 +164,8 @@ to_str(X) ->
 format_args_assert_exception(Fetch) ->
   case Fetch(unexpected_exception) of
     undefined             -> {Fetch(pattern), Fetch(unexpected_success)};
-    {ExType, Ex, [Mfa|_]} ->
-      {Fetch(pattern), format("~w:~w in ~w", [ExType, Ex, Mfa])}
+    {ExType, Ex, [{M,F,A}|_]} ->
+      {Fetch(pattern), format("~w:~w in ~w:~w/~w", [ExType, Ex, M, F, A])}
   end.
 
 format(FormatStr, Args) ->
