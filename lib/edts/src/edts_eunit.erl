@@ -221,22 +221,23 @@ handle_begin(L, Data, State) ->
   State.
 
 -spec handle_end(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_end(test, Data, #state{tests=Tests} = State) ->
+handle_end(test, Data, State) ->
   debug("handle_end test: ~p", [Data]),
   case proplists:get_value(status, Data, ok) of
-    ok              -> State;
-    {error, {_What, Error, _StackTrace}} ->
-      Source = proplists:get_value(source, Data),
-      Fail   = mk_fail(Error),
-      Fails  = orddict:fetch(Source, Tests),
-      State#state{tests = orddict:store(Source, [Fail|Fails], Tests)};
-    Other           ->
-      debug("other: ~p", [Other]),
-      State
+    {error, Err} -> add_fail(Err, Data, State);
+    ok           -> State;
+    _Other       -> State
   end;
 handle_end(L, Data, State) ->
   debug("handle_end ~p: ~p", [L, Data]),
   State.
+
+-spec add_fail(tuple(), proplists:proplist(), #state{}) -> #state{}.
+add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
+  Source = proplists:get_value(source, Data),
+  Fail   = mk_fail(How),
+  Fails  = orddict:fetch(Source, Tests),
+  State#state{tests = orddict:store(Source, [Fail|Fails], Tests)}.
 
 -spec mk_fail({eunit_reason(), proplists:proplist()} | eunit_reason()) ->
                  eunit_info().
