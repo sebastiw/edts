@@ -26,6 +26,8 @@
    function (edts-argument-regexp arity)))
 
 (defun edts-doc-any-function-regexp ()
+  "Return a regexp matching the whole function (heads and body) of any
+complete function."
   (format
    "^%s[[:space:]\n]*([[:ascii:]]??*)[[:space:]\n]*->[[:ascii:]]+?*\\."
    erlang-atom-regexp))
@@ -40,14 +42,13 @@ source in SOURCE."
 (defun edts-doc-extract-function-information (function arity)
   "Extract information (spec and comments) about FUNCTION/ARITY from
 source in current buffer."
-  (goto-char 0)
-  (re-search-forward (concat "^" (edts-function-regexp function arity)))
-  (let ((end (match-beginning 0)))
-    (re-search-backward (edts-doc-any-function-regexp) nil t)
-    (let ((start (match-end 0)))
-      (concat (edts-doc-extract-spec start end function arity)
-              "\n\n"
-              (edts-doc-extract-doc start end)))))
+  (ferl-search-function function arity)
+  (let* ((end (point))
+         (re  (edts-doc-any-function-regexp))
+         (start (or (and (re-search-backward re nil t) (match-end 0)) 0)))
+    (concat (edts-doc-extract-spec start end function arity)
+            "\n\n"
+            (edts-doc-extract-doc start end))))
 
 (defun edts-doc-extract-spec (start end function arity)
   "Extract spec for FUNCTION/ARITY from source in current buffer. Search

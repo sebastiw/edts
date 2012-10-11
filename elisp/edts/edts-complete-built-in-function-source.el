@@ -200,7 +200,7 @@ candidates, except we single-quote-terminate candidates."
   (let* ((split  (split-string candidate "/"))
          (function   (car split))
          (arity  (string-to-number (cadr split))))
-    (edts-man-extract-function-entry "erlang" function arity)))
+    (edts-man-extract-function-entry "erlang" function))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

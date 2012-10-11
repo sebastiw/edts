@@ -97,20 +97,28 @@ node."
   (let ((source (cdr (assoc 'source (edts-get-basic-module-info module)))))
     (edts-doc-extract-function-information-from-source source function arity)))
 
-(defun edts-function-regexp (function arity)
-  "Construct a regexp matching FUNCTION(arg1, ..., argARITY)."
-  (format "%s[[:space:]\n]*(%s)[[:space:]\n]*->"
-          function (edts-argument-regexp arity)))
+(defun edts-function-head-regexp (function &optional arity)
+  "Construct a regexp matching FUNCTION(arg1, ..., argARITY). A negative number
+for ARITY will give a regexp matching any arity."
+  (unless arity (setq arity -1))
+  (format "%s[[:space:]\n]*(%s)" function (edts-argument-regexp arity)))
+
+(defun edts-function-regexp (function &optional arity)
+  "Construct a regexp matching 'FUNCTION(arg1, ..., argARITY) ->'.
+negative number for ARITY will give a regexp matching any arity."
+  (concat (edts-function-head-regexp function arity) "[[:space:]\n]*->"))
 
 (defun edts-any-function-regexp ()
   "Construct a regexp matching any function."
   (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]\n]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
-  "Contstruct a regexp matching ARITY arguments."
-  (if (equal arity 0)
-      "[[:space:]\n]*"
-      (concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*")))))
+  "Contstruct a regexp matching ARITY arguments. A negative number
+for ARITY will give a regexp matching any arity."
+  (cond
+   ((< arity 0) "[[:ascii:]]*?")
+   ((equal arity 0) "[[:space:]\n]*")
+   ((concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*"))))))
 
 (defun edts-ahs-edit-current-function ()
   "Activate ahs-edit-mode with erlang-current-function range-plugin."
