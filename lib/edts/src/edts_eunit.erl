@@ -372,7 +372,7 @@ handle_end_test_() ->
   , ?_assertEqual(#state{tests=[{foo, []}]},
                   handle_end(foo, [], #state{tests=[{foo, []}]}))
   , ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(foo, [{status, asdf}], #state{tests=[{foo, []}]}))
+                  handle_end(test, [{status, asdf}], #state{tests=[{foo, []}]}))
   , ?_assertEqual(#state{tests=[{foo, [[{reason, bar}]]}]},
                   handle_end(test, [ {status, {error, {error, bar, st}}}
                                    , {source, foo}
