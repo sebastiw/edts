@@ -249,6 +249,16 @@ debug(_FmtStr, _Args) -> ok.
 
 %%%_* Tests ====================================================================
 
+run_tests_ok_test() ->
+  {Ref, Pid} = run_tests_common(),
+  Pid ! {result, Ref, foo},
+  assert_receive({ok, foo}).
+
+run_tests_error_test() ->
+  {_Ref, Pid} = run_tests_common(),
+  Pid ! {error, foo},
+  assert_receive({error, foo}).
+
 format_test_test_() ->
   { setup
   , mock_get_function_info()
@@ -380,11 +390,11 @@ handle_end_test_() ->
   ].
 
 terminate_test() ->
-  State = #state{ref=ref, parent=self(), tests=[foo, bar]},
-  Exp   = {result, {[{a, 1}, {b, 2}], [foo, bar]}},
-  self() ! {stop, ref, self()},
+  Ref   = make_ref(),
+  State = #state{ref=Ref, parent=self(), tests=[foo, bar]},
+  Exp   = {result, Ref, {[{a, 1}, {b, 2}], [foo, bar]}},
   ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
-  ?assertEqual(Exp, receive Res -> Res end),
+  assert_receive(Exp),
   ?assertEqual({error, foo}, terminate(foo, State)).
 
 mk_fail_test_() ->
@@ -396,6 +406,19 @@ mk_fail_test_() ->
 handle_cancel_test() ->
   State = #state{ref=foo, parent=bar, tests=baz},
   ?assertEqual(State, handle_cancel(l, data, State)).
+
+%%%_* Test helpers -------------------------------------------------------------
+
+run_tests_common() ->
+  Ref      = make_ref(),
+  Listener = self(),
+  Pid      = spawn(fun() -> Listener ! run_tests(Ref, Listener) end),
+  Pid ! {start, Ref},
+  assert_receive({start, Ref}),
+  {Ref, Pid}.
+
+assert_receive(Expected) ->
+  ?assertEqual(Expected, receive Expected -> Expected end).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
