@@ -63,7 +63,7 @@
                       (ferl-paren-arity (match-string 2))) funs)))
     (reverse funs)))
 
-(defun edts-man-extract-function-entry (module function arity)
+(defun edts-man-extract-function-entry (module function)
   "Extract and display the man-page entry for MODULE:FUNCTION in
 `edts-man-root'."
   (with-temp-buffer
@@ -76,21 +76,20 @@
     ;; section of interest, then decode that section ('til
     ;; end-of-buffer) and finally we delete everything before the
     ;; section of interest.
-    (re-search-forward (edts-man-function-entry-regexp function arity))
-    (delete-region (+ (match-end 0) 1) (point-max))
-    (woman-decode-region (point-min) (point-max))
-    (goto-char (point-min))
-    (re-search-forward (edts-function-regexp function arity))
-    (delete-region (point-min) (match-beginning 0))
-    (set-left-margin (point-min) (point-max) 0)
-    (delete-to-left-margin (point-min) (point-max))
-    (buffer-string)))
-
-(defun edts-man-function-entry-regexp (function arity)
-  "Construct a regexp matching FUNCTION/ARITY section in an Erlang
-man-page."
-  (format "\\.B\n%s[[:ascii:]]*?\n\n\\.LP\n\\.nf"
-          (edts-function-regexp function arity)))
+    (re-search-forward (format "^\\.B\n%s" function))
+    (let ((end   (point-max)))
+      (while (re-search-forward (format "^\\.B\n%s" function) nil t) nil)
+      (when
+          (re-search-forward "^\\.\\(\\(B\n\\)\\|\\(SH[[:space:]]\\)\\)" nil 't)
+        (setq end (match-beginning 0)))
+      (delete-region end (point-max))
+      (woman-decode-region (point-min) (point-max))
+      (goto-char (point-min))
+      (re-search-forward (format "^\\s-*%s" function))
+      (delete-region (point-min) (match-beginning 0))
+      (set-left-margin (point-min) (point-max) 0)
+      (delete-to-left-margin (point-min) (point-max))
+      (buffer-string))))
 
 (defun edts-man-find-function-entry (module function arity)
   "Find and display the man-page entry for MODULE:FUNCTION in
