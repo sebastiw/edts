@@ -258,6 +258,8 @@ terminate(Other, #state{parent=Parent}) ->
   debug("terminate: ~p", [Other]),
   Parent ! {error, Other}.
 
+debug(Str) -> debug(Str, []).
+
 -ifdef(DEBUG).
 debug(FmtStr, Args) -> error_logger:error_msg(FmtStr, Args).
 -else.
