@@ -79,11 +79,22 @@ test(Module) ->
 %% @doc Run eunit tests in `Module' and return the test result
 -spec run_tests(Module::module()) -> Result::eunit_result().
 run_tests(Module) ->
-  Options = [{report, {?MODULE, [{parent, self()}]}}],
-  eunit:test(Module, Options),
+  debug("running eunit tests in: ~p", [Module]),
+  Listener = ?MODULE:start([{parent, self()}]),
+  case eunit_server:start_test(eunit_server, Listener, Module, []) of
+    {ok, Ref}    -> run_tests(Ref, Listener);
+    {error, Err} -> {error, Err}
+  end.
+
+run_tests(Ref, Listener) ->
+  debug("waiting for start..."),
   receive
-    {result, Result} -> {ok, Result};
-    {error, _} = Err -> Err
+    {start, Ref} -> Listener ! {start, Ref}
+  end,
+  debug("waiting for result..."),
+  receive
+    {result, Ref, Result} -> {ok, Result};
+    {error, Err}          -> {error, Err}
   after
     5000 -> {error, timeout}
   end.
