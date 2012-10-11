@@ -266,7 +266,7 @@ debug(FmtStr, Args) -> error_logger:error_msg(FmtStr, Args).
 debug(_FmtStr, _Args) -> ok.
 -endif.
 
-%%%_* Tests ====================================================================
+%%%_* Unit tests ===============================================================
 
 run_tests_ok_test() ->
   {Ref, Pid} = run_tests_common(),
