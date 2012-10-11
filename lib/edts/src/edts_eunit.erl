@@ -104,7 +104,7 @@ format_test({{M,_,_}, _}, Module) when Module =/= M ->
   [];
 format_test({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
-  {'passed test', get_source(Mfa), get_line(Mfa), "no asserts failed"};
+  [{'passed test', get_source(Mfa), get_line(Mfa), "no asserts failed"}];
 format_test({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
   Formatted      = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
@@ -264,7 +264,7 @@ format_test_test_() ->
   , mock_get_function_info()
   , fun meck:unload/1
   , [ ?_assertEqual([], format_test({{m,f,a}, []}, not_m))
-    , ?_assertEqual({'passed test', "m.erl", 1, "no asserts failed"},
+    , ?_assertEqual([{'passed test', "m.erl", 1, "no asserts failed"}],
                     format_test({{m,f,a}, []}, m))
     , ?_assertEqual([{'failed test', "m.erl", 1, "test aborted"}],
                     format_test({{m,f,a}, [[{reason, foo}]]}, m))
