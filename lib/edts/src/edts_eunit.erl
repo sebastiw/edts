@@ -362,7 +362,7 @@ format_args_assert_exception_test_() ->
   Def   = fun(unexpected_exception) -> {a, b, [{x, y, 0}]};
              (pattern)              -> a
           end,
- Undef  = fun(unexpected_exception) -> undefined;
+  Undef = fun(unexpected_exception) -> undefined;
              (pattern)              -> a;
              (unexpected_success)   -> b
           end,
