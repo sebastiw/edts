@@ -355,7 +355,6 @@ fmt_test_() ->
 to_str_test_() ->
   [ ?_assertEqual("foo",         to_str(foo))
   , ?_assertEqual("\"foo\"",     to_str("foo"))
-  , ?_assertEqual("\"foo\"",     to_str("foo"))
   , ?_assertEqual("[{foo,123}]", to_str([{foo,123}]))
   ].
 
