@@ -253,7 +253,6 @@ handle_cancel(L, Data, State) ->
                    {result, reference(), {eunit_summary, [eunit_test()]}}.
 terminate({ok, Summary}, #state{ref=Ref, parent=Parent, tests=Tests}) ->
   debug("terminate: ~p", [Summary]),
-
   Parent ! {result, Ref, {orddict:from_list(Summary), Tests}};
 terminate(Other, #state{parent=Parent}) ->
   debug("terminate: ~p", [Other]),
