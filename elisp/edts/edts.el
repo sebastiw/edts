@@ -276,6 +276,16 @@ functions."
 buffer"
   (edts-get-module-info module 'detailed))
 
+(defun edts-get-free-vars (snippet)
+  "Return a list of the free variables in SNIPPET."
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource (list "code" "free_vars"))
+         (res      (edts-rest-get resource nil snippet)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'body res))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 (defun edts-get-module-info (module level)
   "Fetches info about MODULE on the node associated with current buffer.
 LEVEL is either basic or detailed."
@@ -285,7 +295,8 @@ LEVEL is either basic or detailed."
          (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-module-xref-analysis-async (module checks callback buffer)
   "Compile MODULE in FILE on the node associated with current buffer,

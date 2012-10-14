@@ -32,19 +32,20 @@
 (defconst edts-rest-content-type-hdr '("Content-Type" . "application/json"))
 
 
-(defun edts-rest-get (resource args)
-  "Send a get request to RESOURCE with ARGS"
-  (edts-rest-request "GET" resource args))
+(defun edts-rest-get (resource args &optional body)
+  "Send a get request to RESOURCE with ARGS with optional BODY."
+  (edts-rest-request "GET" resource args body))
 
-(defun edts-rest-post (resource args)
+(defun edts-rest-post (resource args &optional body)
   "Send a post request to RESOURCE with ARGS"
-  (edts-rest-request "POST" resource args))
+  (edts-rest-request "POST" resource args body))
 
-(defun edts-rest-request (method resource args)
+(defun edts-rest-request (method resource args &optional body)
   "Send a get request to RESOURCE with ARGS"
   (let* ((url                       (edts-rest-resource-url resource args))
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
+         (url-request-data          body)
          (url-show-status           nil)
          (buffer (url-retrieve-synchronously url)))
     (edts-log-debug "Sending %s-request to %s" method url)

@@ -33,6 +33,8 @@
 -export([add_paths/1,
          check_module/2,
          compile_and_load/1,
+         free_vars/1,
+         free_vars/2,
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
@@ -46,6 +48,11 @@
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 %%%_* Types ====================================================================
+
+-type error()::{error | warning,
+                File             ::string(),
+                Line             ::non_neg_integer(),
+                Description      ::string()}.
 
 %%%_* API ======================================================================
 
@@ -72,10 +79,7 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 %% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_module(Module::module(), Checks::[xref:analysis()]) ->
-                      {ok, [{ Type::error
-                            , File::string()
-                            , Line::non_neg_integer()
-                            , Description::string()}]}.
+                      {ok, [error()]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
   case code:is_loaded(Module) of
@@ -89,11 +93,7 @@ check_module(Module, Checks) ->
 %% Equivalent to compile_and_load(Module, []).
 %% @end
 -spec compile_and_load(Module::file:filename() | module()) ->
-                          {ok | error,
-                           [{error | warning,
-                             File::string(),
-                             Line::non_neg_integer(),
-                             Description::string()}]}.
+                          {ok | error, [error()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   compile_and_load(Module, []).
@@ -108,11 +108,7 @@ compile_and_load(Module) ->
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
-                          {ok | error,
-                           [{error | warning,
-                             File::string(),
-                             Line::non_neg_integer(),
-                             Description::string()}]}.
+                          {ok | error, [error()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
@@ -181,6 +177,41 @@ get_function_info(M, F0, A0) ->
       , {source,   Source}
       , {line,     Line}]
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Equivalent to free_vars(Snippet, 1).
+%% @end
+-spec free_vars(Text::string()) -> {ok, FreeVars::[atom()]} |
+                                   {error, [error()]}.
+%% @equiv free_vars(Text, 1)
+%%------------------------------------------------------------------------------
+free_vars(Snippet) -> free_vars(Snippet, 1).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Equivalent to free_vars(Snippet, 1).
+%% @end
+-spec free_vars(Text::string(), pos_integer()) -> {ok, FreeVars::[atom()]} |
+                                   {error, [error()]}.
+%% @equiv free_vars(Text, 1)
+%%------------------------------------------------------------------------------
+free_vars(Text, StartLine) ->
+  %% StartLine/EndLine may be useful in error messages.
+  {ok, Ts, EndLine} = erl_scan:string(Text, StartLine),
+  %%Ts1 = reverse(strip(reverse(Ts))),
+  Ts2 = [{'begin', 1}] ++ Ts ++ [{'end', EndLine}, {dot, EndLine}],
+  case erl_parse:parse_exprs(Ts2) of
+    {ok, Es} ->
+      E = erl_syntax:block_expr(Es),
+      E1 = erl_syntax_lib:annotate_bindings(E, ordsets:new()),
+      {value, {free, Vs}} =
+        lists:keysearch(free, 1, erl_syntax:get_ann(E1)),
+      {ok, Vs};
+    {error, {_Line, erl_parse, _Reason} = Err} ->
+        {error, format_errors(error, {"Snippet", [Err]})}
+    end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
