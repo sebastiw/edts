@@ -104,6 +104,10 @@ Planned features in the short term are:
                   project's node-sname. The command must also not set the
                   erlang cookie to anything other than the default
                   ~/.erlang.cookie.
+  otp-path      - The path to any custom OTP-version to use for the project. The
+                  OTP-release's bin-directory will be added to the head of the
+                  exec-path and the PATH environment variable when starting the
+                  project node.
 
   Example:
   (setq edts-projects
@@ -111,6 +115,7 @@ Planned features in the short term are:
          (name       . "awesome_stuff")
          (root       . "~/src/awesome_stuff")
          (node-sname . "awesome")
+         (otp-path   . "~/otp/r15b02"
          (start-command . "./start-being-awesome.sh"))
         ( ;; My other project.
          (name       . "other_stuff")
