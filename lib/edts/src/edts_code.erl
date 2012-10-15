@@ -128,7 +128,7 @@ compile_and_load(File, Opts) ->
           {module, Mod} = code:load_abs(OutFile),
           update_xref(),
           add_path(OutDir),
-          maybe_interpret_module(Module, WasInterpreted),
+          maybe_interpret_module(Mod, WasInterpreted),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
