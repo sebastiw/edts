@@ -28,6 +28,7 @@
 (require 'edts-complete-module-source)
 (require 'edts-complete-macro-source)
 (require 'edts-complete-record-source)
+(load-library "edts-complete-keyword-source")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -93,6 +94,7 @@ character before that."
 
 (defcustom edts-complete-sources
   '(
+    edts-complete-keyword-source
     edts-complete-variable-source
     edts-complete-local-function-source
     edts-complete-imported-function-source
