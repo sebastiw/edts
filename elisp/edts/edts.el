@@ -110,15 +110,15 @@ negative number for ARITY will give a regexp matching any arity."
 
 (defun edts-any-function-regexp ()
   "Construct a regexp matching any function."
-  (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]\n]*->" erlang-atom-regexp))
+  (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments. A negative number
 for ARITY will give a regexp matching any arity."
   (cond
    ((< arity 0) "[[:ascii:]]*?")
-   ((equal arity 0) "[[:space:]\n]*")
-   ((concat "[^,]*" (apply #'concat (make-list (- arity 1) ",[^,]*"))))))
+   ((equal arity 0) "[[:space:]]*")
+   ((concat "[^,]*?" (apply #'concat (make-list (- arity 1) ",[^,]*?"))))))
 
 (defun edts-ahs-edit-current-function ()
   "Activate ahs-edit-mode with erlang-current-function range-plugin."
