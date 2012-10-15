@@ -50,24 +50,24 @@ the node, version 1.2 (or perhaps later.)"
               (goto-char end)
               (skip-chars-backward ". ,;\r\n\t")
               (point)))
-  (let ((body      (buffer-substring-no-properties start end))
-        (text      (edts-refactor-strip-macros body))
-        (free-vars (cdr (assoc 'vars (edts-get-free-vars text))))
-        (arglist   (concat "(" (mapconcat 'symbol-name free-vars ", ") ")"))
-        (let (
-              )
-		;; rewrite the original as a call
-		(delete-region start end)
-                (goto-char start)
-		(insert (format "%s%s" name arglist))
-		(indent-according-to-mode)
-		;; Now generate the function and stick it on the kill ring
-		(kill-new (with-temp-buffer
-			    (insert (format "%s%s ->\n%s.\n" name arglist body))
-			    (erlang-mode)
-			    (indent-region (point-min) (point-max) nil)
-			    (buffer-string)))
-		(message "Saved `%s' definition on kill ring." name)))))))))
+  (let* ((body       (buffer-substring-no-properties start end))
+         (text       (edts-refactor-strip-macros body))
+         (free-vars  (cdr (assoc 'vars (edts-get-free-vars text))))
+         (arglist    (concat "(" (mapconcat 'symbol-name free-vars ", ") ")"))
+         (indent-lvl erlang-indent-level))
+    ;; rewrite the original as a call
+    (delete-region start end)
+    (goto-char start)
+    (insert (format "%s%s" name arglist))
+    (indent-according-to-mode)
+    ;; Now generate the function and stick it on the kill ring
+    (kill-new (with-temp-buffer
+                (insert (format "%s%s ->\n%s.\n" name arglist body))
+                (erlang-mode)
+                (setq erlang-indent-level indent-lvl)
+                (indent-region (point-min) (point-max) nil)
+                (buffer-string)))
+    (message "Saved `%s' definition on kill ring." name)))
 
 (defun edts-refactor-strip-macros (text)
   "Removed all use of macros in TEXT.
