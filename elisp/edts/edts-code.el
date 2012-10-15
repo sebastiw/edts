@@ -59,18 +59,19 @@ a symbol."
             (warnings (cdr (assoc 'warnings comp-res))))
         (edts-code-display-error-overlays "edts-code-compile" errors)
         (edts-code-display-warning-overlays "edts-code-compile" warnings)
-        (run-hooks 'edts-code-after-compilation-hook)
+        (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
         result))))
 
-(defun edts-code-xref-analyze ()
+(defun edts-code-xref-analyze (result)
   "Runs xref-checks for current buffer on node related the that
 buffer's project."
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
-    (let ((module   (erlang-get-module)))
-      (edts-get-module-xref-analysis-async
-       module edts-code-xref-checks
-       #'edts-code-handle-xref-analysis-result (current-buffer)))))
+    (when (not (eq result 'error))
+      (let ((module   (erlang-get-module)))
+        (edts-get-module-xref-analysis-async
+         module edts-code-xref-checks
+         #'edts-code-handle-xref-analysis-result (current-buffer))))))
 
 (defun edts-code-handle-xref-analysis-result (analysis-res buffer)
   (when analysis-res
