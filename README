@@ -42,7 +42,7 @@ Planned features in the short term are:
 ## Getting started ##
 
 - Requirements:
-  - Emacs 23.1 or later (24.2 recommended)
+  - Emacs 23.3 or later (24.2 recommended)
 
 - First of all, make sure your ensure your environment is setup correctly:
   - If you're not using Linux, setup Erlang mode according to the instructions
