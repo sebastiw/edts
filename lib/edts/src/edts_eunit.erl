@@ -25,8 +25,6 @@
 %%%_* Module declaration =======================================================
 -module(edts_eunit).
 
--behaviour(eunit_listener).
-
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
@@ -37,26 +35,16 @@
         , run_tests/1
         ]).
 
-%% Eunit listener callbacks
--export([ handle_begin/3
-        , handle_cancel/3
-        , handle_end/3
-        , init/1
-        , start/0
-        , start/1
-        , terminate/2
-        ]).
-
 %%%_* Defines ==================================================================
 %-define(DEBUG, true).
 
 %%%_* Types ====================================================================
--type edts_eunit_info()    :: orddict:orddict().
--type edts_eunit_result()  :: {ok, {edts_eunit_summary(), [edts_eunit_test()]}}
-                            | {error, term()}.
--type edts_eunit_summary() :: orddict:orddict().
--type edts_eunit_test()    :: {mfa(), [edts_eunit_info()]}.
--type edts_eunit_reason()  :: atom().
+-type info()    :: orddict:orddict().
+-type result()  :: {ok, {summary(), [test()]}}
+                 | {error, term()}.
+-type summary() :: orddict:orddict().
+-type test()    :: {mfa(), [info()]}.
+-type reason()  :: atom().
 
 %%%_* API ======================================================================
 
@@ -77,16 +65,16 @@ test(Module) ->
 
 %%%_* Internal functions =======================================================
 
--spec run_tests(module()) -> edts_eunit_result().
+-spec run_tests(module()) -> result().
 run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
-  Listener = ?MODULE:start([{parent, self()}]),
+  Listener = edts_eunit_listener:start([{parent, self()}]),
   case eunit_server:start_test(eunit_server, Listener, Module, []) of
     {ok, Ref}    -> run_tests(Ref, Listener);
     {error, Err} -> {error, Err}
   end.
 
--spec run_tests(reference(), pid()) -> edts_eunit_result().
+-spec run_tests(reference(), pid()) -> result().
 run_tests(Ref, Listener) ->
   debug("waiting for start..."),
   receive
@@ -100,7 +88,7 @@ run_tests(Ref, Listener) ->
     5000 -> {error, timeout}
   end.
 
--spec format_test_result(edts_eunit_test(), module()) -> [edts_code:issue()].
+-spec format_test_result(test(), module()) -> [edts_code:issue()].
 format_test_result({{M,_,_}, _}, Module) when Module =/= M ->
   debug("format_test_result: module not matching ~p =/= ~p", [Module, M]),
   [];
@@ -130,7 +118,7 @@ get_source_and_line({Module, Function, Arity}) ->
   {source, Source} = lists:keyfind(source, 1, Info),
   {Source, Line}.
 
--spec format_fail(mfa(), edts_eunit_info()) -> edts_code:issue() | [].
+-spec format_fail(mfa(), info()) -> edts_code:issue() | [].
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
 format_fail({M,_F,_A} = Mfa, Info)     ->
   Module      = orddict:fetch(module, Info),
@@ -141,7 +129,7 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
     false -> []
   end.
 
--spec format_reason(edts_eunit_info()) -> string().
+-spec format_reason(info()) -> string().
 format_reason(Info) ->
   Fetch = fun(Key) ->
               case orddict:find(Key, Info) of
@@ -153,7 +141,7 @@ format_reason(Info) ->
   format("(~p) expected: ~s, got: ~s",
          [Fetch(reason), to_str(Expected), to_str(Got)]).
 
--spec fmt(edts_eunit_reason(), fun((atom()) -> term())) -> {term(), term()}.
+-spec fmt(reason(), fun((atom()) -> term())) -> {term(), term()}.
 fmt(assertException_failed,    F) -> format_args_assert_exception(F);
 fmt(assertNotException_failed, F) -> format_args_assert_exception(F);
 fmt(assertCmdOutput_failed,    F) -> {F(expected_output), F(output)};
@@ -183,79 +171,6 @@ format_args_assert_exception(Fetch) ->
 format(FormatStr, Args) ->
   lists:flatten(io_lib:format(FormatStr, Args)).
 
-%%%_* Listener =================================================================
-
--record(state, { parent     :: pid()
-               , ref        :: reference()
-               , tests = [] :: [edts_eunit_test()]
-               }).
-
--spec start() -> pid().
-start() -> start([]).
-
--spec start(proplists:proplist()) -> pid().
-start(Options) -> eunit_listener:start(?MODULE, Options).
-
--spec init(proplists:proplist()) -> #state{}.
-init(Options) ->
-  debug("init, waiting for start..."),
-  receive
-    {start, Reference} ->
-      #state{ ref    = Reference
-            , parent = proplists:get_value(parent, Options)
-            }
-  end.
-
--spec handle_begin(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_begin(test, Data, #state{tests=Tests} = State) ->
-  debug("handle_begin test: ~p", [Data]),
-  Source = proplists:get_value(source, Data),
-  case orddict:is_key(Source, Tests) of
-    true  -> State;
-    false -> State#state{tests = orddict:store(Source, [], Tests)}
-  end;
-handle_begin(L, Data, State) ->
-  debug("handle_begin ~p: ~p", [L, Data]),
-  State.
-
--spec handle_end(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_end(test, Data, State) ->
-  debug("handle_end test: ~p", [Data]),
-  case proplists:get_value(status, Data, ok) of
-    {error, Err} -> add_fail(Err, Data, State);
-    ok           -> State;
-    _Other       -> State
-  end;
-handle_end(L, Data, State) ->
-  debug("handle_end ~p: ~p", [L, Data]),
-  State.
-
--spec add_fail(tuple(), proplists:proplist(), #state{}) -> #state{}.
-add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
-  Source = proplists:get_value(source, Data),
-  Fail   = mk_fail(How),
-  Fails  = orddict:fetch(Source, Tests),
-  State#state{tests = orddict:store(Source, [Fail|Fails], Tests)}.
-
--spec mk_fail({edts_eunit_reason(), proplists:proplist()}
-              | edts_eunit_reason()) -> edts_eunit_info().
-mk_fail({Reason, Info}) -> orddict:from_list([{reason, Reason}|Info]);
-mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
-
--spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_cancel(L, Data, State) ->
-  debug("handle_cancel ~p: ~p", [L, Data]),
-  State.
-
--spec terminate({ok, proplists:proplist()}, #state{}) ->
-              {result, reference(), {edts_eunit_summary, [edts_eunit_test()]}}.
-terminate({ok, Summary}, #state{ref=Ref, parent=Parent, tests=Tests}) ->
-  debug("terminate: ~p", [Summary]),
-  Parent ! {result, Ref, {orddict:from_list(Summary), Tests}};
-terminate(Other, #state{parent=Parent}) ->
-  debug("terminate: ~p", [Other]),
-  Parent ! {error, Other}.
-
 debug(Str) -> debug(Str, []).
 
 -ifdef(DEBUG).
@@ -273,8 +188,8 @@ run_tests_ok_test() ->
 
 run_tests_error_test() ->
   {_Ref, Pid} = run_tests_common(),
-  Pid ! {error, foo},
-  assert_receive({error, foo}).
+  Pid ! {error, foobar},
+  assert_receive({error, foobar}).
 
 format_test_result_test_() ->
   { setup
@@ -367,61 +282,6 @@ format_args_assert_exception_test_() ->
   [ ?_assertEqual({a, "a:b in x:y/0"}, format_args_assert_exception(Def))
   , ?_assertEqual({a, b},              format_args_assert_exception(Undef))
   ].
-
-init_test() ->
-  self() ! {start, ref},
-  ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
-
-handle_begin_test_() ->
-  [ ?_assertEqual(#state{tests=[{a, []}]},
-                  handle_begin(test, [{source, a}], #state{tests=[]}))
-  , ?_assertEqual(#state{tests=[{a, [1]}]},
-                  handle_begin(test, [{source, a}], #state{tests=[{a, [1]}]}))
-  , ?_assertEqual(#state{tests=[{a, [1]}, {b, []}]},
-                  handle_begin(test, [{source, b}], #state{tests=[{a, [1]}]}))
-  , ?_assertEqual(#state{}, handle_begin(foo, [], #state{}))
-  ].
-
-handle_end_test_() ->
-  [ ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(test, [], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(foo, [], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(test, [{status, asdf}], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{reason, bar}]]}]},
-                  handle_end(test, [ {status, {error, {error, bar, st}}}
-                                   , {source, foo}
-                                   ], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}]]}]},
-                  handle_end(test,
-                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
-                             , {source, foo}
-                             ], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}], baz]}]},
-                  handle_end(test,
-                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
-                             , {source, foo}
-                             ], #state{tests=[{foo, [baz]}]}))
-  ].
-
-terminate_test() ->
-  Ref   = make_ref(),
-  State = #state{ref=Ref, parent=self(), tests=[foo, bar]},
-  Exp   = {result, Ref, {[{a, 1}, {b, 2}], [foo, bar]}},
-  ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
-  assert_receive(Exp),
-  ?assertEqual({error, foo}, terminate(foo, State)).
-
-mk_fail_test_() ->
-  [ ?_assertEqual([{reason, foo}],             mk_fail(foo))
-  , ?_assertEqual([{reason, foo}],             mk_fail({foo, []}))
-  , ?_assertEqual([{aaa, bar}, {reason, foo}], mk_fail({foo, [{aaa, bar}]}))
-  ].
-
-handle_cancel_test() ->
-  State = #state{ref=foo, parent=bar, tests=baz},
-  ?assertEqual(State, handle_cancel(l, data, State)).
 
 %%%_* Test helpers -------------------------------------------------------------
 
