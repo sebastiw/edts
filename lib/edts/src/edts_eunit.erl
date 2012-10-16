@@ -53,7 +53,7 @@
 %%%_* Types ====================================================================
 -type edts_eunit_info()    :: orddict:orddict().
 -type edts_eunit_result()  :: {ok, {edts_eunit_summary(), [edts_eunit_test()]}}
-                            | {error, any()}.
+                            | {error, term()}.
 -type edts_eunit_summary() :: orddict:orddict().
 -type edts_eunit_test()    :: {mfa(), [edts_eunit_info()]}.
 -type edts_eunit_reason()  :: atom().
@@ -63,7 +63,7 @@
 %%------------------------------------------------------------------------------
 %% @doc Run eunit tests on Module and return result as "issues".
 -spec test(module()) -> {ok, [edts_code:issue()]}
-                      | {error, any()}.
+                      | {error, term()}.
 %%------------------------------------------------------------------------------
 test(Module) ->
   case run_tests(Module) of
