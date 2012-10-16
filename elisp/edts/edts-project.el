@@ -55,7 +55,9 @@ activated for the first file that is located inside a project."
   (let* ((project-root (expand-file-name (edts-project-root project)))
          (node-name    (edts-project-node-name project))
          (buffer-name  (concat "*" (edts-project-name project) "*"))
-         (command      (edts-project-build-project-command project)))
+         (command      (edts-project-build-project-command project))
+         (exec-path    (edts-project-build-exec-path project))
+         (process-environment (edts-project-build-env project)))
     (edts-ensure-node-not-started node-name)
     (edts-project-make-comint-buffer buffer-name project-root command)
     (edts-project-register-node-when-ready project)
@@ -71,11 +73,34 @@ started."
 
 (defun edts-project-build-project-command (project)
   "Build a command line for PROJECT"
-  (let ((command (edts-project-start-command project)))
+  (let ((command  (edts-project-start-command project)))
     (if command
         (delete "" (split-string command)) ; delete "" for xemacs.
-        (let ((sname (edts-project-node-name project)))
-          (list (executable-find "erl") "-sname" sname)))))
+        (list "erl" "-sname" (edts-project-node-name project)))))
+
+(defun edts-project-build-exec-path (project)
+  "Build up the exec-path to use when starting the project-node of PROJECT."
+  (let ((otp-path (edts-project-otp-path project)))
+    (if otp-path
+        ;; ensure otp-path is first in the path
+        (cons (concat otp-path "/bin") exec-path)
+        exec-path)))
+
+(defun edts-project-build-env (project)
+  "Build up the PATH environment variable to use when starting the
+project-node of PROJECT."
+  (let ((otp-path (edts-project-otp-path project)))
+    (if otp-path
+        (edts-project--add-to-path process-environment (concat otp-path "/bin"))
+        (let ((erl-path (executable-find "erl")))
+          (if erl-path
+              (edts-project--add-to-path process-environment erl-path)
+              process-environment)))))
+
+(defun edts-project--add-to-path (env path)
+  "Return the ENV with PATH added to its path value."
+  (cons (concat "PATH=" (expand-file-name path) path-separator (getenv "PATH"))
+        process-environment))
 
 (defun edts-project-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
@@ -115,6 +140,11 @@ short names are supported."
   "Returns the edts-project PROJECT's command for starting it's project
  node."
   (edts-project-property 'start-command project))
+
+(defun edts-project-otp-path (project)
+  "Returns the edts-project PROJECT's command for starting it's project
+ node."
+  (edts-project-property 'otp-path project))
 
 (defun edts-project-property (prop project)
   "Returns the value of the property of name PROP from PROJECT."
@@ -190,7 +220,8 @@ make sure it ends with a '/'."
 
   ;; Incorrectly defined project
   (defvar edts-project-test-project-2
-    '((start-command . "bin/start.sh -i")))
+    '((start-command . "bin/start.sh -i")
+      (otp-path      . "/usr/bin")))
 
   (defvar edts-project-test-project-3
     '((name          . "dev")
@@ -264,6 +295,11 @@ make sure it ends with a '/'."
     (should (eq nil (edts-project-start-command edts-project-test-project-1)))
     (should (string= "bin/start.sh -i"
                      (edts-project-start-command edts-project-test-project-2))))
+
+  (ert-deftest edts-project-otp-path-test ()
+    (should (eq nil (edts-project-otp-path edts-project-test-project-1)))
+    (should (string= "/usr/bin"
+                     (edts-project-otp-path edts-project-test-project-2))))
 
   (ert-deftest edts-project-path-expand-test ()
     (let ((home (expand-file-name "~")))

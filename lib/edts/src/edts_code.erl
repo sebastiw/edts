@@ -101,9 +101,8 @@ compile_and_load(Module) ->
 %% @doc
 %% Compiles Module with Options and returns a list of any errors and warnings.
 %% If there are no errors, the module will be loaded. Compilation options
-%% always include 'return', 'debug_info' and {i, Dir} (and also 'binary', but
-%% the module will be written to file by EDTS instead), for all directories
-%% where we can reasonably expect to find include-files for the current project.
+%% always include 'return', and 'debug_info' (and also 'binary', but
+%% the module will be written to file by EDTS instead).
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
@@ -112,15 +111,13 @@ compile_and_load(Module) ->
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Opts);
-compile_and_load(File, Opts0) ->
+compile_and_load(File, Opts) ->
   AbsPath  = filename:absname(File),
-  Includes = [filename:dirname(File)|get_include_dirs()],
-  Opts     = [{i, I} || I <- Includes] ++ [binary, debug_info, return, Opts0],
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
-  case compile:file(AbsPath, Opts) of
+  case compile:file(AbsPath, [binary, debug_info, return|Opts]) of
     {ok, Mod, Bin, Warnings} ->
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
@@ -387,25 +384,6 @@ filename_to_outdir(File) ->
     true  -> EbinDir;
     false -> DirName
   end.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Translates the code-path to a list if include-directories for compilation
-%% @end
--spec get_include_dirs() -> [string()].
-%%------------------------------------------------------------------------------
-
-get_include_dirs() ->
-  F = fun(Path) ->
-          case filename:basename(Path) of
-            "ebin" -> [ filename:join(filename:dirname(Path), "include")
-                      , filename:join(filename:dirname(Path), "src")
-                      , filename:join(filename:dirname(Path), "test")];
-            _      -> [Path]
-          end
-      end,
-  lists:flatmap(F, code:get_path()).
 
 %%------------------------------------------------------------------------------
 %% @doc Reloads a module unless it is sticky.
