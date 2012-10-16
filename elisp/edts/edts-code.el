@@ -32,9 +32,9 @@ undefined_function_calls, unexported_functions"
   :group 'edts)
 
 (defconst edts-code-issue-overlay-priorities
-  '((failed\ test . 1001);auto-highlight-symbol prio + 1
-    (warning      . 1002)
-    (error        . 1003))
+  '((failed\ test . 900);auto-highlight-symbol prio + 1
+    (warning      . 901)
+    (error        . 902))
   "The overlay priorities for compilation errors and warnings")
 
 (defun edts-code-overlay-priority (type)
@@ -60,18 +60,19 @@ a symbol."
             (warnings (cdr (assoc 'warnings comp-res))))
         (edts-code-display-error-overlays "edts-code-compile" errors)
         (edts-code-display-warning-overlays "edts-code-compile" warnings)
-        (run-hooks 'edts-code-after-compilation-hook)
+        (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
         result))))
 
-(defun edts-code-xref-analyze ()
+(defun edts-code-xref-analyze (result)
   "Runs xref-checks for current buffer on node related the that
 buffer's project."
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
-    (let ((module   (erlang-get-module)))
-      (edts-get-module-xref-analysis-async
-       module edts-code-xref-checks
-       #'edts-code-handle-xref-analysis-result (current-buffer)))))
+    (when (not (eq result 'error))
+      (let ((module   (erlang-get-module)))
+        (edts-get-module-xref-analysis-async
+         module edts-code-xref-checks
+         #'edts-code-handle-xref-analysis-result (current-buffer))))))
 
 (defun edts-code-handle-xref-analysis-result (analysis-res buffer)
   (when analysis-res

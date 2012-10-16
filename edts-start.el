@@ -42,6 +42,7 @@
 (require 'edts-face)
 (require 'edts-project)
 (require 'edts-navigate)
+(load-library "edts-refactor")
 
 ;; External
 (require 'auto-highlight-symbol)
