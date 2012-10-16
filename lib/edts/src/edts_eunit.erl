@@ -69,7 +69,7 @@ test(Module) ->
   case run_tests(Module) of
     {ok, {Summary, Tests}} ->
       debug("run tests returned ok: ~p", [Summary]),
-      {ok, lists:flatten([format_test(Test, Module) || Test <- Tests])};
+      {ok, lists:flatten([format_test_result(Test, Module) || Test <- Tests])};
     {error, Reason} = Error ->
       debug("Error in eunit test result in ~p: ~p", [Module, Reason]),
       Error
@@ -99,15 +99,15 @@ run_tests(Ref, Listener) ->
   after
     5000 -> {error, timeout}
   end.
-p
--spec format_test(edts_eunit_test(), module()) -> [edts_code:issue()].
-format_test({{M,_,_}, _}, Module) when Module =/= M ->
-  debug("format_test: module not matching ~p =/= ~p", [Module, M]),
+
+-spec format_test_result(edts_eunit_test(), module()) -> [edts_code:issue()].
+format_test_result({{M,_,_}, _}, Module) when Module =/= M ->
+  debug("format_test_result: module not matching ~p =/= ~p", [Module, M]),
   [];
-format_test({Mfa, []}, _Module) ->
+format_test_result({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
   [{'passed-test', get_source(Mfa), get_line(Mfa), "no asserts failed"}];
-format_test({Mfa, Fails}, _Module) ->
+format_test_result({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
   Formatted = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
   [ {'failed-test', get_source(Mfa), get_line(Mfa), failed_test_str(Formatted)}
@@ -278,15 +278,15 @@ run_tests_error_test() ->
   Pid ! {error, foo},
   assert_receive({error, foo}).
 
-format_test_test_() ->
+format_test_result_test_() ->
   { setup
   , mock_get_function_info()
   , fun meck:unload/1
-  , [ ?_assertEqual([], format_test({{m,f,a}, []}, not_m))
+  , [ ?_assertEqual([], format_test_result({{m,f,a}, []}, not_m))
     , ?_assertEqual([{'passed-test', "m.erl", 1, "no asserts failed"}],
-                    format_test({{m,f,a}, []}, m))
+                    format_test_result({{m,f,a}, []}, m))
     , ?_assertEqual([{'failed-test', "m.erl", 1, "test aborted"}],
-                    format_test({{m,f,a}, [[{reason, foo}]]}, m))
+                    format_test_result({{m,f,a}, [[{reason, foo}]]}, m))
     ]
   }.
 
