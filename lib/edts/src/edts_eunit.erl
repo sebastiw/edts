@@ -106,11 +106,13 @@ format_test_result({{M,_,_}, _}, Module) when Module =/= M ->
   [];
 format_test_result({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
-  [{'passed-test', get_source(Mfa), get_line(Mfa), "no asserts failed"}];
+  {Source, Line} = get_source_and_line(Mfa),
+  [{'passed-test', Source, Line, "no asserts failed"}];
 format_test_result({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
-  Formatted = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
-  [ {'failed-test', get_source(Mfa), get_line(Mfa), failed_test_str(Formatted)}
+  Formatted      = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
+  {Source, Line} = get_source_and_line(Mfa),
+  [ {'failed-test', Source, Line, failed_test_str(Formatted)}
   | Formatted].
 
 -spec failed_test_str([edts_code:issue()]) -> string().
@@ -121,25 +123,21 @@ failed_test_str(Formatted)      ->
   LinesStr = string:join(Lines, ", "),
   format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
--spec get_source(mfa()) -> string().
-get_source({Module, Function, Arity}) ->
-  Info = edts_code:get_function_info(Module, Function, Arity),
+-spec get_source_and_line(mfa()) -> {string(), non_neg_integer()}.
+get_source_and_line({Module, Function, Arity}) ->
+  Info             = edts_code:get_function_info(Module, Function, Arity),
+  {line, Line}     = lists:keyfind(line,   1, Info),
   {source, Source} = lists:keyfind(source, 1, Info),
-  Source.
-
--spec get_line(mfa()) -> non_neg_integer().
-get_line({Module, Function, Arity}) ->
-  Info = edts_code:get_function_info(Module, Function, Arity),
-  {line, Line} = lists:keyfind(line, 1, Info),
-  Line.
+  {Line, Source}.
 
 -spec format_fail(mfa(), edts_eunit_info()) -> edts_code:issue() | [].
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
 format_fail({M,_F,_A} = Mfa, Info)     ->
-  Module = orddict:fetch(module, Info),
-  Line   = orddict:fetch(line,   Info),
+  Module      = orddict:fetch(module, Info),
+  Line        = orddict:fetch(line,   Info),
+  {Source, _} = get_source_and_line(Mfa),
   case Module =:= M of
-    true  -> {'failed-test', get_source(Mfa), Line, format_reason(Info)};
+    true  -> {'failed-test', Source, Line, format_reason(Info)};
     false -> []
   end.
 
