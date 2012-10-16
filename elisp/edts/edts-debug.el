@@ -149,8 +149,7 @@
 (defun update-breakpoints ()
   "Display breakpoints in the buffer"
   (edts-face-remove-overlays '("edts-breakpoint"))
-  (let* ((breaks (edts-get-breakpoints (get-node-name-from-debug-buffer))))
-    (print breaks)
+  (let ((breaks (edts-get-breakpoints (get-node-name-from-debug-buffer))))
     (dolist (b breaks)
       (let ((module (cdr (assoc 'module b)))
             (line (cdr (assoc 'line b)))
@@ -160,7 +159,7 @@
             (edts-face-display-overlay 'edts-face-breakpoint-enabled-line
                                        line "Breakpoint" "edts-breakpoint"
                                        10 t))))))
-         
+
 
 (defun make-debug-buffer-name (&optional filename)
   (let ((project (if (null filename)
