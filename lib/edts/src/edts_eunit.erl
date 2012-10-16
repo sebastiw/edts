@@ -128,7 +128,7 @@ get_source_and_line({Module, Function, Arity}) ->
   Info             = edts_code:get_function_info(Module, Function, Arity),
   {line, Line}     = lists:keyfind(line,   1, Info),
   {source, Source} = lists:keyfind(source, 1, Info),
-  {Line, Source}.
+  {Source, Line}.
 
 -spec format_fail(mfa(), edts_eunit_info()) -> edts_code:issue() | [].
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
