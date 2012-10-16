@@ -81,15 +81,22 @@ buffer's project."
         (edts-code-display-error-overlays "edts-code-xref" errors)
         errors))))
 
-(defun edts-code-eunit ()
+(defun edts-code-eunit-interactive ()
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
   (interactive)
-  (edts-face-remove-overlays '("edts-code-eunit-passed"))
-  (edts-face-remove-overlays '("edts-code-eunit"))
-  (let ((module   (erlang-get-module)))
-    (edts-get-module-eunit-async
-     module #'edts-code-handle-eunit-result (current-buffer))))
+  (edts-code-eunit 'ok))
+
+(defun edts-code-eunit (result)
+  "Runs eunit tests for current buffer on node related to that
+buffer's project."
+  (when (string= "erl" (file-name-extension (buffer-file-name)))
+    (edts-face-remove-overlays '("edts-code-eunit-passed"))
+    (edts-face-remove-overlays '("edts-code-eunit"))
+    (when (not (eq result 'error))
+      (let ((module (erlang-get-module)))
+	(edts-get-module-eunit-async
+	 module #'edts-code-handle-eunit-result (current-buffer))))))
 
 (defun edts-code-handle-eunit-result (eunit-res buffer)
   (when eunit-res
