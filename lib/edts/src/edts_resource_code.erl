@@ -69,10 +69,10 @@ to_json(ReqData, Ctx) ->
 
 %%%_* Internal functions =======================================================
 format_error({Type, File, Line, Desc}) ->
-  {struct, [ {type, Type}
-           , {file, list_to_binary(File)}
-           , {line, Line}
-           , {description, list_to_binary(Desc)}]}.
+  [ {type, Type}
+  , {file, list_to_binary(File)}
+  , {line, Line}
+  , {description, list_to_binary(Desc)}].
 
 %%%_* Unit tests ===============================================================
 
@@ -80,7 +80,7 @@ init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
 
 allowed_methods_test() ->
-  ?assertEqual({['POST'], foo, bar}, allowed_methods(foo, bar)).
+  ?assertEqual({['GET'], foo, bar}, allowed_methods(foo, bar)).
 
 content_types_provided_test() ->
   ?assertEqual({[ {"application/json", to_json}], foo, bar},
@@ -88,17 +88,22 @@ content_types_provided_test() ->
 
 to_json_test() ->
   meck:unload(),
-  meck:new(edts),
-  meck:expect(edts, init_node, fun(true, r, []) -> ok;
-                                  (_, _, _)    -> error
-                               end),
-  Dict1 =
-    orddict:from_list([{nodename, true}, {project_root, r}, {lib_dirs, []}]),
-  ?assertEqual({true, req_data,  Dict1},
-               to_json(req_data, Dict1)),
-  Dict2 =
-    orddict:from_list([{nodename, false}, {project_root, r}, {lib_dirs, []}]),
-  ?assertError({badmatch, error}, to_json(req_data, Dict2)),
+  meck:new(wrq),
+  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
+  meck:new(edts_code),
+  meck:expect(edts_code, free_vars,
+              fun("req_data1") -> {ok, ['VarA', 'VarB']};
+                 ("req_data2") -> {error, [{err, "S", 13, "D"}]}
+              end),
+  meck:new(mochijson2),
+  meck:expect(mochijson2, encode, fun(A) -> A end),
+  ?assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
+               to_json(req_data1, [])),
+  ?assertEqual({[{errors, [[ {type, err}
+                          , {file, <<"S">>}
+                          , {line, 13}
+                          , {description, <<"D">>}]]}], req_data2, []},
+               to_json(req_data2, [])),
   meck:unload().
 
 
