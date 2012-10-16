@@ -83,7 +83,7 @@ started."
   (let ((otp-path (edts-project-otp-path project)))
     (if otp-path
         ;; ensure otp-path is first in the path
-        (edts-project--add-to-path process-environment (concat otp-path "/bin"))
+        (cons (concat otp-path "/bin") exec-path)
         exec-path)))
 
 (defun edts-project-build-env (project)
