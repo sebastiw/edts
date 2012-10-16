@@ -18,6 +18,7 @@
 -export([ continue/0
         , get_breakpoints/0
         , interpret_modules/1
+        , is_interpreted/1
         , maybe_attach/1
         , step/0
         , step_out/0
@@ -93,6 +94,15 @@ get_breakpoints() ->
 %%--------------------------------------------------------------------
 interpret_modules(Modules) ->
   gen_server:call(?SERVER, {interpret, Modules}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Reports if Module is interpreted.
+%% @end
+-spec is_interpreted(Module :: module()) -> boolean().
+%%--------------------------------------------------------------------
+is_interpreted(Module) ->
+  gen_server:call(?SERVER, {is_interpreted, Module}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -230,6 +240,9 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
 handle_call({uninterpret, Modules}, _From, State) ->
   lists:map(fun(Module) -> int:n(Module) end, Modules),
   {reply, ok, State};
+
+handle_call({is_interpreted, Module}, _From, State) ->
+  {reply, lists:member(Module, int:interpreted()), State};
 
 handle_call(get_breakpoints, _From, State) ->
   {reply, {ok, int:all_breaks()}, State};

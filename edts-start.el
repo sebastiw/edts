@@ -61,7 +61,7 @@
 (defvar erlang-current-function-ahs-plugin
   '((name    . "erlang current function")
    (lighter . "CF")
-   (face    . ahs-plugin-defalt-face)
+   (face    . ahs-plugin-default-face)
    (start   . ferl-point-beginning-of-function)
    (end     . ferl-point-end-of-function)))
 

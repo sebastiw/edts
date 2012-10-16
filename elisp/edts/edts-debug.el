@@ -37,10 +37,10 @@
                                         (number-to-string line-number)))
          (result (cdr (assoc 'result state))))
     (update-breakpoints)
-    (message "Breakpoint %s at %s:%s"
-             result
-             (cdr (assoc 'module state))
-             (cdr (assoc 'line state)))))
+    (edts-log-info "Breakpoint %s at %s:%s"
+                   result
+                   (cdr (assoc 'module state))
+                   (cdr (assoc 'line state)))))
 
 (defun edts-debug-step ()
   "Steps (into) when debugging"
@@ -55,7 +55,7 @@
 (defun edts-debug-continue ()
   "Continues execution when debugging"
   (interactive)
-  (message "Continue")
+  (edts-log-info "Continue")
   (handle-debugger-state (edts-continue (get-node-name-from-debug-buffer))))
 
 (defun edts-debug-quit ()
@@ -139,10 +139,12 @@
            (let ((file (cdr (assoc 'file reply)))
                  (module (cdr (assoc 'module reply)))
                  (line (cdr (assoc 'line reply))))
-             (message "Break at %s:%s" module line)
+             (edts-log-info "Break at %s:%s" module line)
              (edts-enter-debug-mode file line)))
           ((equal state "idle")
-           (message "Finished.")))))
+           (edts-log-info "Finished."))
+          ((equal state "error")
+           (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
 
 (defun update-breakpoints ()
   "Display breakpoints in the buffer"

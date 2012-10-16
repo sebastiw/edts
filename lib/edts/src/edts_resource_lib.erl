@@ -303,7 +303,9 @@ xref_checks_validate(ReqData, _Ctx) ->
 -spec handle_debugger_info({ok, Info :: term()}) -> term().
 %%------------------------------------------------------------------------------
 handle_debugger_info({ok, Info}) ->
-  {struct, do_handle_debugger_info(Info)}.
+  {struct, do_handle_debugger_info(Info)};
+handle_debugger_info({error, Error}) ->
+  {struct, [{state, error}, {message, Error}]}.
 
 do_handle_debugger_info({break, File, {Module, Line}, VarBindings}) ->
   [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},

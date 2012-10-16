@@ -122,19 +122,20 @@ compile_and_load(File, Opts) ->
       WasInterpreted = maybe_uninterpret_module(Mod),
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
-      case file:write_file(OutFile ++ ".beam", Bin) of
-        ok ->
-          code:purge(Mod),
-          {module, Mod} = code:load_abs(OutFile),
-          update_xref(),
-          add_path(OutDir),
-          maybe_interpret_module(Mod, WasInterpreted),
-          {ok, {[], format_errors(warning, Warnings)}};
-        {error, _} = Err ->
-          error_logger:error_msg("(~p) Failed to write ~p: ~p",
-                                 [node(), OutFile, Err]),
-          Err
-      end;
+      Result = case file:write_file(OutFile ++ ".beam", Bin) of
+                 ok ->
+                   code:purge(Mod),
+                   {module, Mod} = code:load_abs(OutFile),
+                   update_xref(),
+                   add_path(OutDir),
+                   {ok, {[], format_errors(warning, Warnings)}};
+                 {error, _} = Err ->
+                   error_logger:error_msg("(~p) Failed to write ~p: ~p",
+                                          [node(), OutFile, Err]),
+                   Err
+               end,
+      maybe_interpret_module(Mod, WasInterpreted),
+      Result;
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
