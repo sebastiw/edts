@@ -42,6 +42,7 @@
         , who_calls/4]).
 
 %%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -246,7 +247,21 @@ nodes() ->
 
 %%%_* Internal functions =======================================================
 
-%%%_* Emacs ====================================================================
+%%%_* Tests ====================================================================
+
+get_module_eunit_result_test_() ->
+  [ ?_assertMatch({ok, [ {'passed-test', _Source, 43, "no asserts failed"}
+                       , {'passed-test', _Source, 44, "no asserts failed"}
+                       ]},
+                  get_module_eunit_result(node(), test_module))
+  , ?_assertEqual({error, not_found},
+                  get_module_eunit_result(not_a_node, test_module))
+  , ?_assertEqual({ok, []},
+                  get_module_eunit_result(node(), not_a_module))
+
+  ].
+
+%%%_* Line ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
