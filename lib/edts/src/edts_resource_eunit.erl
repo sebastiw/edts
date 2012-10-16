@@ -72,7 +72,7 @@ resource_exists(ReqData, Ctx) ->
   {Exists, ReqData, orddict:store(result, Result, Ctx)}.
 
 to_json(ReqData, Ctx) ->
-  IsPassed = fun ({Type, _, _, _}) -> Type =:= 'passed test' end,
+  IsPassed = fun ({Type, _, _, _}) -> Type =:= 'passed-test' end,
   {Passed, Failed} = lists:partition(IsPassed, orddict:fetch(result, Ctx)),
   Struct = [ {passed, {array, [format_test(Test) || Test <- Passed]}}
            , {failed, {array, [format_test(Test) || Test <- Failed]}}],
