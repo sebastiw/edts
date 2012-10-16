@@ -93,7 +93,7 @@ buffer's project."
 buffer's project."
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-eunit-passed"))
-    (edts-face-remove-overlays '("edts-code-eunit"))
+    (edts-face-remove-overlays '("edts-code-eunit-failed"))
     (when (not (eq result 'error))
       (let ((module (erlang-get-module)))
 	(edts-get-module-eunit-async
@@ -104,8 +104,10 @@ buffer's project."
     (with-current-buffer buffer
       (let ((failed (cdr (assoc 'failed eunit-res)))
             (passed (cdr (assoc 'passed eunit-res))))
-        (edts-code-display-passed-test-overlays "edts-code-eunit-passed" passed)
-        (edts-code-display-failed-test-overlays "edts-code-eunit" failed)))))
+        (edts-code-display-passed-test-overlays
+         "edts-code-eunit-passed" passed)
+        (edts-code-display-failed-test-overlays
+         "edts-code-eunit-failed" failed)))))
 
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
@@ -170,7 +172,7 @@ buffer's project."
   (push-mark)
   (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
                                                     "edts-code-xref"
-                                                    "edts-code-eunit"))))
+                                                    "edts-code-eunit-failed"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
@@ -181,9 +183,10 @@ buffer's project."
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
-  (let* ((overlay (edts-face-previous-overlay (point) '("edts-code-compile"
-                                                        "edts-code-xref"
-                                                        "edts-code-eunit"))))
+  (let* ((overlay (edts-face-previous-overlay (point)
+                                              '("edts-code-compile"
+                                                "edts-code-xref"
+                                                "edts-code-eunit-failed"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
