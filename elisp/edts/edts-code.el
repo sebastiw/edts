@@ -32,9 +32,10 @@ undefined_function_calls, unexported_functions"
   :group 'edts)
 
 (defconst edts-code-issue-overlay-priorities
-  '((failed\ test . 900);auto-highlight-symbol prio + 1
-    (warning      . 901)
-    (error        . 902))
+  '((passed-test . 900);auto-highlight-symbol prio + 1
+    (failed-test . 901)
+    (warning     . 902)
+    (error       . 903))
   "The overlay priorities for compilation errors and warnings")
 
 (defun edts-code-overlay-priority (type)

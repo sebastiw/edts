@@ -106,11 +106,11 @@ format_test({{M,_,_}, _}, Module) when Module =/= M ->
   [];
 format_test({Mfa, []}, _Module) ->
   debug("passed test: ~w", [Mfa]),
-  [{'passed test', get_source(Mfa), get_line(Mfa), "no asserts failed"}];
+  [{'passed-test', get_source(Mfa), get_line(Mfa), "no asserts failed"}];
 format_test({Mfa, Fails}, _Module) ->
   debug("failed test: ~w", [Mfa]),
   Formatted = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
-  [ {'failed test', get_source(Mfa), get_line(Mfa), failed_test_str(Formatted)}
+  [ {'failed-test', get_source(Mfa), get_line(Mfa), failed_test_str(Formatted)}
   | Formatted].
 
 -spec failed_test_str([edts_code:issue()]) -> string().
@@ -139,7 +139,7 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
   Module = orddict:fetch(module, Info),
   Line   = orddict:fetch(line,   Info),
   case Module =:= M of
-    true  -> {'failed test', get_source(Mfa), Line, format_reason(Info)};
+    true  -> {'failed-test', get_source(Mfa), Line, format_reason(Info)};
     false -> []
   end.
 
@@ -283,9 +283,9 @@ format_test_test_() ->
   , mock_get_function_info()
   , fun meck:unload/1
   , [ ?_assertEqual([], format_test({{m,f,a}, []}, not_m))
-    , ?_assertEqual([{'passed test', "m.erl", 1, "no asserts failed"}],
+    , ?_assertEqual([{'passed-test', "m.erl", 1, "no asserts failed"}],
                     format_test({{m,f,a}, []}, m))
-    , ?_assertEqual([{'failed test', "m.erl", 1, "test aborted"}],
+    , ?_assertEqual([{'failed-test', "m.erl", 1, "test aborted"}],
                     format_test({{m,f,a}, [[{reason, foo}]]}, m))
     ]
   }.
@@ -303,7 +303,7 @@ format_fail_test_() ->
   , fun meck:unload/1
   , [ ?_assertEqual([], format_fail({m,f,a}, [{reason, foo}]))
     , ?_assertEqual([], format_fail({m,f,a}, [{line, 2}, {module, not_m}]))
-    , ?_assertEqual({'failed test', "m.erl", 2,
+    , ?_assertEqual({'failed-test', "m.erl", 2,
                      "(undefined) expected: undefined, got: undefined"},
                     format_fail({m,f,a}, [{line, 2}, {module, m}]))
     ]
