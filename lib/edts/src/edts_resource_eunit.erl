@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc eunit resource
 %%% @end
-%%% @author Hakan Nilsson
+%%% @author Hakan Nilsson <haakan@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Hakan Nilsson
+%%% Copyright 2012 Hakan Nilsson <haakan@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
