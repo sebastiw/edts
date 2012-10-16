@@ -51,12 +51,12 @@
 %-define(DEBUG, true).
 
 %%%_* Types ====================================================================
--type eunit_info()    :: orddict:orddict().
--type eunit_result()  :: {ok, {eunit_summary(), [eunit_test()]}}
-                       | {error, any()}.
--type eunit_summary() :: orddict:orddict().
--type eunit_test()    :: {mfa(), [eunit_info()]}.
--type eunit_reason()  :: atom().
+-type edts_eunit_info()    :: orddict:orddict().
+-type edts_eunit_result()  :: {ok, {edts_eunit_summary(), [edts_eunit_test()]}}
+                            | {error, any()}.
+-type edts_eunit_summary() :: orddict:orddict().
+-type edts_eunit_test()    :: {mfa(), [edts_eunit_info()]}.
+-type edts_eunit_reason()  :: atom().
 
 %%%_* API ======================================================================
 
@@ -77,7 +77,7 @@ test(Module) ->
 
 %%%_* Internal functions =======================================================
 
--spec run_tests(module()) -> eunit_result().
+-spec run_tests(module()) -> edts_eunit_result().
 run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
   Listener = ?MODULE:start([{parent, self()}]),
@@ -86,7 +86,7 @@ run_tests(Module) ->
     {error, Err} -> {error, Err}
   end.
 
--spec run_tests(reference(), pid()) -> eunit_result().
+-spec run_tests(reference(), pid()) -> edts_eunit_result().
 run_tests(Ref, Listener) ->
   debug("waiting for start..."),
   receive
@@ -99,8 +99,8 @@ run_tests(Ref, Listener) ->
   after
     5000 -> {error, timeout}
   end.
-
--spec format_test(eunit_test(), module()) -> [edts_code:issue()].
+p
+-spec format_test(edts_eunit_test(), module()) -> [edts_code:issue()].
 format_test({{M,_,_}, _}, Module) when Module =/= M ->
   debug("format_test: module not matching ~p =/= ~p", [Module, M]),
   [];
@@ -133,7 +133,7 @@ get_line({Module, Function, Arity}) ->
   {line, Line} = lists:keyfind(line, 1, Info),
   Line.
 
--spec format_fail(mfa(), eunit_info()) -> edts_code:issue() | [].
+-spec format_fail(mfa(), edts_eunit_info()) -> edts_code:issue() | [].
 format_fail(_Mfa, [{reason, _Reason}]) -> [];
 format_fail({M,_F,_A} = Mfa, Info)     ->
   Module = orddict:fetch(module, Info),
@@ -143,7 +143,7 @@ format_fail({M,_F,_A} = Mfa, Info)     ->
     false -> []
   end.
 
--spec format_reason(eunit_info()) -> string().
+-spec format_reason(edts_eunit_info()) -> string().
 format_reason(Info) ->
   Fetch = fun(Key) ->
               case orddict:find(Key, Info) of
@@ -155,7 +155,7 @@ format_reason(Info) ->
   format("(~p) expected: ~s, got: ~s",
          [Fetch(reason), to_str(Expected), to_str(Got)]).
 
--spec fmt(eunit_reason(), fun((atom()) -> term())) -> {term(), term()}.
+-spec fmt(edts_eunit_reason(), fun((atom()) -> term())) -> {term(), term()}.
 fmt(assertException_failed,    F) -> format_args_assert_exception(F);
 fmt(assertNotException_failed, F) -> format_args_assert_exception(F);
 fmt(assertCmdOutput_failed,    F) -> {F(expected_output), F(output)};
@@ -189,7 +189,7 @@ format(FormatStr, Args) ->
 
 -record(state, { parent     :: pid()
                , ref        :: reference()
-               , tests = [] :: [eunit_test()]
+               , tests = [] :: [edts_eunit_test()]
                }).
 
 -spec start() -> pid().
@@ -239,8 +239,8 @@ add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
   Fails  = orddict:fetch(Source, Tests),
   State#state{tests = orddict:store(Source, [Fail|Fails], Tests)}.
 
--spec mk_fail({eunit_reason(), proplists:proplist()} | eunit_reason()) ->
-                 eunit_info().
+-spec mk_fail({edts_eunit_reason(), proplists:proplist()}
+              | edts_eunit_reason()) -> edts_eunit_info().
 mk_fail({Reason, Info}) -> orddict:from_list([{reason, Reason}|Info]);
 mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
 
@@ -250,7 +250,7 @@ handle_cancel(L, Data, State) ->
   State.
 
 -spec terminate({ok, proplists:proplist()}, #state{}) ->
-                   {result, reference(), {eunit_summary, [eunit_test()]}}.
+              {result, reference(), {edts_eunit_summary, [edts_eunit_test()]}}.
 terminate({ok, Summary}, #state{ref=Ref, parent=Parent, tests=Tests}) ->
   debug("terminate: ~p", [Summary]),
   Parent ! {result, Ref, {orddict:from_list(Summary), Tests}};
@@ -261,7 +261,7 @@ terminate(Other, #state{parent=Parent}) ->
 debug(Str) -> debug(Str, []).
 
 -ifdef(DEBUG).
-debug(FmtStr, Args) -> error_logger:error_msg(FmtStr, Args).
+debug(FmtStr, Args) -> error_logger:info_msg(FmtStr, Args).
 -else.
 debug(_FmtStr, _Args) -> ok.
 -endif.
