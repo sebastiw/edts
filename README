@@ -44,7 +44,7 @@ Planned features in the short term are:
 - Requirements:
   - Emacs 23.3 or later (24.2 recommended)
 
-- First of all, make sure your ensure your environment is setup correctly:
+- First of all, ensure your environment is setup correctly:
   - If you're not using Linux, setup Erlang mode according to the instructions
     here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
   - Make sure your code is compiled with the debug_info option set.
@@ -90,9 +90,11 @@ Planned features in the short term are:
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
 
-  name          - The name of the project. Required.
   root          - The top level directory of where you have your project
-                  contents. Required.
+                  contents. The only required field.
+  name          - The name of the project. Defaults to the last component
+                  of the project root-directory (eg a root seth to"~/src/p"
+                  would yield a "p" as the default project name.
   node-sname    - The erlang sname that the project's erlang node should
                   have. Defaults to same name as the project.
   lib-dirs      - A list of paths (relative to the project's root) where the

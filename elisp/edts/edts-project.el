@@ -120,7 +120,10 @@ corresponds to BUFFER."
 (defun edts-project-name (project)
   "Returns the name of the edts-project PROJECT. No default value,
 come on you have to do *something* yourself!"
-  (edts-project-property 'name project))
+  (or (edts-project-property 'name project)
+      (let ((root (edts-project-root project)))
+        (when root
+          (file-name-nondirectory (edts-project-root project))))))
 
 (defun edts-project-root (project)
   "Returns the root directory of the edts-project PROJECT."
