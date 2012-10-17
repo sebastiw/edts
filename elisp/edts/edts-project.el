@@ -248,7 +248,8 @@ make sure it ends with a '/'."
     (let ((buffer (edts-project-make-comint-buffer "edts-test" "." '("erl"))))
       (should (bufferp buffer))
       (should (string= "edts-test" (buffer-name buffer)))
-      (should (string= "erl" (process-name (get-buffer-process buffer))))
+      (should (string-match "erl\\(<[0-9]*>\\)?"
+                            (process-name (get-buffer-process buffer))))
       (set-process-query-on-exit-flag (get-buffer-process buffer) nil)
       (kill-process (get-buffer-process buffer))
       (kill-buffer buffer)))
