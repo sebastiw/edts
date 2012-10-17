@@ -107,7 +107,8 @@
   (edts-project-init)
   (ad-activate-regexp "edts-.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
-  (add-hook 'edts-code-after-compilation-hook 'edts-code-xref-analyze t t)
+  (add-hook 'edts-code-after-compilation-hook
+            'edts-code-xref-analyze-all-buffers t t)
 
   ;; Auto-activate erlang mode for some additional extensions.
   (mapcar

@@ -62,13 +62,27 @@ a symbol."
         (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
         result))))
 
+
+(defun edts-code-xref-analyze-all-buffers (result)
+  "Runs xref-checks for all live buffers with its file in current
+buffer's project, on the node related to that project."
+  (let ((proj (edts-project-buffer-project (current-buffer))))
+    (mapcar
+     #'(lambda(buf)
+         (with-current-buffer buf
+           (let ((file (buffer-file-name)))
+             (when (and edts-mode (edts-project-file-in-project-p proj file))
+               (edts-code-xref-analyze result)))))
+     (buffer-list))))
+
+
 (defun edts-code-xref-analyze (result)
-  "Runs xref-checks for current buffer on node related the that
+  "Runs xref-checks for current buffer on the node related to that
 buffer's project."
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
-    (when (not (eq result 'error))
-      (let ((module   (erlang-get-module)))
+    (when (and edts-code-xref-checks (not (eq result 'error)))
+      (let ((module (erlang-get-module)))
         (edts-get-module-xref-analysis-async
          module edts-code-xref-checks
          #'edts-code-handle-xref-analysis-result (current-buffer))))))
