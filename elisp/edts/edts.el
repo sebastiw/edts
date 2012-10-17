@@ -62,7 +62,7 @@ node."
       (let ((macros nil))
         (while (re-search-forward edts-find-macro-definition-regexp nil t)
           (let ((arity 0)
-                (macro (match-string-no-properties 1))
+                (macro (match-string-no-properties 2))
                 (doc   (format "%s -> %s"
                                (match-string-no-properties 1)
                                (match-string-no-properties 6))))
