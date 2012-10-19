@@ -107,9 +107,17 @@
         (erase-buffer)
         (insert-file-contents file))
       (setq *edts-debug-last-visited-file* nil)))
+  (edts-face-remove-overlays '("edts-debug-current"))
   (if (and (not (null line))
            (numberp line))
-      (goto-line line))
+      (edts-face-display-overlay 'edts-face-debug-current-line
+                                 line
+                                 "EDTS debugger current line"
+                                 "edts-debug-current"
+                                 20
+                                 t
+                                 t
+                                 ))
   (setq *edts-debugger-buffer* (current-buffer))
   (update-breakpoints))
 
