@@ -62,7 +62,7 @@
   "Quits debug mode"
   (interactive)
   (edts-debug-stop (get-node-name-from-debug-buffer))
-  (kill-buffer)
+  (kill-debug-buffers)
   (erlang-mode)
   (set-window-configuration *edts-window-config*))
 
@@ -71,7 +71,9 @@
   (interactive)
   (edts-debug-save-window-configuration)
   (edts-debug-enter-debug-buffer file line)
-  (edts-debug-mode))
+  (delete-other-windows)
+  (edts-debug-mode)
+  (create-auxiliary-buffers))
 
 (defun edts-line-number-at-point ()
   "Get line number at point"
@@ -123,11 +125,36 @@
 (define-derived-mode edts-debug-mode erlang-mode
   "EDTS debug mode"
   "Major mode for debugging interpreted Erlang code using EDTS"
-  (delete-other-windows)
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
-  (use-local-map edts-debug-keymap)
-  (hl-line-mode t))
+  (use-local-map edts-debug-keymap))
+
+(defun create-auxiliary-buffers ()
+  (let ((buffer-width 81))
+    (split-window nil buffer-width 'left)
+    (switch-to-buffer "*EDTS-Debugger Bindings*")
+    (update-bindings '())
+    (edts-debug-mode)))
+
+(defun kill-debug-buffers ()
+  (dolist (buf (match-buffers #'(lambda (buffer)
+                                (let* ((name (buffer-name buffer))
+                                       (match
+                                        (string-match "^*EDTS-Debugger."
+                                                      name)))
+                                  (or (null match) name)))))
+    (kill-buffer buf)))
+
+(defun update-bindings (bindings)
+  (set-buffer "*EDTS-Debugger Bindings*")
+  (with-writable-buffer
+   (insert "Current bindings:\n\n")
+   (mapcar #'(lambda (binding)
+               (message "%s" binding)
+               (insert (format "%s = %s\n"
+                               (car binding)
+                               (cdr binding))))
+           bindings)))
 
 ;; TODO: proper formatting to present in a buffer.
 (defun edts-format-bindings (bindings)
@@ -138,9 +165,11 @@
     (cond ((equal state "break")
            (let ((file (cdr (assoc 'file reply)))
                  (module (cdr (assoc 'module reply)))
-                 (line (cdr (assoc 'line reply))))
+                 (line (cdr (assoc 'line reply)))
+                 (bindings (cdr (assoc 'var_bindings reply))))
              (edts-log-info "Break at %s:%s" module line)
-             (edts-enter-debug-mode file line)))
+             (edts-enter-debug-mode file line)
+             (update-bindings bindings)))
           ((equal state "idle")
            (edts-log-info "Finished."))
           ((equal state "error")
@@ -170,5 +199,17 @@
 (defun get-node-name-from-debug-buffer ()
   (let ((match (string-match "<\\(\\w+\\)>" (buffer-name))))
     (match-string 1 (buffer-name))))
+
+(defun match-buffers (predicate)
+  "Returns a list of buffers for which PREDICATE does not evaluate to T"
+  (delq t
+        (mapcar predicate (buffer-list))))
+
+(defmacro with-writable-buffer (&rest body)
+  "Evaluates BODY by marking the current buffer as writable and restoring its read-only status afterwards"
+  `(let ((was-read-only buffer-read-only))
+     (setq buffer-read-only nil)
+     ,@body
+     (setq buffer-read-only was-read-only)))
 
 (provide 'edts-debug)
