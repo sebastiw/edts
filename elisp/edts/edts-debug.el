@@ -110,6 +110,7 @@
   (if (and (not (null line))
            (numberp line))
       (goto-line line))
+  (setq *edts-debugger-buffer* (current-buffer))
   (update-breakpoints))
 
 (defvar edts-debug-keymap
@@ -134,7 +135,8 @@
     (split-window nil buffer-width 'left)
     (switch-to-buffer "*EDTS-Debugger Bindings*")
     (update-bindings '())
-    (edts-debug-mode)))
+    (edts-debug-mode)
+    (other-window 1)))
 
 (defun kill-debug-buffers ()
   (dolist (buf (match-buffers #'(lambda (buffer)
@@ -148,9 +150,9 @@
 (defun update-bindings (bindings)
   (set-buffer "*EDTS-Debugger Bindings*")
   (with-writable-buffer
-   (insert "Current bindings:\n\n")
+   (erase-buffer)
+   (insert "Current bindings in scope:\n\n")
    (mapcar #'(lambda (binding)
-               (message "%s" binding)
                (insert (format "%s = %s\n"
                                (car binding)
                                (cdr binding))))

@@ -315,7 +315,8 @@ do_handle_debugger_info(State) ->
   [{state, State}].
 
 encode(VarBindings) ->
-  [{Key, io_lib:format("~p", [Value])} || {Key, Value} <- VarBindings].
+  [{Key, list_to_binary(io_lib:format("~p", [Value]))}
+   || {Key, Value} <- VarBindings].
 
 
 %%%_* Unit tests ===============================================================
