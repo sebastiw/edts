@@ -28,7 +28,8 @@
     (document   . edts-complete-exported-function-doc)
     (init       . edts-complete-exported-function-init)
     (symbol     . "f")
-    (requires   . nil)
+    (prefix     . edts-complete-exported-function-prefix)
+    (requires   . 0)
     (limit      . nil)
     (cache)
     ))
@@ -42,15 +43,16 @@
 
 (defun edts-complete-exported-function-init ()
   "Initializes the list of exported function completions."
-  (when (edts-complete-exported-function-p)
-    (case (edts-complete-point-inside-quotes)
-      ('double-quoted nil) ; Don't complete inside strings
-      (otherwise
-       (edts-log-debug "Initializing exported function completions")
-       (let* ((module  (symbol-at (- ac-point 1)))
-              (exports (edts-get-module-exports module)))
-         (setq edts-complete-exported-function-candidates
-               (mapcar #'edts-function-to-string exports)))))))
+  (let ((point (or ac-point (point))))
+    (when (edts-complete-exported-function-p point)
+      (case (edts-complete-point-inside-quotes)
+        ('double-quoted nil) ; Don't complete inside strings
+        (otherwise
+         (edts-log-debug "Initializing exported function completions")
+         (let* ((module  (symbol-at (- point 1)))
+                (exports (edts-get-module-exports module)))
+           (setq edts-complete-exported-function-candidates
+                 (mapcar #'edts-function-to-string exports))))))))
 
 (defun edts-complete-exported-function-candidates ()
   (case (edts-complete-point-inside-quotes)
@@ -60,7 +62,7 @@
 
 (defun edts-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) exported functions."
-  (when (edts-complete-exported-function-p)
+  (when (edts-complete-exported-function-p ac-point)
     (edts-log-debug "completing exported functions")
     (edts-log-debug "completing exported functions done")
     edts-complete-exported-function-candidates))
@@ -86,12 +88,18 @@ candidates, except we single-quote-terminate candidates."
 ;; Conditions
 ;;
 
-(defun edts-complete-exported-function-p ()
-  "Returns non-nil if the current `ac-prefix' can be completed with an
-exported function."
+(defun edts-complete-exported-function-prefix ()
+  "Returns non-nil if the current `ac-prefix' or a prefix starting at
+POINT or current could be completed with an exported function."
+  (cond ((and ac-point (edts-complete-exported-function-p ac-point)) ac-point)
+        ((edts-complete-exported-function-p (point)) (point))))
+
+(defun edts-complete-exported-function-p (point)
+  "Returns non-nil if a prefix starting at POINT could be completed with
+an exported function."
   (let ((case-fold-search nil))
     (and
-     (equal ?: (edts-complete-term-preceding-char))
-     (string-match erlang-atom-regexp (symbol-at (- ac-point 1))))))
+     (equal ?: (edts-complete-term-preceding-char point))
+     (string-match erlang-atom-regexp (symbol-at (- point 1))))))
 
 (provide 'edts-complete-exported-function-source)

@@ -76,10 +76,10 @@ if not already present"
     (when pos (goto-char pos))
     (thing-at-point 'symbol)))
 
-(defun edts-complete-term-preceding-char ()
+(defun edts-complete-term-preceding-char (&optional point)
   "Returns the character preceding symbol, or if that is a single-quote, the
 character before that."
-  (let* ((char  (char-before ac-point)))
+  (let* ((char  (char-before (or point ac-point))))
     (if (equal ?' char)
         (char-before (- ac-point 1))
         char)))
