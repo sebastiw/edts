@@ -26,8 +26,9 @@
 (defvar edts-complete-macro-source
   '((candidates . edts-complete-macro-candidates)
     (document   . edts-complete-macro-doc)
+    (prefix     . edts-complete-macro-prefix)
     (symbol     . "M")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -46,7 +47,7 @@
 
 (defun edts-complete-normal-macro-candidates ()
   "Produces the completion list for normal (unqoted) macros."
-  (when (edts-complete-macro-p)
+  (when (edts-complete-macro-p ac-point)
     (edts-log-debug "completing macros")
     (let ((completions
            (or edts-complete-macro-cache
@@ -69,12 +70,19 @@ candidates, except we single-quote-terminate candidates."
 ;; Conditions
 ;;
 
-(defun edts-complete-macro-p ()
+(defun edts-complete-macro-prefix ()
+  "Returns non-nil if the current `ac-prefix' or a prefix starting at
+POINT or current could be completed with an macro."
+  (cond ((and ac-point (edts-complete-macro-p ac-point)) ac-point)
+        ((edts-complete-macro-p (point)) (point))))
+
+(defun edts-complete-macro-p (point)
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
   (condition-case ex
       (and
-       (equal ?? (edts-complete-term-preceding-char))
-       (string-match erlang-atom-regexp ac-prefix))
+       (equal ?? (edts-complete-term-preceding-char point))
+       (or (not ac-prefix) (string= "" ac-prefix)
+           (string-match erlang-atom-regexp ac-prefix)))
     ('error nil)))
 
