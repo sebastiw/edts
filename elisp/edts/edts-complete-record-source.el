@@ -80,7 +80,9 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-record-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
-  (and
-   (equal ?# (edts-complete-term-preceding-char))
-   (string-match erlang-atom-regexp ac-prefix)))
+  (condition-case ex
+      (and
+       (equal ?# (edts-complete-term-preceding-char))
+       (string-match erlang-atom-regexp ac-prefix))
+    ('error nil)))
 

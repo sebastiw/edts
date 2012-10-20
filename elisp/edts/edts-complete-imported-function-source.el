@@ -74,10 +74,12 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-imported-function-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a imported
 function."
+  (condition-case ex
   (let ((preceding (edts-complete-term-preceding-char)))
     (and
      (not (equal ?? preceding))
      (not (equal ?# preceding))
      (not (equal ?: preceding))
-     (string-match erlang-atom-regexp ac-prefix))))
+     (string-match erlang-atom-regexp ac-prefix)))
+  ('error nil)))
 

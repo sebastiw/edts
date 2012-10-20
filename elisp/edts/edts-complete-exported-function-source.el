@@ -97,8 +97,10 @@ POINT or current could be completed with an exported function."
 (defun edts-complete-exported-function-p (point)
   "Returns non-nil if a prefix starting at POINT could be completed with
 an exported function."
-  (let ((case-fold-search nil))
-    (and
-     (equal ?: (edts-complete-term-preceding-char point))
-     (string-match erlang-atom-regexp (symbol-at (- point 1))))))
+  (condition-case ex
+      (let ((case-fold-search nil))
+        (and
+         (equal ?: (edts-complete-term-preceding-char point))
+         (string-match erlang-atom-regexp (symbol-at (- point 1)))))
+      ('error nil)))
 

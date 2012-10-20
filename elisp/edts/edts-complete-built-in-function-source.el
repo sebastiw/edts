@@ -208,12 +208,14 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-built-in-function-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
-  (let ((preceding (edts-complete-term-preceding-char)))
-    (and
-     (not (equal ?? preceding))
-     (not (equal ?# preceding))
-     ; qualified calls to built-in functions are handled by the
-     ; exported-function source
-     (not (equal ?: preceding))
-     (string-match erlang-atom-regexp ac-prefix))))
+  (condition-case ex
+      (let ((preceding (edts-complete-term-preceding-char)))
+        (and
+         (not (equal ?? preceding))
+         (not (equal ?# preceding))
+         ;; qualified calls to built-in functions are handled by the
+         ;; exported-function source
+         (not (equal ?: preceding))
+         (string-match erlang-atom-regexp ac-prefix)))
+  ('error nil)))
 

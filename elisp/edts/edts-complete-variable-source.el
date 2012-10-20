@@ -78,10 +78,12 @@ mentioned in current function, before current point."
 (defun edts-complete-variable-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with an
 variable."
-  (let ((case-fold-search nil)
-        (preceding        (edts-complete-term-preceding-char)))
-    (and
-     (not (equal ?? preceding))
-     (not (equal ?# preceding))
-     (string-match erlang-variable-regexp ac-prefix))))
+  (condition-case ex
+      (let ((case-fold-search nil)
+            (preceding        (edts-complete-term-preceding-char)))
+        (and
+         (not (equal ?? preceding))
+         (not (equal ?# preceding))
+         (string-match erlang-variable-regexp ac-prefix)))
+    ('error nil)))
 
