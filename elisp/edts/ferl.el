@@ -172,23 +172,28 @@ Should be called with point directly before the opening ( or /."
 
             ;; entering new bracket-pair
            ((member c '(?\( ?\[ ?\{))
-            (when next-is-new
+            (when next-is-new  ;; count up
               (incf arity)
               (setq next-is-new nil))
             (push c brackets))
 
+           ;; entering string/comment
+           ((member c '(?\" ?\' ?\%))
+            (when next-is-new  ;; count up
+              (incf arity)
+              (setq next-is-new nil))
+            (setq in-ignore c))
+
            ;; inside brackets, next-is-new must be nil.
            ((and (member c (member c '(?\) ?\] ?\}))) brackets)
             (pop brackets)) ;; terminate bracket-pair
-           (brackets nil) ;; ignore character
+          (brackets nil) ;; ignore character
 
            ; not inside string, comment or brackets
            ((eq ?, c)  (setq next-is-new t))
-           (next-is-new
+           (next-is-new  ;; count up
             (incf arity)
-            (setq next-is-new nil)
-            (when (member c '(?\" ?\' ?\%)) ;; initiate string/comment
-              (setq in-ignore c)))) ;; count up
+            (setq next-is-new nil)))
           (setq last-c c))
     arity))
 
@@ -213,6 +218,7 @@ Should be called with point directly before the opening ( or /."
     (should (eq 3 (ferl-paren-arity "a%a,b\nb, cc")))
     (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
     (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
+    (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
     (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
     (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
 
