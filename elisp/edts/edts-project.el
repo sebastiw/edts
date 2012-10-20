@@ -373,5 +373,3 @@ make sure it ends with a '/'."
       (should (string= "/test/foo/bar/"
                        (edts-project-normalize-path "foo/bar/"))))))
 
-
-(provide 'edts-project)

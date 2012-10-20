@@ -159,4 +159,3 @@ buffer's project."
           (message (overlay-get overlay 'help-echo)))
         (error "EDTS: no more issues found"))))
 
-(provide 'edts-code)

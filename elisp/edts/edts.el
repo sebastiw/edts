@@ -364,4 +364,3 @@ associated with that buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
-(provide 'edts)

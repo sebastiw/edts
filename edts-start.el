@@ -32,16 +32,17 @@
 (require 'woman)
 
 ;; EDTS
-(require 'ferl)
-(require 'edts)
-(require 'edts-log)
-(require 'edts-code)
-(require 'edts-complete)
-(require 'edts-doc)
-(require 'edts-rest)
-(require 'edts-face)
-(require 'edts-project)
-(require 'edts-navigate)
+(load-library "ferl")
+(load-library "edts")
+(load-library "edts-log")
+(load-library "edts-code")
+(load-library "edts-complete")
+(load-library "edts-doc")
+(load-library "edts-rest")
+(load-library "edts-face")
+(load-library "edts-man")
+(load-library "edts-project")
+(load-library "edts-navigate")
 (load-library "edts-refactor")
 
 ;; External

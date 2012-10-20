@@ -140,4 +140,3 @@ CALLBACK-ARGS."
     (should (equal "foo=bar,baz"
             (edts-rest-encode-arg '("foo" . ("bar" "baz")))))))
 
-(provide 'edts-rest)

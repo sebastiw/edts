@@ -18,7 +18,6 @@
 ;; auto-complete source for built-in erlang functions.
 
 (require 'auto-complete)
-(require 'edts-man)
 (require 'ferl)
 
 (eval-and-compile
@@ -218,4 +217,3 @@ function."
      (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
-(provide 'edts-complete-built-in-function-source)

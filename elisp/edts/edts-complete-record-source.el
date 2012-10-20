@@ -84,4 +84,3 @@ function."
    (equal ?# (edts-complete-term-preceding-char))
    (string-match erlang-atom-regexp ac-prefix)))
 
-(provide 'edts-complete-record-source)

@@ -85,4 +85,3 @@ variable."
      (not (equal ?# preceding))
      (string-match erlang-variable-regexp ac-prefix))))
 
-(provide 'edts-complete-variable-source)

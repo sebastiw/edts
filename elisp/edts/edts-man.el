@@ -117,7 +117,5 @@
    (file-name-as-directory edts-man-root) "man" (int-to-string man-page)))
 
 
-(provide 'edts-man)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests

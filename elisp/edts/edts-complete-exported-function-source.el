@@ -102,4 +102,3 @@ an exported function."
      (equal ?: (edts-complete-term-preceding-char point))
      (string-match erlang-atom-regexp (symbol-at (- point 1))))))
 
-(provide 'edts-complete-exported-function-source)

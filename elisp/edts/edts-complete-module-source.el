@@ -74,4 +74,3 @@ candidates, except we single-quote-terminate candidates."
      (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
-(provide 'edts-complete-module-source)

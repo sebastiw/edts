@@ -95,4 +95,3 @@ function."
      (not (equal ?: preceding))
      (string-match erlang-atom-regexp ac-prefix))))
 
-(provide 'edts-complete-local-function-source)
