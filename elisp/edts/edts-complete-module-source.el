@@ -73,5 +73,5 @@ candidates, except we single-quote-terminate candidates."
          (not (equal ?? preceding))
          (not (equal ?# preceding))
          (not (equal ?: preceding))
-         (string-match erlang-atom-regexp ac-prefix))))
-  ('error nil))
+         (string-match erlang-atom-regexp ac-prefix)))
+  ('error nil)))
