@@ -26,9 +26,10 @@
 (defvar edts-complete-record-source
   '((candidates . edts-complete-record-candidates)
     (init       . edts-complete-record-init)
+    (prefix     . edts-complete-record-prefix)
     (document   . nil)
     (symbol     . "#")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)
     ))
 
@@ -41,7 +42,7 @@
 
 (defun edts-complete-record-init ()
   "Initialize record completions."
-  (when (edts-complete-record-p)
+  (when (edts-complete-record-p ac-point)
     (case (edts-complete-point-inside-quotes)
       ('double-quoted nil) ; Don't complete inside strings
       (otherwise
@@ -61,7 +62,7 @@
 
 (defun edts-complete-normal-record-candidates ()
   "Produces the completion list for normal (unqoted) records. Unimplemented"
-  (when (edts-complete-record-p)
+  (when (edts-complete-record-p ac-point)
     (edts-log-debug "completing records")
     (edts-log-debug "completing records done")
     edts-complete-record-candidates))
@@ -77,12 +78,20 @@ candidates, except we single-quote-terminate candidates."
 ;; Conditions
 ;;
 
-(defun edts-complete-record-p ()
+(defun edts-complete-record-prefix ()
+  "Returns non-nil if the current `ac-prefix' or a prefix starting at
+POINT or current could be completed with an record."
+  (cond ((and ac-point (edts-complete-record-p ac-point)) ac-point)
+        ((edts-complete-record-p (point)) (point))))
+
+
+(defun edts-complete-record-p (point)
   "Returns non-nil if the current `ac-prefix' can be completed with a built-in
 function."
   (condition-case ex
       (and
-       (equal ?# (edts-complete-term-preceding-char))
-       (string-match erlang-atom-regexp ac-prefix))
+       (equal ?# (edts-complete-term-preceding-char point))
+       (or (not ac-prefix) (string= "" ac-prefix)
+           (string-match erlang-atom-regexp ac-prefix)))
     ('error nil)))
 
