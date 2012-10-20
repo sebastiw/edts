@@ -185,12 +185,14 @@ Should be called with point directly before the opening ( or /."
             (setq in-ignore c))
 
            ;; inside brackets, next-is-new must be nil.
-           ((and (member c (member c '(?\) ?\] ?\}))) brackets)
-            (pop brackets)) ;; terminate bracket-pair
-          (brackets nil) ;; ignore character
+           ;; terminate bracket-pair
+           ((and (member c (member c '(?\) ?\] ?\}))) brackets) (pop brackets))
+           ;; ignore character
+           (brackets nil)
 
            ; not inside string, comment or brackets
-           ((eq ?, c)  (setq next-is-new t))
+           ((eq ?, c) (setq next-is-new t))
+
            (next-is-new  ;; count up
             (incf arity)
             (setq next-is-new nil)))
@@ -215,7 +217,7 @@ Should be called with point directly before the opening ( or /."
     (should (eq 1 (ferl-paren-arity "'aa,bb'")))
     (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
     (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
-    (should (eq 3 (ferl-paren-arity "a%a,b\nb, cc")))
+    (should (eq 3 (ferl-paren-arity "a,%a,b\nb, cc")))
     (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
     (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
     (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
