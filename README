@@ -149,6 +149,17 @@ anything from Distel that you are missing in EDTS, please let me know.
 If you are using EDTS, please remove Distel from your configuration, since
 running both can create some confusion.
 
+## Debugger interface ##
+
+EDTS implements a basic interface to the Erlang interpreter/debugger through the int module. When you save a file it automatically becomes interpreted if possible and from that point on you can set breakpoints and control code execution inside that module.
+
+To enter debug mode, press C-c C-d C-d. In debug mode you can set and unset breakpoints simply by pressing SPC and you can control execution using the following keys:
+
+- s steps into the next line/function
+- o steps out of the current function
+- c continues execution until a new breakpoint is hit or execution terminates
+- q forcibly terminates the process under debugging and leaves debug mode
+
 ## Known Issues ##
 
 Some users are experiencing serious performance issues with the auto-completion

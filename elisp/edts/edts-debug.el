@@ -156,8 +156,7 @@
     (kill-buffer buf)))
 
 (defun update-bindings (bindings)
-  (set-buffer "*EDTS-Debugger Bindings*")
-  (with-writable-buffer
+  (with-writable-buffer "*EDTS-Debugger Bindings*"
    (erase-buffer)
    (insert "Current bindings in scope:\n\n")
    (mapcar #'(lambda (binding)
@@ -165,10 +164,6 @@
                                (car binding)
                                (cdr binding))))
            bindings)))
-
-;; TODO: proper formatting to present in a buffer.
-(defun edts-format-bindings (bindings)
-  (format t "~A" bindings))
 
 (defun handle-debugger-state (reply)
   (let ((state (cdr (assoc 'state reply))))
@@ -215,11 +210,12 @@
   (delq t
         (mapcar predicate (buffer-list))))
 
-(defmacro with-writable-buffer (&rest body)
-  "Evaluates BODY by marking the current buffer as writable and restoring its read-only status afterwards"
-  `(let ((was-read-only buffer-read-only))
-     (setq buffer-read-only nil)
-     ,@body
-     (setq buffer-read-only was-read-only)))
+(defmacro with-writable-buffer (buffer-or-name &rest body)
+  "Evaluates BODY by marking BUFFER-OR-NAME as writable and restoring its read-only status afterwards"
+  `(with-current-buffer buffer-or-name
+     (let ((was-read-only buffer-read-only))
+       (setq buffer-read-only nil)
+       ,@body
+       (setq buffer-read-only was-read-only))))
 
 (provide 'edts-debug)
