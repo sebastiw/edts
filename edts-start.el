@@ -87,7 +87,7 @@
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
     (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\C-c\C-dt"    'edts-code-eunit-interactive)
-    (define-key map "\C-c\C-d\C-d" 'edts-enter-debug-mode)
+    (define-key map "\C-c\C-d\C-d" 'edts-start-debugging)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)

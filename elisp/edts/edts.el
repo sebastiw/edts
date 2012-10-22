@@ -390,7 +390,7 @@ associated with that buffer."
          (rest-callback #'(lambda (result)
                             (if (equal (assoc 'result result)
                                        '(result "200" "OK"))
-                                (cdr (assoc 'body result))))))
+                                (handle-debugger-state (cdr (assoc 'body result)))))))
     (edts-rest-get-async resource args rest-callback '())))
 
 (defun edts-toggle-breakpoint (node-name module line)

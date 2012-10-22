@@ -66,9 +66,13 @@
   (erlang-mode)
   (set-window-configuration *edts-window-config*))
 
+(defun edts-start-debugging ()
+  (interactive)
+  (edts-enter-debug-mode)
+  (edts-wait-for-debugger (get-node-name-from-debug-buffer)))
+
 (defun edts-enter-debug-mode (&optional file line)
   "Convenience function to setup and enter debug mode"
-  (interactive)
   (edts-debug-save-window-configuration)
   (edts-debug-enter-debug-buffer file line)
   (delete-other-windows)
@@ -212,7 +216,7 @@
 
 (defmacro with-writable-buffer (buffer-or-name &rest body)
   "Evaluates BODY by marking BUFFER-OR-NAME as writable and restoring its read-only status afterwards"
-  `(with-current-buffer buffer-or-name
+  `(with-current-buffer ,buffer-or-name
      (let ((was-read-only buffer-read-only))
        (setq buffer-read-only nil)
        ,@body
