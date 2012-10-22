@@ -45,6 +45,7 @@
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
@@ -112,6 +113,59 @@ format({{Module, Line}, [Status, Trigger, null, Condition]}) ->
            , {trigger, Trigger}
            , {condition, io_lib:format("~p", [Condition])}
            ]}.
+
+%%%_* Unit tests ===============================================================
+
+init_test() ->
+  ?assertEqual({ok, orddict:new()}, init(foo)).
+
+allowed_methods_test() ->
+  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
+
+content_types_accepted_test() ->
+  ?assertEqual({[ {"application/json", from_json} ], foo, bar},
+               content_types_accepted(foo, bar)).
+
+content_types_provided_test() ->
+  ?assertEqual({[ {"application/json", to_json}
+                , {"text/html",        to_json}
+                , {"text/plain",       to_json} ], foo, bar},
+              content_types_provided(foo, bar)).
+
+to_json_test() ->
+  meck:unload(),
+  meck:new(edts),
+  meck:expect(edts, get_breakpoints, fun(true) -> {ok, [{{foo, 42},
+                                                         [active,
+                                                          enable,
+                                                          null,
+                                                          null]},
+                                                        {{bar, 314},
+                                                         [active,
+                                                          enable,
+                                                          null,
+                                                          null]}]};
+                                        (_)    -> {error, not_found}
+                                     end),
+  Dict1 =
+    orddict:from_list([{nodename, true}]),
+  {Data, req_data, Dict1} = to_json(req_data, Dict1),
+
+  %% The odd array in the expected result stands for the "null" string,
+  %% but the value isn't used yet (and it can be something else, a tuple)
+  %% so I'm not really caring that it's readable or anything.
+
+  ?assertEqual("[{\"module\":\"foo\",\"line\":42,"
+               "\"status\":\"active\",\"trigger\":\"enable\","
+               "\"condition\":[[110,117,108,108]]},"
+               "{\"module\":\"bar\",\"line\":314,"
+               "\"status\":\"active\",\"trigger\":\"enable\","
+               "\"condition\":[[110,117,108,108]]}]",
+               lists:flatten(Data)),
+  Dict2 =
+    orddict:from_list([{nodename, false}]),
+  ?assertError({badmatch, {error, not_found}}, to_json(req_data, Dict2)),
+  meck:unload().
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
