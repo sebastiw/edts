@@ -34,6 +34,8 @@
 %% Exported for spawning
 -export([ start_debugging/1 ]).
 
+-include_lib("eunit/include/eunit.hrl").
+
 -define(SERVER, ?MODULE).
 
 -record(dbg_state, {

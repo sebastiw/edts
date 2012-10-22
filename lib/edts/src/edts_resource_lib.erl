@@ -444,10 +444,39 @@ xref_checks_validate_test() ->
                xref_checks_validate(foo, bar)),
   meck:unload().
 
+handle_debugger_info_test() ->
+  ?assertEqual({struct, [{state, error}, {message, foo}]},
+               handle_debugger_info({error, foo})),
+  ?assertEqual({struct, [ {state, break}
+                        , {file, <<"/awsum/foo.erl">>}
+                        , {module, foo}
+                        , {line, 42}
+                        , {var_bindings, {struct, []}}]},
+               handle_debugger_info({ok, {break, "/awsum/foo.erl", {foo, 42},
+                                          []}})),
+  ?assertEqual({struct, [ {state, break}
+                        , {file, <<"/awsum/bar.erl">>}
+                        , {module, bar}
+                        , {line, 123}
+                        , {var_bindings, {struct, [{'A', <<"3.14">>}]}}]},
+               handle_debugger_info({ok, {break, "/awsum/bar.erl", {bar, 123},
+                                          [{'A', 3.14}]}})).
+
+encode_test() ->
+  ?assertEqual([{'A', <<"\"foo\"">>}], encode([{'A', "foo"}])),
+  ?assertEqual([{"bar", <<"\"BAZ\"">>}], encode([{"bar", [$B, $A, $Z]}])),
+  ?assertEqual([{'foo', <<"bar">>}, {"pi", <<"3.14">>}],
+               encode([{'foo', bar}, {"pi", 3.14}])),
+  ?assertEqual([{a_tuple, <<"{with,3,\"fields\"}">>}],
+               encode([{a_tuple, {with, 3, "fields"}}])).
+               
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+
+
+
 
