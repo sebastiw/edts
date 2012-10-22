@@ -20,10 +20,6 @@
 ;; Window configuration to be restored when quitting debug mode
 (defvar *edts-window-config* nil)
 
-;; List of existing (both enabled and disabled) breakpoints
-;; UNUSED right now
-(defvar *edts-debug-breakpoints* '())
-
 (defvar *edts-debug-last-visited-file* nil)
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
@@ -63,7 +59,8 @@
   (interactive)
   (edts-debug-stop (get-node-name-from-debug-buffer))
   (kill-debug-buffers)
-  (set-window-configuration *edts-window-config*))
+  (set-window-configuration *edts-window-config*)
+  (setf *edts-window-config* nil))
 
 (defun edts-start-debugging ()
   (interactive)
@@ -88,7 +85,9 @@
       (1+ (count-lines 1 (point))))))
 
 (defun edts-debug-save-window-configuration ()
-  (if (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
+  "Saves current window configuration if not currently in an EDTS-Debug buffer"
+  (if (and (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
+           (null *edts-window-config*))
       (setq *edts-window-config* (current-window-configuration))))
 
 (defun edts-debug-enter-debug-buffer (file line)
