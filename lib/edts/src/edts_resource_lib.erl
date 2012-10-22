@@ -469,14 +469,9 @@ encode_test() ->
                encode([{'foo', bar}, {"pi", 3.14}])),
   ?assertEqual([{a_tuple, <<"{with,3,\"fields\"}">>}],
                encode([{a_tuple, {with, 3, "fields"}}])).
-               
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-
-
-
-
