@@ -114,7 +114,7 @@ the highest priority any edts overlay at new point if any."
       overlay1
       overlay2))
 
-(defun edts-face-display-overlay (face line desc type prio &optional fill-line display-arrow)
+(defun edts-face-display-overlay (face line desc type prio &optional fill-line)
   "Displays overlay for ISSUE in current buffer."
   (save-excursion
     (save-restriction
@@ -129,8 +129,6 @@ the highest priority any edts overlay at new point if any."
                       (ferl-last-char-on-line-at  pos)
                     (line-beginning-position 2)))
              (overlay (make-overlay beg end nil t (not fill-line))))
-        (if (not (null display-arrow))
-            (overlay-put overlay 'line-prefix "->"))
         (overlay-put overlay 'edts-face-overlay t)
         (overlay-put overlay 'face face)
         (overlay-put overlay 'help-echo desc)

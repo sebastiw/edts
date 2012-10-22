@@ -119,9 +119,7 @@
                                  "EDTS debugger current line"
                                  "edts-debug-current"
                                  20
-                                 t
-                                 t
-                                 ))
+                                 t))
   (setq *edts-debugger-buffer* (current-buffer))
   (update-breakpoints))
 
@@ -221,5 +219,3 @@
        (setq buffer-read-only nil)
        ,@body
        (setq buffer-read-only was-read-only))))
-
-(provide 'edts-debug)
