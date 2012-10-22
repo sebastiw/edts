@@ -219,7 +219,7 @@ init([]) ->
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   {reply, {ok, attach}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
-  {reply, {already_attached, Dbg, Pid}, State};
+  {reply, {error, {already_attached, Dbg, Pid}}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
   Reply = {ok, lists:map(fun(Module) ->

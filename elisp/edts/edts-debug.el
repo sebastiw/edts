@@ -63,7 +63,6 @@
   (interactive)
   (edts-debug-stop (get-node-name-from-debug-buffer))
   (kill-debug-buffers)
-  (erlang-mode)
   (set-window-configuration *edts-window-config*))
 
 (defun edts-start-debugging ()
