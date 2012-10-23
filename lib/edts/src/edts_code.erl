@@ -47,15 +47,14 @@
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
-%%%_* Types ====================================================================
 
--type error()::{error | warning,
-                File             ::string(),
-                Line             ::non_neg_integer(),
-                Description      ::string()}.
+%%%_* Types ====================================================================
+-type issue() :: { Type        :: atom()
+                 , File        :: string()
+                 , Line        :: non_neg_integer()
+                 , Description :: string()}.
 
 %%%_* API ======================================================================
-
 %%------------------------------------------------------------------------------
 %% @doc
 %% Add a new path to the code-path. Uniqueness is determined after shortening
@@ -79,7 +78,7 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 %% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_module(Module::module(), Checks::[xref:analysis()]) ->
-                      {ok, [error()]}.
+                      {ok, [issue()]}.
 %%------------------------------------------------------------------------------
 check_module(Module, Checks) ->
   case code:is_loaded(Module) of
@@ -93,7 +92,7 @@ check_module(Module, Checks) ->
 %% Equivalent to compile_and_load(Module, []).
 %% @end
 -spec compile_and_load(Module::file:filename() | module()) ->
-                          {ok | error, [error()]}.
+                          {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   compile_and_load(Module, []).
@@ -107,7 +106,7 @@ compile_and_load(Module) ->
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
-                          {ok | error, [error()]}.
+                          {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
@@ -180,7 +179,7 @@ get_function_info(M, F0, A0) ->
 %% Equivalent to free_vars(Snippet, 1).
 %% @end
 -spec free_vars(Text::string()) -> {ok, FreeVars::[atom()]} |
-                                   {error, [error()]}.
+                                   {error, [issue()]}.
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Snippet) -> free_vars(Snippet, 1).
@@ -190,7 +189,7 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 %% Equivalent to free_vars(Snippet, 1).
 %% @end
 -spec free_vars(Text::string(), pos_integer()) -> {ok, FreeVars::[atom()]} |
-                                   {error, [error()]}.
+                                   {error, [issue()]}.
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Text, StartLine) ->
