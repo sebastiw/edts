@@ -31,8 +31,7 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ test/1
-        , run_tests/1
+-export([ run_tests/1
         ]).
 
 %%%_* Defines ==================================================================
@@ -50,11 +49,11 @@
 
 %%------------------------------------------------------------------------------
 %% @doc Run eunit tests on Module and return result as "issues".
--spec test(module()) -> {ok, [edts_code:issue()]}
-                      | {error, term()}.
+-spec run_tests(module()) -> {ok, [edts_code:issue()]}
+                           | {error, term()}.
 %%------------------------------------------------------------------------------
-test(Module) ->
-  case run_tests(Module) of
+run_tests(Module) ->
+  case do_run_tests(Module) of
     {ok, {Summary, Tests}} ->
       debug("run tests returned ok: ~p", [Summary]),
       {ok, lists:flatten([format_test_result(Test, Module) || Test <- Tests])};
@@ -65,17 +64,17 @@ test(Module) ->
 
 %%%_* Internal functions =======================================================
 
--spec run_tests(module()) -> result().
-run_tests(Module) ->
+-spec do_run_tests(module()) -> result().
+do_run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
   Listener = edts_eunit_listener:start([{parent, self()}]),
   case eunit_server:start_test(eunit_server, Listener, Module, []) of
-    {ok, Ref}    -> run_tests(Ref, Listener);
+    {ok, Ref}    -> do_run_tests(Ref, Listener);
     {error, Err} -> {error, Err}
   end.
 
--spec run_tests(reference(), pid()) -> result().
-run_tests(Ref, Listener) ->
+-spec do_run_tests(reference(), pid()) -> result().
+do_run_tests(Ref, Listener) ->
   debug("waiting for start..."),
   receive
     {start, Ref} -> Listener ! {start, Ref}
@@ -181,12 +180,12 @@ debug(_FmtStr, _Args) -> ok.
 
 %%%_* Unit tests ===============================================================
 
-run_tests_ok_test() ->
+do_run_tests_ok_test() ->
   {Ref, Pid} = run_tests_common(),
   Pid ! {result, Ref, foo},
   assert_receive({ok, foo}).
 
-run_tests_error_test() ->
+do_run_tests_error_test() ->
   {_Ref, Pid} = run_tests_common(),
   Pid ! {error, foobar},
   assert_receive({error, foobar}).
@@ -288,7 +287,7 @@ format_args_assert_exception_test_() ->
 run_tests_common() ->
   Ref      = make_ref(),
   Listener = self(),
-  Pid      = spawn(fun() -> Listener ! run_tests(Ref, Listener) end),
+  Pid      = spawn(fun() -> Listener ! do_run_tests(Ref, Listener) end),
   Pid ! {start, Ref},
   assert_receive({start, Ref}),
   {Ref, Pid}.
