@@ -27,7 +27,7 @@
   '((candidates . edts-complete-module-candidates)
     (document   . nil)
     (symbol     . "m")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -67,11 +67,11 @@ candidates, except we single-quote-terminate candidates."
 
 (defun edts-complete-module-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a module."
-  (let ((preceding (edts-complete-term-preceding-char)))
-    (and
-     (not (equal ?? preceding))
-     (not (equal ?# preceding))
-     (not (equal ?: preceding))
-     (string-match erlang-atom-regexp ac-prefix))))
-
-(provide 'edts-complete-module-source)
+  (condition-case ex
+      (let ((preceding (edts-complete-term-preceding-char)))
+        (and
+         (not (equal ?? preceding))
+         (not (equal ?# preceding))
+         (not (equal ?: preceding))
+         (string-match erlang-atom-regexp ac-prefix)))
+  ('error nil)))

@@ -163,4 +163,3 @@ from POS."
    (or (null types)
        (member (overlay-get overlay 'edts-face-overlay-type) types))))
 
-(provide 'edts-face)

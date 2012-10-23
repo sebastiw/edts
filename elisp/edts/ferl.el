@@ -153,49 +153,62 @@ Should be called with point directly before the opening ( or /."
   "Return the arity of an argument-string after a slash."
   (string-to-number (substring str 1)))
 
+
 (defun ferl-paren-arity (str)
   "Return the arity of an argument string within a parenthesis."
   (let ((arity     0)
         (last-c nil)
+        (next-is-new t)
         (in-ignore nil)
         (brackets  nil))
     (loop for c across str do
           (cond
-           ;; inside string or comment
+           ;; inside string or comment, next-is-new must be nil.
            ((and (eq c in-ignore) (not (eq ?\\ last-c)))
             (setq in-ignore nil)) ;; terminate string
            ((and (eq ?\% in-ignore) (eq ?\n c) (not (eq ?\\ last-c)))
             (setq in-ignore nil));; terminate comment
-           (in-ignore
-            (setq last-c c)) ;; ignore character
+           (in-ignore nil) ;; ignore character
 
             ;; entering new bracket-pair
            ((member c '(?\( ?\[ ?\{))
+            (when next-is-new  ;; count up
+              (incf arity)
+              (setq next-is-new nil))
             (push c brackets))
 
-           ;; inside brackets
-           ((and (member c (member c '(?\) ?\] ?\}))) brackets)
-            (pop brackets)) ;; terminate bracket-pair
-           (brackets
-            (setq last-c c)) ;; ignore character
+           ;; entering string/comment
+           ((member c '(?\" ?\' ?\%))
+            (when next-is-new  ;; count up
+              (incf arity)
+              (setq next-is-new nil))
+            (setq in-ignore c))
+
+           ;; inside brackets, next-is-new must be nil.
+           ;; terminate bracket-pair
+           ((and (member c (member c '(?\) ?\] ?\}))) brackets) (pop brackets))
+           ;; ignore character
+           (brackets nil)
 
            ; not inside string, comment or brackets
-           ((eq ?, c)  (incf arity)) ;; count up
-           ((member c '(?\" ?\' ?\%))
-            (setq in-ignore c)) ;; initiate string
-           ('otherwise
-            (setq last-c c)))) ;; otherwise ignore char
-    (when last-c (incf arity))
+           ((eq ?, c) (setq next-is-new t))
+
+           (next-is-new  ;; count up
+            (incf arity)
+            (setq next-is-new nil)))
+          (setq last-c c))
     arity))
+
 
 (when (member 'ert features)
 
   (ert-deftest ferl-paren-arity-test ()
     (should (eq 0 (ferl-paren-arity "")))
     (should (eq 1 (ferl-paren-arity "a")))
-    (should (eq 2 (ferl-paren-arity "a,")))
+    (should (eq 1 (ferl-paren-arity "[]")))
+    (should (eq 1 (ferl-paren-arity "a,")))
     (should (eq 2 (ferl-paren-arity "a,a")))
-    (should (eq 2 (ferl-paren-arity ",a")))
+    (should (eq 1 (ferl-paren-arity ",a")))
     (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
 
     (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
@@ -204,9 +217,10 @@ Should be called with point directly before the opening ( or /."
     (should (eq 1 (ferl-paren-arity "'aa,bb'")))
     (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
     (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
-    (should (eq 2 (ferl-paren-arity "a%a,b\nb, cc")))
+    (should (eq 3 (ferl-paren-arity "a,%a,b\nb, cc")))
     (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
     (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
+    (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
     (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
     (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
 

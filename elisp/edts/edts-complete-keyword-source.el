@@ -59,7 +59,9 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-keyword-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a keyword
 function."
+  (condition-case ex
   (let ((preceding (edts-complete-term-preceding-char)))
     (and
      (not (member preceding '(?? ?# ?:)))
-     (string-match erlang-atom-regexp ac-prefix))))
+     (string-match erlang-atom-regexp ac-prefix)))
+  ('error nil)))

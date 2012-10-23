@@ -20,14 +20,14 @@
 (require 'auto-complete)
 (require 'ferl)
 
-(require 'edts-complete-variable-source)
-(require 'edts-complete-local-function-source)
-(require 'edts-complete-imported-function-source)
-(require 'edts-complete-built-in-function-source)
-(require 'edts-complete-exported-function-source)
-(require 'edts-complete-module-source)
-(require 'edts-complete-macro-source)
-(require 'edts-complete-record-source)
+(load-library "edts-complete-variable-source")
+(load-library "edts-complete-local-function-source")
+(load-library "edts-complete-imported-function-source")
+(load-library "edts-complete-built-in-function-source")
+(load-library "edts-complete-exported-function-source")
+(load-library "edts-complete-module-source")
+(load-library "edts-complete-macro-source")
+(load-library "edts-complete-record-source")
 (load-library "edts-complete-keyword-source")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,10 +76,10 @@ if not already present"
     (when pos (goto-char pos))
     (thing-at-point 'symbol)))
 
-(defun edts-complete-term-preceding-char ()
+(defun edts-complete-term-preceding-char (&optional point)
   "Returns the character preceding symbol, or if that is a single-quote, the
 character before that."
-  (let* ((char  (char-before ac-point)))
+  (let* ((char  (char-before (or point ac-point))))
     (if (equal ?' char)
         (char-before (- ac-point 1))
         char)))
@@ -130,4 +130,3 @@ character before that."
 
   (auto-complete-mode))
 
-(provide 'edts-complete)

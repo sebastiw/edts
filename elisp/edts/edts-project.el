@@ -120,7 +120,10 @@ corresponds to BUFFER."
 (defun edts-project-name (project)
   "Returns the name of the edts-project PROJECT. No default value,
 come on you have to do *something* yourself!"
-  (edts-project-property 'name project))
+  (or (edts-project-property 'name project)
+      (let ((root (edts-project-root project)))
+        (when root
+          (file-name-nondirectory (edts-project-root project))))))
 
 (defun edts-project-root (project)
   "Returns the root directory of the edts-project PROJECT."
@@ -248,7 +251,8 @@ make sure it ends with a '/'."
     (let ((buffer (edts-project-make-comint-buffer "edts-test" "." '("erl"))))
       (should (bufferp buffer))
       (should (string= "edts-test" (buffer-name buffer)))
-      (should (string= "erl" (process-name (get-buffer-process buffer))))
+      (should (string-match "erl\\(<[0-9]*>\\)?"
+                            (process-name (get-buffer-process buffer))))
       (set-process-query-on-exit-flag (get-buffer-process buffer) nil)
       (kill-process (get-buffer-process buffer))
       (kill-buffer buffer)))
@@ -369,5 +373,3 @@ make sure it ends with a '/'."
       (should (string= "/test/foo/bar/"
                        (edts-project-normalize-path "foo/bar/"))))))
 
-
-(provide 'edts-project)

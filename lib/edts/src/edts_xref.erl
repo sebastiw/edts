@@ -256,6 +256,8 @@ lib_and_app_dirs() ->
 %%%_* Unit tests ===============================================================
 
 start_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   stop(),
   ?assertEqual(undefined, whereis(?SERVER)),
   {error, not_started} = stop(),
@@ -268,9 +270,12 @@ start_test() ->
   start(State),
   {error, already_started} = start(State),
   State = get_state(),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
 
 update_paths_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   ?assertEqual(undefined, whereis(?SERVER)),
   xref:start(?SERVER),
   ?assertEqual(lists:sort([{verbose,  false},
@@ -293,9 +298,12 @@ update_paths_test() ->
   DudPath = filename:dirname(AppPath),
   update_paths([], [DudPath]),
   ?assertMatch([], xref:info(?SERVER, applications)),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
 
 who_calls_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   start(),
   xref:add_module(?SERVER, test_module),
   xref:add_module(?SERVER, test_module2),
@@ -303,9 +311,12 @@ who_calls_test() ->
   ?assertEqual(
     [{test_module, bar, 1}, {test_module, baz, 1}, {test_module2, bar, 1}],
      who_calls(test_module, bar, 1)),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
 
 check_undefined_functions_calls_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   start(),
   {ok, Cwd} = file:get_cwd(),
   xref:add_module(?SERVER, test_module),
@@ -316,9 +327,12 @@ check_undefined_functions_calls_test() ->
                do_check_module(test_module, File1, undefined_function_calls)),
   ?assertMatch([{error, File2, 33, Str}] when is_list(Str),
                do_check_module(test_module2, File2, undefined_function_calls)),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
 
 check_unused_exports_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   start(),
   {ok, Cwd} = file:get_cwd(),
   xref:add_module(?SERVER, test_module),
@@ -329,16 +343,29 @@ check_unused_exports_test() ->
                do_check_module(test_module, File1, unused_exports)),
   ?assertMatch([{error, File2, 31, Str}] when is_list(Str),
                do_check_module(test_module2, File2, unused_exports)),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
 
 check_module_test() ->
+  OrigPath = code:get_path(),
+  code:set_path(mock_path()),
   start(),
   xref:add_module(?SERVER, test_module),
   xref:add_module(?SERVER, test_module2),
   Checks = [unused_exports, undefined_function_calls],
   ?assertEqual([],     check_module(test_module, Checks)),
   ?assertMatch([_, _], check_module(test_module2, Checks)),
-  stop().
+  stop(),
+  code:set_path(OrigPath).
+
+%%%_* Unit test helpers ========================================================
+
+mock_path() ->
+  {LibDirs, AppDirs0} = lib_and_app_dirs(),
+  case lists:filter(fun(P) -> filename:basename(P) =:= ".eunit" end, AppDirs0) of
+    [_] = EunitDir -> EunitDir ++ LibDirs;
+    _              -> AppDirs0 ++ LibDirs
+  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

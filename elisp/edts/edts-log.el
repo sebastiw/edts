@@ -56,5 +56,3 @@
   (when (<= level edts-log-level)
     (message (concat "EDTS: " (apply #'format msg args)))))
 
-
-(provide 'edts-log)
