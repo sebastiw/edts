@@ -221,14 +221,6 @@ format_fail_test_() ->
     ]
   }.
 
-mock_get_function_info() ->
- fun() ->
-     F = fun(_, _, _) -> [{line, 1}, {source, "m.erl"}] end,
-     meck:new(edts_code, [passthrough]),
-     meck:expect(edts_code, get_function_info, F),
-     edts_code
- end.
-
 format_reason_test_() ->
   [ ?_assertEqual("(undefined) expected: undefined, got: undefined",
                   format_reason([]))
@@ -283,6 +275,14 @@ format_args_assert_exception_test_() ->
   ].
 
 %%%_* Test helpers -------------------------------------------------------------
+
+mock_get_function_info() ->
+ fun() ->
+     F = fun(_, _, _) -> [{line, 1}, {source, "m.erl"}] end,
+     meck:new(edts_code, [passthrough]),
+     meck:expect(edts_code, get_function_info, F),
+     edts_code
+ end.
 
 run_tests_common() ->
   Ref      = make_ref(),
