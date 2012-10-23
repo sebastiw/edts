@@ -320,6 +320,27 @@ parsed response as the single argument."
     (edts-log-debug "fetching xref-analysis of %s async on %s" module node-name)
     (edts-rest-get-async resource args rest-callback (list callback buffer))))
 
+(defun edts-get-module-eunit-async (module callback buffer)
+  "Run eunit tests in MODULE on the node associated with current buffer,
+asynchronously. When the request terminates, call CALLBACK with the
+parsed response as the single argument."
+  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+         (resource      (list "nodes" node-name "modules" module "eunit"))
+         (rest-callback #'(lambda (result callback buffer)
+                            (if (equal (assoc 'result result)
+                                       '(result "200" "OK"))
+                                (apply
+                                 callback
+                                 (list
+                                  (cdr (assoc 'body result))
+                                  buffer))
+                                (null
+                                 (edts-log-error
+                                  "Unexpected reply: %s"
+                                  (cdr (assoc 'result result))))))))
+    (edts-log-debug "running eunit tests in %s async on %s" module node-name)
+    (edts-rest-get-async resource nil rest-callback (list callback buffer))))
+
 (defun edts-compile-and-load-async (module file callback buffer)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the

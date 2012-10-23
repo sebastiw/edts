@@ -36,6 +36,24 @@
   "Face used for marking warning lines."
   :group 'edts)
 
+(defface edts-face-passed-test-line
+  '((((class color) (background dark))  (:background "dark olive green"
+                                         :foreground "white"))
+    (((class color) (background light)) (:background "pale green"
+                                         :foreground "black"))
+    (t (:bold t)))
+  "Face used for marking passed test lines."
+  :group 'edts)
+
+(defface edts-face-failed-test-line
+  '((((class color) (background dark))  (:background "Firebrick"
+                                         :foreground "white"))
+    (((class color) (background light)) (:background "LightPink1"
+                                         :foreground "black"))
+    (t (:bold t)))
+  "Face used for marking failed test lines."
+  :group 'edts)
+
 (defface edts-face-lesser-line
   '((((class color) (background dark)) (:background "dark olive green"))
     (((class color) (background light)) (:background "pale green"))

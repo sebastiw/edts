@@ -32,8 +32,10 @@ undefined_function_calls, unexported_functions"
   :group 'edts)
 
 (defconst edts-code-issue-overlay-priorities
-  '((warning . 900)
-    (error   . 901))
+  '((passed-test . 900);auto-highlight-symbol prio + 1
+    (failed-test . 901)
+    (warning     . 902)
+    (error       . 903))
   "The overlay priorities for compilation errors and warnings")
 
 (defun edts-code-overlay-priority (type)
@@ -94,6 +96,32 @@ buffer's project."
         (edts-code-display-error-overlays "edts-code-xref" errors)
         errors))))
 
+(defun edts-code-eunit-interactive ()
+  "Runs eunit tests for current buffer on node related to that
+buffer's project."
+  (interactive)
+  (edts-code-eunit 'ok))
+
+(defun edts-code-eunit (result)
+  "Runs eunit tests for current buffer on node related to that
+buffer's project."
+  (when (string= "erl" (file-name-extension (buffer-file-name)))
+    (edts-face-remove-overlays '("edts-code-eunit-passed"))
+    (edts-face-remove-overlays '("edts-code-eunit-failed"))
+    (when (not (eq result 'error))
+      (let ((module (erlang-get-module)))
+	(edts-get-module-eunit-async
+	 module #'edts-code-handle-eunit-result (current-buffer))))))
+
+(defun edts-code-handle-eunit-result (eunit-res buffer)
+  (when eunit-res
+    (with-current-buffer buffer
+      (let ((failed (cdr (assoc 'failed eunit-res)))
+            (passed (cdr (assoc 'passed eunit-res))))
+        (edts-code-display-passed-test-overlays
+         "edts-code-eunit-passed" passed)
+        (edts-code-display-failed-test-overlays
+         "edts-code-eunit-failed" failed)))))
 
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
@@ -108,6 +136,23 @@ buffer's project."
    #'(lambda (warning)
        (edts-code-display-issue-overlay type 'edts-face-warning-line warning))
    warnings))
+
+(defun edts-code-display-failed-test-overlays (type failed-tests)
+  "Displays overlays for FAILED TESTS in current buffer."
+  (mapcar
+   #'(lambda (failed-test)
+       (edts-code-display-issue-overlay
+        type 'edts-face-failed-test-line failed-test))
+   failed-tests))
+
+(defun edts-code-display-passed-test-overlays (type passed-tests)
+  "Displays overlays for PASSED TESTS in current buffer."
+  (mapcar
+   #'(lambda (passed-test)
+       (edts-code-display-issue-overlay
+        type 'edts-face-passed-test-line passed-test))
+   passed-tests))
+
 
 (defun edts-code-display-issue-overlay (type face issue)
   "Displays overlay with FACE for ISSUE in current buffer."
@@ -140,7 +185,8 @@ buffer's project."
   (interactive)
   (push-mark)
   (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
-                                                    "edts-code-xref"))))
+                                                    "edts-code-xref"
+                                                    "edts-code-eunit-failed"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
@@ -151,8 +197,10 @@ buffer's project."
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
-  (let* ((overlay (edts-face-previous-overlay (point) '("edts-code-compile"
-                                                        "edts-code-xref"))))
+  (let* ((overlay (edts-face-previous-overlay (point)
+                                              '("edts-code-compile"
+                                                "edts-code-xref"
+                                                "edts-code-eunit-failed"))))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
