@@ -527,10 +527,20 @@ path_flatten([Dir|Rest], Back, Acc) ->
 -spec extract_compile_opts(file:filename()) -> [compile:option()].
 extract_compile_opts(File) ->
   Module = list_to_atom(filename:basename(File, ".erl")),
-  case module_loaded(Module) of
-    false -> [];
-    true -> proplists:get_value(options, Module:module_info(compile))
+  case code:is_loaded(Module) of
+    false     -> [];
+    {file, _} ->
+      Opts = proplists:get_value(options, Module:module_info(compile)),
+      [Opt || Opt <- Opts, extract_compile_opt_p(Opt)]
   end.
+
+extract_compile_opt_p({parse_transform, _})    -> true;
+extract_compile_opt_p({i,               _})    -> true;
+extract_compile_opt_p({d,               _})    -> true;
+extract_compile_opt_p({d,               _, _}) -> true;
+extract_compile_opt_p(export_all)              -> true;
+extract_compile_opt_p({no_auto_import,  _})    -> true;
+extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
 shorten_path_test_() ->
