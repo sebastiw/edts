@@ -113,11 +113,12 @@ compile_and_load(Module, Opts) when is_atom(Module)->
   compile_and_load(File, Opts);
 compile_and_load(File, Opts) ->
   AbsPath  = filename:absname(File),
+  CompileOpts = extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
-  case compile:file(AbsPath, [binary, debug_info, return|Opts]) of
+  case compile:file(AbsPath, [binary, debug_info, return|Opts]++CompileOpts) of
     {ok, Mod, Bin, Warnings} ->
       OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
@@ -519,7 +520,17 @@ path_flatten([_Dir|Rest], [_|Back], Acc) ->
 path_flatten([Dir|Rest], Back, Acc) ->
   path_flatten(Rest, Back, [Dir|Acc]).
 
-
+%%------------------------------------------------------------------------------
+%% @doc
+%% Extracts compile options from module, if it exists
+%% @end
+-spec extract_compile_opts(file:filename()) -> [compile:option()].
+extract_compile_opts(File) ->
+  Module = list_to_atom(filename:basename(File, ".erl")),
+  case module_loaded(Module) of
+    false -> [];
+    true -> proplists:get_value(options, Module:module_info(compile))
+  end.
 
 %%%_* Unit tests ===============================================================
 shorten_path_test_() ->
