@@ -263,7 +263,11 @@ get_compile_cwd(M, [{attribute,1,file,{RelPath,1}}|_]) ->
   CompileInfo = M:module_info(compile),
   CompileOpts = proplists:get_value(options, CompileInfo),
   case proplists:get_value(cwd, CompileOpts, undefined) of
-    undefined -> pop_dirs(proplists:get_value(source, CompileInfo), RelPath);
+    undefined ->
+        case pop_dirs(proplists:get_value(source, CompileInfo), RelPath) of
+            [] -> {ok, Cwd} = file:get_cwd(), Cwd;
+            Cwd -> Cwd
+        end;
     Cwd       -> Cwd
   end.
 
