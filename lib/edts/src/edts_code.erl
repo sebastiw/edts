@@ -525,6 +525,7 @@ path_flatten([Dir|Rest], Back, Acc) ->
 %% Extracts compile options from module, if it exists
 %% @end
 -spec extract_compile_opts(file:filename()) -> [compile:option()].
+%%------------------------------------------------------------------------------
 extract_compile_opts(File) ->
   Module = list_to_atom(filename:basename(File, ".erl")),
   case code:is_loaded(Module) of
