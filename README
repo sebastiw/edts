@@ -18,10 +18,10 @@ for details.
 
 ## Introduction ##
 
-The Erlang Development Tool Suite (EDTS) is meant to be a package of useful
-development tools for working with the Erlang programming language in Emacs. It
-bundles a number of useful external packages, together with specialized Erlang
-plugins for them, and its own features to create an efficient development
+The Erlang Development Tool Suite (EDTS) is a package of useful development
+tools for working with the Erlang programming language in Emacs. It bundles a
+number of useful external packages, together with specialized Erlang plugins for
+them, and its own features to create a complete and efficient development
 environment that is easy to set up.
 
 Currently EDTS provides:
@@ -32,10 +32,10 @@ Currently EDTS provides:
 - Auto-completion, using auto-complete-mode
 - Auto-highlighting, using auto-highlight-mode
 - Convenient access to Erlang documentation
+- In-buffer running of unit tests
 
 Planned features in the short term are:
 - Better support for imported functions
-- In-buffer running of unit tests
 - yasnippets
 - A nice interface to the erlang debugger
 
