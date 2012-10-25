@@ -243,7 +243,7 @@ current buffer's project."
   (if caller-items
       (progn
         (setq edts-found-caller-items caller-items)
-        (let* ((choice       (popup-menu* caller-items))
+        (let* ((choice       (popup-menu* caller-items :scroll-bar t))
                (module       (cdr (assoc 'module   choice)))
                (function     (cdr (assoc 'function choice)))
                (arity        (cdr (assoc 'arity    choice))))
