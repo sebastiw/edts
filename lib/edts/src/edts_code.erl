@@ -112,15 +112,17 @@ compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Opts);
 compile_and_load(File, Opts) ->
-  AbsPath  = filename:absname(File),
-  CompileOpts = extract_compile_opts(File),
+  AbsPath     = filename:absname(File),
+  {ok, Cwd}   = file:get_cwd(),
+  CompileOpts =
+    [{cwd, Cwd}, binary, debug_info, return|Opts] ++ extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
-  case compile:file(AbsPath, [binary, debug_info, return|Opts]++CompileOpts) of
+  case compile:file(AbsPath, CompileOpts) of
     {ok, Mod, Bin, Warnings} ->
-      OutDir = get_compile_outdir(File),
+      OutDir  = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
