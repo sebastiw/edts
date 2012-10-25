@@ -120,6 +120,8 @@
 
   (auto-highlight-symbol-mode t)
   (add-to-list 'ahs-exclude erlang-auto-highlight-exclusions)
+  (make-local-variable 'ahs-case-fold-search)
+  (setq ahs-case-fold-search nil)
 
   ;; Register the range plugin with ahs
   (ahs-regist-range-plugin
