@@ -106,7 +106,9 @@ directive."
   (let* ((headerfile (edts-header-at-point))
          (mark (copy-marker (point-marker))) ;; Add us to the history list
          (includes (edts-get-includes))
-         (file (find-if #'(lambda(x) (edts-has-suffix headerfile x))
+         (file (find-if #'(lambda(x) (string=
+                                      (file-name-nondirectory headerfile)
+                                      (file-name-nondirectory x)))
                         includes)))
     (if file
         (progn (ring-insert-at-beginning (edts-window-history-ring) mark)
