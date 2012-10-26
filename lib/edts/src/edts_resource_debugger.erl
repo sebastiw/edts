@@ -30,13 +30,17 @@
 %% API
 %% Webmachine callbacks
 -export([ allowed_methods/2
+        , allow_missing_post/2
+        , content_types_accepted/2
         , content_types_provided/2
+        , create_path/2
         , init/1
         , malformed_request/2
+        , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([to_json/2]).
+-export([ from_json/2, to_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -53,7 +57,14 @@ init(_Config) ->
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
+  {['GET', 'POST'], ReqData, Ctx}.
+
+allow_missing_post(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
+
+content_types_accepted(ReqData, Ctx) ->
+  Map = [ {"application/json", from_json} ],
+  {Map, ReqData, Ctx}.
 
 content_types_provided(ReqData, Ctx) ->
   Map = [ {"application/json", to_json}
@@ -61,19 +72,31 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
+create_path(ReqData, Ctx) ->
+  {wrq:path(ReqData), ReqData, Ctx}.
+
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
+post_is_create(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
+
 resource_exists(ReqData, Ctx) ->
-  Node     = orddict:fetch(nodename, Ctx),
-  Info     = edts:wait_for_debugger(Node),
-  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
-             not (Info =:= {error, not_found}),
-  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
+  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
+  {Exists, ReqData, Ctx}.
 
 %% Handlers
+from_json(ReqData, Ctx) ->
+  Node    = orddict:fetch(nodename, Ctx),
+  Command = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
+  Info    = edts:Command(Node),
+  Data    = edts_resource_lib:handle_debugger_info(Info),
+  {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
+
 to_json(ReqData, Ctx) ->
-  Info = orddict:fetch(info, Ctx),
+  Node     = orddict:fetch(nodename, Ctx),
+  Command  = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
+  Info     = edts:Command(Node),
   Data = edts_resource_lib:handle_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 

@@ -142,7 +142,7 @@ compile_and_load(File, Opts) ->
 
 maybe_uninterpret_module(Module) ->
   case edts_debug_server:is_interpreted(Module) of
-    true -> edts_debug_server:uninterpret_module(Module),
+    true -> edts_debug_server:uninterpret_modules([Module]),
             true;
     _    -> false
   end.

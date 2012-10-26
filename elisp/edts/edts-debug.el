@@ -41,12 +41,14 @@
 (defun edts-debug-step ()
   "Steps (into) when debugging"
   (interactive)
+  (edts-log-info "Step")
   (edts-debug-handle-debugger-state
    (edts-step-into (edts-debug-buffer-node-name))))
 
 (defun edts-debug-step-out ()
   "Steps out of the current function when debugging"
   (interactive)
+  (edts-log-info "Step out")
   (edts-debug-handle-debugger-state
    (edts-step-out (edts-debug-buffer-node-name))))
 
@@ -97,7 +99,7 @@
 (defun edts-debug-enter-debug-buffer (file line)
   "Helper function to enter a debugger buffer with the contents of FILE"
   (if (and file (stringp file))
-      (progn (pop-to-buffer (make-debug-buffer-name file))
+      (progn (pop-to-buffer (edts-debug-make-debug-buffer-name file))
              (when (not (equal *edts-debug-last-visited-file* file))
                (setq buffer-read-only nil)
                (erase-buffer)
@@ -106,7 +108,7 @@
              (setq *edts-debug-last-visited-file* file))
     (progn
       (let ((file (buffer-file-name)))
-        (pop-to-buffer (make-debug-buffer-name file))
+        (pop-to-buffer (edts-debug-make-debug-buffer-name file))
         (erase-buffer)
         (insert-file-contents file))
       (setq *edts-debug-last-visited-file* nil)))
@@ -178,6 +180,7 @@
          (edts-debug-enter-debug-mode file line)
          (edts-debug--update-bindings bindings)))
       ('idle
+       (edts-face-remove-overlays '("edts-debug-current-line"))
        (edts-log-info "Finished."))
       ('error
        (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
@@ -197,7 +200,7 @@
                                        10 t))))))
 
 
-(defun make-debug-buffer-name (&optional file-name)
+(defun edts-debug-make-debug-buffer-name (&optional file-name)
   (let ((project (edts-project-file-project (or file-name (buffer-file-name)))))
     (format "*EDTS-Debugger <%s>*" (edts-project-node-name project))))
 

@@ -386,18 +386,6 @@ associated with that buffer."
   (let ((info (edts-get-detailed-module-info (erlang-get-module))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
-(defun edts-wait-for-debugger (node-name)
-  "Wait for the debugger to attach and return the current interpreter state"
-  (let* ((resource
-          (list "debugger" node-name "wait_for_debugger"))
-         (args '())
-         (rest-callback #'(lambda (result)
-                            (if (equal (assoc 'result result)
-                                       '(result "200" "OK"))
-                                (edts-debug-handle-debugger-state
-                                 (cdr (assoc 'body result)))))))
-    (edts-rest-get-async resource args rest-callback '())))
-
 (defun edts-toggle-breakpoint (node-name module line)
   "Add/remove breakpoint in MODULE at LINE. This does not imply that MODULE becomes
 interpreted."
@@ -419,45 +407,48 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-wait-for-debugger (node-name)
+  "Wait for the debugger to attach and return the current interpreter state"
+  (edts--send-debugger-command-async node-name "wait_for_debugger"
+                                     #'(lambda (result)
+                                         (if (equal (assoc 'result result)
+                                                    '(result "200" "OK"))
+                                             (edts-debug-handle-debugger-state
+                                              (cdr (assoc 'body result)))))))
+
 (defun edts-step-into (node-name)
   "When debugging, perform a step-into"
-  (let* ((resource
-          (list "debugger" node-name "step"))
-         (args '())
-         (res (edts-rest-post resource args)))
-    (if (equal (assoc 'result res) '(result "201" "Created"))
-        (cdr (assoc 'body res))
-      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+  (edts--send-debugger-command node-name "step"))
 
 (defun edts-continue (node-name)
   "When debugging, continue execution until the next breakpoint or termination"
-  (let* ((resource
-          (list "debugger" node-name "continue"))
-         (args '())
-         (res (edts-rest-post resource args)))
-    (if (equal (assoc 'result res) '(result "201" "Created"))
-        (cdr (assoc 'body res))
-      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+  (edts--send-debugger-command node-name "continue"))
 
 (defun edts-step-out (node-name)
   "When debugging, step out of the current function"
+  (edts--send-debugger-command node-name "step_out"))
+
+(defun edts-debug-stop (node-name)
+  "Stop debugging"
+  (edts--send-debugger-command node-name "stop_debugger"))
+
+(defun edts--send-debugger-command (node-name command)
+  "Convenience function to send COMMAND to the debugger at NODE-NAME"
   (let* ((resource
-          (list "debugger" node-name "step_out"))
-         (args '())
+          (list "debugger" node-name))
+         (args (list (cons "cmd" command)))
          (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-debug-stop (node-name)
-  "Stop debugging"
+(defun edts--send-debugger-command-async (node-name command callback)
+  "Convenience function to send COMMAND to the debugger at NODE-NAME,
+executing CALLBACK when a reply is received"
   (let* ((resource
-          (list "debugger" node-name "stop"))
-         (args '())
-         (res (edts-rest-post resource args)))
-    (if (equal (assoc 'result res) '(result "201" "Created"))
-        (cdr (assoc 'body res))
-      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+          (list "debugger" node-name))
+         (args (list (cons "cmd" command))))
+    (edts-rest-get-async resource args callback '())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
