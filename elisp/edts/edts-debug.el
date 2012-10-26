@@ -18,7 +18,7 @@
 ;; Debugger interaction code for EDTS
 
 ;; Window configuration to be restored when quitting debug mode
-(defvar *edts-window-config* nil)
+(defvar *edts-debug-window-config-to-restore* nil)
 
 (defvar *edts-debug-last-visited-file* nil)
 
@@ -27,12 +27,12 @@
 (defun edts-debug-toggle-breakpoint ()
   "Enables or disables breakpoint at point"
   (interactive)
-  (let* ((line-number (edts-line-number-at-point))
-         (state (edts-toggle-breakpoint (get-node-name-from-debug-buffer)
+  (let* ((line-number (edts-debug--line-number-at-point))
+         (state (edts-toggle-breakpoint (edts-debug-buffer-node-name)
                                         (erlang-get-module)
                                         (number-to-string line-number)))
          (result (cdr (assoc 'result state))))
-    (update-breakpoints)
+    (edts-debug-update-breakpoints)
     (edts-log-info "Breakpoint %s at %s:%s"
                    result
                    (cdr (assoc 'module state))
@@ -41,41 +41,44 @@
 (defun edts-debug-step ()
   "Steps (into) when debugging"
   (interactive)
-  (handle-debugger-state (edts-step-into (get-node-name-from-debug-buffer))))
+  (edts-debug-handle-debugger-state
+   (edts-step-into (edts-debug-buffer-node-name))))
 
 (defun edts-debug-step-out ()
   "Steps out of the current function when debugging"
   (interactive)
-  (handle-debugger-state (edts-step-out (get-node-name-from-debug-buffer))))
+  (edts-debug-handle-debugger-state
+   (edts-step-out (edts-debug-buffer-node-name))))
 
 (defun edts-debug-continue ()
   "Continues execution when debugging"
   (interactive)
   (edts-log-info "Continue")
-  (handle-debugger-state (edts-continue (get-node-name-from-debug-buffer))))
+  (edts-debug-handle-debugger-state
+   (edts-continue (edts-debug-buffer-node-name))))
 
 (defun edts-debug-quit ()
   "Quits debug mode"
   (interactive)
-  (edts-debug-stop (get-node-name-from-debug-buffer))
-  (kill-debug-buffers)
-  (set-window-configuration *edts-window-config*)
-  (setf *edts-window-config* nil))
+  (edts-debug-stop (edts-debug-buffer-node-name))
+  (edts-debug--kill-debug-buffers)
+  (set-window-configuration *edts-debug-window-config-to-restore*)
+  (setf *edts-debug-window-config-to-restore* nil))
 
-(defun edts-start-debugging ()
+(defun edts-debug-start-debugging ()
   (interactive)
-  (edts-enter-debug-mode)
-  (edts-wait-for-debugger (get-node-name-from-debug-buffer)))
+  (edts-debug-enter-debug-mode)
+  (edts-wait-for-debugger (edts-debug-buffer-node-name)))
 
-(defun edts-enter-debug-mode (&optional file line)
+(defun edts-debug-enter-debug-mode (&optional file line)
   "Convenience function to setup and enter debug mode"
   (edts-debug-save-window-configuration)
   (edts-debug-enter-debug-buffer file line)
   (delete-other-windows)
   (edts-debug-mode)
-  (create-auxiliary-buffers))
+  (edts-debug--create-auxiliary-buffers))
 
-(defun edts-line-number-at-point ()
+(defun edts-debug--line-number-at-point ()
   "Get line number at point"
   (interactive)
   (save-restriction
@@ -87,21 +90,19 @@
 (defun edts-debug-save-window-configuration ()
   "Saves current window configuration if not currently in an EDTS-Debug buffer"
   (if (and (not (equal (buffer-local-value 'major-mode (current-buffer)) 'edts-debug-mode))
-           (null *edts-window-config*))
-      (setq *edts-window-config* (current-window-configuration))))
+           (null *edts-debug-window-config-to-restore*))
+      (setq *edts-debug-window-config-to-restore*
+            (current-window-configuration))))
 
 (defun edts-debug-enter-debug-buffer (file line)
   "Helper function to enter a debugger buffer with the contents of FILE"
-  (if (and (not (null file))
-           (stringp file))
+  (if (and file (stringp file))
       (progn (pop-to-buffer (make-debug-buffer-name file))
-             (if (or (null *edts-debug-last-visited-file*)
-                     (not (equal *edts-debug-last-visited-file* file)))
-                 (progn
-                   (setq buffer-read-only nil)
-                   (erase-buffer)
-                   (insert-file-contents file)
-                   (setq buffer-read-only t)))
+             (when (not (equal *edts-debug-last-visited-file* file))
+               (setq buffer-read-only nil)
+               (erase-buffer)
+               (insert-file-contents file)
+               (setq buffer-read-only t))
              (setq *edts-debug-last-visited-file* file))
     (progn
       (let ((file (buffer-file-name)))
@@ -109,17 +110,16 @@
         (erase-buffer)
         (insert-file-contents file))
       (setq *edts-debug-last-visited-file* nil)))
-  (edts-face-remove-overlays '("edts-debug-current"))
-  (if (and (not (null line))
-           (numberp line))
-      (edts-face-display-overlay 'edts-face-debug-current-line
-                                 line
-                                 "EDTS debugger current line"
-                                 "edts-debug-current"
-                                 20
-                                 t))
+  (edts-face-remove-overlays '("edts-debug-current-line"))
+  (when (numberp line)
+    (edts-face-display-overlay 'edts-face-debug-current-line
+                               line
+                               "EDTS debugger current line"
+                               "edts-debug-current-line"
+                               20
+                               t))
   (setq *edts-debugger-buffer* (current-buffer))
-  (update-breakpoints))
+  (edts-debug-update-breakpoints))
 
 (defvar edts-debug-keymap
   (let ((map (make-sparse-keymap)))
@@ -138,24 +138,25 @@
   (setq mode-name "EDTS-debug")
   (use-local-map edts-debug-keymap))
 
-(defun create-auxiliary-buffers ()
+(defun edts-debug--create-auxiliary-buffers ()
   (let ((buffer-width 81))
     (split-window nil buffer-width 'left)
     (switch-to-buffer "*EDTS-Debugger Bindings*")
-    (update-bindings '())
+    (edts-debug--update-bindings '())
     (edts-debug-mode)
     (other-window 1)))
 
-(defun kill-debug-buffers ()
-  (dolist (buf (match-buffers #'(lambda (buffer)
-                                (let* ((name (buffer-name buffer))
-                                       (match
-                                        (string-match "^*EDTS-Debugger."
-                                                      name)))
-                                  (or (null match) name)))))
+(defun edts-debug--kill-debug-buffers ()
+  (dolist (buf (edts-debug--match-buffers
+                #'(lambda (buffer)
+                    (let* ((name (buffer-name buffer))
+                           (match
+                            (string-match "^*EDTS-Debugger."
+                                          name)))
+                      (or (null match) name)))))
     (kill-buffer buf)))
 
-(defun update-bindings (bindings)
+(defun edts-debug--update-bindings (bindings)
   (with-writable-buffer "*EDTS-Debugger Bindings*"
    (erase-buffer)
    (insert "Current bindings in scope:\n\n")
@@ -165,25 +166,26 @@
                                (cdr binding))))
            bindings)))
 
-(defun handle-debugger-state (reply)
-  (let ((state (cdr (assoc 'state reply))))
-    (cond ((equal state "break")
-           (let ((file (cdr (assoc 'file reply)))
-                 (module (cdr (assoc 'module reply)))
-                 (line (cdr (assoc 'line reply)))
-                 (bindings (cdr (assoc 'var_bindings reply))))
-             (edts-log-info "Break at %s:%s" module line)
-             (edts-enter-debug-mode file line)
-             (update-bindings bindings)))
-          ((equal state "idle")
-           (edts-log-info "Finished."))
-          ((equal state "error")
-           (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
+(defun edts-debug-handle-debugger-state (reply)
+  (let ((state (intern (cdr (assoc 'state reply)))))
+    (case state
+      ('break
+       (let ((file (cdr (assoc 'file reply)))
+             (module (cdr (assoc 'module reply)))
+             (line (cdr (assoc 'line reply)))
+             (bindings (cdr (assoc 'var_bindings reply))))
+         (edts-log-info "Break at %s:%s" module line)
+         (edts-debug-enter-debug-mode file line)
+         (edts-debug--update-bindings bindings)))
+      ('idle
+       (edts-log-info "Finished."))
+      ('error
+       (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
 
-(defun update-breakpoints ()
+(defun edts-debug-update-breakpoints ()
   "Display breakpoints in the buffer"
-  (edts-face-remove-overlays '("edts-breakpoint"))
-  (let ((breaks (edts-get-breakpoints (get-node-name-from-debug-buffer))))
+  (edts-face-remove-overlays '("edts-debug-breakpoint"))
+  (let ((breaks (edts-get-breakpoints (edts-debug-buffer-node-name))))
     (dolist (b breaks)
       (let ((module (cdr (assoc 'module b)))
             (line (cdr (assoc 'line b)))
@@ -191,21 +193,20 @@
         (if (and (equal module (erlang-get-module))
                  (equal status "active"))
             (edts-face-display-overlay 'edts-face-breakpoint-enabled-line
-                                       line "Breakpoint" "edts-breakpoint"
+                                       line "Breakpoint" "edts-debug-breakpoint"
                                        10 t))))))
 
 
-(defun make-debug-buffer-name (&optional filename)
-  (let ((project (if (null filename)
-                     (edts-project-file-project (buffer-file-name))
-                   (edts-project-file-project filename))))
+(defun make-debug-buffer-name (&optional file-name)
+  (let ((project (edts-project-file-project (or file-name (buffer-file-name)))))
     (format "*EDTS-Debugger <%s>*" (edts-project-node-name project))))
 
-(defun get-node-name-from-debug-buffer ()
-  (let ((match (string-match "<\\(\\w+\\)>" (buffer-name))))
-    (match-string 1 (buffer-name))))
+(defun edts-debug-buffer-node-name ()
+  (save-match-data
+    (let ((match (string-match "<\\(\\w+\\)>" (buffer-name))))
+      (match-string 1 (buffer-name)))))
 
-(defun match-buffers (predicate)
+(defun edts-debug--match-buffers (predicate)
   "Returns a list of buffers for which PREDICATE does not evaluate to T"
   (delq t
         (mapcar predicate (buffer-list))))

@@ -51,7 +51,8 @@ a symbol."
         (file     (buffer-file-name)))
     (when (string= "erl" (file-name-extension file))
       (edts-compile-and-load-async
-       module file #'edts-code-handle-compilation-result (current-buffer)))))
+       module file t
+       #'edts-code-handle-compilation-result (current-buffer)))))
 
 (defun edts-code-handle-compilation-result (comp-res buffer)
   (when comp-res

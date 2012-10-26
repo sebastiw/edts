@@ -341,13 +341,15 @@ parsed response as the single argument."
     (edts-log-debug "running eunit tests in %s async on %s" module node-name)
     (edts-rest-get-async resource nil rest-callback (list callback buffer))))
 
-(defun edts-compile-and-load-async (module file callback buffer)
+(defun edts-compile-and-load-async (module file interpret callback buffer)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
-parsed response as the single argument."
+parsed response as the single argument. MODULE becomes interpreted
+if INTERPRET evaluates to a non-NIL value"
   (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
          (resource      (list "nodes" node-name "modules" module))
-         (args (list    (cons "file" file) (cons "interpret" "true")))
+         (interpreted   (if interpret "true" "false"))
+         (args (list    (cons "file" file) (cons "interpret" interpreted)))
          (rest-callback #'(lambda (result callback buffer)
                             (if (equal (assoc 'result result)
                                        '(result "201" "Created"))
@@ -363,13 +365,15 @@ parsed response as the single argument."
     (edts-log-debug "Compiling %s async on %s" module node-name)
     (edts-rest-post-async resource args rest-callback (list callback buffer))))
 
-(defun edts-compile-and-load (module file)
-  "Compile MODULE in FILE on the node associated with current buffer."
+(defun edts-compile-and-load (module file interpret)
+  "Compile MODULE in FILE on the node associated with current buffer.
+MODULE becomes interpreted if INTERPRET evaluates to a non-NIL value."
   (let ((node-name (edts-project-buffer-node-name (current-buffer))))
     (edts-log-debug "Compiling %s on %s" module node-name)
     (let* ((resource
             (list "nodes" node-name "modules" module))
-           (args (list (cons "file" file) (cons "interpret" "true")))
+           (interpreted   (if interpret "true" "false"))
+           (args (list (cons "file" file) (cons "interpret" interpreted)))
            (res (edts-rest-post resource args)))
       (if (equal (assoc 'result res) '(result "201" "Created"))
           (cdr (assoc 'body res))
@@ -390,7 +394,8 @@ associated with that buffer."
          (rest-callback #'(lambda (result)
                             (if (equal (assoc 'result result)
                                        '(result "200" "OK"))
-                                (handle-debugger-state (cdr (assoc 'body result)))))))
+                                (edts-debug-handle-debugger-state
+                                 (cdr (assoc 'body result)))))))
     (edts-rest-get-async resource args rest-callback '())))
 
 (defun edts-toggle-breakpoint (node-name module line)

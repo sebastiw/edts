@@ -75,8 +75,8 @@
   :group 'edts)
 
 (defface edts-face-debug-current-line
-  '((((class color) (background dark)) (:background "dark olive green"))
-    (((class color) (background light)) (:background "pale green")))
+  '((((class color) (background dark)) (:background "DarkGoldenRod4"))
+    (((class color) (background light)) (:background "DarkGoldenRod2")))
   "Face used for marking the current line during debugging"
   :group 'edts)
 
@@ -119,15 +119,11 @@ the highest priority any edts overlay at new point if any."
   (save-excursion
     (save-restriction
       (widen)
-      (let* ((pos (if (null fill-line)
-                      (ferl-position-at-line line)
-                    (ferl-goto-line line)))
-             (beg (if (null fill-line)
-                      (ferl-first-char-on-line-at pos)
-                    (line-beginning-position)))
-             (end (if (null fill-line)
-                      (ferl-last-char-on-line-at  pos)
-                    (line-beginning-position 2)))
+      (let* ((pos (ferl-position-at-beginning-of-line line))
+             (blah (goto-char pos))
+             (beg (if fill-line pos (ferl-first-char-on-line-at pos)))
+             (end (if fill-line (ferl-position-at-end-of-line line)
+                    (ferl-last-char-on-line-at  pos)))
              (overlay (make-overlay beg end nil t (not fill-line))))
         (overlay-put overlay 'edts-face-overlay t)
         (overlay-put overlay 'face face)
