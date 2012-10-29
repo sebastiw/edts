@@ -176,7 +176,7 @@ terminate_test() ->
   ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
   ?assertEqual(Exp, receive Exp -> Exp end),
   ?assertEqual({error, foo}, terminate(foo, State)),
-  ?assertEqual({error, foo}, receive ExpErr -> ExpErr end).
+  ?assertEqual({error, foo}, receive {error, _} = ExpErr -> ExpErr end).
 
 mk_fail_test_() ->
   [ ?_assertEqual([{reason, foo}],             mk_fail(foo))
