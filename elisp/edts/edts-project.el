@@ -52,7 +52,7 @@ activated for the first file that is located inside a project."
 
 (defun edts-project-start-node (project)
   "Starts a new erlang node for PROJECT."
-  (let* ((project-root (expand-file-name (edts-project-root project)))
+  (let* ((project-root (edts-project-root project))
          (node-name    (edts-project-node-name project))
          (buffer-name  (concat "*" (edts-project-name project) "*"))
          (command      (edts-project-build-project-command project))
@@ -67,7 +67,7 @@ activated for the first file that is located inside a project."
   "Asynchronously register PROJECT's node with EDTS as soon at his has
 started."
   (let* ((node-name    (edts-project-node-name project))
-         (project-root (expand-file-name (edts-project-root project)))
+         (project-root (edts-project-root project))
          (lib-dirs     (edts-project-lib-dirs project)))
     (edts-register-node-when-ready node-name project-root lib-dirs)))
 
@@ -127,7 +127,8 @@ come on you have to do *something* yourself!"
 
 (defun edts-project-root (project)
   "Returns the root directory of the edts-project PROJECT."
-  (edts-project-property 'root project))
+  (let ((root (edts-project-property 'root project)))
+    (when root (expand-file-name root))))
 
 (defun edts-project-lib-dirs (project)
   "Returns the edts-project PROJECT's library directories. Defaults to
