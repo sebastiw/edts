@@ -102,7 +102,7 @@ compile_and_load(Module) ->
 %% Compiles Module with Options and returns a list of any errors and warnings.
 %% If there are no errors, the module will be loaded. Compilation options
 %% always include 'return', and 'debug_info' (and also 'binary', but
-%% the module will be written to file by EDTS instead).
+%% the returned binary will be written to file by EDTS).
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
@@ -111,18 +111,21 @@ compile_and_load(Module) ->
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Opts);
-compile_and_load(File, Opts) ->
-  AbsPath     = filename:absname(File),
+compile_and_load(File0, Opts) ->
   {ok, Cwd}   = file:get_cwd(),
+  File = case lists:prefix(Cwd, File0) of
+           true  -> lists:nthtail(length(Cwd) + 1, File0);
+           false -> File0
+         end,
   CompileOpts =
     [{cwd, Cwd}, binary, debug_info, return|Opts] ++ extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
-  case compile:file(AbsPath, CompileOpts) of
+  case compile:file(File, CompileOpts) of
     {ok, Mod, Bin, Warnings} ->
-      OutDir  = get_compile_outdir(File),
+      OutDir  = get_compile_outdir(File0),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
