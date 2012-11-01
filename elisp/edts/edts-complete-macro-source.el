@@ -83,6 +83,7 @@ function."
       (and
        (equal ?? (edts-complete-term-preceding-char point))
        (or (not ac-prefix) (string= "" ac-prefix)
-           (string-match erlang-atom-regexp ac-prefix)))
+           (string-match "[a-zA-Z_][a-zA-Z1-9_@]*" ac-prefix)))
     ('error nil)))
 
+\\|\\(\\)
