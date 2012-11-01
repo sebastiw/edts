@@ -85,5 +85,3 @@ function."
        (or (not ac-prefix) (string= "" ac-prefix)
            (string-match "[a-zA-Z_][a-zA-Z1-9_@]*" ac-prefix)))
     ('error nil)))
-
-\\|\\(\\)
