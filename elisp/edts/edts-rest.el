@@ -80,7 +80,8 @@ CALLBACK-ARGS."
          (reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply))))
     (edts-log-debug "Reply received, %s" status)
-    (apply callback (edts-rest-parse-http-response) callback-args)))
+    (kill-buffer)
+    (apply callback reply callback-args)))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
