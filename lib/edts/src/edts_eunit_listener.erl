@@ -104,8 +104,10 @@ add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
 
 -spec mk_fail({edts_eunit:reason(), proplists:proplist()}
               | edts_eunit:reason()) -> edts_eunit:info().
-mk_fail({Reason, Info}) -> orddict:from_list([{reason, Reason}|Info]);
-mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
+mk_fail({Reason, Info}) when is_list(Info) ->
+  orddict:from_list([{reason, Reason}|Info]);
+mk_fail(Reason) ->
+  orddict:from_list([{reason, Reason}]).
 
 -spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
 handle_cancel(L, Data, State) ->
