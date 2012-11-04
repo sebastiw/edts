@@ -83,7 +83,7 @@ format_test({Type, File, Line, Desc}) ->
   {struct, [ {type, Type}
            , {file, list_to_binary(File)}
            , {line, Line}
-           , {description, list_to_binary(Desc)}]}.
+           , {description, unicode:characters_to_binary(Desc)}]}.
 
 %%%_* Internal functions =======================================================
 
