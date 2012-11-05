@@ -109,6 +109,10 @@ PWD and running COMMAND."
          (args (cdr command)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
+    (with-current-buffer (get-buffer buffer-name)
+      (make-local-variable 'comint-prompt-read-only)
+      (setq comint-prompt-read-only t)
+      (edts-complete-setup edts-complete-shell-sources))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name)))
 
@@ -184,7 +188,19 @@ beneath ROOT/DIR expanded with <path>/ebin and <path>/test."
 (defun edts-project-buffer-project (buffer)
   "Returns the edts-project that BUFFER is part of, if any,
 otherwise nil."
-  (edts-project-file-project (buffer-file-name buffer)))
+  (let ((file (buffer-file-name buffer))
+        (buffer-name (if (bufferp buffer) (buffer-name buffer) buffer)))
+    (if file
+        (edts-project-file-project file)
+        (when (and (buffer-local-value 'comint-mode buffer)
+                   (string-match "\\*\\(.*\\)\\*" buffer-name))
+          (edts-project (match-string 1 buffer-name))))
+
+(defun edts-project (project-name)
+  "Returns the edts-project name PROJECT-NAME if it exists, otherwise
+nil."
+  (find-if  #'(lambda (p) (string= (edts-project-name p) project-name))
+            edts-projects))
 
 (defun edts-project-file-project (file-name)
   "Returns the edts-project that the file with FILE-NAME is part of,

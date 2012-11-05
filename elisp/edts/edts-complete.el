@@ -93,8 +93,7 @@ character before that."
 ;; Setup
 
 (defcustom edts-complete-sources
-  '(
-    edts-complete-keyword-source
+  '(edts-complete-keyword-source
     edts-complete-variable-source
     edts-complete-local-function-source
     edts-complete-imported-function-source
@@ -102,11 +101,18 @@ character before that."
     edts-complete-built-in-function-source
     edts-complete-module-source
     edts-complete-macro-source
-    edts-complete-record-source
-    )
+    edts-complete-record-source)
   "Sources that EDTS uses for auto-completion.")
 
-(defun edts-complete-setup ()
+(defcustom edts-complete-shell-sources
+  '(edts-complete-keyword-source
+    edts-complete-exported-function-source
+    edts-complete-built-in-function-source
+    edts-complete-module-source)
+  "Sources that EDTS uses for auto-completion in shell (comint)
+buffers.")
+
+(defun edts-complete-setup (&optional sources)
   "Set edts completion defaults local to current buffer."
   (make-local-variable 'ac-sources)
   (make-local-variable 'ac-disable-faces)
@@ -116,7 +122,7 @@ character before that."
   (make-local-variable 'ac-use-dictionary-as-stop-words)
   (make-local-variable 'ac-disable-faces)
 
-  (setq ac-sources edts-complete-sources)
+  (setq ac-sources (or edts-complete-sources sources))
   (setq ac-ignore-case 'smart)
   (setq ac-use-menu-map t)
   (setq ac-use-dictionary-as-stop-words nil)
