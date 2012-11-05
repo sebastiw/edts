@@ -31,9 +31,6 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
-%% Exported for spawning
--export([ start_debugging/1 ]).
-
 -include_lib("eunit/include/eunit.hrl").
 
 -define(SERVER, ?MODULE).
@@ -67,8 +64,7 @@ stop() ->
 %%--------------------------------------------------------------------
 maybe_attach(Pid) ->
   case gen_server:call(?SERVER, {attach, Pid}) of
-    {ok, attach} ->
-      AttPid = spawn_link(?MODULE, start_debugging, [Pid]),
+    {ok, attach, AttPid} ->
       {attached, AttPid, Pid};
     {error, already_attached, AttPid} ->
       {already_attached, AttPid, Pid}
@@ -217,17 +213,21 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
-  {reply, {ok, attach}, State#dbg_state{proc = Pid}};
+  register_attached(self()),
+  int:attached(Pid),
+  error_logger:info_msg("Debugger ~p attached to ~p~n", [self(), Pid]),
+  {reply, {ok, attach, self()}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {error, {already_attached, Dbg, Pid}}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
-  Reply = {ok, lists:map(fun(Module) ->
-                             case int:interpretable(Module) of
-                               true -> int:i(Module);
-                               _    -> ok
-                             end
-                         end, Modules)},
+  Reply = {ok, lists:filter(fun(E) -> E =/= mod_uninterpretable end,
+                            lists:map(fun(Module) ->
+                                          case int:interpretable(Module) of
+                                            true -> int:i(Module);
+                                            _    -> mod_uninterpretable
+                                          end
+                                      end, Modules))},
   {reply, Reply, State};
 
 handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
@@ -304,7 +304,36 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+%% Hit a breakpoint
+handle_info({Meta, {break_at, Module, Line, _Cur}}, State) ->
+  Bindings = int:meta(Meta, bindings, nostack),
+  File = int:file(Module),
+  notify({break, File, {Module, Line}, Bindings}),
+  {noreply, State};
+
+%% Became idle (not executing any code under debugging)
+handle_info({_Meta, idle}, State) ->
+  notify(idle),
+  {noreply, State};
+
+%% Came back from uninterpreted code
+handle_info({_Meta, {re_entry, _, _}}, State) ->
+  {noreply, State};
+
+%% Running code, but not telling anything really relevant
+handle_info({_Meta, running}, State) ->
+  {noreply, State};
+
+%% Something attached to the debugger (most likely ourselves)
+handle_info({_Meta, {attached, _, _, _}}, State) ->
+  {noreply, State};
+
+%% Process under debug terminated
+handle_info({_Meta, {exit_at, _, _Reason, _}}, State) ->
+  {stop, finished, State};
+
+handle_info(Msg, State) ->
+  error_logger:info_msg("Unexpected message: ~p~n", [Msg]),
   {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -348,48 +377,11 @@ notify(Info, [Client|R]) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Register in idbg_server as a debugger process attached to Pid
-%% and enter a debugging loop to handle messages coming from the meta
-%% process.
+%% Register in idbg_server as a debugger process attached to Pid.
 %% @end
 %%--------------------------------------------------------------------
-start_debugging(Pid) ->
-  register_attached(self()),
-  int:attached(Pid),
-  io:format("Debugger ~p attached to ~p~n", [self(), Pid]),
-  debug_loop().
-
 register_attached(Pid) ->
   gen_server:cast(?SERVER, {register_attached, Pid}).
-
-debug_loop() ->
-  receive
-    %% Hit a breakpoint
-    {Meta, {break_at, Module, Line, _Cur}} ->
-      Bindings = int:meta(Meta, bindings, nostack),
-      File = int:file(Module),
-      notify({break, File, {Module, Line}, Bindings}),
-      debug_loop();
-    %% Became idle (not executing any code under debugging)
-    {_Meta, idle} ->
-      notify(idle),
-      debug_loop();
-    %% Came back from uninterpreted code
-    {_Meta, {re_entry, _, _}} ->
-      debug_loop();
-    %% Running code, but not telling anything really relevant
-    {_Meta, running} ->
-      debug_loop();
-    %% Something attached to the debugger (most likely ourselves)
-    {_Meta, {attached, _, _, _}} ->
-      debug_loop();
-    %% Process under debug terminated
-    {_Meta, {exit_at, _, _Reason, _}} ->
-      finished;
-    _ = Msg ->
-      io:format("Unexpected message: ~p~n", [Msg]),
-      debug_loop()
-  end.
 
 %%%====================================================================
 %%% Unit tests
