@@ -112,7 +112,9 @@ PWD and running COMMAND."
     (with-current-buffer (get-buffer buffer-name)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
-      (edts-complete-setup edts-complete-shell-sources))
+      (edts-complete-setup edts-complete-shell-sources)
+      (erlang-syntax-table-init)
+      (erlang-font-lock-init))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name)))
 
