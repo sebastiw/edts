@@ -17,18 +17,26 @@
 ;;
 ;; Erlang shell related functions
 
-(defvar edts-erl-next-shell-id 0
+(defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
-(defun edts-erl-shell ()
+(defcustom edts-shell-ac-sources
+  '(edts-complete-keyword-source
+    edts-complete-exported-function-source
+    edts-complete-built-in-function-source
+    edts-complete-module-source)
+  "Sources that EDTS uses for auto-completion in shell (comint)
+buffers.")
+
+(defun edts-shell ()
   "Start an interactive erlang shell."
   (interactive)
-  (let ((buffer-name (format "*edts-erl[%s]*" edts-erl-next-shell-id)))
-    (incf edts-erl-next-shell-id)
+  (let ((buffer-name (format "*edts-erl[%s]*" edts-shell-next-shell-id)))
+    (incf edts-shell-next-shell-id)
     (switch-to-buffer
-     (edts-erl-make-comint-buffer buffer-name "." (list edts-erl-command)))))
+     (edts-shell-make-comint-buffer buffer-name "." (list edts-erl-command)))))
 
-(defun edts-erl-make-comint-buffer (buffer-name pwd command)
+(defun edts-shell-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
 PWD and running COMMAND."
   (let* ((cmd  (car command))
@@ -38,15 +46,15 @@ PWD and running COMMAND."
     (with-current-buffer (get-buffer buffer-name)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
-      (edts-complete-setup edts-complete-shell-sources)
+      (edts-complete-setup edts-shell-ac-sources)
       (erlang-syntax-table-init)
       (erlang-font-lock-init))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name)))
 
 (when (member 'ert features)
-  (ert-deftest edts-erl-make-comint-buffer-test ()
-    (let ((buffer (edts-erl-make-comint-buffer "edts-test" "." '("erl"))))
+  (ert-deftest edts-shell-make-comint-buffer-test ()
+    (let ((buffer (edts-shell-make-comint-buffer "edts-test" "." '("erl"))))
       (should (bufferp buffer))
       (should (string= "edts-test" (buffer-name buffer)))
       (should (string-match "erl\\(<[0-9]*>\\)?"
