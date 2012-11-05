@@ -1,15 +1,35 @@
-%%%-------------------------------------------------------------------
-%%% @author João Neves <sevenjp@gmail.com>
-%%% @copyright (C) 2012, João Neves
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc
 %%% Erlang interpreter interface through a gen_server for communication
 %%% with external processes
 %%% @end
-%%% Created : 10 Sep 2012 by João Neves <sevenjp@gmail.com>
-%%%-------------------------------------------------------------------
+%%% @author João Neves <sevenjp@gmail.com>
+%%% @copyright
+%%% Copyright 2012 João Neves <sevenjp@gmail.com>
+%%%
+%%% This file is part of EDTS.
+%%%
+%%% EDTS is free software: you can redistribute it and/or modify
+%%% it under the terms of the GNU Lesser General Public License as published by
+%%% the Free Software Foundation, either version 3 of the License, or
+%%% (at your option) any later version.
+%%%
+%%% EDTS is distributed in the hope that it will be useful,
+%%% but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%% GNU Lesser General Public License for more details.
+%%%
+%%% You should have received a copy of the GNU Lesser General Public License
+%%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
+%%% @end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%_* Module declaration =======================================================
 -module(edts_debug_server).
 
 -behaviour(gen_server).
+
+%%%_* Exports =================================================================
 
 %% server API
 -export([start/0, stop/0, start_link/0]).
@@ -31,8 +51,10 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+%%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
+%%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 
 -record(dbg_state, {
@@ -42,10 +64,10 @@
           listeners = []       :: [term()]
          }).
 
-%%%===================================================================
-%%% API
-%%%===================================================================
+%%%_* Types ====================================================================
+-type state():: #dbg_state{}.
 
+%%%_* API ======================================================================
 start() ->
   edts_debug_server:start_link(),
   {node(), ok}.
@@ -54,14 +76,14 @@ stop() ->
   ok.
 
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Potentially attach to an interpreter process Pid. Will not
 %% reattach if already attached.
 %% @end
 -spec maybe_attach(Pid :: pid()) -> {attached, pid(), pid()}
                                   | {already_attached, pid(), pid()}.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 maybe_attach(Pid) ->
   case gen_server:call(?SERVER, {attach, Pid}) of
     {ok, attach, AttPid} ->
@@ -70,7 +92,7 @@ maybe_attach(Pid) ->
       {already_attached, AttPid, Pid}
   end.
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Get all breakpoints and their status in the current interpreter
 %% @end
@@ -79,93 +101,93 @@ maybe_attach(Pid) ->
                               }
                             , Options  :: [term()]
                             }].
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 get_breakpoints() ->
   gen_server:call(?SERVER, get_breakpoints).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Make Modules interpretable. Returns the list of modules which were
 %% interpretable and set as such.
 %% @end
 -spec interpret_modules(Modules :: [module()]) -> {ok, [module()]}.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 interpret_modules(Modules) ->
   gen_server:call(?SERVER, {interpret, Modules}).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Reports if Module is interpreted.
 %% @end
 -spec is_interpreted(Module :: module()) -> boolean().
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 is_interpreted(Module) ->
   gen_server:call(?SERVER, {is_interpreted, Module}).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Toggles a breakpoint at Module:Line.
 %% @end
 -spec toggle_breakpoint(Module :: module(), Line :: non_neg_integer()) ->
                            {ok, set, {Module, Line}}
                          | {ok, unset, {Module, Line}}.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 toggle_breakpoint(Module, Line) ->
   gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Uninterprets Modules.
 %% @end
 -spec uninterpret_modules(Modules :: [module()]) -> ok.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 uninterpret_modules(Modules) ->
   gen_server:call(?SERVER, {uninterpret, Modules}).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Waits for debugging to be triggered by a breakpoint and returns
 %% relevant module and line information.
 %% @end
 -spec wait_for_debugger() -> {ok, {module(), non_neg_integer()}}.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 wait_for_debugger() ->
   gen_server:call(?SERVER, wait_for_debugger, infinity).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Orders the debugger to continue execution until it reaches another
 %% breakpoint or execution terminates.
 %% @end
 -spec continue() -> ok.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 continue() ->
   gen_server:call(?SERVER, continue, infinity).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Orders the debugger to step in execution.
 %% @end
 -spec step() -> ok.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 step() ->
   gen_server:call(?SERVER, step, infinity).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Order the debugger to step out of the current function.
 %% @end
 -spec step_out() -> ok.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 step_out() ->
   gen_server:call(?SERVER, step_out, infinity).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Stop debugging
 %% @end
 -spec stop_debug() -> ok.
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 stop_debug() ->
   gen_server:call(?SERVER, stop_debug).
 
@@ -179,22 +201,18 @@ stop_debug() ->
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-%%%===================================================================
-%%% gen_server callbacks
-%%%===================================================================
 
-%%--------------------------------------------------------------------
+%%%_* gen_server callbacks  ====================================================
+%%------------------------------------------------------------------------------
 %% @private
 %% @doc
 %% Initializes the server
-%%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
 %% @end
-%%--------------------------------------------------------------------
-
+-spec init(list()) -> {ok, state()} |
+                      {ok, state(), timeout()} |
+                      ignore |
+                      {stop, atom()}.
+%%------------------------------------------------------------------------------
 init([]) ->
   int:auto_attach([break], {?MODULE, maybe_attach, []}),
   {ok, #dbg_state{}}.
@@ -389,6 +407,10 @@ notify(Info, [Client|R]) ->
 register_attached(Pid) ->
   gen_server:cast(?SERVER, {register_attached, Pid}).
 
-%%%====================================================================
-%%% Unit tests
-%%%====================================================================
+%%%_* Unit tests ===============================================================
+
+%%%_* Emacs ====================================================================
+%%% Local Variables:
+%%% allout-layout: t
+%%% erlang-indent-level: 2
+%%% End:
