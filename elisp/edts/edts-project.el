@@ -59,7 +59,7 @@ activated for the first file that is located inside a project."
          (exec-path    (edts-project-build-exec-path project))
          (process-environment (edts-project-build-env project)))
     (edts-ensure-node-not-started node-name)
-    (edts-project-make-comint-buffer buffer-name project-root command)
+    (edts-erl-make-comint-buffer buffer-name project-root command)
     (edts-project-register-node-when-ready project)
     (get-buffer buffer-name)))
 
@@ -101,22 +101,6 @@ project-node of PROJECT."
   "Return the ENV with PATH added to its path value."
   (cons (concat "PATH=" (expand-file-name path) path-separator (getenv "PATH"))
         process-environment))
-
-(defun edts-project-make-comint-buffer (buffer-name pwd command)
-  "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
-PWD and running COMMAND."
-  (let* ((cmd  (car command))
-         (args (cdr command)))
-    (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
-    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
-    (with-current-buffer (get-buffer buffer-name)
-      (make-local-variable 'comint-prompt-read-only)
-      (setq comint-prompt-read-only t)
-      (edts-complete-setup edts-complete-shell-sources)
-      (erlang-syntax-table-init)
-      (erlang-font-lock-init))
-    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
-    (get-buffer buffer-name)))
 
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
@@ -266,16 +250,6 @@ make sure it ends with a '/'."
     (should
      (equal '("bin/start.sh" "-i")
             (edts-project-build-project-command edts-project-test-project-2))))
-
-  (ert-deftest edts-project-make-comint-buffer-test ()
-    (let ((buffer (edts-project-make-comint-buffer "edts-test" "." '("erl"))))
-      (should (bufferp buffer))
-      (should (string= "edts-test" (buffer-name buffer)))
-      (should (string-match "erl\\(<[0-9]*>\\)?"
-                            (process-name (get-buffer-process buffer))))
-      (set-process-query-on-exit-flag (get-buffer-process buffer) nil)
-      (kill-process (get-buffer-process buffer))
-      (kill-buffer buffer)))
 
   (ert-deftest edts-project-buffer-node-started-p-test ()
     (flet ((edts-node-started-p (node)

@@ -44,6 +44,7 @@
 (load-library "edts-project")
 (load-library "edts-navigate")
 (load-library "edts-refactor")
+(load-library "edts-erl")
 
 ;; External
 (require 'auto-highlight-symbol)
