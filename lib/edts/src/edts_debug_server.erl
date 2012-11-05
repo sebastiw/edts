@@ -169,13 +169,13 @@ step_out() ->
 stop_debug() ->
   gen_server:call(?SERVER, stop_debug).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Starts the server
-%%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
-%%--------------------------------------------------------------------
+%%
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
+%%-----------------------------------------------------------------------------
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
@@ -194,24 +194,25 @@ start_link() ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
+
 init([]) ->
   int:auto_attach([break], {?MODULE, maybe_attach, []}),
   {ok, #dbg_state{}}.
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @private
 %% @doc
 %% Handling call messages
-%%
-%% @spec handle_call(Request, From, State) ->
-%%                                   {reply, Reply, State} |
-%%                                   {reply, Reply, State, Timeout} |
-%%                                   {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, Reply, State} |
-%%                                   {stop, Reason, State}
 %% @end
-%%--------------------------------------------------------------------
+%%
+-spec handle_call(term(), {pid(), atom()}, state()) ->
+                     {reply, Reply::term(), state()} |
+                     {reply, Reply::term(), state(), timeout()} |
+                     {noreply, state()} |
+                     {noreply, state(), timeout()} |
+                     {stop, Reason::atom(), term(), state()} |
+                     {stop, Reason::atom(), state()}.
+%%------------------------------------------------------------------------------
 handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   register_attached(self()),
   int:attached(Pid),
@@ -276,16 +277,15 @@ handle_call(stop_debug, _From, #dbg_state{proc = Pid}) ->
   {reply, {ok, finished}, #dbg_state{}}.
 
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @private
 %% @doc
 %% Handling cast messages
-%%
-%% @spec handle_cast(Msg, State) -> {noreply, State} |
-%%                                  {noreply, State, Timeout} |
-%%                                  {stop, Reason, State}
 %% @end
-%%--------------------------------------------------------------------
+-spec handle_cast(Msg::term(), state()) -> {noreply, state()} |
+                                           {noreply, state(), timeout()} |
+                                           {stop, Reason::atom(), state()}.
+%%------------------------------------------------------------------------------
 handle_cast({register_attached, Pid}, State) ->
   {noreply, State#dbg_state{debugger = Pid}};
 handle_cast({notify, Info}, #dbg_state{listeners = Listeners} = State) ->
@@ -294,16 +294,15 @@ handle_cast({notify, Info}, #dbg_state{listeners = Listeners} = State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
+%% @doc Handling all non call/cast messages
 %% @end
-%%--------------------------------------------------------------------
+%%
+-spec handle_info(term(), state()) -> {noreply, state()} |
+                                      {noreply, state(), Timeout::timeout()} |
+                                      {stop, Reason::atom(), state()}.
+%%------------------------------------------------------------------------------
 %% Hit a breakpoint
 handle_info({Meta, {break_at, Module, Line, _Cur}}, State) ->
   Bindings = int:meta(Meta, bindings, nostack),
@@ -336,29 +335,28 @@ handle_info(Msg, State) ->
   error_logger:info_msg("Unexpected message: ~p~n", [Msg]),
   {noreply, State}.
 
-%%--------------------------------------------------------------------
+
+%%------------------------------------------------------------------------------
 %% @private
 %% @doc
 %% This function is called by a gen_server when it is about to
 %% terminate. It should be the opposite of Module:init/1 and do any
 %% necessary cleaning up. When it returns, the gen_server terminates
 %% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
 %% @end
-%%--------------------------------------------------------------------
+-spec terminate(Reason::atom(), state()) -> any().
+%%------------------------------------------------------------------------------
 terminate(_Reason, _State) ->
   int:auto_attach(false),
   ok.
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @private
 %% @doc
 %% Convert process state when code is changed
 %%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
+-spec code_change(OldVsn::string(), state(), Extra::term()) -> {ok, state()}.
+%%------------------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
@@ -366,6 +364,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Notifies all registered debugger clients of a change in debugger state
+%% through Info
+%%
+-spec notify(Info :: term()) -> ok.
+%%------------------------------------------------------------------------------
 notify(Info) ->
   gen_server:cast(?SERVER, {notify, Info}).
 
@@ -375,11 +380,12 @@ notify(Info, [Client|R]) ->
   gen_server:reply(Client, {ok, Info}),
   notify(Info, R).
 
-%%--------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc
 %% Register in idbg_server as a debugger process attached to Pid.
-%% @end
-%%--------------------------------------------------------------------
+%%
+-spec register_attached(Pid :: pid()) -> ok.
+%%------------------------------------------------------------------------------
 register_attached(Pid) ->
   gen_server:cast(?SERVER, {register_attached, Pid}).
 
