@@ -42,21 +42,21 @@
   "Steps (into) when debugging"
   (interactive)
   (edts-log-info "Step")
-  (edts-debug-handle-debugger-state
+  (edts-debug-handle-debugger-reply
    (edts-step-into (edts-debug-buffer-node-name))))
 
 (defun edts-debug-step-out ()
   "Steps out of the current function when debugging"
   (interactive)
   (edts-log-info "Step out")
-  (edts-debug-handle-debugger-state
+  (edts-debug-handle-debugger-reply
    (edts-step-out (edts-debug-buffer-node-name))))
 
 (defun edts-debug-continue ()
   "Continues execution when debugging"
   (interactive)
   (edts-log-info "Continue")
-  (edts-debug-handle-debugger-state
+  (edts-debug-handle-debugger-reply
    (edts-continue (edts-debug-buffer-node-name))))
 
 (defun edts-debug-quit ()
@@ -168,7 +168,7 @@
                                (cdr binding))))
            bindings)))
 
-(defun edts-debug-handle-debugger-state (reply)
+(defun edts-debug-handle-debugger-reply (reply)
   (let ((state (intern (cdr (assoc 'state reply)))))
     (case state
       ('break

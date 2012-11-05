@@ -413,24 +413,24 @@ interpreted."
                                      #'(lambda (result)
                                          (if (equal (assoc 'result result)
                                                     '(result "200" "OK"))
-                                             (edts-debug-handle-debugger-state
+                                             (edts-debug-handle-debugger-reply
                                               (cdr (assoc 'body result)))))))
 
 (defun edts-step-into (node-name)
   "When debugging, perform a step-into"
-  (edts--send-debugger-command node-name "step"))
+  (edts--send-debugger-command node-name "debugger_step"))
 
 (defun edts-continue (node-name)
   "When debugging, continue execution until the next breakpoint or termination"
-  (edts--send-debugger-command node-name "continue"))
+  (edts--send-debugger-command node-name "debugger_continue"))
 
 (defun edts-step-out (node-name)
   "When debugging, step out of the current function"
-  (edts--send-debugger-command node-name "step_out"))
+  (edts--send-debugger-command node-name "debugger_step_out"))
 
 (defun edts-debug-stop (node-name)
   "Stop debugging"
-  (edts--send-debugger-command node-name "stop_debugger"))
+  (edts--send-debugger-command node-name "debugger_stop"))
 
 (defun edts--send-debugger-command (node-name command)
   "Convenience function to send COMMAND to the debugger at NODE-NAME"
