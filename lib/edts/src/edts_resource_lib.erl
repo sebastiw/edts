@@ -380,6 +380,17 @@ info_level_validate_test() ->
   ?assertEqual(error, info_level_validate(foo, bar)),
   meck:unload().
 
+interpret_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "not_a_bool" end),
+  ?assertEqual(false, interpret_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "false" end),
+  ?assertEqual(false, interpret_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "true" end),
+  ?assertEqual(true, interpret_validate(foo, bar)),
+  meck:unload().
+
 lib_dirs_validate_validate_test() ->
   meck:unload(),
   meck:new(wrq),
