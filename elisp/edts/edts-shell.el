@@ -31,10 +31,11 @@ buffers.")
 (defun edts-shell ()
   "Start an interactive erlang shell."
   (interactive)
-  (let ((buffer-name (format "*edts-erl[%s]*" edts-shell-next-shell-id)))
+  (let*((buffer-name (format "*edts-shell[%s]*" edts-shell-next-shell-id))
+        (node-name   (format "edts-shell-%s" edts-shell-next-shell-id))
+        (command     (list edts-erl-command "-sname" node-name)))
     (incf edts-shell-next-shell-id)
-    (switch-to-buffer
-     (edts-shell-make-comint-buffer buffer-name "." (list edts-erl-command)))))
+    (switch-to-buffer (edts-shell-make-comint-buffer buffer-name "." command))))
 
 (defun edts-shell-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
