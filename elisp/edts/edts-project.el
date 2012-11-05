@@ -194,9 +194,10 @@ otherwise nil."
         (buffer-name (if (bufferp buffer) (buffer-name buffer) buffer)))
     (if file
         (edts-project-file-project file)
-        (when (and (buffer-local-value 'comint-mode buffer)
-                   (string-match "\\*\\(.*\\)\\*" buffer-name))
-          (edts-project (match-string 1 buffer-name))))
+        (when (and
+               (eq (buffer-local-value 'major-mode buffer) 'comint-mode)
+               (string-match "\\*\\(.*\\)\\*" buffer-name))
+          (edts-project (match-string 1 buffer-name))))))
 
 (defun edts-project (project-name)
   "Returns the edts-project name PROJECT-NAME if it exists, otherwise
