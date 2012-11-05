@@ -29,7 +29,7 @@
 
 %% Application callbacks
 -export([ exists_p/3
-        , handle_debugger_info/1
+        , encode_debugger_info/1
         , make_nodename/1
         , validate/3]).
 
@@ -204,7 +204,8 @@ lib_dirs_validate(ReqData, Ctx) ->
 interpret_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("interpret", ReqData) of
     undefined -> {ok, false};
-    Interpret -> {ok, list_to_atom(Interpret)}
+    "false"   -> {ok, false};
+    "true"    -> {ok, true}
   end.
 
 %%------------------------------------------------------------------------------
@@ -298,20 +299,20 @@ xref_checks_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Handles debugger replies and converts them to the appropriate json structure
+%% Encodes debugger replies into the appropriate json structure
 %% @end
--spec handle_debugger_info({ok, Info :: term()}) -> term().
+-spec encode_debugger_info({ok, Info :: term()}) -> term().
 %%------------------------------------------------------------------------------
-handle_debugger_info({ok, Info}) ->
-  {struct, do_handle_debugger_info(Info)};
-handle_debugger_info({error, Error}) ->
+encode_debugger_info({ok, Info}) ->
+  {struct, do_encode_debugger_info(Info)};
+encode_debugger_info({error, Error}) ->
   {struct, [{state, error}, {message, Error}]}.
 
-do_handle_debugger_info({break, File, {Module, Line}, VarBindings}) ->
+do_encode_debugger_info({break, File, {Module, Line}, VarBindings}) ->
   [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
    {var_bindings,
     {struct, encode(VarBindings)}}];
-do_handle_debugger_info(State) ->
+do_encode_debugger_info(State) ->
   [{state, State}].
 
 encode(VarBindings) ->
@@ -446,20 +447,20 @@ xref_checks_validate_test() ->
 
 handle_debugger_info_test() ->
   ?assertEqual({struct, [{state, error}, {message, foo}]},
-               handle_debugger_info({error, foo})),
+               encode_debugger_info({error, foo})),
   ?assertEqual({struct, [ {state, break}
                         , {file, <<"/awsum/foo.erl">>}
                         , {module, foo}
                         , {line, 42}
                         , {var_bindings, {struct, []}}]},
-               handle_debugger_info({ok, {break, "/awsum/foo.erl", {foo, 42},
+               encode_debugger_info({ok, {break, "/awsum/foo.erl", {foo, 42},
                                           []}})),
   ?assertEqual({struct, [ {state, break}
                         , {file, <<"/awsum/bar.erl">>}
                         , {module, bar}
                         , {line, 123}
                         , {var_bindings, {struct, [{'A', <<"3.14">>}]}}]},
-               handle_debugger_info({ok, {break, "/awsum/bar.erl", {bar, 123},
+               encode_debugger_info({ok, {break, "/awsum/bar.erl", {bar, 123},
                                           [{'A', 3.14}]}})).
 
 encode_test() ->
