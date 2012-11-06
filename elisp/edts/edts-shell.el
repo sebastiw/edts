@@ -55,7 +55,10 @@ PWD and running COMMAND."
          (node-name (edts-shell-node-name-from-args args)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
-    (with-current-buffer (get-buffer buffer-name)
+    (with-current-buffer buffer-name
+      (when (fboundp 'show-paren-mode)
+        (make-local-variable 'show-paren-mode)
+        (show-paren-mode))
       (setq edts-shell-node-name node-name)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
