@@ -151,7 +151,11 @@ running both can create some confusion.
 
 ## Debugger interface ##
 
-EDTS implements a basic interface to the Erlang interpreter through the int module, thus enabling debugging to some extent. When you save a file it automatically becomes interpreted if possible and from that point on you can set breakpoints and control code execution inside that module.
+EDTS implements a basic interface to the Erlang interpreter through the int module, thus enabling debugging to some extent.
+
+You can configure EDTS so that whenever you save a file it automatically becomes interpreted, if possible.
+
+You can toggle breakpoints from your code buffer directly using C-c C-d b.
 
 To enter debug mode, press C-c C-d C-d. In debug mode you can set and unset breakpoints simply by pressing SPC and you can control execution using the following keys:
 
@@ -160,9 +164,9 @@ To enter debug mode, press C-c C-d C-d. In debug mode you can set and unset brea
 - c continues execution until a new breakpoint is hit or execution terminates
 - q forcibly terminates the process under debugging and leaves debug mode
 
-Debug mode operates on a separate, read-only buffer with the EDTS-Debug major mode and also creates a separate buffer where all current variable bindings and their values can be visualized. Both are killed when leaving debug mode.
+EDTS Debug mode operates on a separate, read-only buffer with the EDTS-Debug major mode and also creates a separate buffer where all current variable bindings and their values can be visualized. Both are killed when leaving debug mode.
 
-Note that leaving debug mode will not unset any breakpoints. Breakpoints set directly through your project node's shell should be visible in debug mode as well.
+Note that leaving debug mode will not unset any breakpoints or disable module interpretation. Breakpoints set directly through your project node's shell or through other external methods should be visible in debug mode as well.
 
 ## Known Issues ##
 
