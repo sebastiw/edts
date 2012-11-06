@@ -110,7 +110,7 @@ allowed_methods_test() ->
   ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
 
 content_types_accepted_test() ->
-  ?assertEqual({[ {"application/json", to_json} ], foo, bar},
+  ?assertEqual({[ {"application/json", from_json} ], foo, bar},
                content_types_accepted(foo, bar)).
 
 content_types_provided_test() ->
@@ -119,25 +119,46 @@ content_types_provided_test() ->
                 , {"text/plain",       to_json} ], foo, bar},
               content_types_provided(foo, bar)).
 
-%% to_json_test() ->
-%%   meck:unload(),
-%%   meck:new(wrq),
-%%   meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
-%%   meck:new(edts_code),
-%%   meck:expect(edts_code, free_vars,
-%%               fun("req_data1") -> {ok, ['VarA', 'VarB']};
-%%                  ("req_data2") -> {error, [{err, "S", 13, "D"}]}
-%%               end),
-%%   meck:new(mochijson2),
-%%   meck:expect(mochijson2, encode, fun(A) -> A end),
-%%   ?assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
-%%                to_json(req_data1, [])),
-%%   ?assertEqual({[{errors, [[ {type, err}
-%%                           , {file, <<"S">>}
-%%                           , {line, 13}
-%%                           , {description, <<"D">>}]]}], req_data2, []},
-%%                to_json(req_data2, [])),
-%%   meck:unload().
+from_json_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
+  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "step" end),
+  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
+  meck:new(edts),
+  meck:expect(edts, step,
+              fun(_) -> {break, "foo.erl", {foo, 42}, [{bar, 1}]} end),
+  meck:new(mochijson2),
+  meck:expect(mochijson2, encode, fun(A) -> A end),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
+
+  Dict1 =
+    orddict:from_list([{nodename, true}]),
+
+  ?assertEqual({true, {break, "foo.erl", {foo, 42}, [{bar, 1}]}, Dict1},
+               from_json(req_data, Dict1)),
+  meck:unload().
+
+to_json_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
+  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "wait_for_debugger" end),
+  meck:new(edts),
+  meck:expect(edts, wait_for_debugger,
+              fun(_) -> {break, "foo.erl", {foo, 42}, [{bar, 1}]} end),
+  meck:new(mochijson2),
+  meck:expect(mochijson2, encode, fun(A) -> A end),
+  meck:new(edts_resource_lib),
+  meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
+
+  Dict1 =
+    orddict:from_list([{nodename, true}]),
+
+  ?assertEqual({{break, "foo.erl", {foo, 42}, [{bar, 1}]}, req_data1, Dict1},
+               to_json(req_data1, Dict1)),
+  meck:unload().
 
 
 %%%_* Emacs ============================================================
