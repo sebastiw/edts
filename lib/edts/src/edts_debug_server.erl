@@ -347,7 +347,7 @@ handle_info({_Meta, {attached, _, _, _}}, State) ->
 
 %% Process under debug terminated
 handle_info({_Meta, {exit_at, _, _Reason, _}}, State) ->
-  {stop, finished, State};
+  {noreply, State};
 
 handle_info(Msg, State) ->
   error_logger:info_msg("Unexpected message: ~p~n", [Msg]),
