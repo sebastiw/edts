@@ -200,6 +200,7 @@ further.
     (mapc #'byte-compile-file files)
     t))
 
+;; Global setup
 (make-directory edts-data-directory 'parents)
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 
