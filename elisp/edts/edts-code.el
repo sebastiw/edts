@@ -31,6 +31,11 @@
 undefined_function_calls, unexported_functions"
   :group 'edts)
 
+(defcustom edts-code-interpret-after-saving nil
+  "Set to a non-NIL value if EDTS should automatically interpret a module
+after save-and-compile"
+  :group 'edts)
+
 (defconst edts-code-issue-overlay-priorities
   '((passed-test . 900);auto-highlight-symbol prio + 1
     (failed-test . 901)
@@ -51,7 +56,7 @@ a symbol."
         (file     (buffer-file-name)))
     (when (string= "erl" (file-name-extension file))
       (edts-compile-and-load-async
-       module file t
+       module file edts-code-interpret-after-saving
        #'edts-code-handle-compilation-result (current-buffer)))))
 
 (defun edts-code-handle-compilation-result (comp-res buffer)
