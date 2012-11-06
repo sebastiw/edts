@@ -29,7 +29,7 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ ensure_node_initialized/1
+-export([ wait_for_node/1
         , init_node/3
         , is_node/1
         , node_available_p/1
@@ -76,10 +76,10 @@ start_link() ->
 %% fulfilled).
 %% @end
 %%
--spec ensure_node_initialized(node()) -> ok.
+-spec wait_for_node(node()) -> ok.
 %%------------------------------------------------------------------------------
-ensure_node_initialized(Node) ->
-  gen_server:call(?SERVER, {ensure_node_initialized, Node}, infinity).
+wait_for_node(Node) ->
+  gen_server:call(?SERVER, {wait_for_node, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -156,7 +156,7 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({ensure_node_initialized, Name}, _From, State) ->
+handle_call({wait_for_node, Name}, _From, State) ->
     case node_find(Name, State) of
       false -> {reply, {error, not_found}, State};
       #node{promises = [_|_]} = Node->
@@ -317,20 +317,20 @@ node_store(Node, State) ->
 
 %%%_* Unit tests ===============================================================
 
-ensure_node_initialized_test() ->
+wait_for_node_test() ->
   S1 = #state{},
   ?assertEqual({reply, {error, not_found}, S1},
-               handle_call({ensure_node_initialized, foo}, self(), S1)),
+               handle_call({wait_for_node, foo}, self(), S1)),
   meck:new(rpc, [unstick]),
   meck:expect(rpc, yield, fun(dummy) -> ok end),
   N2 = #node{name = foo, promises = [dummy]},
   S2 = #state{nodes = [N2]},
   ?assertEqual({reply, ok, S2#state{nodes = [N2#node{promises = []}]}},
-               handle_call({ensure_node_initialized, foo}, self(), S2)),
+               handle_call({wait_for_node, foo}, self(), S2)),
   N3 = #node{name = foo, promises = []},
   S3 = #state{nodes = [N3]},
   ?assertEqual({reply, ok, S3},
-               handle_call({ensure_node_initialized, foo}, self(), S3)),
+               handle_call({wait_for_node, foo}, self(), S3)),
   meck:unload().
 
 init_node_test() ->

@@ -60,7 +60,7 @@
 %%------------------------------------------------------------------------------
 compile_and_load(Node, Filename) ->
   edts_log:debug("compile_and_load ~p on ~p", [Filename, Node]),
-  edts_server:ensure_node_initialized(Node),
+  edts_server:wait_for_node(Node),
   case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
     {badrpc, E} ->
       Fmt = "Error in remote call edts_code:compile_and_load/1 on ~p: ~p",
@@ -105,7 +105,7 @@ get_function_info(Node, Module, Function, Arity) ->
 %%------------------------------------------------------------------------------
 who_calls(Node, Module, Function, Arity) ->
   edts_log:debug("who_calls ~p:~p/~p on ~p", [Module, Function, Arity, Node]),
-  edts_server:ensure_node_initialized(Node),
+  edts_server:wait_for_node(Node),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, who_calls, Args) of
     {badrpc, E} ->
@@ -217,7 +217,7 @@ node_available_p(Node) ->
 -spec modules(Node::node()) -> [module()].
 %%------------------------------------------------------------------------------
 modules(Node) ->
-  edts_server:ensure_node_initialized(Node),
+  edts_server:wait_for_node(Node),
   edts_dist:call(Node, edts_code, modules).
 
 
