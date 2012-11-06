@@ -22,15 +22,6 @@
 
 (defvar *edts-debug-last-visited-file* nil)
 
-
-(defun edts-debug-interpret-module ()
-  (let ((module (erlang-get-module)))
-    (edts-set-module-interpretation module "true")))
-
-(defun edts-debug-uninterpret-module ()
-  (let ((module (erlang-get-module)))
-    (edts-set-module-interpretation module "false")))
-
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
 (defun edts-debug-toggle-breakpoint ()

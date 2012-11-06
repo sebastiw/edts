@@ -111,7 +111,7 @@ allowed_methods_test() ->
 
 content_types_accepted_test() ->
   ?assertEqual({[ {"application/json", to_json} ], foo, bar},
-               content_types_accepted(foo, bar).)
+               content_types_accepted(foo, bar)).
 
 content_types_provided_test() ->
   ?assertEqual({[ {"application/json", to_json}

@@ -32,12 +32,12 @@ Currently EDTS provides:
 - Auto-completion, using auto-complete-mode
 - Auto-highlighting, using auto-highlight-mode
 - Convenient access to Erlang documentation
+- An interface to the Erlang interpreter for debugging
 
 Planned features in the short term are:
 - Better support for imported functions
 - In-buffer running of unit tests
 - yasnippets
-- A nice interface to the erlang debugger
 
 ## Getting started ##
 
