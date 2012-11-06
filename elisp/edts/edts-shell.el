@@ -64,7 +64,8 @@ PWD and running COMMAND."
       (setq comint-prompt-read-only t)
       (edts-complete-setup edts-shell-ac-sources)
       (erlang-syntax-table-init)
-      (erlang-font-lock-init))
+      (erlang-font-lock-init)
+      (setq font-lock-keywords-only nil))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name)))
 
