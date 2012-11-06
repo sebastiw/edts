@@ -22,17 +22,28 @@
 
 (defvar *edts-debug-last-visited-file* nil)
 
+
+(defun edts-debug-interpret-module ()
+  (let ((module (erlang-get-module)))
+    (edts-set-module-interpretation module "true")))
+
+(defun edts-debug-uninterpret-module ()
+  (let ((module (erlang-get-module)))
+    (edts-set-module-interpretation module "false")))
+
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
 (defun edts-debug-toggle-breakpoint ()
   "Enables or disables breakpoint at point"
   (interactive)
   (let* ((line-number (edts-debug--line-number-at-point))
-         (state (edts-toggle-breakpoint (edts-debug-buffer-node-name)
+         (node-name  (or (edts-project-buffer-node-name (current-buffer))
+                         (edts-debug-buffer-node-name)))
+         (state (edts-toggle-breakpoint node-name
                                         (erlang-get-module)
                                         (number-to-string line-number)))
          (result (cdr (assoc 'result state))))
-    (edts-debug-update-breakpoints)
+    (edts-debug-update-breakpoints node-name)
     (edts-log-info "Breakpoint %s at %s:%s"
                    result
                    (cdr (assoc 'module state))
@@ -185,10 +196,11 @@
       ('error
        (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
 
-(defun edts-debug-update-breakpoints ()
+(defun edts-debug-update-breakpoints (&optional node-name)
   "Display breakpoints in the buffer"
   (edts-face-remove-overlays '("edts-debug-breakpoint"))
-  (let ((breaks (edts-get-breakpoints (edts-debug-buffer-node-name))))
+  (let ((breaks (edts-get-breakpoints (or node-name
+                                          (edts-debug-buffer-node-name)))))
     (dolist (b breaks)
       (let ((module (cdr (assoc 'module b)))
             (line (cdr (assoc 'line b)))

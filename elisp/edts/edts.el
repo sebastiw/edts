@@ -407,6 +407,16 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-set-module-interpretation (module value)
+  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+         (resource (list "nodes" node-name
+                         "modules" module))
+         (res      (edts-rest-get resource '(("interpret" . value)))))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+          (cdr (assoc 'exports (cdr (assoc 'body res))))
+        (null (edts-log-error "Unexpected reply: %s"
+                              (cdr (assoc 'result res)))))))
+
 (defun edts-wait-for-debugger (node-name)
   "Wait for the debugger to attach and return the current interpreter state"
   (edts--send-debugger-command-async node-name "wait_for_debugger"

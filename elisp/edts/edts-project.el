@@ -137,7 +137,8 @@ come on you have to do *something* yourself!"
 (defun edts-project-node-name (project)
   "Returns the edts-project PROJECT's erlang node-name. Currently only
 short names are supported."
-  (or (edts-project-property 'node-sname project) (edts-project-name project)))
+  (when project
+    (or (edts-project-property 'node-sname project) (edts-project-name project))))
 
 (defun edts-project-start-command (project)
   "Returns the edts-project PROJECT's command for starting it's project
@@ -177,7 +178,8 @@ beneath ROOT/DIR expanded with <path>/ebin and <path>/test."
     (apply #'append app-paths)))
 
 (defun edts-project-buffer-node-name (buffer)
-  "Returns the erlang node-name of BUFFER's edts-project node."
+  "Returns the erlang node-name of BUFFER's edts-project node or NIL if
+BUFFER does not belong to a known edts-project"
   (edts-project-node-name (edts-project-buffer-project buffer)))
 
 (defun edts-project-buffer-project (buffer)
@@ -188,8 +190,9 @@ otherwise nil."
 (defun edts-project-file-project (file-name)
   "Returns the edts-project that the file with FILE-NAME is part of,
 if any, otherwise nil."
-  (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
-            edts-projects))
+  (when file-name
+    (find-if  #'(lambda (p) (edts-project-file-in-project-p p file-name))
+              edts-projects)))
 
 (defun edts-project-file-in-project-p (project file-name)
   "Returns non-nil if the fully qualified FILE-NAME is located
