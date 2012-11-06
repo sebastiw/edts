@@ -31,7 +31,7 @@
 undefined_function_calls, unexported_functions"
   :group 'edts)
 
-(defcustom edts-code-interpret-after-saving nil
+(defcustom edts-code-interpret-after-saving t
   "Set to a non-NIL value if EDTS should automatically interpret a module
 after save-and-compile"
   :group 'edts)
