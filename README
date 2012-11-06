@@ -25,6 +25,7 @@ them, and its own features to create a complete and efficient development
 environment that is easy to set up.
 
 Currently EDTS provides:
+- A snazzy erlang shell wrapper with syntax highlighting and auto-completion.
 - In-buffer flymake-like compilation
 - In-buffer xref checks
 - Rudimentary project support
@@ -38,6 +39,8 @@ Planned features in the short term are:
 - Better support for imported functions
 - yasnippets
 - A nice interface to the erlang debugger
+
+For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
 ## Getting started ##
 
