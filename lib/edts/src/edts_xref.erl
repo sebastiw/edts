@@ -58,14 +58,15 @@
 %% @doc
 %% Starts the edts xref-server on the local node.
 %% @end
--spec start() -> {ok , node()} | {error, already_started}.
+-spec start() -> {ok, pid()} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
   case started_p() of
     false ->
-      xref:start(?SERVER),
+      {ok, Pid} = xref:start(?SERVER),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-      update();
+      update(),
+      {ok, Pid};
     true ->
       {error, already_started}
   end.

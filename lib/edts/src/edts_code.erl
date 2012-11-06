@@ -300,28 +300,18 @@ modules_at_path(Path) ->
 %% @doc
 %% Starts the edts xref-server on the local node.
 %% @end
--spec start() -> {ok , node()} | {error, already_started}.
+-spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  File = xref_file(),
-  try
-    case file:read_file(File) of
-      {ok, BinState} ->
-        edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> edts_xref:start();
-      {error, _} = Error  ->
-        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error])
-    end,
-    {node(), ok}
-  catch
-    C:E ->
-      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p",
-                             [File, C, E]),
-      case edts_xref:started_p() of
-        true  -> ok;
-        false -> edts_xref:start()
+  case edts_xref:started_p() of
+    true  -> {error, already_started};
+    false ->
+      case init_xref() of
+        {error, _} = Err -> Err;
+        {ok, _Pid}       -> {node(), ok}
       end
   end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -332,7 +322,24 @@ start() ->
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
+
 %%%_* Internal functions =======================================================
+
+init_xref() ->
+  File = xref_file(),
+  try file:read_file(File) of
+      {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
+      {error, enoent}     -> edts_xref:start();
+      {error, _} = Error  ->
+      error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+      edts_xref:start()
+  catch
+    C:E ->
+      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
+                             "Starting with clean state instead.",
+                             [File, C, E]),
+      edts_xref:start()
+  end.
 
 shorten_path("") -> "";
 shorten_path(P)  ->
