@@ -17,8 +17,14 @@
 ;;
 ;; Erlang shell related functions
 
+(require 'cl)
+
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
+
+(defvar edts-shell-node-name nil
+  "The node sname of the erlang node running in an edts-shell buffer.")
+(make-variable-buffer-local 'edts-shell-node-name)
 
 (defcustom edts-shell-ac-sources
   '(edts-complete-keyword-source
@@ -31,20 +37,26 @@ buffers.")
 (defun edts-shell ()
   "Start an interactive erlang shell."
   (interactive)
-  (let*((buffer-name (format "*edts-shell[%s]*" edts-shell-next-shell-id))
-        (node-name   (format "edts-shell-%s" edts-shell-next-shell-id))
+  (edts-ensure-server-started)
+  (let*((buffer-name (format "*edts[%s]*" edts-shell-next-shell-id))
+        (node-name   (format "edts-%s" edts-shell-next-shell-id))
         (command     (list edts-erl-command "-sname" node-name)))
+        ;; (root        (expand-file-name default-directory)))
     (incf edts-shell-next-shell-id)
-    (switch-to-buffer (edts-shell-make-comint-buffer buffer-name "." command))))
+    (let ((buffer (edts-shell-make-comint-buffer buffer-name "." command)))
+      (edts-register-node-when-ready node-name default-directory nil)
+      (switch-to-buffer buffer))))
 
 (defun edts-shell-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
 PWD and running COMMAND."
   (let* ((cmd  (car command))
-         (args (cdr command)))
+         (args (cdr command))
+         (node-name (edts-shell-node-name-from-args args)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
     (with-current-buffer (get-buffer buffer-name)
+      (setq edts-shell-node-name node-name)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
       (edts-complete-setup edts-shell-ac-sources)
@@ -52,6 +64,19 @@ PWD and running COMMAND."
       (erlang-font-lock-init))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name)))
+
+(defun edts-shell-node-name-from-args (args)
+  "Return node sname based on args"
+  (block nil
+    (while args
+      (when (string= (car args) "-sname")
+        (return (cadr args)))
+      (pop args))))
+
+(defun edts-shell-node-name (buffer)
+  "Return the node sname of the erlang node running in an edts-shell
+buffer."
+  (buffer-local-value 'edts-shell-node-name buffer))
 
 (when (member 'ert features)
   (ert-deftest edts-shell-make-comint-buffer-test ()
