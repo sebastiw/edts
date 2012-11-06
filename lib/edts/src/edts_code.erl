@@ -438,6 +438,10 @@ format_errors(Type, Errors) ->
                         File::string(), Abstract::[term()])->
                            {ok, {File::string(), Line::non_neg_integer()}}.
 %%------------------------------------------------------------------------------
+get_file_and_line(M, new, A, CurFile,
+                  [{attribute, Line, module, {M, Attrs}}|_T])
+  when length(Attrs) =:= A ->
+  {ok, {CurFile, Line}};
 get_file_and_line(_M, F, A, CurFile, [{function, Line, F, A, _Clauses}|_T]) ->
   {ok, {CurFile, Line}};
 get_file_and_line(M, F, A, _CurFile, [{attribute, _, file, {File, _}}|T]) ->
@@ -610,6 +614,30 @@ get_file_and_line_test_() ->
                  , get_file_and_line(m, f, 0, "foo.erl",
                                      [ {function, 1335, f0, 0, ''}
                                      , {function, 1337, f, 0, ''}]))
+  , ?_assertEqual( {ok, {"foo.erl", 2}}
+                 , get_file_and_line(foo, new, 1, "foo.erl",
+                                     [ {attribute, 1, file, {"foo.erl", 1}}
+                                     , {attribute, 2, module, {foo, ['A']}}
+                                     , {function, 1337, new, 2, ''}
+                                     , {function, 1338, new, 0, ''}]))
+  , ?_assertEqual( {error, not_found}
+                 , get_file_and_line(foo, new, 1, "foo.erl",
+                                     [ {attribute, 1, file, {"foo.erl", 1}}
+                                     , {attribute, 2, module, foo}
+                                     , {function, 1337, new, 2, ''}
+                                     , {function, 1338, new, 0, ''}]))
+  , ?_assertEqual( {ok, {"foo.erl", 1337}}
+                 , get_file_and_line(foo, new, 2, "foo.erl",
+                                     [ {attribute, 1, file, {"foo.erl", 1}}
+                                     , {attribute, 2, module, foo}
+                                     , {function, 1337, new, 2, ''}
+                                     , {function, 1338, new, 0, ''}]))
+  , ?_assertEqual( {ok, {"foo.erl", 1337}}
+                 , get_file_and_line(foo, new, 2, "foo.erl",
+                                     [ {attribute, 1, file, {"foo.erl", 1}}
+                                     , {attribute, 2, module, {foo, ['A']}}
+                                     , {function, 1337, new, 2, ''}
+                                     , {function, 1338, new, 0, ''}]))
   ].
 
 path_flatten_test_() ->
