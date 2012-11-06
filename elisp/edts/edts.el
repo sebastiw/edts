@@ -183,6 +183,15 @@ localhost."
 (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
+(defun edts-buffer-node-name ()
+  "Return the node sname of the erlang node connected to current
+buffer. The node is either:
+- The module's project node, if current buffer is an erlang module, or
+- The buffer's erlang node if buffer is an edts-shell buffer."
+  (let ((buffer (current-buffer)))
+    (or (edts-project-buffer-node-name buffer)
+        (edts-shell-node-name buffer))))
+
 (defun edts-register-node-when-ready (node-name root libs &optional retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
@@ -223,7 +232,8 @@ node, optionally retrying RETRIES times."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-function-info (node module function arity)
   "Fetches info MODULE on the node associated with
@@ -236,30 +246,32 @@ current buffer."
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
 current buffer."
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name (edts-buffer-node-name))
          (resource (list "nodes" node-name "modules"))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-module-exports (module)
   "Fetches all exported functions of MODULE on the node associated with
 current buffer. Does not fetch detailed information about the individual
 functions."
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name (edts-buffer-node-name))
          (resource (list "nodes" node-name
                          "modules" module))
          (res      (edts-rest-get resource '(("info_level" . "basic")))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
           (cdr (assoc 'exports (cdr (assoc 'body res))))
-        (null (edts-log-error "Unexpected reply: %s"
-                              (cdr (assoc 'result res)))))))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-function-to-string (function-struct)
   "Convert FUNCTION-STRUCT to a string of <function>/<arity>."
@@ -278,7 +290,7 @@ buffer"
 
 (defun edts-get-free-vars (snippet)
   "Return a list of the free variables in SNIPPET."
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name (edts-buffer-node-name))
          (resource (list "code" "free_vars"))
          (res      (edts-rest-get resource nil snippet)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -289,7 +301,7 @@ buffer"
 (defun edts-get-module-info (module level)
   "Fetches info about MODULE on the node associated with current buffer.
 LEVEL is either basic or detailed."
-  (let* ((node-name (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name (edts-buffer-node-name))
          (resource (list "nodes" node-name "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
          (res      (edts-rest-get resource args)))
@@ -302,7 +314,7 @@ LEVEL is either basic or detailed."
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name     (edts-buffer-node-name))
          (resource      (list "nodes" node-name "modules" module "xref_analysis"))
          (args (list    (cons "xref_checks" (mapcar #'symbol-name checks))))
          (rest-callback #'(lambda (result callback buffer)
@@ -324,7 +336,7 @@ parsed response as the single argument."
   "Run eunit tests in MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name     (edts-buffer-node-name))
          (resource      (list "nodes" node-name "modules" module "eunit"))
          (rest-callback #'(lambda (result callback buffer)
                             (if (equal (assoc 'result result)
@@ -345,7 +357,7 @@ parsed response as the single argument."
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((node-name     (edts-project-buffer-node-name (current-buffer)))
+  (let* ((node-name     (edts-buffer-node-name))
          (resource      (list "nodes" node-name "modules" module))
          (args (list    (cons "file" file)))
          (rest-callback #'(lambda (result callback buffer)
@@ -365,7 +377,7 @@ parsed response as the single argument."
 
 (defun edts-compile-and-load (module file)
   "Compile MODULE in FILE on the node associated with current buffer."
-  (let ((node-name (edts-project-buffer-node-name (current-buffer))))
+  (let ((node-name (edts-buffer-node-name)))
     (edts-log-debug "Compiling %s on %s" module node-name)
     (let* ((resource
             (list "nodes" node-name "modules" module))
