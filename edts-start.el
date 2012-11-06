@@ -8,7 +8,7 @@
 ;; Paths
 (defvar edts-lib-directory
   (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "/elisp/")
+            (or (locate-library "edts-start") load-file-name)) "elisp/")
   "Directory where edts libraries are located.")
 
 (mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
