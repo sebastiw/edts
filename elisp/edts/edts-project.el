@@ -59,7 +59,7 @@ activated for the first file that is located inside a project."
          (exec-path    (edts-project-build-exec-path project))
          (process-environment (edts-project-build-env project)))
     (edts-ensure-node-not-started node-name)
-    (edts-erl-make-comint-buffer buffer-name project-root command)
+    (edts-shell-make-comint-buffer buffer-name project-root command)
     (edts-project-register-node-when-ready project)
     (get-buffer buffer-name)))
 
