@@ -166,19 +166,19 @@ handle_call({wait_for_node, Name}, _From, State) ->
         {reply, ok, State}
     end;
 handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
-  edts_log:info("Registering ~p.", [Name]),
-  case node_find(Name, State) of
-    #node{} ->
-      edts_log:info("~p already initialized.", [Name]),
-      {reply, ok, State};
-    false   ->
-      edts_log:info("~p Initializing.", [Name]),
-      case do_init_node(Name, ProjectRoot, LibDirs) of
-        {ok, Keys} ->
-          {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
-        {error, _} = Err ->
-          {reply, Err, State}
-      end
+  edts_log:info("Initializing ~p.", [Name]),
+  Node = #node{promises = Keys0} =
+    case node_find(Name, State) of
+      #node{} = Node0 -> Node0;
+      false          -> #node{name = Name}
+    end,
+  case do_init_node(Name, ProjectRoot, LibDirs) of
+    {ok, Keys} ->
+      edts_log:debug("Initialization call done on ~p.", [Name]),
+      {reply, ok, node_store(Node#node{promises = Keys ++ Keys0}, State)};
+    {error, _} = Err ->
+      edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
+      {reply, Err, State}
   end;
 handle_call({is_node, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
@@ -287,7 +287,7 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    {ok, edts_dist:start_services(Node, [edts_code])}
+    {ok, edts_dist:ensure_services_started(Node, [edts_code])}
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
@@ -342,13 +342,14 @@ init_node_test() ->
   application:set_env(edts, project_dir, "foo_dir"),
 
   meck:new(edts_dist),
-  meck:expect(edts_dist, add_paths,      fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_modules,   fun(foo, _) -> ok end),
-  meck:expect(edts_dist, set_app_env,    fun(foo, _, _, _) -> ok end),
-  meck:expect(edts_dist, start_services, fun(foo, _) -> [dummy] end),
+  meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
+  meck:expect(edts_dist, load_modules,            fun(foo, _) -> ok end),
+  meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
+  meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
   ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
                handle_call({init_node, N1#node.name, "", []}, self(), S1)),
-  ?assertEqual({reply, ok, S2}, % Node already initialized.
+  %% Node already initialized.
+  ?assertEqual({reply, ok, S2#state{nodes = [N1#node{promises = [dummy]}]}},
                handle_call({init_node, N1#node.name, "", []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,

@@ -40,6 +40,7 @@
          get_module_info/2,
          modules/0,
          start/0,
+         started_p/0,
          who_calls/3]).
 
 %% internal exports
@@ -311,6 +312,15 @@ start() ->
         {ok, _Pid}       -> {node(), ok}
       end
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if the edts_code service has been started.
+%% @end
+-spec started_p() -> boolean().
+%%------------------------------------------------------------------------------
+started_p() -> edts_xref:started_p().
 
 
 %%------------------------------------------------------------------------------
