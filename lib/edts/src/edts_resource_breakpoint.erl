@@ -95,7 +95,8 @@ from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Module   = orddict:fetch(module, Ctx),
   Line     = orddict:fetch(line, Ctx),
-  {ok, Result, {Module, Line}} = edts:toggle_breakpoint(Nodename, Module, Line),
+  {ok, Result, {Module, Line}}
+    = edts:debugger_toggle_breakpoint(Nodename, Module, Line),
   Data = {struct, [{result, Result}, {module, Module}, {line, Line}]},
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 

@@ -372,7 +372,7 @@ MODULE becomes interpreted if INTERPRET evaluates to a non-NIL value."
     (edts-log-debug "Compiling %s on %s" module node-name)
     (let* ((resource
             (list "nodes" node-name "modules" module))
-           (interpreted   (if interpret "true" "false"))
+           (interpreted (if interpret "true" "false"))
            (args (list (cons "file" file) (cons "interpret" interpreted)))
            (res (edts-rest-post resource args)))
       (if (equal (assoc 'result res) '(result "201" "Created"))

@@ -44,6 +44,7 @@
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -90,17 +91,53 @@ from_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
   Command = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
   Info    = edts:Command(Node),
-  Data    = edts_resource_lib:handle_debugger_info(Info),
+  Data    = edts_resource_lib:encode_debugger_info(Info),
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
   Node     = orddict:fetch(nodename, Ctx),
   Command  = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
   Info     = edts:Command(Node),
-  Data = edts_resource_lib:handle_debugger_info(Info),
+  Data     = edts_resource_lib:encode_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+%%%_* Unit tests ===============================================================
+init_test() ->
+  ?assertEqual({ok, orddict:new()}, init(foo)).
+
+allowed_methods_test() ->
+  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
+
+content_types_accepted_test() ->
+  ?assertEqual({[ {"application/json", to_json} ], foo, bar},
+               content_types_accepted(foo, bar).)
+
+content_types_provided_test() ->
+  ?assertEqual({[ {"application/json", to_json}
+                , {"text/html",        to_json}
+                , {"text/plain",       to_json} ], foo, bar},
+              content_types_provided(foo, bar)).
+
+%% to_json_test() ->
+%%   meck:unload(),
+%%   meck:new(wrq),
+%%   meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
+%%   meck:new(edts_code),
+%%   meck:expect(edts_code, free_vars,
+%%               fun("req_data1") -> {ok, ['VarA', 'VarB']};
+%%                  ("req_data2") -> {error, [{err, "S", 13, "D"}]}
+%%               end),
+%%   meck:new(mochijson2),
+%%   meck:expect(mochijson2, encode, fun(A) -> A end),
+%%   ?assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
+%%                to_json(req_data1, [])),
+%%   ?assertEqual({[{errors, [[ {type, err}
+%%                           , {file, <<"S">>}
+%%                           , {line, 13}
+%%                           , {description, <<"D">>}]]}], req_data2, []},
+%%                to_json(req_data2, [])),
+%%   meck:unload().
 
 
 %%%_* Emacs ============================================================
