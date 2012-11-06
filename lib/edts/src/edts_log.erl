@@ -35,7 +35,9 @@
          error/2,
          critical/2,
          alert/2,
-         emergency/2]).
+         emergency/2,
+
+         set_log_level/1]).
 
 %%%_* Includes =================================================================
 
@@ -52,6 +54,8 @@ error(    Fmt, Args) -> lager:error(    Fmt, Args).
 critical( Fmt, Args) -> lager:critical( Fmt, Args).
 alert(    Fmt, Args) -> lager:alert(    Fmt, Args).
 emergency(Fmt, Args) -> lager:emergency(Fmt, Args).
+
+set_log_level(Level) -> lager:set_loglevel(lager_console_backend, Level).
 
 %%%_* Internal functions =======================================================
 

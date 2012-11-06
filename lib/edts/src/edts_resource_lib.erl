@@ -74,7 +74,10 @@ validate(ReqData0, Ctx0, Keys) ->
   try
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
-  catch throw:{error, _} = E -> {true, ReqData0, orddict:store(error, E, Ctx0)}
+  catch throw:{error, Key} = E ->
+      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
+                     [Key, wrq:get_qs_value(atom_to_list(Key), ReqData0)]),
+      {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
 %%------------------------------------------------------------------------------
