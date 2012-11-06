@@ -34,7 +34,7 @@
                                         (erlang-get-module)
                                         (number-to-string line-number)))
          (result (cdr (assoc 'result state))))
-    (edts-debug-update-breakpoints node-name)
+    (edts-debug-update-breakpoints)
     (edts-log-info "Breakpoint %s at %s:%s"
                    result
                    (cdr (assoc 'module state))
@@ -67,7 +67,8 @@
   (edts-debug-stop (edts-debug-buffer-node-name))
   (edts-debug--kill-debug-buffers)
   (set-window-configuration *edts-debug-window-config-to-restore*)
-  (setf *edts-debug-window-config-to-restore* nil))
+  (setf *edts-debug-window-config-to-restore* nil)
+  (edts-debug-update-breakpoints))
 
 (defun edts-debug-start-debugging ()
   (interactive)
@@ -187,10 +188,10 @@
       ('error
        (edts-log-info "Error:%s" (cdr (assoc 'message reply)))))))
 
-(defun edts-debug-update-breakpoints (&optional node-name)
+(defun edts-debug-update-breakpoints ()
   "Display breakpoints in the buffer"
   (edts-face-remove-overlays '("edts-debug-breakpoint"))
-  (let ((breaks (edts-get-breakpoints (or node-name
+  (let ((breaks (edts-get-breakpoints (or (edts-project-buffer-node-name (current-buffer))
                                           (edts-debug-buffer-node-name)))))
     (dolist (b breaks)
       (let ((module (cdr (assoc 'module b)))
