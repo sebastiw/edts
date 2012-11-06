@@ -25,6 +25,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
 
+;; workaround to get proper variable highlighting in the shell.
+(defvar erlang-font-lock-keywords-vars
+  '(("\\(?:\\<\\|[^#]\\)\\_<\\([[:upper:]_]\\(?:\\sw\\|\\s_\\)*\\)\\_>"
+     1 'font-lock-variable-name-face)))
+
 ;; Prerequisites
 (require 'cl)
 (require 'erlang)
