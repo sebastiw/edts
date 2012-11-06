@@ -147,21 +147,24 @@ to_json_test() ->
                                                           null]}]};
                                         (_)    -> {error, not_found}
                                      end),
+  Data =  [[{"module", "foo"},
+            {"line", 42},
+            {"status", "active"},
+            {"trigger", "enable"},
+            {"condition", "null"}],
+           [{"module", "bar"},
+            {"line", 314},
+            {"status", "active"},
+            {"trigger", "enable"},
+            {"condition", "null"}]],
+
+  meck:new(mochijson2),
+  meck:expect(mochijson2, encode, fun(_) -> Data
+                                  end),
   Dict1 =
     orddict:from_list([{nodename, true}]),
-  {Data, req_data, Dict1} = to_json(req_data, Dict1),
+  ?assertMatch({Data, req_data, Dict1}, to_json(req_data, Dict1)),
 
-  %% The odd array in the expected result stands for the "null" string,
-  %% but the value isn't used yet (and it can be something else, a tuple)
-  %% so I'm not really caring that it's readable or anything.
-
-  ?assertEqual("[{\"module\":\"foo\",\"line\":42,"
-               "\"status\":\"active\",\"trigger\":\"enable\","
-               "\"condition\":[[110,117,108,108]]},"
-               "{\"module\":\"bar\",\"line\":314,"
-               "\"status\":\"active\",\"trigger\":\"enable\","
-               "\"condition\":[[110,117,108,108]]}]",
-               lists:flatten(Data)),
   Dict2 =
     orddict:from_list([{nodename, false}]),
   ?assertError({badmatch, {error, not_found}}, to_json(req_data, Dict2)),
