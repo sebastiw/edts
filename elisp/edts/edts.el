@@ -38,7 +38,7 @@ node."
   "Where EDTS should save its data.")
 
 (defvar edts-find-macro-regexp
-  "\\(\\(\\('.*'\\)\\|\\([a-zA-Z0-9_-]*\\)\\)[\\s-]*\\((.*)\\)?\\)"
+  "\\(\\(\\('.*'\\)\\|\\([a-zA-Z0-9_@]*\\)\\)[\\s-]*\\((.*)\\)?\\)"
   "Regexp describing a macro name")
 
 (defconst edts-find-macro-definition-regexp
