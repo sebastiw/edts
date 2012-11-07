@@ -38,13 +38,16 @@
 -export([ continue/0
         , get_breakpoints/0
         , interpret_modules/1
-        , is_interpreted/1
+        , interpret_node/0
+        , is_code_interpreted/0
+        , is_module_interpreted/1
         , maybe_attach/1
         , step/0
         , step_out/0
         , stop_debug/0
         , toggle_breakpoint/2
         , uninterpret_modules/1
+        , uninterpret_node/0
         , wait_for_debugger/0 ]).
 
 %% gen_server callbacks
@@ -58,10 +61,11 @@
 -define(SERVER, ?MODULE).
 
 -record(dbg_state, {
-          debugger = undefined :: undefined | pid(),
-          proc = unattached    :: unattached | pid(),
-          stack = {1, 1}       :: {non_neg_integer(), non_neg_integer()},
-          listeners = []       :: [term()]
+          debugger = undefined   :: undefined | pid(),
+          proc = unattached      :: unattached | pid(),
+          stack = {1, 1}         :: {non_neg_integer(), non_neg_integer()},
+          listeners = []         :: [term()],
+          interpretation = false :: boolean()
          }).
 
 %%%_* Types ====================================================================
@@ -117,11 +121,31 @@ interpret_modules(Modules) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Make all loaded modules interpretable.
+%% Returns the list of modules which were
+%% interpretable and set as such.
+%% @end
+-spec interpret_node() -> {ok, [module()]}.
+%%------------------------------------------------------------------------------
+interpret_node() ->
+  interpret_modules([Module || {Module, _File} <- code:get_loaded()]).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Reports if code in the current project node is being interpreted.
+%% @end
+-spec is_code_interpreted() -> boolean().
+%%------------------------------------------------------------------------------
+is_code_interpreted() ->
+  gen_server:call(?SERVER, is_code_interpreted).
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Reports if Module is interpreted.
 %% @end
--spec is_interpreted(Module :: module()) -> boolean().
+-spec is_module_interpreted(Module :: module()) -> boolean().
 %%------------------------------------------------------------------------------
-is_interpreted(Module) ->
+is_module_interpreted(Module) ->
   gen_server:call(?SERVER, {is_interpreted, Module}).
 
 %%------------------------------------------------------------------------------
@@ -143,6 +167,15 @@ toggle_breakpoint(Module, Line) ->
 %%------------------------------------------------------------------------------
 uninterpret_modules(Modules) ->
   gen_server:call(?SERVER, {uninterpret, Modules}).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Make all loaded modules uninterpretable.
+%% @end
+-spec uninterpret_node() -> {ok, [module()]}.
+%%------------------------------------------------------------------------------
+uninterpret_node() ->
+  uninterpret_modules([Module || {Module, _File} <- code:get_loaded()]).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -247,7 +280,7 @@ handle_call({interpret, Modules}, _From, State) ->
                                             _    -> mod_uninterpretable
                                           end
                                       end, Modules))},
-  {reply, Reply, State};
+  {reply, Reply, State#dbg_state{interpretation = true}};
 
 handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
   Reply = case lists:keymember({Module, Line}, 1, int:all_breaks()) of
@@ -260,10 +293,14 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
 
 handle_call({uninterpret, Modules}, _From, State) ->
   lists:map(fun(Module) -> int:n(Module) end, Modules),
-  {reply, ok, State};
+  {reply, ok, State#dbg_state{interpretation = false}};
 
 handle_call({is_interpreted, Module}, _From, State) ->
   {reply, lists:member(Module, int:interpreted()), State};
+
+handle_call(is_code_interpreted, _From,
+            #dbg_state{interpretation = Value} = State) ->
+  {reply, Value, State};
 
 handle_call(get_breakpoints, _From, State) ->
   {reply, {ok, int:all_breaks()}, State};

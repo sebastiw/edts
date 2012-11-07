@@ -141,16 +141,17 @@ compile_and_load(File, Opts) ->
   end.
 
 maybe_uninterpret_module(Module) ->
-  case edts_debug_server:is_interpreted(Module) of
+  case edts_debug_server:is_module_interpreted(Module) of
     true -> edts_debug_server:uninterpret_modules([Module]),
             true;
     _    -> false
   end.
 
-maybe_interpret_module(Module, true) ->
-  edts_debug_server:interpret_modules([Module]);
-maybe_interpret_module(_Module, _WasInterpreted) ->
-  ok.
+maybe_interpret_module(Module, WasInterpreted) ->
+  case WasInterpreted orelse edts_debug_server:is_code_interpreted() of
+    true -> edts_debug_server:interpret_modules([Module]);
+    _    -> ok
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

@@ -22,6 +22,13 @@
 
 (defvar *edts-debug-last-visited-file* nil)
 
+(defun edts-debug-is-project-interpreted ()
+  "Reports if the node for the current project is running interpreted code"
+  (let* ((node-name  (or (edts-project-buffer-node-name (current-buffer))
+                         (edts-debug-buffer-node-name)))
+         (state (edts-is-node-interpreted node-name)))
+    (equal (cdr (assoc 'result state)) "true")))
+
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
 (defun edts-debug-toggle-breakpoint ()
