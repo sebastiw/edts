@@ -27,8 +27,19 @@
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
-  '(("\\(?:\\<\\|[^#]\\)\\_<\\([[:upper:]_]\\(?:\\sw\\|\\s_\\)*\\)\\_>"
-     1 'font-lock-variable-name-face)))
+  (list
+   (list
+    #'(lambda (max)
+        (let ((match nil)
+              (re erlang-variable-regexp))
+          (while (and (null match) (re-search-forward re max 'move-point))
+            ;; no numerical constants
+            (unless (eq ?# (char-before (match-beginning 0)))
+              (setq match (match-end 0))))
+          match))
+    1 'font-lock-variable-name-face t))
+  "Font lock keyword highlighting Erlang variables.
+Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;; Prerequisites
 (require 'cl)
