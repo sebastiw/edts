@@ -90,26 +90,28 @@ Planned features in the short term are:
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
 
-  root          - The top level directory of where you have your project
-                  contents. The only required field.
-  name          - The name of the project. Defaults to the last component
-                  of the project root-directory (eg a root seth to"~/src/p"
-                  would yield a "p" as the default project name.
-  node-sname    - The erlang sname that the project's erlang node should
-                  have. Defaults to same name as the project.
-  lib-dirs      - A list of paths (relative to the project's root) where the
-                  project's code is located. All subdirectories of lib-dirs are
-                  assumed to be otp-applications. Defaults to '("lib").
-  start-command - A custom command that EDTS should execute to start the
-                  project's Erlang node. If this is set, the command must set
-                  the node's sname to be the same as the value specified in the
-                  project's node-sname. The command must also not set the
-                  erlang cookie to anything other than the default
-                  ~/.erlang.cookie.
-  otp-path      - The path to any custom OTP-version to use for the project. The
-                  OTP-release's bin-directory will be added to the head of the
-                  exec-path and the PATH environment variable when starting the
-                  project node.
+  root              - The top level directory of where you have your project
+                      contents. The only required field.
+  name              - The name of the project. Defaults to the last component
+                      of the project root-directory (eg a root seth to"~/src/p"
+                      would yield a "p" as the default project name.
+  node-sname        - The erlang sname that the project's erlang node should
+                      have. Defaults to same name as the project.
+  lib-dirs          - A list of paths (relative to the project's root) where the
+                      project's code is located. All subdirectories of lib-dirs
+                      are assumed to be otp-applications. Defaults to '("lib").
+  start-command     - A custom command that EDTS should execute to start the
+                      project's Erlang node. If this is set, the command must
+                      set the node's sname to be the same as the value specified
+                      in the project's node-sname. The command must also not set
+                      the erlang cookie to anything other than the default
+                      ~/.erlang.cookie.
+  otp-path          - The path to any custom OTP-version to use for the project.
+                      The OTP-release's bin-directory will be added to the head 
+                      of the exec-path and the PATH environment variable when
+                      starting the project node.
+  excluded-from-int - A list of application names which should be excluded from
+                      interpretation for this project node.
 
   Example:
   (setq edts-projects
@@ -118,7 +120,8 @@ Planned features in the short term are:
          (root       . "~/src/awesome_stuff")
          (node-sname . "awesome")
          (otp-path   . "~/otp/r15b02"
-         (start-command . "./start-being-awesome.sh"))
+         (start-command . "./start-being-awesome.sh")
+         (exclude-from-int . ("bad_app"))
         ( ;; My other project.
          (name       . "other_stuff")
          (root       . "~/src/other_stuff")
@@ -153,7 +156,9 @@ running both can create some confusion.
 
 EDTS implements a basic interface to the Erlang interpreter through the int module, thus enabling debugging to some extent.
 
-You can configure EDTS so that whenever you save a file it automatically becomes interpreted, if possible.
+You can configure EDTS so that whenever you save a file it automatically becomes interpreted, if possible. You can toggle interpretation of loaded modules in the project nodeby using C-c C-d i.
+
+Take caution however, as some interpreting/uninterpreting some modules may bring down your Erlang node. If you find such a case, you can explicitly disable interpretation on an application level by specifying a "exclude-from-int" option in your project configuration. An application known to be incompatible with this functionality is eper.
 
 You can toggle breakpoints from your code buffer directly using C-c C-d b.
 
