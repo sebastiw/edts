@@ -189,9 +189,12 @@ buffer. The node is either:
 - The module's project node, if current buffer is an erlang module, or
 - The buffer's erlang node if buffer is an edts-shell buffer."
   (interactive)
-  (let ((buffer (current-buffer)))
-    (or (edts-project-buffer-node-name buffer)
-        (edts-shell-node-name buffer))))
+  (let* ((buffer    (current-buffer))
+        (node-name (or (edts-project-buffer-node-name buffer)
+                       (edts-shell-node-name buffer))))
+    (when (called-interactively-p 'any)
+      (message "%s" node-name))
+    node-name))
 
 (defun edts-register-node-when-ready (node-name root libs &optional retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
