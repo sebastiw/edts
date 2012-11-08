@@ -401,7 +401,7 @@ parsed response as the single argument."
 (defun edts-get-includes ()
   "Get all includes of module in current-buffer from the node
 associated with that buffer."
-  (let ((info (edts-get-detailed-module-info (erlang-get-module))))
+  (let ((info (edts-get-detailed-module-info (ferl-get-module))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

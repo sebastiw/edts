@@ -52,6 +52,11 @@ current-buffer"
           (+ (point) 1)
           (point)))))
 
+(defun ferl-get-module ()
+  "Try to find the name of the erlang module in current buffer"
+  (or (erlang-get-module)
+      (erlang-get-module-from-file-name)))
+
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position
 of that function, otherwise nil."
@@ -235,7 +240,7 @@ Should be called with point directly before the opening ( or /."
 Should no explicit module name be present at the point, the
 list of imported functions is searched. If there is still no result
 use DEFAULT-MODULE."
-  (when (null default-module) (setq default-module (erlang-get-module)))
+  (when (null default-module) (setq default-module (ferl-get-module)))
   (save-excursion
     (save-match-data
       (ferl-goto-end-of-call-name)

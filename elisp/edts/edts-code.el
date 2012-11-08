@@ -48,7 +48,7 @@ a symbol."
   "Compiles current buffer on node related the that buffer's project."
   (interactive)
   (edts-face-remove-overlays '("edts-code-compile"))
-  (let ((module   (erlang-get-module))
+  (let ((module   (ferl-get-module))
         (file     (buffer-file-name)))
     (when (string= "erl" (file-name-extension file))
       (edts-compile-and-load-async
@@ -87,7 +87,7 @@ buffer's project."
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
     (when (and edts-code-xref-checks (not (eq result 'error)))
-      (let ((module (erlang-get-module)))
+      (let ((module (ferl-get-module)))
         (edts-get-module-xref-analysis-async
          module edts-code-xref-checks
          #'edts-code-handle-xref-analysis-result (current-buffer))))))
@@ -107,7 +107,7 @@ buffer's project."
     (edts-face-remove-overlays '("edts-code-eunit-passed"))
     (edts-face-remove-overlays '("edts-code-eunit-failed"))
     (when (not (eq result 'error))
-      (let ((module (erlang-get-module)))
+      (let ((module (ferl-get-module)))
 	(edts-get-module-eunit-async
 	 module #'edts-code-handle-eunit-result (current-buffer))))))
 

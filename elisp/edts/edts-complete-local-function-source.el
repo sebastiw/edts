@@ -70,7 +70,7 @@ candidates, except we single-quote-terminate candidates."
 
 (defun edts-complete-local-function-doc (candidate)
   "Find the documentation for CANDIDATE."
-  (let* ((module   (erlang-get-module))
+  (let* ((module   (ferl-get-module))
          (split    (split-string candidate "/"))
          (function (car split))
          (arity    (string-to-number (cadr split))))

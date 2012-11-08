@@ -124,7 +124,7 @@ directive."
   "Jump to the record-definition under point."
   (let* ((mark (copy-marker (point-marker)))
          (rec-name (thing-at-point 'symbol))
-         (info (edts-get-detailed-module-info (erlang-get-module)))
+         (info (edts-get-detailed-module-info (ferl-get-module)))
          (records (cdr (assoc 'records info)))
          (record (edts-nav-find-record rec-name records)))
     (if record
@@ -184,7 +184,7 @@ Move point there and make an entry in edts-window-history-ring."
 When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
   (let ((mark (copy-marker (point-marker))))
-    (if (or (equal module (erlang-get-module))
+    (if (or (equal module (ferl-get-module))
             (string-equal module "MODULE"))
         (if function
             (progn
