@@ -98,15 +98,10 @@ buffer's project."
         (edts-code-display-error-overlays "edts-code-xref" errors)
         errors))))
 
-(defun edts-code-eunit-interactive ()
-  "Runs eunit tests for current buffer on node related to that
-buffer's project."
-  (interactive)
-  (edts-code-eunit 'ok))
-
 (defun edts-code-eunit (result)
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
+  (interactive)
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-eunit-passed"))
     (edts-face-remove-overlays '("edts-code-eunit-failed"))
