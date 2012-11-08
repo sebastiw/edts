@@ -188,6 +188,7 @@ localhost."
 buffer. The node is either:
 - The module's project node, if current buffer is an erlang module, or
 - The buffer's erlang node if buffer is an edts-shell buffer."
+  (interactive)
   (let ((buffer (current-buffer)))
     (or (edts-project-buffer-node-name buffer)
         (edts-shell-node-name buffer))))

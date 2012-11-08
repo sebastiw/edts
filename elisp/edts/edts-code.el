@@ -46,6 +46,7 @@ a symbol."
 
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
+  (interactive)
   (edts-face-remove-overlays '("edts-code-compile"))
   (let ((module   (erlang-get-module))
         (file     (buffer-file-name)))
