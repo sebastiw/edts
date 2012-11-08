@@ -77,7 +77,7 @@ create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, cmd, exclusions]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -89,16 +89,20 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 from_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
-  Command = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
-  Info    = edts:Command(Node),
+  Command = orddict:fetch(cmd, Ctx),
+  Info    = case Command of
+               interpret_node -> Exclusions = orddict:fetch(exclusions, Ctx),
+                                 edts:Command(Node, Exclusions);
+               _              -> edts:Command(Node)
+             end,
   Data    = edts_resource_lib:encode_debugger_info(Info),
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node     = orddict:fetch(nodename, Ctx),
-  Command  = list_to_atom(wrq:get_qs_value("cmd", ReqData)),
-  Info     = edts:Command(Node),
-  Data     = edts_resource_lib:encode_debugger_info(Info),
+  Node    = orddict:fetch(nodename, Ctx),
+  Command = orddict:fetch(cmd, Ctx),
+  Info    = edts:Command(Node),
+  Data    = edts_resource_lib:encode_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

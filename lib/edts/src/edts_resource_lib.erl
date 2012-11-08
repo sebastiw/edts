@@ -93,6 +93,8 @@ atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2.
 
 atom_to_validate(arity)        -> fun arity_validate/2;
+atom_to_validate(cmd)          -> fun cmd_validate/2;
+atom_to_validate(exclusions)   -> fun exclusions_validate/2;
 atom_to_validate(exported)     -> fun exported_validate/2;
 atom_to_validate(file)         -> fun file_validate/2;
 atom_to_validate(function)     -> fun function_validate/2;
@@ -121,7 +123,34 @@ arity_validate(ReqData, _Ctx) ->
   catch error:badarg -> error
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate debugger command
+%% @end
+-spec cmd_validate(wrq:req_data(), orddict:orddict()) ->
+                      {ok, atom()} | error.
+%%------------------------------------------------------------------------------
+cmd_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("cmd", ReqData) of
+    undefined         -> error;
+    L when is_list(L) -> {ok, list_to_atom(L)}
+  end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate application exclusion list for interpretation
+%% @end
+-spec exclusions_validate(wrq:req_data(), orddict:orddict()) ->
+                            {ok, [atom()]} | error.
+%%------------------------------------------------------------------------------
+exclusions_validate(ReqData, _Ctx) ->
+  ExclusionsStr = case wrq:get_qs_value("exclusions", ReqData) of
+                    undefined -> "";
+                    Str       -> Str
+                  end,
+  Exclusions = lists:map(fun(AppName) -> list_to_atom(AppName) end,
+                         string:tokens(ExclusionsStr, ",")),
+  {ok, Exclusions}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -195,7 +224,8 @@ lib_dirs_validate(ReqData, Ctx) ->
                          string:tokens(LibDirsStr, ",")),
   {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
 
-
+%%------------------------------------------------------------------------------
+%% @doc
 %% Validate interpret
 %% @end
 -spec interpret_validate(wrq:req_data(), orddict:orddict()) ->
@@ -205,7 +235,8 @@ interpret_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("interpret", ReqData) of
     undefined -> {ok, false};
     "false"   -> {ok, false};
-    "true"    -> {ok, true}
+    "true"    -> {ok, true};
+    _         -> error
   end.
 
 %%------------------------------------------------------------------------------
@@ -334,6 +365,26 @@ arity_validate_test() ->
   ?assertEqual(error, arity_validate(foo, bar)),
   meck:unload().
 
+cmd_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("cmd", _) -> undefined end),
+  ?assertEqual(error, cmd_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "foo" end),
+  ?assertEqual({ok, foo}, cmd_validate(foo, bar)),
+  meck:unload().
+
+exclusions_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> undefined end),
+  ?assertEqual({ok, []}, exclusions_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> "foo" end),
+  ?assertEqual({ok, [foo]}, exclusions_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> "foo,bar" end),
+  ?assertEqual({ok, [foo, bar]}, exclusions_validate(foo, bar)),
+  meck:unload().
+
 exported_validate_test() ->
   meck:unload(),
   meck:new(wrq),
@@ -384,11 +435,11 @@ interpret_validate_test() ->
   meck:unload(),
   meck:new(wrq),
   meck:expect(wrq, get_qs_value, fun("interpret", _) -> "not_a_bool" end),
-  ?assertEqual(false, interpret_validate(foo, bar)),
+  ?assertEqual(error, interpret_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("interpret", _) -> "false" end),
-  ?assertEqual(false, interpret_validate(foo, bar)),
+  ?assertEqual({ok, false}, interpret_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("interpret", _) -> "true" end),
-  ?assertEqual(true, interpret_validate(foo, bar)),
+  ?assertEqual({ok, true}, interpret_validate(foo, bar)),
   meck:unload().
 
 lib_dirs_validate_validate_test() ->

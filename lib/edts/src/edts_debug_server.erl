@@ -38,7 +38,7 @@
 -export([ continue/0
         , get_breakpoints/0
         , interpret_modules/1
-        , interpret_node/0
+        , interpret_node/1
         , is_node_interpreted/0
         , is_module_interpreted/1
         , maybe_attach/1
@@ -125,10 +125,10 @@ interpret_modules(Modules) ->
 %% Returns the list of modules which were
 %% interpretable and set as such.
 %% @end
--spec interpret_node() -> {ok, [module()]}.
+-spec interpret_node(Exclusions :: [module()]) -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
-interpret_node() ->
-  interpret_modules(get_non_otp_modules()).
+interpret_node(Exclusions) ->
+  interpret_modules(get_safe_modules(Exclusions)).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -171,12 +171,12 @@ uninterpret_modules(Modules) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Make all loaded modules uninterpretable.
+%% Make all interpreted modules uninterpretable.
 %% @end
 -spec uninterpret_node() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
 uninterpret_node() ->
-  uninterpret_modules(get_non_otp_modules()).
+  uninterpret_modules(int:interpreted()).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -451,14 +451,19 @@ register_attached(Pid) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all loaded, non-OTP modules
+%% Returns a list of all loaded modules except OTP modules and those
+%% explicitly belonging to ExcludedApps
 %%
--spec get_non_otp_modules() -> [module()].
+-spec get_safe_modules(ExcludedApps :: [atom()]) -> [module()].
 %%------------------------------------------------------------------------------
-get_non_otp_modules() ->
+get_safe_modules(ExcludedApps) ->
+  ExcludedAppDirs = [code:lib_dir(App, ebin) || App <- ExcludedApps],
   ErlLibDir = code:lib_dir(),
   [Module || {Module, Filename} <- code:all_loaded(),
-             is_list(Filename) andalso not lists:prefix(ErlLibDir, Filename)].
+             is_list(Filename),
+             not lists:prefix(ErlLibDir, Filename),
+             not code:is_module_native(Module),
+             not lists:member(filename:dirname(Filename), ExcludedAppDirs)].
 
 %%%_* Unit tests ===============================================================
 

@@ -28,12 +28,16 @@
     (equal (cdr (assoc 'result state)) "true")))
 
 (defun edts-debug-toggle-interpret-project ()
+  (interactive)
   (let* ((node-name (or (edts-project-buffer-node-name (current-buffer))
                         (edts-debug-buffer-node-name)))
+         (exclusions (edts-project-interpretation-exclusions
+                      (edts-project-buffer-project (current-buffer))))
          (interpretedp (edts-debug--is-node-interpreted node-name)))
     (if interpretedp
-        (edts-set-node-interpretation node-name nil)
-      (edts-set-node-interpretation node-name t))))
+        (edts-set-node-interpretation node-name nil exclusions)
+      (progn (edts-set-node-interpretation node-name t exclusions)
+             (edts-log-info "Interpreting all loaded modules (this might take a while)...")))))
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.

@@ -150,6 +150,11 @@ short names are supported."
  node."
   (edts-project-property 'otp-path project))
 
+(defun edts-project-interpretation-exclusions (project)
+  "Returns the applications that should be excluded from interpretation on
+ PROJECT."
+  (edts-project-property 'exclude-from-int project))
+
 (defun edts-project-property (prop project)
   "Returns the value of the property of name PROP from PROJECT."
   (cdr (assoc prop project)))

@@ -41,7 +41,7 @@
         , get_module_xref_analysis/3
         , init_node/3
         , interpret_modules/2
-        , interpret_node/1
+        , interpret_node/2
         , is_node/1
         , is_node_interpreted/1
         , node_available_p/1
@@ -149,11 +149,11 @@ who_calls(Node, Module, Function, Arity) ->
 %% Interprets all code loaded in Node, if possible, returning the list
 %% of interpreted modules.
 %% @end
--spec interpret_node( Node :: node() ) ->
+-spec interpret_node( Node :: node(), Exclusions :: [module()] ) ->
                            [module()] | {error, not_found}.
 %%------------------------------------------------------------------------------
-interpret_node(Node) ->
-  case edts_dist:call(Node, edts_debug_server, interpret_node, []) of
+interpret_node(Node, Exclusions) ->
+  case edts_dist:call(Node, edts_debug_server, interpret_node, [Exclusions]) of
     {badrpc, _} -> {error, not_found};
     Interpreted -> {ok, Interpreted}
   end.

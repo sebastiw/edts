@@ -406,14 +406,15 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-set-node-interpretation (node-name enable)
+(defun edts-set-node-interpretation (node-name enable exclusions)
   "Enables code interpretation at NODE-NAME if ENABLE evaluates to a non-NIL
 value"
   (let* ((resource
           (list "debugger" node-name))
          (args (list (cons "cmd" (if enable
                                      "interpret_node"
-                                   "uninterpret_node"))))
+                                   "uninterpret_node"))
+                     (cons "exclusions" exclusions)))
          (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
         (cdr (assoc 'body res))
