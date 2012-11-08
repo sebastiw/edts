@@ -397,6 +397,28 @@ interpreted."
         (cdr (assoc 'body res))
       (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts-is-node-interpreted (node-name)
+  (let* ((resource
+          (list "debugger" node-name))
+          (args (list (cons "cmd" "is_node_interpreted")))
+          (res (edts-rest-get resource args)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-set-node-interpretation (node-name enable)
+  "Enables code interpretation at NODE-NAME if ENABLE evaluates to a non-NIL
+value"
+  (let* ((resource
+          (list "debugger" node-name))
+         (args (list (cons "cmd" (if enable
+                                     "interpret_node"
+                                   "uninterpret_node"))))
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 (defun edts-get-breakpoints (node-name)
   "Get all breakpoints and related info on NODE-NAME."
   (let* ((resource

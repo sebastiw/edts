@@ -39,7 +39,7 @@
         , get_breakpoints/0
         , interpret_modules/1
         , interpret_node/0
-        , is_code_interpreted/0
+        , is_node_interpreted/0
         , is_module_interpreted/1
         , maybe_attach/1
         , step/0
@@ -128,16 +128,16 @@ interpret_modules(Modules) ->
 -spec interpret_node() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
 interpret_node() ->
-  interpret_modules([Module || {Module, _File} <- code:get_loaded()]).
+  interpret_modules(get_non_otp_modules()).
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Reports if code in the current project node is being interpreted.
 %% @end
--spec is_code_interpreted() -> boolean().
+-spec is_node_interpreted() -> boolean().
 %%------------------------------------------------------------------------------
-is_code_interpreted() ->
-  gen_server:call(?SERVER, is_code_interpreted).
+is_node_interpreted() ->
+  gen_server:call(?SERVER, is_node_interpreted).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -159,6 +159,7 @@ is_module_interpreted(Module) ->
 toggle_breakpoint(Module, Line) ->
   gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Uninterprets Modules.
@@ -175,7 +176,7 @@ uninterpret_modules(Modules) ->
 -spec uninterpret_node() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
 uninterpret_node() ->
-  uninterpret_modules([Module || {Module, _File} <- code:get_loaded()]).
+  uninterpret_modules(get_non_otp_modules()).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -275,9 +276,13 @@ handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
 handle_call({interpret, Modules}, _From, State) ->
   Reply = {ok, lists:filter(fun(E) -> E =/= mod_uninterpretable end,
                             lists:map(fun(Module) ->
-                                          case int:interpretable(Module) of
-                                            true -> int:i(Module);
-                                            _    -> mod_uninterpretable
+                                          try
+                                            case int:interpretable(Module) of
+                                              true -> int:i(Module);
+                                              _    -> mod_uninterpretable
+                                            end
+                                          catch
+                                            _:_ -> mod_uninterpretable
                                           end
                                       end, Modules))},
   {reply, Reply, State#dbg_state{interpretation = true}};
@@ -298,7 +303,7 @@ handle_call({uninterpret, Modules}, _From, State) ->
 handle_call({is_interpreted, Module}, _From, State) ->
   {reply, lists:member(Module, int:interpreted()), State};
 
-handle_call(is_code_interpreted, _From,
+handle_call(is_node_interpreted, _From,
             #dbg_state{interpretation = Value} = State) ->
   {reply, Value, State};
 
@@ -443,6 +448,17 @@ notify(Info, [Client|R]) ->
 %%------------------------------------------------------------------------------
 register_attached(Pid) ->
   gen_server:cast(?SERVER, {register_attached, Pid}).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns a list of all loaded, non-OTP modules
+%%
+-spec get_non_otp_modules() -> [module()].
+%%------------------------------------------------------------------------------
+get_non_otp_modules() ->
+  ErlLibDir = code:lib_dir(),
+  [Module || {Module, Filename} <- code:all_loaded(),
+             is_list(Filename) andalso not lists:prefix(ErlLibDir, Filename)].
 
 %%%_* Unit tests ===============================================================
 

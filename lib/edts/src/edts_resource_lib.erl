@@ -456,7 +456,7 @@ xref_checks_validate_test() ->
                xref_checks_validate(foo, bar)),
   meck:unload().
 
-handle_debugger_info_test() ->
+encode_debugger_info_test() ->
   ?assertEqual({struct, [{state, error}, {message, foo}]},
                encode_debugger_info({error, foo})),
   ?assertEqual({struct, [ {state, break}

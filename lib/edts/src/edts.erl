@@ -43,6 +43,7 @@
         , interpret_modules/2
         , interpret_node/1
         , is_node/1
+        , is_node_interpreted/1
         , node_available_p/1
         , modules/1
         , node_reachable/1
@@ -154,7 +155,7 @@ who_calls(Node, Module, Function, Arity) ->
 interpret_node(Node) ->
   case edts_dist:call(Node, edts_debug_server, interpret_node, []) of
     {badrpc, _} -> {error, not_found};
-    Interpreted -> Interpreted
+    Interpreted -> {ok, Interpreted}
   end.
 
 %%------------------------------------------------------------------------------
@@ -283,6 +284,19 @@ wait_for_debugger(Node) ->
   case edts_dist:call(Node, edts_debug_server, wait_for_debugger, []) of
     {badrpc, _} -> {error, not_found};
     Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is running interpreted code.
+%% @end
+%%
+-spec is_node_interpreted(Node::node()) -> boolean().
+%%------------------------------------------------------------------------------
+is_node_interpreted(Node) ->
+  case edts_dist:call(Node, edts_debug_server, is_node_interpreted, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> {ok, Result}
   end.
 
 %%------------------------------------------------------------------------------
