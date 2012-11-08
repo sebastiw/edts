@@ -65,9 +65,10 @@ a symbol."
         result))))
 
 
-(defun edts-code-xref-analyze-all-buffers (result)
+(defun edts-code-xref-analyze-project (&optional result)
   "Runs xref-checks for all live buffers with its file in current
 buffer's project, on the node related to that project."
+  (interactive)
   (let ((proj (edts-project-buffer-project (current-buffer))))
     (mapcar
      #'(lambda(buf)
@@ -81,6 +82,7 @@ buffer's project, on the node related to that project."
 (defun edts-code-xref-analyze (result)
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
+  (interactive)
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
     (when (and edts-code-xref-checks (not (eq result 'error)))
