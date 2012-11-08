@@ -210,8 +210,14 @@ node, optionally retrying RETRIES times."
                  "Error: edts could not register node '%s'" node-name)))))
 
 (defun edts-register-node (node-name root libs)
-  "Register NODE-NAME with the edts node."
-  (interactive "MNode-name: ")
+  "Register NODE-NAME with the edts node.
+
+If called interactively, fetch arguments from project of
+current-buffer."
+  (interactive (let ((proj (edts-project-buffer-project (current-buffer))))
+                           (list (edts-project-node-name proj)
+                                 (edts-project-root      proj)
+                                 (edts-project-lib-dirs  proj))))
   (let* ((resource (list "nodes" node-name))
          (args     (list (cons "project_root" root)
                          (cons "lib_dirs"     libs)))
