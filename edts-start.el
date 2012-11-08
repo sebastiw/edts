@@ -25,25 +25,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
 
-
-
-;; ;; workaround to get proper variable highlighting in the shell.
-;; (defvar erlang-font-lock-keywords-vars
-;;   (list
-;;    (list
-;;     #'(lambda (max)
-;;         (let ((match nil)
-;;               (re erlang-variable-regexp))
-;;           (while (re-search-forward re max 'move-point)
-;;             (let ((bol (save-excursion (beginning-of-line) (point))))
-;;               ;; no numerical constants
-;;               (unless (and (eq ?# (char-before (match-beginning 0)))
-;;                            (not (erlang-in-literal (match-beginning 0))))
-;;                 (setq match (match-end 0))))
-;;             match)))
-;;     1 'font-lock-variable-name-face t))
-;;   "Font lock keyword highlighting Erlang variables.
-;; Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
+;; workaround to get proper variable highlighting in the shell.
+(defvar erlang-font-lock-keywords-vars
+  (list
+   (list
+    #'(lambda (max)
+        (block nil
+          (while (re-search-forward erlang-variable-regexp max 'move-point)
+            ;; no numerical constants
+            (unless (eq ?# (char-before (match-beginning 0)))
+              (return (match-string 0))))))
+    1 'font-lock-variable-name-face nil))
+  "Font lock keyword highlighting Erlang variables.
+Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;; Prerequisites
 (require 'cl)
