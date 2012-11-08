@@ -190,7 +190,29 @@ They are configured to work together with EDTS but see their respective
 documentation for information on how to configure their behaviour
 further.
 
-\\{edts-mode-map}"
+\\{edts-mode-map}Other useful commands:
+\\[edts-buffer-node-name]                   - Print the project node-name of
+                                              current-buffer.
+\\[edts-code-compile-and-display]           - Compile current buffer and display
+                                              issues.
+\\[edts-code-eunit]                         - Run the eunit tests of current
+                                              buffer and display results.
+\\[edts-code-xref-analyze]                  - Run xref analysis on current
+                                              buffer.
+\\[edts-code-xref-analyze-project]          - Run xref analysis on all buffers
+                                              belonging to the same project as
+                                              current buffer.
+\\[edts-make]                               - Byte compile all EDTS elisp files.
+\\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
+                                              if not already running.
+\\[edts-refactor-extract-function]          - Extract code in current region
+                                              into a separate function.
+\\[edts-register-node]                      - Register the project-node of
+                                              current buffer with the central
+                                              EDTS server.
+\\[edts-shell]                              - Start an interactive Erlang shell.
+\\[edts-start-server]                       - Start the central EDTS server."
+
   :lighter " EDTS"
   :keymap edts-mode-map
   :group edts
