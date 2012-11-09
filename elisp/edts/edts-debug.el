@@ -36,8 +36,8 @@
          (interpretedp (edts-debug--is-node-interpreted node-name)))
     (if interpretedp
         (edts-set-node-interpretation node-name nil exclusions)
-      (progn (edts-set-node-interpretation node-name t exclusions)
-             (edts-log-info "Interpreting all loaded modules (this might take a while)...")))))
+      (progn (edts-log-info "Interpreting all loaded modules (this might take a while)...")
+             (edts-set-node-interpretation node-name t exclusions)))))
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
