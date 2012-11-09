@@ -89,16 +89,16 @@ post_is_create(ReqData, Ctx) ->
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Module   = orddict:fetch(module, Ctx),
-  InfoLevel =
-    case wrq:method(ReqData) of
-      'GET'  -> orddict:fetch(info_level, Ctx);
-      'POST' -> basic
-    end,
-  Info     = edts:get_module_info(Nodename, Module, InfoLevel),
-  Exists   =
-    (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) andalso
-     not (Info =:= {error, not_found})),
-  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
+  case wrq:method(ReqData) of
+    'GET'  ->
+      InfoLevel = orddict:fetch(info_level, Ctx),
+      Info      = edts:get_module_info(Nodename, Module, InfoLevel),
+      {Info =/= {error, not_found}, ReqData, orddict:store(info, Info, Ctx)};
+    'POST' ->
+      Exists = edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]),
+      {Exists, ReqData, Ctx}
+  end.
+
 
 %% Handlers
 from_json(ReqData, Ctx) ->
