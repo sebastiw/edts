@@ -163,8 +163,8 @@ the project node by using C-c C-d i.
 Take caution however, as some interpreting/uninterpreting some modules may
 bring down your Erlang node. If you find such a case, you can explicitly
 disable interpretation on an application level by specifying a
-"exclude-from-int" option in your project configuration. An application known
-to be incompatible with this functionality is eper.
+"exclude-from-int" option in your project configuration. Applications known
+to misbehave with this feature are eper and yaws.
 
 You can toggle breakpoints from your code buffer directly using C-c C-d b.
 
