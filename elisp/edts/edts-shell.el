@@ -56,13 +56,22 @@ PWD and running COMMAND."
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
     (with-current-buffer buffer-name
+      ;; generic stuff
       (when (fboundp 'show-paren-mode)
         (make-local-variable 'show-paren-mode)
         (show-paren-mode))
-      (setq edts-shell-node-name node-name)
+
+      ;; comint-variables
+      (make-local-variable 'comint-output-filter-functions)
+      (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
+
+      ;; edts-specifics
+      (setq edts-shell-node-name node-name)
       (edts-complete-setup edts-shell-ac-sources)
+
+      ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)
       (erlang-font-lock-init)
       (setq font-lock-keywords-only nil))
@@ -81,6 +90,13 @@ PWD and running COMMAND."
   "Return the node sname of the erlang node running in an edts-shell
 buffer."
   (buffer-local-value 'edts-shell-node-name buffer))
+
+(defun edts-shell-comint-filter (arg)
+  "Make comint output read-only. Added to `comint-output-filter-functions'."
+  (when (and arg (not (string= arg "")))
+    (let ((output-end (process-mark (get-buffer-process (current-buffer)))))
+      (put-text-property comint-last-output-start output-end 'read-only t))))
+
 
 (when (member 'ert features)
   (ert-deftest edts-shell-make-comint-buffer-test ()
