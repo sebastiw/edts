@@ -99,8 +99,10 @@ buffer."
   (when (and arg (not (string= arg "")))
     (setq buffer-undo-list nil)
     (let ((output-end (process-mark (get-buffer-process (current-buffer)))))
-      (put-text-property comint-last-output-start output-end 'read-only t))))
-
+      (put-text-property
+       comint-last-input-start comint-last-input-end 'read-only t)
+      (put-text-property
+       comint-last-output-start output-end 'read-only t))))
 
 (when (member 'ert features)
   (ert-deftest edts-shell-make-comint-buffer-test ()
