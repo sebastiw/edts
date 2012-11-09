@@ -307,7 +307,7 @@ exported_validate_test() ->
   meck:expect(wrq, get_qs_value, fun("exported", _) -> "false" end),
   ?assertEqual({ok, false}, exported_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("exported", _) -> true end),
-  ?assertEqual(error, exported_validate(foo, bar)),
+  ?assertEqual({error, {illegal, true}}, exported_validate(foo, bar)),
   meck:unload().
 
 file_validate_test() ->
@@ -316,9 +316,10 @@ file_validate_test() ->
   {ok, Cwd} = file:get_cwd(),
   meck:expect(wrq, get_qs_value, fun("file", _) -> Cwd end),
   ?assertEqual({ok, Cwd}, file_validate(foo, bar)),
+  Filename = filename:join(Cwd, "asotehu"),
   meck:expect(wrq, get_qs_value,
-              fun("file", _) -> filename:join(Cwd, "asotehu") end),
-  ?assertEqual(error, file_validate(foo, bar)),
+              fun("file", _) ->  Filename end),
+  ?assertEqual({error, {no_exists, Filename}}, file_validate(foo, bar)),
   meck:unload().
 
 function_validate_test() ->
@@ -338,7 +339,7 @@ info_level_validate_test() ->
   meck:expect(wrq, get_qs_value, fun("info_level", _) -> "detailed" end),
   ?assertEqual({ok, detailed}, info_level_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("info_level", _) -> true end),
-  ?assertEqual(error, info_level_validate(foo, bar)),
+  ?assertEqual({error, {illegal, true}}, info_level_validate(foo, bar)),
   meck:unload().
 
 lib_dirs_validate_validate_test() ->
@@ -378,9 +379,10 @@ root_validate_test() ->
   {ok, Cwd} = file:get_cwd(),
   meck:expect(wrq, get_qs_value, fun("project_root", _) -> Cwd end),
   ?assertEqual({ok, Cwd}, project_root_validate(foo, bar)),
+  Path = filename:join(Cwd, "asotehu"),
   meck:expect(wrq, get_qs_value,
-              fun("project_root", _) -> filename:join(Cwd, "asotehu") end),
-  ?assertEqual(error, project_root_validate(foo, bar)),
+              fun("project_root", _) -> Path end),
+  ?assertEqual({error, {not_dir, Path}}, project_root_validate(foo, bar)),
   meck:unload().
 
 xref_checks_validate_test() ->
@@ -394,10 +396,10 @@ xref_checks_validate_test() ->
   ?assertEqual({ok, [undefined_function_calls]},
                xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> "something" end),
-  ?assertEqual(error, xref_checks_validate(foo, bar)),
+  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) ->
-                                     "something, undefined_function_calls" end),
-  ?assertEqual(error, xref_checks_validate(foo, bar)),
+                                     "something,undefined_function_calls" end),
+  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value,
               fun("xref_checks", _) ->
                   "undefined_function_calls,unused_exports"
