@@ -178,12 +178,13 @@ interpret_modules(Node, Modules) ->
 %% Uninterprets all code loaded in Node.
 %% modules.
 %% @end
--spec uninterpret_node( Node :: node() ) -> ok | {error, not_found}.
+-spec uninterpret_node( Node :: node() )
+                      -> {ok, uninterpreted} | {error, not_found}.
 %%------------------------------------------------------------------------------
 uninterpret_node(Node) ->
   case edts_dist:call(Node, edts_debug_server, uninterpret_node, []) of
     {badrpc, _} -> {error, not_found};
-    ok          -> ok
+    Result      ->  Result
   end.
 
 %%------------------------------------------------------------------------------

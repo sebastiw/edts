@@ -343,6 +343,8 @@ do_encode_debugger_info({break, File, {Module, Line}, VarBindings}) ->
   [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
    {var_bindings,
     {struct, encode(VarBindings)}}];
+do_encode_debugger_info([{module, _} | _] = Interpreted) ->
+  [{interpreted, {array, Interpreted}}];
 do_encode_debugger_info(State) ->
   [{state, State}].
 
