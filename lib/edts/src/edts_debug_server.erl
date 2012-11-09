@@ -298,7 +298,7 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
 
 handle_call({uninterpret, Modules}, _From, State) ->
   lists:map(fun(Module) -> int:n(Module) end, Modules),
-  {reply, ok, State#dbg_state{interpretation = false}};
+  {reply, {ok, uninterpreted}, State#dbg_state{interpretation = false}};
 
 handle_call({is_interpreted, Module}, _From, State) ->
   {reply, lists:member(Module, int:interpreted()), State};

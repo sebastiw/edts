@@ -25,7 +25,7 @@
 (defun edts-debug--is-node-interpreted (node-name)
   "Reports if the node for the current project is running interpreted code"
   (let* ((state (edts-is-node-interpreted node-name)))
-    (equal (cdr (assoc 'result state)) "true")))
+    (eq (cdr (assoc 'state state)) t)))
 
 (defun edts-debug-toggle-interpret-project ()
   (interactive)
