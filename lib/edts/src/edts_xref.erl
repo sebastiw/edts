@@ -35,6 +35,7 @@
 
 %% API
 -export([check_module/2,
+         allowed_checks/0,
          get_state/0,
          started_p/0,
          update/0,
@@ -43,6 +44,10 @@
 
 %% Internal exports.
 -export([do_start/1]).
+
+-export_type([xref_check/0]).
+
+-type xref_check() :: xref:analysis().
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -53,6 +58,15 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all implemented xref-checks.
+%% @end
+-spec allowed_checks() -> [xref_check()].
+%%------------------------------------------------------------------------------
+allowed_checks() -> [undefined_function_calls, unused_exports].
+
 
 %%------------------------------------------------------------------------------
 %% @doc

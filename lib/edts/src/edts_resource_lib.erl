@@ -67,7 +67,9 @@ validate(ReqData0, Ctx0, Keys) ->
           case (atom_to_validate(Key))(ReqData, Ctx) of
             {ok, Value} ->
               {ReqData, orddict:store(Key, Value, Ctx)};
-            error       ->
+            {error, Rsn} ->
+              edts_log:error("API input validation failed. Key ~p, Rsn: ~p",
+                             [Key, Rsn]),
               throw({error, Key})
           end
       end,
@@ -128,7 +130,7 @@ arity_validate(ReqData, _Ctx) ->
 %% Validate export parameter
 %% @end
 -spec exported_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok,  boolean() | all} | error.
+                    {ok,  boolean() | all} | {error, {illegal, string()}}.
 %%------------------------------------------------------------------------------
 exported_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("exported", ReqData) of
@@ -136,27 +138,29 @@ exported_validate(ReqData, _Ctx) ->
     "all"     -> {ok, all};
     "true"    -> {ok, true};
     "false"   -> {ok, false};
-    _         -> error
+    V         -> {error, {illegal, V}}
   end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate path to a file.
 %% @end
--spec file_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec file_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
 %%------------------------------------------------------------------------------
 file_validate(ReqData, _Ctx) ->
   File = wrq:get_qs_value("file", ReqData),
   case filelib:is_file(File) of
     true  -> {ok, File};
-    false -> error
+    false -> {error, {no_exists, File}}
   end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate function
 %% @end
--spec function_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()} | error.
+-spec function_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()}.
 %%------------------------------------------------------------------------------
 function_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(function, ReqData))}.
@@ -167,14 +171,14 @@ function_validate(ReqData, _Ctx) ->
 %% Validate arity
 %% @end
 -spec info_level_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok, basic | detailed} | error.
+                    {ok, basic | detailed} | {error, {illegal, string()}}.
 %%------------------------------------------------------------------------------
 info_level_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("info_level", ReqData) of
     undefined  -> {ok, basic};
     "basic"    -> {ok, basic};
     "detailed" -> {ok, detailed};
-    _          -> error
+    V          -> {error, {illegal, V}}
   end.
 
 %%------------------------------------------------------------------------------
@@ -183,7 +187,7 @@ info_level_validate(ReqData, _Ctx) ->
 %% specified in Ctx.
 %% @end
 -spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) ->
-                           {ok, file:filename()} | error.
+                           {ok, file:filename()}.
 %%------------------------------------------------------------------------------
 lib_dirs_validate(ReqData, Ctx) ->
   Root       = orddict:fetch(project_root, Ctx),
@@ -199,8 +203,7 @@ lib_dirs_validate(ReqData, Ctx) ->
 %% @doc
 %% Validate module
 %% @end
--spec module_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok, module()} | error.
+-spec module_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()}.
 %%------------------------------------------------------------------------------
 module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
@@ -223,8 +226,7 @@ module_exists_p(_ReqData, Ctx) ->
 %% @doc
 %% Validate nodename
 %% @end
--spec nodename_validate(wrq:req_data(), orddict:orddict()) ->
-               {ok, node()} | error.
+-spec nodename_validate(wrq:req_data(), orddict:orddict()) -> {ok, node()}.
 %%------------------------------------------------------------------------------
 nodename_validate(ReqData, _Ctx) ->
   {ok, make_nodename(wrq:path_info(nodename, ReqData))}.
@@ -243,7 +245,8 @@ nodename_exists_p(_ReqData, Ctx) ->
 %% Validate path to a project root directory
 %% @end
 -spec project_root_validate(wrq:req_data(), orddict:orddict()) ->
-                               {ok, file:filename()} | error.
+                               {ok, file:filename()} |
+                               {error, {not_dir, string()}}.
 %%------------------------------------------------------------------------------
 project_root_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("project_root", ReqData) of
@@ -251,7 +254,7 @@ project_root_validate(ReqData, _Ctx) ->
     Root      ->
       case filelib:is_dir(Root) of
         true  -> {ok, Root};
-        false -> error
+        false -> {error, {not_dir, Root}}
       end
   end.
 
@@ -260,17 +263,21 @@ project_root_validate(ReqData, _Ctx) ->
 %% @doc
 %% Validate xref_checks
 %% @end
--spec xref_checks_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec xref_checks_validate(wrq:req_data(), orddict:orddict()) ->
+                              {ok, [edts_xref:xref_check()]} |
+                              {error, {illegal, [atom()]}}.
 %%------------------------------------------------------------------------------
 xref_checks_validate(ReqData, _Ctx) ->
-  Allowed = [undefined_function_calls, unused_exports],
   case wrq:get_qs_value("xref_checks", ReqData) of
     undefined  -> {ok, [undefined_function_calls]};
     Val        ->
-      Checks = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
-      case lists:all(fun(Check) -> lists:member(Check, Allowed) end, Checks) of
-        true  -> {ok, Checks};
-        false -> error
+      Checks   = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
+      IsLegalF = fun(Check) ->
+                     lists:member(Check, edts_xref:allowed_checks())
+                 end,
+      case lists:partition(IsLegalF, Checks) of
+        {Legal, []}       -> {ok, Legal};
+        {_Legal, Illegal} -> {error, {illegal, Illegal}}
       end
   end.
 
