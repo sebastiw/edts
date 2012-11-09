@@ -66,6 +66,9 @@ PWD and running COMMAND."
       (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
+      ;; (make-local-variable 'comint-prompt-regexp)
+      ;; (setq comint-prompt-regexp edts-shell-prompt-regexp)
+      ;; (setq comint-use-prompt-regexp t)
 
       ;; edts-specifics
       (setq edts-shell-node-name node-name)
@@ -94,6 +97,7 @@ buffer."
 (defun edts-shell-comint-filter (arg)
   "Make comint output read-only. Added to `comint-output-filter-functions'."
   (when (and arg (not (string= arg "")))
+    (setq buffer-undo-list nil)
     (let ((output-end (process-mark (get-buffer-process (current-buffer)))))
       (put-text-property comint-last-output-start output-end 'read-only t))))
 
