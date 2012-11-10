@@ -238,11 +238,11 @@ make sure it ends with a '/'."
 
 
   (ert-deftest edts-project-start-node-test ()
-    (letf ((edts-node-started-p (node-name) t))
+    (flet ((edts-node-started-p (node-name) t))
       (should-error (edt-project-start-node edts-project-test-project-1))))
 
   (ert-deftest edts-project-build-project-command-test ()
-    (letf ((executable-find (cmd) cmd))
+    (flet ((executable-find (cmd) cmd))
       (should
        (equal
         '("erl" "-sname" "dev-node")
@@ -252,13 +252,13 @@ make sure it ends with a '/'."
             (edts-project-build-project-command edts-project-test-project-2))))
 
   (ert-deftest edts-project-buffer-node-started-p-test ()
-    (letf ((edts-node-started-p (node)
+    (flet ((edts-node-started-p (node)
                                 (if (string= node "dev-node")
                                     t
                                   (error "wrong node-name")))
            (edts-project-buffer-project (buffer) edts-project-test-project-1))
       (should (edts-project-buffer-node-started-p (current-buffer))))
-    (letf ((edts-node-started-p (node)
+    (flet ((edts-node-started-p (node)
                                 (if (string= node "dev-node")
                                     nil
                                   (error "wrong node-name")))
@@ -301,7 +301,7 @@ make sure it ends with a '/'."
 
   (ert-deftest edts-project-path-expand-test ()
     (let ((home (expand-file-name "~")))
-      (letf ((file-expand-wildcards (path)
+      (flet ((file-expand-wildcards (path)
                                     (when (string= (concat home "/foo/lib/*")
                                                    path)
                                       (list (concat home "/foo/lib/bar")))))
@@ -312,22 +312,22 @@ make sure it ends with a '/'."
 
   (ert-deftest edts-project-buffer-node-name-test ()
     (let ((edts-projects (list edts-project-test-project-1)))
-      (letf ((buffer-file-name (buffer) "/foo/bar.el"))
+      (flet ((buffer-file-name (buffer) "/foo/bar.el"))
         (should
          (string= "dev-node"
                   (edts-project-buffer-node-name (current-buffer)))))
-      (letf ((buffer-file-name (buffer) "/bar/baz.el"))
+      (flet ((buffer-file-name (buffer) "/bar/baz.el"))
         (should
          (eq nil
              (edts-project-buffer-node-name (current-buffer)))))))
 
   (ert-deftest edts-project-buffer-project-test ()
     (let ((edts-projects (list edts-project-test-project-1)))
-      (letf ((buffer-file-name (buffer) "/foo/bar.el"))
+      (flet ((buffer-file-name (buffer) "/foo/bar.el"))
         (should
          (eq edts-project-test-project-1
              (edts-project-buffer-project (current-buffer)))))
-      (letf ((buffer-file-name (buffer) "./bar/baz.el"))
+      (flet ((buffer-file-name (buffer) "./bar/baz.el"))
         (should
          (eq nil
              (edts-project-buffer-project (current-buffer)))))))
