@@ -612,18 +612,17 @@ format_errors_test_() ->
     ]}.
 
 get_file_and_line_test_() ->
-  [ ?_assertEqual({error, not_found}, get_file_and_line(m, f, a, "foo.erl", []))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [{function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"bar.erl", 1337}}
-                 , get_file_and_line( m, f, 0, "foo.erl"
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_nodule.erl",
+  Mod   = non_parametrised_nodule,
+  [ ?_assertEqual( {error, not_found}
+                 , get_file_and_line(Mod, f, a, File, []))
+  , ?_assertEqual( {ok, {File, 12}}
+                 , get_file_and_line(Mod, foo, 0, File, Forms))
+  , ?_assertEqual( {ok, {"bar.erl", 12}}
+                 , get_file_and_line(Mod, foo, 0, File
                                     , [ {attribute, '', file, {"bar.erl", ''}}
-                                      , {function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [ {function, 1335, f0, 0, ''}
-                                     , {function, 1337, f, 0, ''}]))
+                                      | Forms]))
   ].
 
 get_file_and_line_parametrised_mod_test_() ->
