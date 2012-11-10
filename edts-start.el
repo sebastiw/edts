@@ -15,6 +15,7 @@
         '("auto-complete"
           "auto-highlight-symbol-mode"
           "edts"
+          "ert"
           "popup-el"))
 
 (when (boundp 'erlang-root-dir)
