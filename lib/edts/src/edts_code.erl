@@ -624,30 +624,34 @@ get_file_and_line_test_() ->
                  , get_file_and_line(m, f, 0, "foo.erl",
                                      [ {function, 1335, f0, 0, ''}
                                      , {function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 2}}
-                 , get_file_and_line(foo, new, 1, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, {foo, ['A']}}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {error, not_found}
-                 , get_file_and_line(foo, new, 1, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, foo}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(foo, new, 2, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, foo}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(foo, new, 2, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, {foo, ['A']}}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
+  ].
+
+get_file_and_line_parametrised_mod_test_() ->
+  Forms = test_file_forms("parametrised-module"),
+  File  = "parametrised_module.erl",
+  Mod   = parametrised_module,
+  [ ?_assertEqual( {ok, {File, 3}}
+                 , get_file_and_line(Mod, new, 1, File, Forms))
+  , ?_assertEqual( {ok, {File, 10}}
+                 , get_file_and_line(Mod, foo, 0, File, Forms))
+  , ?_assertEqual( {ok, {File, 12}}
+                 , get_file_and_line(Mod, new, 0, File, Forms))
+  , ?_assertEqual( {ok, {File, 14}}
+                 , get_file_and_line(Mod, new, 2, File, Forms))
+  ].
+
+get_file_and_line_non_parametrised_new_test_() ->
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_module.erl",
+  Mod   =  non_parametrised_module,
+  [ ?_assertEqual( {error, not_found}
+                 , get_file_and_line(Mod, new, 1, File, Forms))
+  , ?_assertEqual( {ok, {File, 12}}
+                 , get_file_and_line(Mod, foo, 0, File, Forms))
+  , ?_assertEqual( {ok, {File, 14}}
+                 , get_file_and_line(Mod, new, 0, File, Forms))
+  , ?_assertEqual( {ok, {File, 16}}
+                 , get_file_and_line(Mod, new, 2, File, Forms))
   ].
 
 path_flatten_test_() ->
