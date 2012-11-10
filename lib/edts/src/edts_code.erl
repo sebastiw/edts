@@ -590,74 +590,79 @@ format_errors_test_() ->
   CleanupF = fun(_) ->
                  meck:unload()
              end,
-  { setup, SetupF, CleanupF
-  , [ ?_assertEqual( [ {warning, file1, 1337, "error1"}
-                     , {warning, file1, 1338, "error2"}
-                     , {warning, file2, 1339, "error3"}
-                     , {warning, file2, 1340, "error4"} ]
-                   , format_errors( warning
-                                  , [ {file1, [ {1337, source, error1}
-                                              , {1338, source, error2}]}
-                                    , {file2, [ {1339, source, error3}
-                                              , {1340, source, error4}]} ]))
-    , ?_assertEqual( [ {error, file1, 1337, "error1"}
-                     , {error, file1, 1338, "error2"}
-                     , {error, file2, 1339, "error3"}
-                     , {error, file2, 1340, "error4"} ]
-                   , format_errors( error
-                                  , [ {file1, [ {1337, source, error1}
-                                              , {1338, source, error2}]}
-                                    , {file2, [ {1339, source, error3}
-                                              , {1340, source, error4}]} ]))
+  { setup, SetupF, CleanupF,
+    [ ?_assertEqual( [ {warning, file1, 1337, "error1"},
+                       {warning, file1, 1338, "error2"},
+                       {warning, file2, 1339, "error3"},
+                       {warning, file2, 1340, "error4"} ],
+                     format_errors(warning,
+                                   [ {file1, [ {1337, source, error1},
+                                               {1338, source, error2}]},
+                                     {file2, [ {1339, source, error3},
+                                               {1340, source, error4}]}
+                                   ])),
+      ?_assertEqual( [ {error, file1, 1337, "error1"},
+                       {error, file1, 1338, "error2"},
+                       {error, file2, 1339, "error3"},
+                       {error, file2, 1340, "error4"} ],
+                     format_errors( error,
+                                    [ {file1, [ {1337, source, error1},
+                                                {1338, source, error2}]},
+                                      {file2, [ {1339, source, error3},
+                                                {1340, source, error4}]}
+                                    ]))
     ]}.
 
 get_file_and_line_test_() ->
-  [ ?_assertEqual({error, not_found}, get_file_and_line(m, f, a, "foo.erl", []))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [{function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"bar.erl", 1337}}
-                 , get_file_and_line( m, f, 0, "foo.erl"
-                                    , [ {attribute, '', file, {"bar.erl", ''}}
-                                      , {function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [ {function, 1335, f0, 0, ''}
-                                     , {function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 2}}
-                 , get_file_and_line(foo, new, 1, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, {foo, ['A']}}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {error, not_found}
-                 , get_file_and_line(foo, new, 1, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, foo}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(foo, new, 2, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, foo}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(foo, new, 2, "foo.erl",
-                                     [ {attribute, 1, file, {"foo.erl", 1}}
-                                     , {attribute, 2, module, {foo, ['A']}}
-                                     , {function, 1337, new, 2, ''}
-                                     , {function, 1338, new, 0, ''}]))
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_nodule.erl",
+  Mod   = non_parametrised_nodule,
+  [ ?_assertEqual( {error, not_found},
+                   get_file_and_line(Mod, f, a, File, [])),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {"bar.erl", 12}},
+                   get_file_and_line(Mod, foo, 0, File,
+                                     [ {attribute, '', file, {"bar.erl", ''}}
+                                       | Forms]))
+  ].
+
+get_file_and_line_parametrised_mod_test_() ->
+  Forms = test_file_forms("parametrised-module"),
+  File  = "parametrised_module.erl",
+  Mod   = parametrised_module,
+  [ ?_assertEqual( {ok, {File, 3}},
+                   get_file_and_line(Mod, new, 1, File, Forms)),
+    ?_assertEqual( {ok, {File, 10}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, new, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 14}},
+                   get_file_and_line(Mod, new, 2, File, Forms))
+  ].
+
+get_file_and_line_non_parametrised_new_test_() ->
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_module.erl",
+  Mod   =  non_parametrised_module,
+  [ ?_assertEqual( {error, not_found},
+                   get_file_and_line(Mod, new, 1, File, Forms)),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 14}},
+                   get_file_and_line(Mod, new, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 16}},
+                   get_file_and_line(Mod, new, 2, File, Forms))
   ].
 
 path_flatten_test_() ->
-  [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten("./bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten("../foo/bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten(".././foo/bar.erl"))
-  , ?_assertEqual("./foo/bar.erl", path_flatten("bar/../foo/bar.erl"))
-  , ?_assertEqual("../bar.erl",    path_flatten("bar/../foo/../../bar.erl"))
-  , ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
+  [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten("./bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten("../foo/bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten(".././foo/bar.erl")),
+    ?_assertEqual("./foo/bar.erl", path_flatten("bar/../foo/bar.erl")),
+    ?_assertEqual("../bar.erl",    path_flatten("bar/../foo/../../bar.erl")),
+    ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
    ].
 
 parse_abstract_function_test_() ->
@@ -670,26 +675,26 @@ parse_abstract_function_test_() ->
   meck:unload(),
   meck:new(Mod, [no_link]),
   meck:expect(Mod, Fun, fun(_) -> ok end),
-  Acc = orddict:from_list([ {module,    Mod}
-                          , {cur_file,  CurFile}
-                          , {exports,   Exports}
-                          , {functions, []}]),
+  Acc = orddict:from_list([ {module,    Mod},
+                            {cur_file,  CurFile},
+                            {exports,   Exports},
+                            {functions, []}]),
   Res = parse_abstract({function, Line, Fun, Arity, []}, Acc),
   meck:unload(),
   [ ?_assertEqual(
        lists:sort([module, cur_file, exports, functions]),
-       lists:sort(orddict:fetch_keys(Res)))
-  , ?_assertEqual(Mod,     orddict:fetch(module, Res))
-  , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
-  , ?_assertEqual(Exports, orddict:fetch(exports, Res))
-  , ?_assertMatch([_],     orddict:fetch(functions, Res))
-  , ?_assertEqual(lists:sort([ {module, Mod}
-                             , {function, Fun}
-                             , {arity,    Arity}
-                             , {source,   CurFile}
-                             , {line,     Line}
-                             , {exported, true}])
-                  , lists:sort(hd(orddict:fetch(functions, Res))))
+       lists:sort(orddict:fetch_keys(Res))),
+    ?_assertEqual(Mod,     orddict:fetch(module, Res)),
+    ?_assertEqual(CurFile, orddict:fetch(cur_file, Res)),
+    ?_assertEqual(Exports, orddict:fetch(exports, Res)),
+    ?_assertMatch([_],     orddict:fetch(functions, Res)),
+    ?_assertEqual(lists:sort([ {module, Mod},
+                               {function, Fun},
+                               {arity,    Arity},
+                               {source,   CurFile},
+                               {line,     Line},
+                               {exported, true}]),
+                  lists:sort(hd(orddict:fetch(functions, Res))))
   ].
 
 parse_abstract_include_test_() ->
@@ -698,31 +703,31 @@ parse_abstract_include_test_() ->
   Source1 = "test.erl",
   Include0 = "test.hrl",
   CompileCwd = "/foo",
-  Acc = orddict:from_list([ {source,      Source0}
-                          , {compile_cwd, CompileCwd}
-                          , {includes,    []}]),
+  Acc = orddict:from_list([ {source,      Source0},
+                            {compile_cwd, CompileCwd},
+                            {includes,    []}]),
   Res0 = parse_abstract({attribute, Line, file, {Source0, Line}}, Acc),
   Res1 = parse_abstract({attribute, Line, file, {Source1, Line}}, Acc),
   Res2 = parse_abstract({attribute, Line, file, {Include0, Line}}, Acc),
   [ ?_assertEqual(
-       lists:sort([source, compile_cwd, includes, cur_file])
-     , lists:sort(orddict:fetch_keys(Res0)))
-  , ?_assertEqual(Source0, orddict:fetch(source, Res0))
-  , ?_assertEqual(CompileCwd, orddict:fetch(compile_cwd, Res0))
-  , ?_assertEqual([], orddict:fetch(includes, Res0))
-  , ?_assertEqual([], orddict:fetch(includes, Res1))
-  , ?_assertEqual(["/foo/test.hrl"], orddict:fetch(includes, Res2))
+       lists:sort([source, compile_cwd, includes, cur_file]),
+       lists:sort(orddict:fetch_keys(Res0))),
+    ?_assertEqual(Source0, orddict:fetch(source, Res0)),
+    ?_assertEqual(CompileCwd, orddict:fetch(compile_cwd, Res0)),
+    ?_assertEqual([], orddict:fetch(includes, Res0)),
+    ?_assertEqual([], orddict:fetch(includes, Res1)),
+    ?_assertEqual(["/foo/test.hrl"], orddict:fetch(includes, Res2))
   ].
 
 parse_abstract_import_test_() ->
   Acc = orddict:from_list([ {imports, []}]),
   Res0 = parse_abstract({attribute, 0, import, {foo, [{bar, 1}]}}, Acc),
-  [ ?_assertEqual([imports], orddict:fetch_keys(Res0))
-  , ?_assertMatch([_], orddict:fetch(imports, Res0))
-  , ?_assertEqual( lists:sort([ {module,   foo}
-                              , {function, bar}
-                              , {arity,    1}])
-                 , lists:sort(hd(orddict:fetch(imports, Res0))))
+  [ ?_assertEqual([imports], orddict:fetch_keys(Res0)),
+    ?_assertMatch([_], orddict:fetch(imports, Res0)),
+    ?_assertEqual( lists:sort([ {module,   foo},
+                                {function, bar},
+                                {arity,    1}]),
+                   lists:sort(hd(orddict:fetch(imports, Res0))))
   ].
 
 parse_abstract_record_test_() ->
@@ -754,20 +759,52 @@ modules_test() ->
 get_compile_outdir_test_() ->
   Good = "good/../ebin",
   F    = fun get_compile_outdir/2,
-  [{ setup
-   , fun () ->
+  [{ setup,
+     fun () ->
          meck:new(filelib, [passthrough, unstick]),
          meck:expect(filelib, is_dir, fun ("good/../ebin") -> true;
                                           (_)              -> false
                                        end)
-     end
-   , fun (_) -> meck:unload() end
-   , [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}]))
-     , ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}]))
-     , ?_assertEqual("foo", F("foo/mod.erl" , []))
-     , ?_assertEqual(Good , F("good/mod.erl", []))
+     end,
+     fun (_) -> meck:unload() end,
+     [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}])),
+       ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}])),
+       ?_assertEqual("foo", F("foo/mod.erl" , [])),
+       ?_assertEqual(Good , F("good/mod.erl", []))
      ]
    }].
+
+%%%_* Test helpers =============================================================
+
+parse_string(String) ->
+  parse(scan(String)).
+
+scan(String) ->
+  case erl_scan:string(String) of
+    {ok, Toks, _}        -> Toks;
+    {error, Reason, Loc} -> erlang:error({scanner_error, Loc, Reason})
+  end.
+
+parse(Toks) ->
+  parse(Toks, []).
+
+parse([Tok = {dot, _}| T], Unparsed) ->
+  [get_form(lists:reverse([Tok | Unparsed]))
+   | parse(T, [])];
+parse([Tok | T], Unparsed) -> parse(T, [Tok | Unparsed]);
+parse([], []) -> [];
+parse([], _) -> erlang:error({parser_error, no_trailing_dot}).
+
+get_form(Toks) ->
+  case erl_parse:parse_form(Toks) of
+    {ok, Forms} -> Forms;
+    {error, Reason} -> erlang:error({parser_error, Reason})
+  end.
+
+test_file_forms(File) ->
+  Path = filename:join([code:priv_dir(edts), "test/modules", File]),
+  {ok, Bin} = file:read_file(Path),
+  parse_string(unicode:characters_to_list(Bin)).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

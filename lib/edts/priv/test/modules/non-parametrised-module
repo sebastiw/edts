@@ -1,0 +1,16 @@
+%% Some comments to add a bit of noise
+
+-module(non_parametrised_module).
+
+-export([say_hello/0
+        , new/0
+        , new/2
+        ]).
+
+foo0() -> hello0.
+
+foo() -> hello.
+
+new() -> foo.
+
+new(_,_) -> bar.
