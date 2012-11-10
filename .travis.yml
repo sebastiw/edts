@@ -1,0 +1,10 @@
+language: erlang
+otp-release:
+ - R14B04
+before_install:
+ - sudo gpg -q --keyserver pgpkeys.mit.edu --recv-key 16126D3A3E5C1192
+ - sudo gpg -q -a --export 16126D3A3E5C1192 | sudo apt-key add -
+ - sudo apt-get update -qq
+ - sudo apt-get install -y -qq emacs23 erlang-mode
+ - "./install-ert.sh"
+script: "make -s test"

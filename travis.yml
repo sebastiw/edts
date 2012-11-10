@@ -1,9 +1,0 @@
-language erlang
-before_script:
- - sudo add-apt-repository ppa:cassou/emacs
- - sudo apt-get update -qq
- - sudo apt-get install emacs24 erlang-mode
- - git submodule update --init
- script: ./travis.sh
-
-
