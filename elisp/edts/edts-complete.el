@@ -20,15 +20,15 @@
 (require 'auto-complete)
 (require 'ferl)
 
-(load-library "edts-complete-variable-source")
-(load-library "edts-complete-local-function-source")
-(load-library "edts-complete-imported-function-source")
-(load-library "edts-complete-built-in-function-source")
-(load-library "edts-complete-exported-function-source")
-(load-library "edts-complete-module-source")
-(load-library "edts-complete-macro-source")
-(load-library "edts-complete-record-source")
-(load-library "edts-complete-keyword-source")
+(load "edts-complete-variable-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-local-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-imported-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-built-in-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-exported-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-module-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-macro-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-record-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-keyword-source" nil edts-start-inhibit-load-msgs)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers

@@ -4,6 +4,9 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defvar edts-start-inhibit-load-msgs t
+  "If non-nil, don't print messages when loading edts-packages.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
 (defvar edts-lib-directory
@@ -47,19 +50,19 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (require 'woman)
 
 ;; EDTS
-(load-library "ferl")
-(load-library "edts")
-(load-library "edts-log")
-(load-library "edts-code")
-(load-library "edts-complete")
-(load-library "edts-doc")
-(load-library "edts-rest")
-(load-library "edts-face")
-(load-library "edts-man")
-(load-library "edts-project")
-(load-library "edts-navigate")
-(load-library "edts-refactor")
-(load-library "edts-shell")
+(load "ferl" nil edts-start-inhibit-load-msgs)
+(load "edts" nil edts-start-inhibit-load-msgs)
+(load "edts-log" nil edts-start-inhibit-load-msgs)
+(load "edts-code" nil edts-start-inhibit-load-msgs)
+(load "edts-complete" nil edts-start-inhibit-load-msgs)
+(load "edts-doc" nil edts-start-inhibit-load-msgs)
+(load "edts-rest" nil edts-start-inhibit-load-msgs)
+(load "edts-face" nil edts-start-inhibit-load-msgs)
+(load "edts-man" nil edts-start-inhibit-load-msgs)
+(load "edts-project" nil edts-start-inhibit-load-msgs)
+(load "edts-navigate" nil edts-start-inhibit-load-msgs)
+(load "edts-refactor" nil edts-start-inhibit-load-msgs)
+(load "edts-shell" nil edts-start-inhibit-load-msgs)
 
 ;; External
 (require 'auto-highlight-symbol)
