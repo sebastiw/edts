@@ -33,13 +33,6 @@ activated for the first file that is located inside a project."
 ;; Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun edts-project-init ()
-  "Buffer specific (not necessarily buffer-local) setup."
-  (let* ((buffer  (current-buffer))
-         (project (edts-project-buffer-project buffer)))
-    (when (and project edts-project-auto-start-node)
-      (edts-project-ensure-buffer-node-started buffer))))
-
 (defun edts-project-ensure-buffer-node-started (buffer)
   "Start BUFFER's project's node if it is not already started."
   (edts-project-ensure-node-started (edts-project-buffer-project buffer)))
@@ -53,12 +46,11 @@ activated for the first file that is located inside a project."
 (defun edts-project-start-node (project)
   "Starts a new erlang node for PROJECT."
   (let* ((project-root (edts-project-root project))
-         (node-name    (edts-project-node-name project))
          (buffer-name  (concat "*" (edts-project-name project) "*"))
          (command      (edts-project-build-project-command project))
          (exec-path    (edts-project-build-exec-path project))
          (process-environment (edts-project-build-env project)))
-    (edts-ensure-node-not-started node-name)
+    (edts-ensure-node-not-started edts-buffer-node-name)
     (edts-shell-make-comint-buffer buffer-name project-root command)
     (edts-project-register-node-when-ready project)
     (get-buffer buffer-name)))
@@ -66,17 +58,17 @@ activated for the first file that is located inside a project."
 (defun edts-project-register-node-when-ready (project)
   "Asynchronously register PROJECT's node with EDTS as soon at his has
 started."
-  (let* ((node-name    (edts-project-node-name project))
-         (project-root (edts-project-root project))
-         (lib-dirs     (edts-project-lib-dirs project)))
-    (edts-register-node-when-ready node-name project-root lib-dirs)))
+  (edts-register-node-when-ready
+   edts-buffer-node-name
+   (edts-project-root project)
+   (edts-project-lib-dirs project)))
 
 (defun edts-project-build-project-command (project)
   "Build a command line for PROJECT"
   (let ((command  (edts-project-start-command project)))
     (if command
         (delete "" (split-string command)) ; delete "" for xemacs.
-        (list "erl" "-sname" (edts-project-node-name project)))))
+        (list "erl" "-sname" edts-buffer-node-name))))
 
 (defun edts-project-build-exec-path (project)
   "Build up the exec-path to use when starting the project-node of PROJECT."
@@ -105,7 +97,7 @@ project-node of PROJECT."
 (defun edts-project-buffer-node-started-p (buffer)
   "Returns non-nil if there is an edts-project erlang node started that
 corresponds to BUFFER."
-  (edts-node-started-p (edts-project-buffer-node-name buffer)))
+  (edts-node-started-p edts-buffer-node-name buffer))
 
 (defun edts-project-name (project)
   "Returns the name of the edts-project PROJECT. No default value,

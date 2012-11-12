@@ -125,7 +125,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (defun edts-setup ()
   ;; Start with our own stuff
   (edts-ensure-server-started)
-  (edts-project-init)
+  (edts-buffer-init)
   (ad-activate-regexp "edts-.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
   (add-hook 'edts-code-after-compilation-hook 'edts-code-eunit t t)
