@@ -194,13 +194,13 @@ When FUNCTION is specified, the point is moved to its start."
               (let ((line (cdr (assoc 'line info))))
                 (edts-find-file-existing (cdr (assoc 'source info)))
                 (cond
-                 ((integerp line)
+                 ((integerp line) ;; We're ok
                   (ferl-goto-line line))
-                 ((string= line "is_bif")
+                 ((string= line "is_bif") ;; Function is a bif
                   (edts-log-error "%s:%s/%s is a bif" module function arity))
-                 (edts-log-error
+                 (edts-log-error ;; Some unknown error
                   "Function %s:%s/%s not found" module function arity)))
-            ((edts-log-error
+            (edts-log-error
               "Function %s:%s/%s not found" module function arity))))))
 
 (defun edts-find-file-existing (file)
