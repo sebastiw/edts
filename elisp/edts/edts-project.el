@@ -94,11 +94,6 @@ project-node of PROJECT."
   (cons (concat "PATH=" (expand-file-name path) path-separator (getenv "PATH"))
         process-environment))
 
-(defun edts-project-buffer-node-started-p (buffer)
-  "Returns non-nil if there is an edts-project erlang node started that
-corresponds to BUFFER."
-  (edts-node-started-p edts-buffer-node-name buffer))
-
 (defun edts-project-name (project)
   "Returns the name of the edts-project PROJECT. No default value,
 come on you have to do *something* yourself!"
@@ -242,20 +237,6 @@ make sure it ends with a '/'."
     (should
      (equal '("bin/start.sh" "-i")
             (edts-project-build-project-command edts-project-test-project-2))))
-
-  (ert-deftest edts-project-buffer-node-started-p-test ()
-    (flet ((edts-node-started-p (node)
-                                (if (string= node "dev-node")
-                                    t
-                                  (error "wrong node-name")))
-           (edts-project-buffer-project (buffer) edts-project-test-project-1))
-      (should (edts-project-buffer-node-started-p (current-buffer))))
-    (flet ((edts-node-started-p (node)
-                                (if (string= node "dev-node")
-                                    nil
-                                  (error "wrong node-name")))
-           (edts-project-buffer-project (buffer) edts-project-test-project-1))
-      (should-not (edts-project-buffer-node-started-p (current-buffer)))))
 
   (ert-deftest edts-project-project-name-test ()
     (should (string= "dev"
