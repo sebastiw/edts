@@ -45,15 +45,15 @@ node."
   (format "^-define\\s-*(%s,\\s-*\\(.*\\)).$" edts-find-macro-regexp)
   "Regexp describing a macro definition")
 
-(defvar edts-node-name nil
+(defvar edts-buffer-node-name nil
   "The node-name of current-buffer")
-(make-variable-buffer-local 'edts-node-name)
+(make-variable-buffer-local 'edts-buffer-node-name)
 
 (defun edts-buffer-init ()
   "Buffer specific (not necessarily buffer-local) setup."
   (let* ((buffer    (current-buffer))
          (project   (edts-project-buffer-project buffer)))
-    (unless edts-node-name
+    (unless edts-buffer-node-name
       (setq edts-buffer-node-name (edts-buffer-node-name)))
     (when (and project edts-project-auto-start-node)
       (edts-project-ensure-buffer-node-started buffer))))
@@ -348,15 +348,16 @@ parsed response as the single argument."
                                  (edts-log-error
                                   "Unexpected reply: %s"
                                   (cdr (assoc 'result result))))))))
-    (edts-log-debug "fetching xref-analysis of %s async on %s" module node-name)
+    (edts-log-debug
+     "fetching xref-analysis of %s async on %s" module edts-buffer-node-name)
     (edts-rest-get-async resource args rest-callback (list callback buffer))))
 
 (defun edts-get-module-eunit-async (module callback buffer)
   "Run eunit tests in MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((node-name     (edts-buffer-node-name))
-         (resource      (list "nodes" node-name "modules" module "eunit"))
+  (let* ((resource      (list "nodes"   edts-buffer-node-name
+                              "modules" module "eunit"))
          (rest-callback #'(lambda (result callback buffer)
                             (if (equal (assoc 'result result)
                                        '(result "200" "OK"))
@@ -369,15 +370,15 @@ parsed response as the single argument."
                                  (edts-log-error
                                   "Unexpected reply: %s"
                                   (cdr (assoc 'result result))))))))
-    (edts-log-debug "running eunit tests in %s async on %s" module node-name)
+    (edts-log-debug
+     "running eunit tests in %s async on %s" module edts-buffer-node-name)
     (edts-rest-get-async resource nil rest-callback (list callback buffer))))
 
 (defun edts-compile-and-load-async (module file callback buffer)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((node-name     (edts-buffer-node-name))
-         (resource      (list "nodes" node-name "modules" module))
+  (let* ((resource      (list "nodes" edts-buffer-node-name "modules" module))
          (args (list    (cons "file" file)))
          (rest-callback #'(lambda (result callback buffer)
                             (if (equal (assoc 'result result)
@@ -391,21 +392,20 @@ parsed response as the single argument."
                                  (edts-log-error
                                   "Unexpected reply: %s"
                                   (cdr (assoc 'result result))))))))
-    (edts-log-debug "Compiling %s async on %s" module node-name)
+    (edts-log-debug "Compiling %s async on %s" module edts-buffer-node-name)
     (edts-rest-post-async resource args rest-callback (list callback buffer))))
 
 (defun edts-compile-and-load (module file)
   "Compile MODULE in FILE on the node associated with current buffer."
-  (let ((node-name (edts-buffer-node-name)))
-    (edts-log-debug "Compiling %s on %s" module node-name)
-    (let* ((resource
-            (list "nodes" node-name "modules" module))
-           (args (list (cons "file" file)))
-           (res (edts-rest-post resource args)))
-      (if (equal (assoc 'result res) '(result "201" "Created"))
-          (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s"
-                              (cdr (assoc 'result res))))))))
+  (edts-log-debug "Compiling %s on %s" module edts-buffer-node-name)
+  (let* ((resource
+          (list "nodes" edts-buffer-node-name "modules" module))
+         (args (list (cons "file" file)))
+         (res (edts-rest-post resource args)))
+    (if (equal (assoc 'result res) '(result "201" "Created"))
+        (cdr (assoc 'body res))
+      (null (edts-log-error "Unexpected reply: %s"
+                            (cdr (assoc 'result res)))))))
 
 (defun edts-get-includes ()
   "Get all includes of module in current-buffer from the node
