@@ -35,8 +35,7 @@
         (let* ((choice (edts-query "Module: " modules))
                (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
                (mark (copy-marker (point-marker))))
-          (find-file-existing file) ; Fixme, catch error
-          (ring-insert-at-beginning (edts-window-history-ring) mark)
+          (edts-find-file-existing file)
           (edts-find-local-function))
         (error "No module found"))))
 
@@ -111,8 +110,7 @@ directive."
                                       (file-name-nondirectory x)))
                         includes)))
     (if file
-        (progn (ring-insert-at-beginning (edts-window-history-ring) mark)
-               (find-file-existing file)
+        (progn (edts-find-file-existing file)
                (goto-char (point-min)))
         (null (error "No header filename at point")))))
 
@@ -129,8 +127,7 @@ directive."
          (record (edts-nav-find-record rec-name records)))
     (if record
         (progn
-          (ring-insert-at-beginning (edts-window-history-ring) mark)
-          (find-file-existing (cdr (assoc 'source record)))
+          (edts-find-file-existing (cdr (assoc 'source record)))
           (ferl-goto-line (cdr (assoc 'line   record))))
       (null (error "No record at point")))))
 
@@ -173,11 +170,10 @@ Move point there and make an entry in edts-window-history-ring."
           (when (re-search-forward re nil t) (setq found (car includes)))
           (pop includes))))
     (when found
-      (find-file-existing found)
+      (edts-find-file-existing found)
       (goto-char (point-min))
       (re-search-forward re nil t)
-      (beginning-of-line)
-      (ring-insert-at-beginning (edts-window-history-ring) mark))))
+      (beginning-of-line))))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
@@ -195,11 +191,17 @@ When FUNCTION is specified, the point is moved to its start."
                (info (edts-get-function-info node module function arity)))
           (if info
               (progn
-                (find-file-existing (cdr (assoc 'source info)))
-                (ring-insert-at-beginning (edts-window-history-ring) mark)
+                (edts-find-file-existing (cdr (assoc 'source info)))
                 (ferl-goto-line (cdr (assoc 'line   info))))
               (null
                (error "Function %s:%s/%s not found" module function arity)))))))
+
+(defun edts-find-file-existing (file)
+  "EDTS wrapper for find-file-existing."
+  (let ((node-name edts-buffer-node-name))
+    (find-file-existing file)  ; Fixme, catch error
+    (setq  edts-buffer-node-name node-name)
+    (ring-insert-at-beginning (edts-window-history-ring) mark)))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
