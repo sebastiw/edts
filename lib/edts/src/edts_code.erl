@@ -151,35 +151,43 @@ compile_and_load(File0, Opts) ->
 -spec get_function_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
                            [{atom(), term()}].
 %%------------------------------------------------------------------------------
-get_function_info(M, F0, A0) ->
+get_function_info(M, F, A) ->
   reload_module(M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  OrigSource = proplists:get_value(source, M:module_info(compile)),
-  case get_file_and_line(M, F0, A0, OrigSource, Abstract) of
-    {error, _} = Err   -> Err;
-    {ok, {File, Line}} ->
-      %% Get rid of any local paths, in case function was defined in a
-      %% file include with a relative path.
-      Source =
-        case filename:pathtype(File) of
-          absolute -> File;
-          relative ->
-            % Deals with File = "./src". Must be a better way to do this.
-            case lists:suffix(File, OrigSource) of
-              true  -> OrigSource;
-              false ->
-                filename:join(filename:dirname(OrigSource), File)
-            end
-        end,
-      [ {module,   M}
-      , {function, F0}
-      , {arity,    A0}
-      , {exported, lists:member({F0, A0}, M:module_info(exports))}
-      , {source,   Source}
-      , {line,     Line}]
+  ExportedP = lists:member({F, A}, M:module_info(exports)),
+  {ok, ModSrc} = get_module_source(M, M:module_info()),
+  case get_file_and_line(M, F, A, ModSrc, Abstract) of
+    {error, _} = Err   ->
+      case ExportedP of
+        false -> Err;
+        true  -> make_function_info(M, F, A, ExportedP, ModSrc, is_bif, ModSrc)
+      end;
+    {ok, {FunSrc, Line}} ->
+      make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc)
   end.
+
+make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc) ->
+  %% Get rid of any local paths, in case function was defined in a
+  %% file include with a relative path.
+  Source =
+    case filename:pathtype(FunSrc) of
+      absolute -> FunSrc;
+      relative ->
+        % Deals with File = "./src". Must be a better way to do this.
+        case lists:suffix(FunSrc, ModSrc) of
+          true  -> ModSrc;
+          false -> filename:join(filename:dirname(ModSrc), FunSrc)
+        end
+    end,
+  [ {module,   M}
+  , {function, F}
+  , {arity,    A}
+  , {exported, ExportedP}
+  , {source,   Source}
+  , {line,     Line}].
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -240,10 +248,11 @@ do_get_module_info(M, basic) ->
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
+  {ok, ModSrc}                    = get_module_source(M, Info),
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
-  , lists:keyfind(source,  1, Compile)];
+  , {source, ModSrc}];
 do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
@@ -409,6 +418,52 @@ filename_to_outdir(File) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% @doc Try to find the source of M using (in order):
+%% - The beam-file source compile attribute if present.
+%% - If the module is located in a directory called ebin, the src subfolder of
+%%   the that directory's parent directory (eg foo/src for a module located in
+%%   foo/ebin).
+%% - The module beam-file's location (eg foo for a module in foo).
+%% - The erts application source-directory. This is for modules located in the
+%%   'preloaded' directory of otp.
+-spec get_module_source(M::module(), MInfo::[{atom(), term()}]) ->
+                           {ok, string()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+get_module_source(M, MInfo) ->
+  case get_module_source_from_info(MInfo) of
+    {ok, _Src} = Res   -> Res;
+    {error, not_found} -> get_module_source_from_beam(M)
+  end.
+
+get_module_source_from_info(MInfo) ->
+  try
+    {compile, Compile} = lists:keyfind(compile, 1, MInfo),
+    {source,  ModSrc}     = lists:keyfind(source,  1, Compile),
+    true               = filelib:is_regular(ModSrc),
+    {ok, ModSrc}
+  catch
+    error:{badmatch, _} -> {error, not_found}
+  end.
+
+get_module_source_from_beam(M) ->
+  try
+    ModPath = code:where_is_file(atom_to_list(M) ++ ".beam"),
+    SrcFile = atom_to_list(M) ++ ".erl",
+    SplitPath = filename:split(filename:dirname(ModPath)),
+    [Dir|Rest] = lists:reverse(SplitPath),
+    SrcAbs =
+      case Dir of
+        "ebin" -> filename:join(lists:reverse(Rest) ++ ["src", SrcFile]);
+        _      -> filename:join(SplitPath ++ [SrcFile])
+      end,
+    true = filelib:is_regular(SrcAbs),
+    {ok, SrcAbs}
+  catch
+    error:{badmatch, _} -> {error, not_found}
+  end.
+
+
+%%------------------------------------------------------------------------------
 %% @doc Reloads a module unless it is sticky.
 -spec reload_module(M::module()) -> ok.
 %%------------------------------------------------------------------------------
@@ -480,7 +535,7 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
   BeamSource = path_flatten(orddict:fetch(source, Acc0)),
-  Src =
+  ModSrc =
     case filename:pathtype(Src0) of
       absolute ->
         path_flatten(Src0);
@@ -489,12 +544,12 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
     end,
   %% Update list of all files.
   Acc =
-    case Src of
+    case ModSrc of
       BeamSource -> Acc0;
-      Src        -> orddict:update(includes, fun(I) -> [Src|I] end, Acc0)
+      ModSrc        -> orddict:update(includes, fun(I) -> [ModSrc|I] end, Acc0)
     end,
   %% Update current file.
-  orddict:store(cur_file, Src, Acc);
+  orddict:store(cur_file, ModSrc, Acc);
 parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
              , {function, F}
