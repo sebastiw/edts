@@ -182,19 +182,26 @@ When FUNCTION is specified, the point is moved to its start."
   (let ((mark (copy-marker (point-marker))))
     (if (or (equal module (ferl-get-module))
             (string-equal module "MODULE"))
+        ;; Function is local
         (if function
             (progn
-              (ring-insert-at-beginning (edts-window-history-ring) mark)
-              (ferl-search-function function arity))
-            (null (error "Function %s:%s/%s not found" module function arity)))
+              (ferl-search-function function arity)
+              (ring-insert-at-beginning (edts-window-history-ring) mark))
+            (error "Function %s:%s/%s not found" module function arity))
         (let* ((node (edts-project-buffer-node-name (current-buffer)))
                (info (edts-get-function-info node module function arity)))
           (if info
-              (progn
+              (let ((line (cdr (assoc 'line info))))
                 (edts-find-file-existing (cdr (assoc 'source info)))
-                (ferl-goto-line (cdr (assoc 'line   info))))
-              (null
-               (error "Function %s:%s/%s not found" module function arity)))))))
+                (cond
+                 ((integerp line)
+                  (ferl-goto-line line))
+                 ((string= line "is_bif")
+                  (edts-log-error "%s:%s/%s is a bif" module function arity))
+                 (edts-log-error
+                  "Function %s:%s/%s not found" module function arity)))
+            ((edts-log-error
+              "Function %s:%s/%s not found" module function arity))))))
 
 (defun edts-find-file-existing (file)
   "EDTS wrapper for find-file-existing."
