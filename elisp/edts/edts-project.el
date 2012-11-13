@@ -229,14 +229,16 @@ make sure it ends with a '/'."
       (should-error (edt-project-start-node edts-project-test-project-1))))
 
   (ert-deftest edts-project-build-project-command-test ()
-    (flet ((executable-find (cmd) cmd))
+    (let ((edts-buffer-node-name "dev-node"))
+      (flet ((executable-find (cmd) cmd))
+        (should
+         (equal
+          '("erl" "-sname" "dev-node")
+          (edts-project-build-project-command edts-project-test-project-1))))
       (should
        (equal
-        '("erl" "-sname" "dev-node")
-        (edts-project-build-project-command edts-project-test-project-1))))
-    (should
-     (equal '("bin/start.sh" "-i")
-            (edts-project-build-project-command edts-project-test-project-2))))
+        '("bin/start.sh" "-i")
+        (edts-project-build-project-command edts-project-test-project-2)))))
 
   (ert-deftest edts-project-project-name-test ()
     (should (string= "dev"
