@@ -438,11 +438,11 @@ get_module_source(M, MInfo) ->
 get_module_source_from_info(MInfo) ->
   try
     {compile, Compile} = lists:keyfind(compile, 1, MInfo),
-    {source,  ModSrc}     = lists:keyfind(source,  1, Compile),
+    {source,  ModSrc}  = lists:keyfind(source,  1, Compile),
     true               = filelib:is_regular(ModSrc),
     {ok, ModSrc}
   catch
-    error:{badmatch, _} -> {error, not_found}
+    error:_ -> {error, not_found}
   end.
 
 get_module_source_from_beam(M) ->
@@ -459,7 +459,7 @@ get_module_source_from_beam(M) ->
     true = filelib:is_regular(SrcAbs),
     {ok, SrcAbs}
   catch
-    error:{badmatch, _} -> {error, not_found}
+    error:_ -> {error, not_found}
   end.
 
 
