@@ -22,10 +22,6 @@
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
-(defvar edts-shell-node-name nil
-  "The node sname of the erlang node running in an edts-shell buffer.")
-(make-variable-buffer-local 'edts-shell-node-name)
-
 (defcustom edts-shell-ac-sources
   '(edts-complete-keyword-source
     edts-complete-exported-function-source
@@ -71,7 +67,7 @@ PWD and running COMMAND."
       ;; (setq comint-use-prompt-regexp t)
 
       ;; edts-specifics
-      (setq edts-shell-node-name node-name)
+      (setq edts-buffer-node-name (edts-shell-node-name-from-args args))
       (edts-complete-setup edts-shell-ac-sources)
 
       ;; erlang-mode syntax highlighting
@@ -89,11 +85,6 @@ PWD and running COMMAND."
         (return (cadr args)))
       (pop args))))
 
-(defun edts-shell-node-name (buffer)
-  "Return the node sname of the erlang node running in an edts-shell
-buffer."
-  (buffer-local-value 'edts-shell-node-name buffer))
-
 (defun edts-shell-comint-filter (arg)
   "Make comint output read-only. Added to `comint-output-filter-functions'."
   (when (and arg (not (string= arg "")))
@@ -103,6 +94,10 @@ buffer."
        comint-last-input-start comint-last-input-end 'read-only t)
       (put-text-property
        comint-last-output-start output-end 'read-only t))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Unit tests
 
 (when (member 'ert features)
   (ert-deftest edts-shell-make-comint-buffer-test ()
