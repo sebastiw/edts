@@ -710,6 +710,22 @@ get_file_and_line_non_parametrised_new_test_() ->
                    get_file_and_line(Mod, new, 2, File, Forms))
   ].
 
+get_module_source_test_() ->
+  ErlangAbsName = filename:join([code:lib_dir(erts, src), "erlang.erl"]),
+  [?_assertEqual({error, not_found},
+                 get_module_source_from_info(erlang:module_info())),
+   ?_assertEqual({ok, ErlangAbsName},
+                 get_module_source_from_beam(erlang)),
+   ?_assertEqual({error, not_found},
+                 get_module_source_from_info([])),
+   ?_assertEqual({error, not_found},
+                 get_module_source_from_beam(erlang_foo)),
+   ?_assertEqual({ok, ErlangAbsName},
+                get_module_source(erlang, erlang:module_info())),
+   ?_assertEqual({error, not_found},
+                get_module_source(erlang_foo, []))
+  ].
+
 path_flatten_test_() ->
   [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl")),
     ?_assertEqual("./bar.erl",     path_flatten("./bar.erl")),
