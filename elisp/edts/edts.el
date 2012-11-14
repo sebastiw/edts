@@ -51,26 +51,28 @@ node."
 
 (defun edts-buffer-init ()
   "Buffer specific (not necessarily buffer-local) setup."
-  (let* ((buffer    (current-buffer))
-         (project   (edts-project-buffer-project buffer)))
-    (unless edts-buffer-node-name
-      (setq edts-buffer-node-name (edts-buffer-node-name)))
-    (when (and project edts-project-auto-start-node)
-      (edts-project-ensure-buffer-node-started buffer))))
+  (let ((project (edts-project-buffer-project (current-buffer))))
+    (when project
+      ;; Set the buffer's node-name if not set already.
+      (unless edts-buffer-node-name
+        (setq edts-buffer-node-name (edts-project-node-name project)))
+      ;; Start the buffer's project-node if not already running.
+      (when project edts-project-auto-start-node
+        (edts-project-ensure-node-started project)))))
 
 (defun edts-buffer-node-name ()
   "Return the node sname of the erlang node connected to current
 buffer. The node is either:
 - The module's project node, if current buffer is an erlang module, or
-- The buffer's erlang node if buffer is an edts-shell buffer."
+- The buffer's erlang node if buffer is an edts-shell buffer.
+- The project-node of the buffer that was current buffer before jumping
+  to the current buffer if the file of the current buffer is located outside
+  any project (eg. an \"externally\" loaded module such as an otp-module or a
+  module loaded by ~/.erlang)."
   (interactive)
-  (let* ((buffer  (current-buffer))
-         (project (edts-project-buffer-project buffer))
-         (node-name (or (edts-project-node-name project)
-                        (edts-shell-node-name buffer))))
-    (when (called-interactively-p 'any)
-      (message "%s" node-name))
-    node-name))
+  (when (called-interactively-p 'any)
+    (message "%s" edts-buffer-node-name))
+  edts-buffer-node-name)
 
 (defun edts-find-module-macros ()
   (let ((includes (edts-get-includes)))
@@ -233,7 +235,7 @@ node, optionally retrying RETRIES times."
 If called interactively, fetch arguments from project of
 current-buffer."
   (interactive (let ((proj (edts-project-buffer-project (current-buffer))))
-                           (list (edts-buffer-node-name)
+                           (list edts-buffer-node-name
                                  (edts-project-root      proj)
                                  (edts-project-lib-dirs  proj))))
   (let* ((resource (list "nodes" node-name))
