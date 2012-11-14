@@ -78,7 +78,7 @@ determine which file to look in, with the following algorithm:
 directive."
   (save-excursion
     (beginning-of-line)
-    (looking-at "-include\\(_lib\\)\\s-*(\\s-*.*")))
+    (looking-at "-include\\(_lib\\)?\\s-*(\\s-*.*")))
 
 (defun edts-macro-under-point-p ()
   "Return non nil if the form under point is a macro."
@@ -97,7 +97,7 @@ directive."
   (let ((bound (ferl-last-char-on-line-at (point))))
     (save-excursion
       (beginning-of-line)
-      (when (re-search-forward "-include\\(_lib\\)\\s-*(\\s-*\"\\s-*" bound t)
+      (when (re-search-forward "-include\\(_lib\\)?\\s-*(\\s-*\"\\s-*" bound t)
         (thing-at-point 'filename)))))
 
 (defun edts-find-header-source ()
