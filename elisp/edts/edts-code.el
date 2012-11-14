@@ -102,7 +102,7 @@ buffer's project."
 (defun edts-code-eunit (result)
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
-  (interactive)
+  (interactive '(nil))
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-eunit-passed"))
     (edts-face-remove-overlays '("edts-code-eunit-failed"))
