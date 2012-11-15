@@ -22,6 +22,10 @@
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
+(defvar edts-shell-list nil
+  "An alist of currently alive edts-shell buffer's. Each entry in the
+list is itself an alist of the shell's properties.")
+
 (defcustom edts-shell-ac-sources
   '(edts-complete-keyword-source
     edts-complete-exported-function-source
@@ -30,9 +34,9 @@
   "Sources that EDTS uses for auto-completion in shell (comint)
 buffers.")
 
-(defun edts-shell ()
+(defun edts-shell (&optional switch-to)
   "Start an interactive erlang shell."
-  (interactive)
+  (interactive '(t))
   (edts-ensure-server-started)
   (let*((buffer-name (format "*edts[%s]*" edts-shell-next-shell-id))
         (node-name   (format "edts-%s" edts-shell-next-shell-id))
@@ -41,14 +45,16 @@ buffers.")
     (incf edts-shell-next-shell-id)
     (let ((buffer (edts-shell-make-comint-buffer buffer-name "." command)))
       (edts-register-node-when-ready node-name root nil)
-      (switch-to-buffer buffer))))
+      (when switch-to (switch-to-buffer buffer))
+      buffer)))
 
 (defun edts-shell-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
 PWD and running COMMAND."
   (let* ((cmd  (car command))
          (args (cdr command))
-         (node-name (edts-shell-node-name-from-args args)))
+         (node-name (edts-shell-node-name-from-args args))
+         (pwd  (expand-file-name pwd)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
     (with-current-buffer buffer-name
@@ -66,16 +72,24 @@ PWD and running COMMAND."
       ;; (setq comint-prompt-regexp edts-shell-prompt-regexp)
       ;; (setq comint-use-prompt-regexp t)
 
-      ;; edts-specifics
-      (setq edts-buffer-node-name (edts-shell-node-name-from-args args))
-      (edts-complete-setup edts-shell-ac-sources)
-
       ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)
       (erlang-font-lock-init)
-      (setq font-lock-keywords-only nil))
+      (setq font-lock-keywords-only nil)
+
+      ;; edts-specifics
+      (setq edts-buffer-node-name (edts-shell-node-name-from-args args))
+      (edts-complete-setup edts-shell-ac-sources)
+      (add-to-list
+       'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
+      (make-local-variable 'kill-buffer-hook)
+      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook)))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
-    (get-buffer buffer-name)))
+    (get-buffer buffer-name))
+
+(defun edts-shell--kill-buffer-hook ()
+  "Removes the buffer from `edts-shell-list'."
+  (setq edts-shell-list (assq-delete-all (buffer-name) edts-shell-list)))
 
 (defun edts-shell-node-name-from-args (args)
   "Return node sname based on args"
@@ -95,6 +109,15 @@ PWD and running COMMAND."
       (put-text-property
        comint-last-output-start output-end 'read-only t))))
 
+(defun edts-shell-find-by-path (path)
+  "Return the buffer of the first found shell with PATH as its
+default directory if it exists, otherwise nil."
+  (block nil
+    (let ((shells edts-shell-list))
+      (while shells
+        (when (string= path (cdr (assoc 'default-directory (cdar shells))))
+          (return (get-buffer (caar shells)))
+          (pop shells))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
