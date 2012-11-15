@@ -50,15 +50,59 @@ node."
 (make-variable-buffer-local 'edts-buffer-node-name)
 
 (defun edts-buffer-init ()
-  "Buffer specific (not necessarily buffer-local) setup."
+  "Buffer specific initialization."
   (let ((project (edts-project-buffer-project (current-buffer))))
-    (when project
-      ;; Set the buffer's node-name if not set already.
-      (unless edts-buffer-node-name
-        (setq edts-buffer-node-name (edts-project-node-name project)))
-      ;; Start the buffer's project-node if not already running.
-      (when project edts-project-auto-start-node
-        (edts-project-ensure-node-started project)))))
+    (if project
+        (edts--project-buffer-init project)
+        (edts--independent-buffer-init))))
+
+(defun edts--project-buffer-init (project)
+  "Initializes a project buffer"
+  ;; Set the buffer's node-name if not set already.
+  (unless edts-buffer-node-name
+    (setq edts-buffer-node-name (edts-project-node-name project)))
+  ;; Start the buffer's project-node if not already running.
+  (when project edts-project-auto-start-node
+        (edts-project-ensure-node-started project)))
+
+(defun edts--independent-buffer-init ()
+  "Initializes a buffer not associated with any project"
+  (let* ((file (buffer-file-name))
+         ; The beam-file to look for
+         (beam-name (concat (edts--path-root-base-name file) ".beam"))
+         ; Look in this directory
+         (ebin-dir  (edts--path-join (edts--path-pop file 2) "ebin"))
+         (beam-abs  (edts--path-join ebin-dir ebin-dir))
+         ; Where to start the node
+         (root-dir (if (file-exists-p beam-abs)
+                       ebin-dir
+                       (edts--path-pop file)))
+         (shell-buffer (edts-shell-find-by-path root-dir)))
+    (if shell-buffer
+        (setq edts-buffer-node-name
+              (buffer-local-value 'edts-buffer-node-name shell-buffer)))
+        (progn
+          (cd root-dir)
+          (edts-shell nil)))))
+
+
+(defun edts--path-root-base-name (path)
+  "Return the root-name (w/o extension) of the base-name (last
+component) of PATH"
+  (file-name-sans-extension (file-name-nondirectory path)))
+
+(defun edts--path-pop (path &optional count)
+  "Pop COUNT levels from PATH. COUNT defaults to 1"
+  (let ((count (or count 1)))
+    (while (>= (setq count (1- count)) 0)
+      (setq path (directory-file-name (file-name-directory path))))
+    path))
+
+(defun edts--path-join (&rest paths)
+  "Join strings in PATHS with a direcory separator in between each
+element."
+  (mapconcat #'identity paths "/"))
+
 
 (defun edts-buffer-node-name ()
   "Return the node sname of the erlang node connected to current
@@ -192,7 +236,7 @@ localhost."
                        4369)))
           (process-send-string socket (edts-build-epmd-message "n"))
           (accept-process-output socket 0.5))
-          (member name (edts-nodenames-from-string (buffer-string))))
+        (member name (edts-nodenames-from-string (buffer-string))))
     ('file-error nil)))
 
 (defun edts-nodenames-from-string (string)
