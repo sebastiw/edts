@@ -83,7 +83,7 @@ node."
               (buffer-local-value 'edts-buffer-node-name shell-buffer)))
         (progn
           (cd root-dir)
-          (edts-shell nil)))))
+          (edts-shell nil))))
 
 
 (defun edts--path-root-base-name (path)
