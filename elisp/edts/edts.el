@@ -77,13 +77,10 @@ node."
          (root-dir (if (file-exists-p beam-abs)
                        ebin-dir
                        (edts--path-pop file)))
-         (shell-buffer (edts-shell-find-by-path root-dir)))
-    (if shell-buffer
-        (setq edts-buffer-node-name
-              (buffer-local-value 'edts-buffer-node-name shell-buffer)))
-        (progn
-          (cd root-dir)
-          (edts-shell nil))))
+         (shell-buffer (or (edts-shell-find-by-path root-dir)
+                           (progn (cd root-dir) (edts-shell nil)))))
+    (setq edts-buffer-node-name
+          (buffer-local-value 'edts-buffer-node-name shell-buffer))))
 
 
 (defun edts--path-root-base-name (path)
