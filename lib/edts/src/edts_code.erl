@@ -847,35 +847,10 @@ get_compile_outdir_test_() ->
 
 %%%_* Test helpers =============================================================
 
-parse_string(String) ->
-  parse(scan(String)).
-
-scan(String) ->
-  case erl_scan:string(String) of
-    {ok, Toks, _}        -> Toks;
-    {error, Reason, Loc} -> erlang:error({scanner_error, Loc, Reason})
-  end.
-
-parse(Toks) ->
-  parse(Toks, []).
-
-parse([Tok = {dot, _}| T], Unparsed) ->
-  [get_form(lists:reverse([Tok | Unparsed]))
-   | parse(T, [])];
-parse([Tok | T], Unparsed) -> parse(T, [Tok | Unparsed]);
-parse([], []) -> [];
-parse([], _) -> erlang:error({parser_error, no_trailing_dot}).
-
-get_form(Toks) ->
-  case erl_parse:parse_form(Toks) of
-    {ok, Forms} -> Forms;
-    {error, Reason} -> erlang:error({parser_error, Reason})
-  end.
-
 test_file_forms(File) ->
   Path = filename:join([code:priv_dir(edts), "test/modules", File]),
   {ok, Bin} = file:read_file(Path),
-  parse_string(unicode:characters_to_list(Bin)).
+  edts_syntax:parse_forms(unicode:characters_to_list(Bin)).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
