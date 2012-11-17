@@ -32,7 +32,7 @@
 
 -export([free_vars/1,
          free_vars/2,
-         parse_expression/1,
+         parse_expressions/1,
          parse_forms/1]).
 
 %%%_* Defines ==================================================================
@@ -85,13 +85,13 @@ parse_forms(String) -> parse(scan(String)).
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Tokenize and parse String as a single expression.
+%% Tokenize and parse String as a sequence of expressions.
 %% @end
--spec parse_expression(string()) -> Forms::erl_parse:abstract_form().
+-spec parse_expressions(string()) -> Forms::erl_parse:abstract_form().
 %%------------------------------------------------------------------------------
-parse_expression(String) ->
+parse_expressions(String) ->
   case erl_parse:parse_exprs(scan(String)) of
-    {ok, Forms}      -> Forms;
+    {ok, _}    = Res -> Res;
     {error, _} = Err -> Err
   end.
 
@@ -105,7 +105,10 @@ scan(String) ->
   end.
 
 parse(Toks) ->
-  parse(Toks, []).
+  case parse(Toks, []) of
+    {error, _} = Err -> Err;
+    Res              -> {ok, Res}
+  end.
 
 %% Separate
 parse([Tok = {dot, _}| T], Unparsed) ->
@@ -122,17 +125,17 @@ get_form(Toks) ->
 
 %%%_* Unit tests ===============================================================
 
-parse_expression_test_() ->
+parse_expressions_test_() ->
   [?_assertMatch({error, {_, erl_parse, _}},
-                 parse_expression("foo(fun() -> ok end)")),
-   ?_assertMatch([{call,1, {atom, 1, foo}, [_]}],
-                 parse_expression("foo(fun() -> ok end)."))
+                 parse_expressions("foo(fun() -> ok end)")),
+   ?_assertMatch({ok, [{call,1, {atom, 1, foo}, [_]}]},
+                 parse_expressions("foo(fun() -> ok end)."))
   ].
 
 parse_forms_test_() ->
   [?_assertMatch({error, {_, erl_parse, _}},
                  parse_forms("foo(fun() -> ok end)")),
-   ?_assertMatch([{function, 1, foo, _, [_]}],
+   ?_assertMatch({ok, [{function, 1, foo, _, [_]}]},
                  parse_forms("foo() -> ok."))
   ].
 
