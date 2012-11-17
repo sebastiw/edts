@@ -30,7 +30,9 @@
 
 %%%_* Exports ==================================================================
 
--export([parse_expression/1,
+-export([free_vars/1,
+         free_vars/2,
+         parse_expression/1,
          parse_forms/1]).
 
 %%%_* Defines ==================================================================
@@ -38,6 +40,41 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Equivalent to free_vars(Snippet, 1).
+%% @end
+-spec free_vars(Text::string()) -> {ok, FreeVars::[atom()]} |
+                                   {error, term()}.
+%% @equiv free_vars(Text, 1)
+%%------------------------------------------------------------------------------
+free_vars(Snippet) -> free_vars(Snippet, 1).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of free variables in Snippet.
+%% @end
+-spec free_vars(Text::string(), pos_integer()) -> {ok, FreeVars::[atom()]} |
+                                                  {error, term()}.
+%% @equiv free_vars(Text, 1)
+%%------------------------------------------------------------------------------
+free_vars(Text, StartLine) ->
+  %% StartLine/EndLine may be useful in error messages.
+  {ok, Ts, EndLine} = erl_scan:string(Text, StartLine),
+  %%Ts1 = reverse(strip(reverse(Ts))),
+  Ts2 = [{'begin', 1}] ++ Ts ++ [{'end', EndLine}, {dot, EndLine}],
+  case erl_parse:parse_exprs(Ts2) of
+    {ok, Es} ->
+      E = erl_syntax:block_expr(Es),
+      E1 = erl_syntax_lib:annotate_bindings(E, ordsets:new()),
+      {value, {free, Vs}} =
+        lists:keysearch(free, 1, erl_syntax:get_ann(E1)),
+      {ok, Vs};
+    {error, {_Line, erl_parse, _Reason}} = Err -> Err
+    end.
+
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Tokenize and parse String as a sequence of forms.
@@ -97,6 +134,12 @@ parse_forms_test_() ->
                  parse_forms("foo(fun() -> ok end)")),
    ?_assertMatch([{function, 1, foo, _, [_]}],
                  parse_forms("foo() -> ok."))
+  ].
+
+free_vars_test_() ->
+  [?_assertMatch({error, {_, erl_parse, _}}, free_vars("foo sth,")),
+   ?_assertEqual({ok, []}, free_vars("ok")),
+   ?_assertEqual({ok, ['Bar', 'Baz']}, free_vars("foo(Bar, Baz)"))
   ].
 
 %%%_* Test helpers =============================================================

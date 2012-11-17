@@ -199,6 +199,7 @@ make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc) ->
 %%------------------------------------------------------------------------------
 free_vars(Snippet) -> free_vars(Snippet, 1).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Equivalent to free_vars(Snippet, 1).
@@ -208,20 +209,10 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Text, StartLine) ->
-  %% StartLine/EndLine may be useful in error messages.
-  {ok, Ts, EndLine} = erl_scan:string(Text, StartLine),
-  %%Ts1 = reverse(strip(reverse(Ts))),
-  Ts2 = [{'begin', 1}] ++ Ts ++ [{'end', EndLine}, {dot, EndLine}],
-  case erl_parse:parse_exprs(Ts2) of
-    {ok, Es} ->
-      E = erl_syntax:block_expr(Es),
-      E1 = erl_syntax_lib:annotate_bindings(E, ordsets:new()),
-      {value, {free, Vs}} =
-        lists:keysearch(free, 1, erl_syntax:get_ann(E1)),
-      {ok, Vs};
-    {error, {_Line, erl_parse, _Reason} = Err} ->
-        {error, format_errors(error, {"Snippet", [Err]})}
-    end.
+  case edts_syntax:free_vars(Text, StartLine) of
+    {ok, _} = Res    -> Res;
+    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+  end.
 
 
 %%------------------------------------------------------------------------------
