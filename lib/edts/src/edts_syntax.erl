@@ -53,16 +53,18 @@ parse_forms(String) -> parse(scan(String)).
 -spec parse_expression(string()) -> Forms::erl_parse:abstract_form().
 %%------------------------------------------------------------------------------
 parse_expression(String) ->
-  {ok, Forms} = erl_parse:parse_exprs(scan(String)),
-  Forms.
+  case erl_parse:parse_exprs(scan(String)) of
+    {ok, Forms}      -> Forms;
+    {error, _} = Err -> Err
+  end.
 
 %%%_* Internal functions =======================================================
 
 %% Tokenize String
 scan(String) ->
   case erl_scan:string(String) of
-    {ok, Toks, _}        -> Toks;
-    {error, Reason, Loc} -> erlang:error({scanner_error, Loc, Reason})
+    {ok, Toks, _}       -> Toks;
+    {error, _, _} = Err -> Err
   end.
 
 parse(Toks) ->
@@ -73,15 +75,29 @@ parse([Tok = {dot, _}| T], Unparsed) ->
   [get_form(lists:reverse([Tok | Unparsed])) | parse(T, [])];
 parse([Tok | T], Unparsed) -> parse(T, [Tok | Unparsed]);
 parse([], []) -> [];
-parse([], _) -> erlang:error({parser_error, no_trailing_dot}).
+parse([], Unparsed) -> get_form(lists:reverse(Unparsed)).
 
 get_form(Toks) ->
   case erl_parse:parse_form(Toks) of
-    {ok, Forms} -> Forms;
-    {error, Reason} -> erlang:error({parser_error, Reason})
+    {ok, Forms}      -> Forms;
+    {error, _} = Err -> Err
   end.
 
 %%%_* Unit tests ===============================================================
+
+parse_expression_test_() ->
+  [?_assertMatch({error, {_, erl_parse, _}},
+                 parse_expression("foo(fun() -> ok end)")),
+   ?_assertMatch([{call,1, {atom, 1, foo}, [_]}],
+                 parse_expression("foo(fun() -> ok end)."))
+  ].
+
+parse_forms_test_() ->
+  [?_assertMatch({error, {_, erl_parse, _}},
+                 parse_forms("foo(fun() -> ok end)")),
+   ?_assertMatch([{function, 1, foo, _, [_]}],
+                 parse_forms("foo() -> ok."))
+  ].
 
 %%%_* Test helpers =============================================================
 
