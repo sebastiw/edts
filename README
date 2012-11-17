@@ -36,6 +36,8 @@ Currently EDTS provides:
 - In-buffer running of unit tests
 
 Planned features in the short term are:
+- Shell improvements
+- Dialyzer integration
 - Better support for imported functions
 - yasnippets
 - A nice interface to the erlang debugger
@@ -51,13 +53,6 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
   - If you're not using Linux, setup Erlang mode according to the instructions
     here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
   - Make sure your code is compiled with the debug_info option set.
-  - If you want to be able automatically navigate to OTP sources from your code
-    using eg. edts-find-source-under-point, you must build your OTP-release from
-    source since the beam-files of the versions most commonly installed point
-    to paths that will most likely not be correct or even exist on your system.
-  - At the moment it is possible to navigate from project-code to OTP-code, but
-    to be able to automatically navigate between OTP modules, you need to set up
-    a separate edts-project for your OTP repo.
 
 - Get the Erlang documentation (optional).
 
@@ -109,7 +104,9 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                   project's node-sname. The command must also not set the
                   erlang cookie to anything other than the default
                   ~/.erlang.cookie.
-  otp-path      - The path to any custom OTP-version to use for the project. The
+  otp-path      - The path to any custom OTP-version to use for the project. You
+                  only have to set this if the project uses a different OTP-
+                  release than the one that comes first in your `exec-path'. The
                   OTP-release's bin-directory will be added to the head of the
                   exec-path and the PATH environment variable when starting the
                   project node.
