@@ -39,6 +39,7 @@
          get_module_info/1,
          get_module_info/2,
          modules/0,
+         parse_expressions/1,
          start/0,
          started_p/0,
          who_calls/3]).
@@ -211,6 +212,19 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 free_vars(Text, StartLine) ->
   case edts_syntax:free_vars(Text, StartLine) of
     {ok, _} = Res    -> Res;
+    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Tokenize and parse String as a sequence of expressions.
+%% @end
+-spec parse_expressions(string()) -> Forms::erl_parse:abstract_form().
+%%------------------------------------------------------------------------------
+parse_expressions(String) ->
+  case edts_syntax:parse_expressions(String) of
+    {ok, Forms}      -> Forms;
     {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
   end.
 
