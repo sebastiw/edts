@@ -173,7 +173,8 @@ Move point there and make an entry in edts-window-history-ring."
       (edts-find-file-existing found)
       (goto-char (point-min))
       (re-search-forward re nil t)
-      (beginning-of-line))))
+      (beginning-of-line))
+    found))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
