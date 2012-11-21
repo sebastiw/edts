@@ -855,7 +855,8 @@ get_compile_outdir_test_() ->
 test_file_forms(File) ->
   Path = filename:join([code:priv_dir(edts), "test/modules", File]),
   {ok, Bin} = file:read_file(Path),
-  edts_syntax:parse_forms(unicode:characters_to_list(Bin)).
+  {ok, Forms} = edts_syntax:parse_forms(unicode:characters_to_list(Bin)),
+  Forms.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
