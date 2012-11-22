@@ -206,7 +206,7 @@ further.
 \\[edts-code-xref-analyze-project]          - Run xref analysis on all buffers
                                               belonging to the same project as
                                               current buffer.
-\\[edts-make]                               - Byte compile all EDTS elisp files.
+\\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
 \\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
                                               if not already running.
 \\[edts-refactor-extract-function]          - Extract code in current region
@@ -229,7 +229,7 @@ further.
   (when (buffer-file-name)
     (edts-mode t)))
 
-(defun edts-make ()
+(defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."
   (interactive)
   (let* ((dirs (directory-files edts-lib-directory t "^[^.]"))

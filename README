@@ -81,18 +81,15 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 
-- Byte-compile EDTS elisp files (optional):
-  M-x edts-make RET
-
 - Configure your projects. EDTS projects are stored in the variable
   `edts-projects'. `edts-projects' is a list of projects, where each project is
   an association list. The properties that can be set for each project are:
 
   root          - The top level directory of where you have your project
-                  contents. The only required field.
+                  contents. This is the only required field.
   name          - The name of the project. Defaults to the last component
-                  of the project root-directory (eg a root seth to"~/src/p"
-                  would yield a "p" as the default project name.
+                  of the project root-directory (eg a root set to "~/src/p"
+                  would yield "p" as the project name if not explicitly set.
   node-sname    - The erlang sname that the project's erlang node should
                   have. Defaults to same name as the project.
   lib-dirs      - A list of paths (relative to the project's root) where the
