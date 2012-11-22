@@ -110,7 +110,9 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
   Example:
   (setq edts-projects
-      '(( ;; My awesome project.
+      '(( ;; My basic project
+         (root       . "~/src/simple_stuff"))
+        ( ;; My awesome project.
          (name       . "awesome_stuff")
          (root       . "~/src/awesome_stuff")
          (node-sname . "awesome")
@@ -122,7 +124,7 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
          (node-sname . "not_as_awesome")
          (lib-dirs   . ("lib" "test")))))
 
-That should be all it takes. If it's not, I've failed. Please send a bugreport.
+That should be all it takes. If it's not, please report the issue on github.
 
 ## How it works ##
 
