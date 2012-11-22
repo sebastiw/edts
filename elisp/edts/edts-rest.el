@@ -71,7 +71,10 @@ CALLBACK-ARGS."
          (url-show-status           nil)
          (callback-args             (cons callback callback-args)))
     (edts-log-debug "Sending async %s-request to %s" method url)
-    (url-retrieve url #'edts-rest-request-callback callback-args)))
+    (with-current-buffer
+        (url-retrieve url #'edts-rest-request-callback callback-args)
+      (make-local-variable 'url-show-status)
+      (setq url-show-status nil))))
 
 (defun edts-rest-request-callback (events &rest args)
   "Callback for asynchronous http requests."
