@@ -31,8 +31,15 @@
 undefined_function_calls, unexported_functions"
   :group 'edts)
 
+(defvar edts-code-buffer-issues nil
+  "A plist describing the current issues (errors and warnings) in the
+current buffer. It is a plist with one entry for each type (compilation,
+xref, eunit, etc). Each entry in turn is an plist with an entry for each
+issue severity (error, warning, etc).")
+(make-variable-buffer-local 'edts-code-buffer-issues)
+
 (defconst edts-code-issue-overlay-priorities
-  '((passed-test . 900);auto-highlight-symbol prio + 1
+  '((passed-test . 900)
     (failed-test . 901)
     (warning     . 902)
     (error       . 903))
@@ -43,6 +50,26 @@ undefined_function_calls, unexported_functions"
 a symbol."
   (let ((type (if (symbolp type) type (intern type))))
     (cdr (assoc type edts-code-issue-overlay-priorities))))
+
+(defun edts-code--set-issues (type issues)
+  "Set the buffer's issues of TYPE to ISSUES. Issues should be an plist
+with severity as key and a lists of issues as values"
+  (setq edts-code-buffer-issues
+        (plist-put edts-code-buffer-issues type issues)))
+
+(defun edts-code-buffer-status ()
+  "Return 'error if there are any edts errors in current buffer,
+'warning if there are warnings and 'ok otherwise."
+  (block nil
+    (let ((status 'ok)
+          (issues edts-code-buffer-issues))
+      (while issues
+        (when (plist-get (cadr issues) 'error)
+          (return 'error))
+        (when (plist-get (cadr issues) 'warning)
+          (setq status 'warning))
+        (setq issues (cddr issues)))
+      status)))
 
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
@@ -60,8 +87,11 @@ a symbol."
       (let ((result   (cdr (assoc 'result comp-res)))
             (errors   (cdr (assoc 'errors comp-res)))
             (warnings (cdr (assoc 'warnings comp-res))))
+        (edts-code--set-issues 'edts-code-compile (list 'error   errors
+                                                        'warning warnings))
         (edts-code-display-error-overlays "edts-code-compile" errors)
         (edts-code-display-warning-overlays "edts-code-compile" warnings)
+        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
         (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
         result))))
 
@@ -96,7 +126,9 @@ buffer's project."
   (when analysis-res
     (with-current-buffer buffer
       (let ((errors (cdr (assoc 'errors analysis-res))))
+        (edts-code--set-issues 'edts-code-xref (list 'error errors))
         (edts-code-display-error-overlays "edts-code-xref" errors)
+        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
         errors))))
 
 (defun edts-code-eunit (result)
@@ -116,10 +148,13 @@ buffer's project."
     (with-current-buffer buffer
       (let ((failed (cdr (assoc 'failed eunit-res)))
             (passed (cdr (assoc 'passed eunit-res))))
+        (edts-code--set-issues 'edts-code-eunit (list 'error failed))
         (edts-code-display-passed-test-overlays
          "edts-code-eunit-passed" passed)
         (edts-code-display-failed-test-overlays
-         "edts-code-eunit-failed" failed)))))
+         "edts-code-eunit-failed" failed)
+        (edts-face-update-buffer-mode-line (edts-code-buffer-status))))))
+
 
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."

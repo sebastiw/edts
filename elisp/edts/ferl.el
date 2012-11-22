@@ -233,7 +233,6 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-slash-arity "/2")))))
 
 ;; Based on code from distel and erlang-mode
-;; FIXME Butt-ugly function, split to cheek-size.
 (defun ferl-mfa-at-point (&optional default-module)
   "Return the module and function under the point, or nil.
 
