@@ -23,6 +23,11 @@
 (require 'face-remap)
 ;; Faces for highlighting
 
+(defcustom edts-face-inhibit-mode-line-updates nil
+  "If non-nil, don't make any changes to the mode-line appearance."
+  :group 'edts
+  :type 'boolean)
+
 (defface edts-face-error-line
   '((((class color) (background dark)) (:background "Firebrick"))
     (((class color) (background light)) (:background "LightPink1"))
@@ -39,11 +44,13 @@
 
 (defface edts-face-error-mode-line
   '((default (:foreground "white" :inherit edts-face-error-line)))
-  "The face to use for the modeline when there are errors in the buffer")
+  "The face to use for the modeline when there are errors in the buffer"
+  :group 'edts)
 
 (defface edts-face-warning-mode-line
   '((default (:foreground "white" :inherit edts-face-warning-line)))
-  "The face to use for the modeline when there are warnings in the buffer")
+  "The face to use for the modeline when there are warnings in the buffer"
+  :group 'edts)
 
 (defvar edts-face-modeline-remap-cookie nil
   "The 'cookie' returned from face-remap-add-relative, so that we can
@@ -178,14 +185,15 @@ from POS."
 
 (defun edts-face-update-buffer-mode-line (status)
   (edts-face-reset-mode-line)
-  (setq edts-face-modeline-remap-cookie
-        (case status
-          (warning
-           (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
-          (error
-           (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
-          (ok
-           nil))))
+  (unless edts-face-inhibit-mode-line-updates
+    (setq edts-face-modeline-remap-cookie
+          (case status
+            (warning
+             (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
+            (error
+             (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
+            (ok
+             nil)))))
 
 (defun edts-face-reset-mode-line ()
   "Reset mode-line face remapping."
