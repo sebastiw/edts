@@ -58,9 +58,7 @@ node."
 
 (defun edts--project-buffer-init (project)
   "Initializes a project buffer"
-  ;; Set the buffer's node-name if not set already.
-  (unless edts-buffer-node-name
-    (setq edts-buffer-node-name (edts-project-node-name project)))
+  (setq edts-buffer-node-name (edts-project-node-name project))
   ;; Start the buffer's project-node if not already running.
   (when project edts-project-auto-start-node
         (edts-project-ensure-node-started project)))

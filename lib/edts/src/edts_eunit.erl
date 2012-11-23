@@ -84,7 +84,7 @@ do_run_tests(Ref, Listener) ->
     {result, Ref, Result} -> {ok, Result};
     {error, Err}          -> {error, Err}
   after
-    5000 -> {error, timeout}
+    20000 -> {error, timeout}
   end.
 
 -spec format_test_result(test(), module()) -> [edts_code:issue()].

@@ -159,5 +159,9 @@ switch to emacs 24.2 where the problem is fixed [1], but if the problems
 persist, any help in debugging the issue would be appreciated since I have
 never myself been able to reproduce it.
 
+When killing some buffers, Emacs 23 decides to move point in a seemingly
+completely unrelated buffer to (point-max). This will sometimes happen as an
+effect of EDTS' after-save-hook. This issue does not exist in Emacs 24.
+
 [1] https://github.com/auto-complete/auto-complete/issues/153
 
