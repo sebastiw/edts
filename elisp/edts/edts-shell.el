@@ -61,7 +61,7 @@ PWD and running COMMAND."
       ;; generic stuff
       (when (fboundp 'show-paren-mode)
         (make-local-variable 'show-paren-mode)
-        (show-paren-mode))
+        (show-paren-mode t))
 
       ;; comint-variables
       (make-local-variable 'comint-output-filter-functions)

@@ -72,7 +72,7 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
 - Get EDTS:
 
-  $git clone git@github.com:tjarvstrand/edts.git
+  $git clone git://github.com/tjarvstrand/edts.git
   $cd edts
   $make
 
