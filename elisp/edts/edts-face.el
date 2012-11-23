@@ -52,9 +52,9 @@
   "The face to use for the modeline when there are warnings in the buffer"
   :group 'edts)
 
-(defvar edts-face-modeline-remap-cookie nil
-  "The 'cookie' returned from face-remap-add-relative, so that we can
-reset our face remappings.")
+(defvar edts-face-modeline-remap-cookies nil
+  "A list of The 'cookies' returned from face-remap-add-relative, so
+that we can reset our face remappings.")
 
 (defface edts-face-passed-test-line
   '((((class color) (background dark))  (:background "dark olive green"
@@ -186,17 +186,18 @@ from POS."
 (defun edts-face-update-buffer-mode-line (status)
   (edts-face-reset-mode-line)
   (unless edts-face-inhibit-mode-line-updates
-    (setq edts-face-modeline-remap-cookie
-          (case status
-            (warning
-             (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
-            (error
-             (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
-            (ok
-             nil)))))
+    (push (edts-face--remap-modeline-face status)
+          edts-face-modeline-remap-cookies)))
+
+(defun edts-face--remap-modeline-face (status)
+  "Add a relative mapping to mode-line face for STATUS."
+  (case status
+    (warning (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
+    (error   (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
+    (ok      nil)))
 
 (defun edts-face-reset-mode-line ()
   "Reset mode-line face remapping."
-  (when edts-face-modeline-remap-cookie
-    (face-remap-remove-relative edts-face-modeline-remap-cookie)
-    (setq edts-face-modeline-remap-cookie nil)))
+  (while edts-face-modeline-remap-cookies
+    (face-remap-remove-relative (pop edts-face-modeline-remap-cookies))
+    (setq edts-face-modeline-remap-cookies nil)))
