@@ -51,6 +51,8 @@
 -define(SERVER, ?MODULE).
 
 %%%_* Types ====================================================================
+-export_type([issue/0]).
+
 -type issue() :: { Type        :: atom()
                  , File        :: string()
                  , Line        :: non_neg_integer()
@@ -489,14 +491,9 @@ reload_module(M) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
--spec format_errors( ErrType % warning | error
-                   , Errors::[{ File::string(), [term()]}]) ->
-                       [{ErrType,
-                         File::string(),
-                         Line::non_neg_integer(),
-                         Description::string()}].
+-spec format_errors( ErrType ::warning | error
+                   , Errors  ::[{ File::string(), [term()]}]) -> issue().
 %%------------------------------------------------------------------------------
-
 format_errors(Type, Errors) ->
    lists:append(
      [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
