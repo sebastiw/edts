@@ -32,7 +32,20 @@ list is itself an alist of the shell's properties.")
     edts-complete-built-in-function-source
     edts-complete-module-source)
   "Sources that EDTS uses for auto-completion in shell (comint)
-buffers.")
+buffers."
+  :group 'edts)
+
+(defcustom edts-shell-inhibit-comint-input-highlight t
+  "Whether or not to inhibit comint's own highlighting of user input.
+If nil, syntax highlighting will be removed once input is submitted to
+the erlang process."
+  :group 'edts
+  :type 'boolean)
+
+(defface edts-shell-output-face
+  '((default (:inherit font-lock-string-face)))
+  "The face to use for process output in edts-shells."
+  :group 'edts)
 
 (defconst edts-shell-prompt-regexp
   "([a-zA-Z0-9_-]*\\(@[a-zA-Z0-9_-]*\\)?)[0-9]*> ")
@@ -94,19 +107,46 @@ PWD and running COMMAND."
     (get-buffer buffer-name))
 
 (defun edts-shell-syntax-propertize-function (start end)
-  "Set the syntax table property of all output from START to END."
+  "Set text properties from START to END; find and set face for process
+output and, if `edts-shell-inhibit-comint-input-highlight' is non-nil,
+disable comint-highligt-input face for input."
+  (edts-shell--set-output-field-face start end)
+  (when edts-shell-inhibit-comint-input-highlight
+    (edts-shell--disable-highlight-input start end)))
+
+(defun edts-shell--set-output-field-face (start end)
+  "Find output fields from START to END and set their font-lock-face to
+`edts-shell-output-face."
   (let ((output-start nil))
     (loop for p from start to end do
           (if (eq (get-text-property p 'field) 'output)
-              (when (not output-start)
+              (when (not output-start) ;; entering output field
                 (setq output-start p))
             (when output-start
-              (add-text-properties output-start p
-                                   '(syntax-table   (2)
-                                     font-lock-face font-lock-string-face))
+              ;; just went outside of output field
+              (edts-shell--set-output-face output-start p)
               (setq output-start nil))))
-    (when output-start
-      (put-text-property output-start p 'syntax-table '(2)))))
+    (when output-start ;; in case last position was inside output
+      (edts-shell--set-output-face output-start p))))
+
+(defun edts-shell--set-output-face (start end)
+  "Set the face to `edts-shell-output-face' from START to END."
+  (put-text-property start p 'font-lock-face 'edts-shell-output-face))
+
+(defun edts-shell--disable-highlight-input (start end)
+  "Find and disable comint's input highlighting."
+  (let ((input-start nil))
+    (loop for p from start to end do
+          (message "font-lock-face %s" (get-text-property p 'font-lock-face))
+          (if (eq (get-text-property p 'font-lock-face) 'comint-highlight-input)
+                (when (not input-start) ;; entering input field
+                  (setq input-start p))
+            (when input-start
+              ;; just went outside of input field
+              (message "1 font-lock-face %s" (get-text-property p 'font-lock-face))
+              (remove-list-of-text-properties input-start p '(font-lock-face))
+              (message "2 font-lock-face %s" (get-text-property p 'font-lock-face))
+              (setq input-start nil))))))
 
 (defun edts-shell--kill-buffer-hook ()
   "Removes the buffer from `edts-shell-list'."
