@@ -187,8 +187,7 @@ from POS."
   "Sets the mode-line face unless `edts-face-inhibit-mode-line-updates'
 is non-nil."
   (edts-face-reset-mode-line)
-  (unless (or edts-face-inhibit-mode-line-updates
-              (eq status edts-face-mode-line-state))
+  (unless edts-face-inhibit-mode-line-updates
     (setq edts-face-modeline-remap-cookie
           (edts-face--remap-modeline-face status))))
 
