@@ -36,7 +36,6 @@ Currently EDTS provides:
 - In-buffer running of unit tests
 
 Planned features in the short term are:
-- Shell improvements
 - Dialyzer integration
 - Better support for imported functions
 - yasnippets

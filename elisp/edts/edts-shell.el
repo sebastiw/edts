@@ -34,6 +34,9 @@ list is itself an alist of the shell's properties.")
   "Sources that EDTS uses for auto-completion in shell (comint)
 buffers.")
 
+(defconst edts-shell-prompt-regexp
+  "([a-zA-Z0-9_-]*\\(@[a-zA-Z0-9_-]*\\)?)[0-9]*> ")
+
 (defun edts-shell (&optional switch-to)
   "Start an interactive erlang shell."
   (interactive '(t))
@@ -68,14 +71,16 @@ PWD and running COMMAND."
       (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
-      ;; (make-local-variable 'comint-prompt-regexp)
-      ;; (setq comint-prompt-regexp edts-shell-prompt-regexp)
-      ;; (setq comint-use-prompt-regexp t)
+      (make-local-variable 'comint-prompt-regexp)
+      (setq comint-prompt-regexp edts-shell-prompt-regexp)
+      ;; (setq comint-use-prompt-regexp nil)
 
       ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)
       (erlang-font-lock-init)
       (setq font-lock-keywords-only nil)
+      (set (make-local-variable 'syntax-propertize-function)
+           'edts-shell-syntax-propertize-function)
 
       ;; edts-specifics
       (setq edts-buffer-node-name (edts-shell-node-name-from-args args))
@@ -86,6 +91,19 @@ PWD and running COMMAND."
       (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook)))
     (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
     (get-buffer buffer-name))
+
+(defun edts-shell-syntax-propertize-function (start end)
+  "Set the syntax table property of all output from START to END."
+  (let ((output-start nil))
+    (loop for p from start to end do
+          (if (eq (get-text-property p 'field) 'output)
+              (when (not output-start)
+                (setq output-start p))
+            (when output-start
+              (put-text-property output-start p 'syntax-table '(2))
+              (setq output-start nil))))
+    (when output-start
+      (put-text-property output-start p 'syntax-table '(2)))))
 
 (defun edts-shell--kill-buffer-hook ()
   "Removes the buffer from `edts-shell-list'."
@@ -103,11 +121,17 @@ PWD and running COMMAND."
   "Make comint output read-only. Added to `comint-output-filter-functions'."
   (when (and arg (not (string= arg "")))
     (setq buffer-undo-list nil)
-    (let ((output-end (process-mark (get-buffer-process (current-buffer)))))
+    (let* ((limit (+ (point) (length arg)))
+           (output-end (save-excursion
+                        (goto-char comint-last-output-start)
+                        (if (re-search-forward edts-shell-prompt-regexp limit t)
+                            (1- (match-beginning 0))
+                          (point-max)))))
       (put-text-property
        comint-last-input-start comint-last-input-end 'read-only t)
-      (put-text-property
-       comint-last-output-start output-end 'read-only t))))
+      (add-text-properties
+       comint-last-output-start output-end
+       '(field output read-only t)))))
 
 (defun edts-shell-find-by-path (path)
   "Return the buffer of the first found shell with PATH as its

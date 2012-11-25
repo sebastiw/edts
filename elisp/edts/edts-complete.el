@@ -86,7 +86,6 @@ character before that."
 
 (defadvice ac-expand-string (before edts-complete-trim-arity)
   "Removes any /x at the end of completion string"
-  (message "string %s" (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0)))
   (ad-set-arg 0 (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
