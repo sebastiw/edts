@@ -137,15 +137,12 @@ disable comint-highligt-input face for input."
   "Find and disable comint's input highlighting."
   (let ((input-start nil))
     (loop for p from start to end do
-          (message "font-lock-face %s" (get-text-property p 'font-lock-face))
           (if (eq (get-text-property p 'font-lock-face) 'comint-highlight-input)
                 (when (not input-start) ;; entering input field
                   (setq input-start p))
             (when input-start
               ;; just went outside of input field
-              (message "1 font-lock-face %s" (get-text-property p 'font-lock-face))
               (remove-list-of-text-properties input-start p '(font-lock-face))
-              (message "2 font-lock-face %s" (get-text-property p 'font-lock-face))
               (setq input-start nil))))))
 
 (defun edts-shell--kill-buffer-hook ()
