@@ -65,6 +65,7 @@ PWD and running COMMAND."
       (when (fboundp 'show-paren-mode)
         (make-local-variable 'show-paren-mode)
         (show-paren-mode t))
+      (linum-mode -1)
 
       ;; comint-variables
       (make-local-variable 'comint-output-filter-functions)
@@ -73,7 +74,7 @@ PWD and running COMMAND."
       (setq comint-prompt-read-only t)
       (make-local-variable 'comint-prompt-regexp)
       (setq comint-prompt-regexp edts-shell-prompt-regexp)
-      ;; (setq comint-use-prompt-regexp nil)
+      (setq comint-use-prompt-regexp t)
 
       ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)
