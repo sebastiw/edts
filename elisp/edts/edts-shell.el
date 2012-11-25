@@ -85,9 +85,6 @@ PWD and running COMMAND."
       (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-prompt-read-only t)
-      (make-local-variable 'comint-prompt-regexp)
-      (setq comint-prompt-regexp edts-shell-prompt-regexp)
-      (setq comint-use-prompt-regexp t)
 
       ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)

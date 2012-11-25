@@ -35,10 +35,8 @@ Currently EDTS provides:
 - Convenient access to Erlang documentation
 - In-buffer running of unit tests
 
-Planned features in the short term are:
+In the works:
 - Dialyzer integration
-- Better support for imported functions
-- yasnippets
 - A nice interface to the erlang debugger
 
 For more information, hit M-x describe-minor-mode RET edts-mode RET.
@@ -123,7 +121,7 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
          (node-sname . "not_as_awesome")
          (lib-dirs   . ("lib" "test")))))
 
-That should be all it takes. If it's not, please report the issue on github.
+That should be all it takes. If it's not, please report any issues on github.
 
 ## How it works ##
 
@@ -138,11 +136,12 @@ emacs can then communicate with the project node.
 
 ## EDTS and Distel ##
 
-EDTS is meant to be a able to replace Distel but only provides a subset of the
-most commonly used of Distel's features, specifically the equivalents of
-erl-find-module, erl-find-source-under-point and erl-who-calls. As far as I
-know, those are the only Distel features that 95% of people use, but if there is
-anything from Distel that you are missing in EDTS, please let me know.
+EDTS is meant to be a able to replace Distel but only provides part of the most
+commonly used of Distel's features, specifically the equivalents of
+erl-find-module, erl-find-source-under-point, erl-who-calls and
+erl-refactor-subfunction. As far as I know, those are the only Distel features
+that 98% of people use, but if there is anything from Distel that you are
+missing in EDTS, please let me know.
 
 If you are using EDTS, please remove Distel from your configuration, since
 running both can create some confusion.
@@ -152,15 +151,15 @@ running both can create some confusion.
 Some users are experiencing serious performance issues with the auto-completion
 during the first use after startup. This is usually solved by typing C-g a
 couple (two or three, it seems to vary) of times when Emacs "hangs" the first
-time. This is most likely caused by a defect in the emacs c-code that affects
+time. It is most likely caused by a bug in the emacs c-code that affects
 the auto-complete package. If you experience these issues, it's recommended to
 switch to emacs 24.2 where the problem is fixed [1], but if the problems
 persist, any help in debugging the issue would be appreciated since I have
 never myself been able to reproduce it.
 
-When killing some buffers, Emacs 23 decides to move point in a seemingly
-completely unrelated buffer to (point-max). This will sometimes happen as an
-effect of EDTS' after-save-hook. This issue does not exist in Emacs 24.
+When killing some buffers, Emacs 23 decides to move point to (point-max) in a
+seemingly completely unrelated buffer. This will sometimes happen as an effect
+of EDTS' after-save-hook. The issue does not exist in Emacs 24.
 
 [1] https://github.com/auto-complete/auto-complete/issues/153
 
