@@ -101,7 +101,9 @@ PWD and running COMMAND."
               (when (not output-start)
                 (setq output-start p))
             (when output-start
-              (put-text-property output-start p 'syntax-table '(2))
+              (add-text-properties output-start p
+                                   '(syntax-table   (2)
+                                     font-lock-face font-lock-string-face))
               (setq output-start nil))))
     (when output-start
       (put-text-property output-start p 'syntax-table '(2)))))
