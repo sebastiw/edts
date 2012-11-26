@@ -72,7 +72,8 @@ PWD and running COMMAND."
          (node-name (edts-shell-node-name-from-args args))
          (pwd  (expand-file-name pwd)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
-    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
+    (apply #'make-comint-in-buffer cmd buffer-name cmd nil
+           (append '("-env" "TERM" "vt100") args))
     (with-current-buffer buffer-name
       ;; generic stuff
       (when (fboundp 'show-paren-mode)
