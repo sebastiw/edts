@@ -28,18 +28,19 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ compile_and_load/2
-        , get_function_info/4
-        , get_module_eunit_result/2
-        , get_module_info/3
-        , get_module_xref_analysis/3
-        , init_node/3
-        , is_node/1
-        , node_available_p/1
-        , modules/1
-        , node_reachable/1
-        , nodes/0
-        , who_calls/4]).
+-export([compile_and_load/2,
+         get_dialyzer_result/4,
+         get_function_info/4,
+         get_module_eunit_result/2,
+         get_module_info/3,
+         get_module_xref_analysis/3,
+         init_node/3,
+         is_node/1,
+         node_available_p/1,
+         modules/1,
+         node_reachable/1,
+         nodes/0,
+         who_calls/4]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -68,6 +69,27 @@ compile_and_load(Node, Filename) ->
       {error, not_found};
     Result      -> Result
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns the result of dialyzing Files on Node.
+%% @end
+%%
+-spec get_dialyzer_result(Node::node(),
+                          OtpPlt::filename:filename(),
+                          OutPlt::filename:filename(),
+                          Files::[filename:filename()]) ->
+                             {ok, edts_code:issue()}.
+%%------------------------------------------------------------------------------
+get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
+  edts_log:debug("get_dialyzer_result ~p (~p) -> ~p, ~p",
+                 [Files, OtpPlt, OutPlt, Node]),
+  case edts_dist:call(Node, edts_dialyzer, run, [OtpPlt, OutPlt, Files]) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -250,16 +272,38 @@ nodes() ->
 %%%_* Tests ====================================================================
 
 get_module_eunit_result_test_() ->
-  [ ?_assertMatch({ok, [ {'passed-test', _Source, 43, "no asserts failed"}
-                       , {'passed-test', _Source, 44, "no asserts failed"}
-                       ]},
-                  get_module_eunit_result(node(), test_module))
-  , ?_assertEqual({error, not_found},
-                  get_module_eunit_result(not_a_node, test_module))
-  , ?_assertEqual({ok, []},
-                  get_module_eunit_result(node(), not_a_module))
+  [?_assertMatch({ok, [{'passed-test', _Source, 43, "no asserts failed"},
+                       {'passed-test', _Source, 44, "no asserts failed"}]},
+                 get_module_eunit_result(node(), test_module)),
+   ?_assertEqual({error, not_found},
+                 get_module_eunit_result(not_a_node, test_module)),
+   ?_assertEqual({ok, []},
+                 get_module_eunit_result(node(), not_a_module))].
 
-  ].
+get_dialyzer_result_test_() ->
+  [{setup,
+   fun() ->
+       meck:unload(),
+       meck:new(edts_dist)
+   end,
+   fun(_) ->
+       meck:unload()
+   end,
+   [fun() ->
+        F = fun(n, edts_dialyzer, run, ["plt", "out", "foo"]) ->
+                {badrpc, error}
+            end,
+        meck:expect(edts_dist, call, F),
+        ?assertEqual({error, not_found},
+                     get_dialyzer_result(n, "plt", "out", "foo"))
+    end,
+    fun() ->
+        F = fun(n, edts_dialyzer, run, ["plt", "out", "foo"]) -> res end,
+        meck:expect(edts_dist, call, F),
+        ?assertEqual(res, get_dialyzer_result(n, "plt", "out", "foo"))
+
+    end]
+  }].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
