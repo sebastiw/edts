@@ -177,8 +177,8 @@ default directory if it exists, otherwise nil."
     (let ((shells edts-shell-list))
       (while shells
         (when (string= path (cdr (assoc 'default-directory (cdar shells))))
-          (return (get-buffer (caar shells)))
-          (pop shells))))))
+          (return (get-buffer (caar shells))))
+          (pop shells)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
