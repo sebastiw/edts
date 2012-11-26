@@ -55,6 +55,7 @@
 (defvar edts-face-modeline-remap-cookie nil
   "A list of The 'cookies' returned from face-remap-add-relative, so
 that we can reset our face remappings.")
+(make-variable-buffer-local 'edts-face-modeline-remap-cookie)
 
 (defface edts-face-passed-test-line
   '((((class color) (background dark))  (:background "dark olive green"
