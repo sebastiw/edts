@@ -28,7 +28,7 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([run/2]).
+-export([run/3]).
 
 %%%_* Includes =================================================================
 
@@ -42,25 +42,53 @@
 %% @doc
 %% Runs dialyzer.
 %%
-%% Add all currently loaded non-otp modules to OutPlt, creating it if it doesn't
-%% exist. Then analyze OtpPlt and OutPlt together.
+%% Add Files to OutPlt, creating it if it doesn't exist. Then analyze OtpPlt and
+%% OutPlt together.
 %% @end
--spec run(filename:filename() | undefined, filename:filename()) -> ok.
+-spec run(OtpPlt::filename:filename() | undefined,
+          OutPlt::filename:filename(),
+          Files::[filename:filename()] | all) -> ok.
 %%------------------------------------------------------------------------------
-run(OtpPlt, OutPlt) ->
-  Files = gather_beam_files(),
-  dialyzer:run([{files, Files},
-                {output_plt, OutPlt},
-                {analysis_type, plt_add}]),
-
+run(OtpPlt, OutPlt, Files0) ->
+  LoadedFiles = gather_beam_files(), % Non-otp modules
+  case filelib:is_file(OutPlt) of
+    false ->
+      %% Build plt from scratch
+      dialyzer:run([{files, LoadedFiles},
+                    {output_plt, OutPlt},
+                    {analysis_type, plt_build}]);
+    true ->
+      {ok, Info} = dialyzer:plt_info(OutPlt),
+      {files, OldFiles} = lists:keyfind(files, 1, Info),
+      %% Add new files.
+      case LoadedFiles -- OldFiles of
+        [] -> ok;
+        FilesToAdd ->
+          dialyzer:run([{files, FilesToAdd},
+                        {output_plt, OutPlt},
+                        {analysis_type, plt_add}])
+      end,
+      %% Remove files that are no longer present.
+      case OldFiles -- LoadedFiles of
+        [] -> ok;
+        FilesToRemove ->
+          dialyzer:run([{files, FilesToRemove},
+                        {output_plt, OutPlt},
+                        {analysis_type, plt_remove}])
+      end
+  end,
+  Files = case Files0 of
+            all -> LoadedFiles;
+            _   -> Files0
+          end,
   Plts = case OtpPlt of
            undefined -> [OutPlt];
            _         -> [OtpPlt, OutPlt]
          end,
   format_warnings(
     dialyzer:run([{files, Files},
-                {plts, Plts},
-                {analysis_type, succ_typings}])).
+                  {plts, Plts},
+                  {analysis_type, succ_typings}])).
 
 %%%_* Internal functions =======================================================
 
