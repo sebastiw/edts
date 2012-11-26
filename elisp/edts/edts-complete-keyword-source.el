@@ -25,7 +25,7 @@
 (defvar edts-complete-keyword-source
   '((candidates . edts-complete-keyword-candidates)
     (symbol     . "k")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

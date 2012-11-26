@@ -27,7 +27,7 @@
   '((candidates . edts-complete-imported-function-candidates)
     (document   . nil)
     (symbol     . "f")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)
     ))
 

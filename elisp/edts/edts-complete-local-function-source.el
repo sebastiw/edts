@@ -28,7 +28,7 @@
     (document   . edts-complete-local-function-doc)
     (init       . edts-complete-local-function-init)
     (symbol     . "f")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)
     ))
 

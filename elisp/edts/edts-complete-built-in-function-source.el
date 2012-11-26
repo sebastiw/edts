@@ -168,7 +168,7 @@
   '((candidates . edts-complete-built-in-function-candidates)
     (document   . edts-complete-built-in-function-doc)
     (symbol     . "f")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
