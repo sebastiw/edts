@@ -80,7 +80,8 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
 - Configure your projects. EDTS projects are stored in the variable
   `edts-projects'. `edts-projects' is a list of projects, where each project is
-  an association list. The properties that can be set for each project are:
+  an association list. The properties should all be strings, except lib-dirs
+  which is a list of strings. The ones that can be set for each project are:
 
   root          - The top level directory of where you have your project
                   contents. This is the only required field.
@@ -88,7 +89,8 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                   of the project root-directory (eg a root set to "~/src/p"
                   would yield "p" as the project name if not explicitly set.
   node-sname    - The erlang sname that the project's erlang node should
-                  have. Defaults to same name as the project.
+                  have. It should contain only the part before the @-sign and
+                  defaults to same name as the project.
   lib-dirs      - A list of paths (relative to the project's root) where the
                   project's code is located. All subdirectories of lib-dirs are
                   assumed to be otp-applications. Defaults to '("lib").
