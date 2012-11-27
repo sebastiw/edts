@@ -33,6 +33,7 @@
         , init_node/3
         , is_node/1
         , node_available_p/1
+        , node_registered_p/1
         , nodes/0
         , start_link/0]).
 
@@ -116,6 +117,18 @@ node_available_p(Node) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Returns true iff Node is registered with this edts instance, but has possibly
+%% not finished its initialization.
+%% @end
+%%
+-spec node_registered_p(node()) -> boolean().
+%%------------------------------------------------------------------------------
+node_registered_p(Node) ->
+  gen_server:call(?SERVER, {node_available_p, Node}, infinity).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Returns a list of the edts_nodes currently registered with this
 %% edts-server instance
 %% @end
@@ -191,6 +204,12 @@ handle_call({node_available_p, Name}, _From, State) ->
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
+          end,
+  {reply, Reply, State};
+handle_call({node_registered_p, Name}, _From, State) ->
+  Reply = case node_find(Name, State) of
+            #node{} -> true;
+            false   -> false
           end,
   {reply, Reply, State};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->

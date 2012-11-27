@@ -251,10 +251,7 @@ modules(Node) ->
 -spec node_reachable(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
 node_reachable(Node) ->
-  case net_adm:ping(Node) of
-    pong -> true;
-    pang -> false
-  end.
+  edts_server:node_registered_p(Node) andalso net_adm:ping(Node) =:= pong.
 
 %%------------------------------------------------------------------------------
 %% @doc
