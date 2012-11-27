@@ -145,8 +145,7 @@ Should be called with point directly before the opening ( or /."
   (save-excursion
     (save-match-data
       (cond
-       ((looking-at "/")
-        (re-search-forward "/[0-9]+")
+       ((re-search-forward "\s*/\s*[0-9]+" nil t)
         (ferl-slash-arity (match-string 0)))
        ((looking-at "\s*(")
         (let ((start (+ (point) 1))
