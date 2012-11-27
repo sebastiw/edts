@@ -148,7 +148,7 @@ Should be called with point directly before the opening ( or /."
        ((looking-at "/")
         (re-search-forward "/[0-9]+")
         (ferl-slash-arity (match-string 0)))
-       ((looking-at "(")
+       ((looking-at "\s*(")
         (let ((start (+ (point) 1))
               (end   (- (progn (forward-sexp) (point)) 1)))
           (ferl-paren-arity (buffer-substring start end))))
@@ -288,9 +288,8 @@ use DEFAULT-MODULE."
         (setq match t)))
     (if match
         (beginning-of-line)
-        (progn
-          (goto-char origin)
-          (error "function %s/%s not found" function arity)))))
+      (goto-char origin)
+      (error "function %s/%s not found" function arity))))
 
 
 (provide 'ferl)
