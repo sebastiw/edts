@@ -20,7 +20,12 @@
 ;;
 ;; Logging stuff.
 
-(defvar edts-log-level 2
+
+(defcustom edts-log-level 1
+  "The current EDTS log-level."
+  :group 'edts)
+
+(defconst edts-log-default-level 1
   "The current EDTS log-level.")
 
 (defconst edts-log-level-error 0
@@ -34,6 +39,15 @@
 
 (defconst edts-log-level-debug 3
   "EDTS debug log-level.")
+
+(defun edts-log-set-level (level)
+  "Set the EDTS log-level."
+  (interactive
+   (list
+    (read-input
+     (format "EDTS log-level (default %s): " edts-log-default-level))))
+  (assert (integerp level))
+  (setq edts-log-level level))
 
 (defun edts-log-error (msg &rest args)
   "Log MSG at error-level."
