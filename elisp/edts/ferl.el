@@ -170,9 +170,9 @@ Should be called with point directly before the opening ( or /."
         (arity 0)
         (in-arg nil))
     ;; increase arity if we're not inside an argument
-    (cl-flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
-                                    (incf arity)
-                                    (setq in-arg t))))
+    (flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
+                                 (incf arity)
+                                 (setq in-arg t))))
       (with-temp-buffer
         (set-syntax-table erlang-mode-syntax-table)
         (save-excursion (insert str))
