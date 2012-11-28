@@ -45,52 +45,63 @@
 %% Add Files to OutPlt, creating it if it doesn't exist. Then analyze OtpPlt and
 %% OutPlt together.
 %% @end
--spec run(OtpPlt::filename:filename() | undefined,
+-spec run(Plts::filename:filename() | undefined,
           OutPlt::filename:filename(),
           Files::[filename:filename()] | all) -> ok.
 %%------------------------------------------------------------------------------
-run(OtpPlt, OutPlt, Files0) ->
+run(Plts, OutPlt, Modules) ->
   LoadedFiles = gather_beam_files(), % Non-otp modules
-  case filelib:is_file(OutPlt) of
-    false ->
-      %% Build plt from scratch
-      dialyzer:run([{files, LoadedFiles},
-                    {output_plt, OutPlt},
-                    {analysis_type, plt_build}]);
-    true ->
-      {ok, Info} = dialyzer:plt_info(OutPlt),
-      {files, OldFiles} = lists:keyfind(files, 1, Info),
-      %% Add new files.
-      case LoadedFiles -- OldFiles of
-        [] -> ok;
-        FilesToAdd ->
-          dialyzer:run([{files, FilesToAdd},
-                        {output_plt, OutPlt},
-                        {analysis_type, plt_add}])
-      end,
-      %% Remove files that are no longer present.
-      case OldFiles -- LoadedFiles of
-        [] -> ok;
-        FilesToRemove ->
-          dialyzer:run([{files, FilesToRemove},
-                        {output_plt, OutPlt},
-                        {analysis_type, plt_remove}])
-      end
-  end,
-  Files = case Files0 of
-            all -> LoadedFiles;
-            _   -> Files0
+  Warnings = get_warnings(LoadedFiles, OutPlt, Plts),
+  Filtered =
+    case Modules of
+      all -> Warnings;
+      _   ->
+        Fun =
+          fun({_, {F, _}, _}) ->
+              Module = list_to_atom(filename:rootname(filename:basename(F))),
+              lists:member(Module, Modules)
           end,
-  Plts = case OtpPlt of
-           undefined -> [OutPlt];
-           _         -> [OtpPlt, OutPlt]
-         end,
-  format_warnings(
-    dialyzer:run([{files, Files},
-                  {plts, Plts},
-                  {analysis_type, succ_typings}])).
+        lists:filter(Fun, Warnings)
+    end,
+  format_warnings(Filtered).
 
 %%%_* Internal functions =======================================================
+
+get_warnings(LoadedFiles, OutPlt, Plts) ->
+  Opts =
+    case filelib:is_file(OutPlt) of
+      false -> %% Build plt from scratch, dialyzer will analyze in the process
+        [{files, LoadedFiles},
+         {output_plt, OutPlt},
+         {plts, Plts},
+         {analysis_type, plt_build}];
+      true ->
+        {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
+        case LoadedFiles -- OldFiles of
+          [] ->
+            %% No new files to add, may need to force an analysis
+            case dialyzer_plt:check_plt(OutPlt, [], []) of
+              ok -> % No changes to any files, exlplicit call needed
+                [{files, LoadedFiles},
+                 {init_plt, OutPlt},
+                 {analysis_type, succ_typings}];
+              {error, _}  = Err -> throw(Err); %% Something went wrong
+              _ -> % Some file changed. dialyzer will update plt and analyze
+                [{files, LoadedFiles},
+                 {init_plt, OutPlt},
+                 {output_plt, OutPlt},
+                 {analysis_type, plt_check}]
+            end;
+          FilesToAdd ->
+            %% Add new files. This will cause dialyzer to run analysis
+            [{files, FilesToAdd},
+             {init_plt, OutPlt},
+             {output_plt, OutPlt},
+             {analysis_type, plt_add}]
+        end
+    end,
+  dialyzer:run([{get_warnings, true}|Opts]).
+
 
 gather_beam_files() ->
   OtpDir = code:lib_dir(),
