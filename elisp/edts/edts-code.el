@@ -99,7 +99,7 @@ with severity as key and a lists of issues as values"
 (defun edts-code-xref-analyze-project (&optional result)
   "Runs xref-checks for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (interactive '(nil))
+  (interactive '(ok))
   (let ((proj (edts-project-buffer-project (current-buffer))))
     (mapcar
      #'(lambda(buf)
@@ -113,7 +113,7 @@ buffer's project, on the node related to that project."
 (defun edts-code-xref-analyze (result)
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
-  (interactive '(nil))
+  (interactive '(ok))
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-xref"))
     (when (and edts-code-xref-checks (not (eq result 'error)))
@@ -134,7 +134,7 @@ buffer's project."
 (defun edts-code-eunit (result)
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
-  (interactive '(nil))
+  (interactive '(ok))
   (when (string= "erl" (file-name-extension (buffer-file-name)))
     (edts-face-remove-overlays '("edts-code-eunit-passed"))
     (edts-face-remove-overlays '("edts-code-eunit-failed"))

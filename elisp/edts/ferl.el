@@ -144,10 +144,12 @@ of (function-name . starting-point)."
 Should be called with point directly before the opening ( or /."
   (save-excursion
     (save-match-data
+      (skip-chars-forward "[:space:]")
       (cond
-       ((re-search-forward "\s*/\s*[0-9]+" nil t)
+       ((looking-at "/")
+        (re-search-forward "/\s*[0-9]+" nil t)
         (ferl-slash-arity (match-string 0)))
-       ((looking-at "\s*(")
+       ((looking-at "(")
         (let ((start (+ (point) 1))
               (end   (- (progn (forward-sexp) (point)) 1)))
           (ferl-paren-arity (buffer-substring start end))))

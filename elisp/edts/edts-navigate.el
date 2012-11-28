@@ -187,7 +187,8 @@ When FUNCTION is specified, the point is moved to its start."
         (if function
             (progn
               (ferl-search-function function arity)
-              (ring-insert-at-beginning (edts-window-history-ring) mark))
+              (unless (eq (marker-position mark) (point))
+                (ring-insert-at-beginning (edts-window-history-ring) mark)))
             (error "Function %s:%s/%s not found" module function arity))
         (let* ((node (edts-project-buffer-node-name (current-buffer)))
                (info (edts-get-function-info node module function arity)))
