@@ -27,17 +27,9 @@
   (let* ((state (edts-is-node-interpreted node-name)))
     (eq (cdr (assoc 'state state)) t)))
 
-(defun edts-debug-toggle-interpret-project ()
+(defun edts-debug-toggle-interpret-minor-mode ()
   (interactive)
-  (let* ((node-name (or (edts-project-buffer-node-name (current-buffer))
-                        (edts-debug-buffer-node-name)))
-         (exclusions (edts-project-interpretation-exclusions
-                      (edts-project-buffer-project (current-buffer))))
-         (interpretedp (edts-debug--is-node-interpreted node-name)))
-    (if interpretedp
-        (edts-set-node-interpretation node-name nil exclusions)
-      (progn (edts-log-info "Interpreting all loaded modules (this might take a while)...")
-             (edts-set-node-interpretation node-name t exclusions)))))
+  (edts-int-mode 'toggle))
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
@@ -159,6 +151,26 @@
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
   (use-local-map edts-debug-keymap))
+
+(define-minor-mode edts-int-mode
+  "Toggle code interpretation for the project node belonging to the current
+buffer. This means all modules (except those belonging to OTP and to the
+applications excluded explicity in the project's configuration will
+be interpreted"
+  :init-value nil
+  :lighter " EDTS-interpreted"
+  :group edts
+  :require edts-mode
+  :after-hook (let* ((node-name (or (edts-project-buffer-node-name (current-buffer))
+				    (edts-debug-buffer-node-name)))
+		     (exclusions (edts-project-interpretation-exclusions
+				  (edts-project-buffer-project (current-buffer))))
+		     (interpretedp (edts-debug--is-node-interpreted node-name)))
+		(if (and (not edts-int-mode) interpretedp)
+		    (edts-set-node-interpretation node-name nil exclusions)
+		  (progn (edts-log-info "Interpreting all loaded modules (this might take a while)...")
+			 (edts-set-node-interpretation node-name t exclusions))))
+)
 
 (defun edts-debug--create-auxiliary-buffers ()
   (let ((buffer-width 81))
