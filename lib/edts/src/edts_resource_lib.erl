@@ -98,7 +98,8 @@ make_nodename(NameStr) ->
 
 %%%_* Internal functions =======================================================
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
-atom_to_exists_p(module)   -> fun module_exists_p/2.
+atom_to_exists_p(module)   -> fun module_exists_p/2;
+atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 term_to_validate(arity)        -> fun arity_validate/2;
 term_to_validate(exported)     -> fun exported_validate/2;
@@ -266,9 +267,10 @@ modules_validate(ReqData, _Ctx) ->
     "all"     -> {ok, all};
     Val        -> {ok, [list_to_atom(Mod) || Mod <- string:tokens(Val, ",")]}
   end.
+
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate module
+%% Check that module exists on the relevant node.
 %% @end
 -spec module_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
@@ -279,6 +281,22 @@ module_exists_p(_ReqData, Ctx) ->
     {badrpc, _} -> false;
     _ -> true
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Check that all of a list of modules exist on the relevant node.
+%% @end
+-spec modules_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+modules_exists_p(_ReqData, Ctx) ->
+  case orddict:fetch(modules, Ctx) of
+    all     -> true;
+    Modules ->
+      Nodename = orddict:fetch(nodename, Ctx),
+      Loaded = edts_dist:call(Nodename, code, all_loaded, []),
+      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Modules) end, Loaded)
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc

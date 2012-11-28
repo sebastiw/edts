@@ -60,25 +60,27 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
-malformed_request(ReqData, Ctx) ->
+malformed_request(ReqData, Ctx0) ->
   % Non-standard validation
-  OtpPlt = wrq:get_qs_value(otp_plt, ReqData),
-  OutPlt = wrq:get_qs_value(out_plt, ReqData),
+  OtpPlt = wrq:get_qs_value("otp_plt", ReqData),
+  OutPlt = wrq:get_qs_value("out_plt", ReqData),
   case (OtpPlt =/= undefined andalso not filelib:is_file(OtpPlt)) orelse
     (OutPlt =:= undefined) of
-    true  -> {true, ReqData, Ctx};
+    true  -> {true, ReqData, Ctx0};
     false ->
       Validators = [nodename, modules],
+      Ctx =
+        orddict:store(otp_plt, OtpPlt, orddict:store(out_plt, OutPlt, Ctx0)),
       edts_resource_lib:validate(ReqData, Ctx, Validators)
   end.
 
 resource_exists(ReqData, Ctx) ->
-  Nodename     = orddict:fetch(nodename, Ctx),
-  OtpPlt       = orddict:fetch(otp_plt,   Ctx),
-  OutPlt       = orddict:fetch(out_plt,   Ctx),
-  Files        = orddict:fetch(files,   Ctx),
-  {ok, Result} = edts:get_dialyzer_result(Nodename, OtpPlt, OutPlt, Files),
-  Exists       = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module])
+  Nodename = orddict:fetch(nodename, Ctx),
+  OtpPlt   = orddict:fetch(otp_plt, Ctx),
+  OutPlt   = orddict:fetch(out_plt, Ctx),
+  Files    = orddict:fetch(modules, Ctx),
+  Result   = edts:get_dialyzer_result(Nodename, OtpPlt, OutPlt, Files),
+  Exists       = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules])
                   andalso not (Result =:= {error, not_found})),
   {Exists, ReqData, orddict:store(result, Result, Ctx)}.
 
