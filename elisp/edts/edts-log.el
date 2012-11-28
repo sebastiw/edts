@@ -46,8 +46,7 @@
    (list
     (read-input
      (format "EDTS log-level (default %s): " edts-log-default-level))))
-  (assert (integerp level))
-  (setq edts-log-level level))
+  (setq edts-log-level (string-to-int level)))
 
 (defun edts-log-error (msg &rest args)
   "Log MSG at error-level."
