@@ -159,76 +159,84 @@ Should be called with point directly before the opening ( or /."
   "Return the arity of an argument-string after a slash."
   (string-to-number (substring str 1)))
 
+(defconst ferl-block-start-regexp
+  "\\<\\(case\\|if\\|begin\\|try\\|fun\\|receive\\)\\>"
+  "Regexp to match the start of a new block")
 
 (defun ferl-paren-arity (str)
   "Return the arity of an argument string within a parenthesis."
-  (let ((arity     0)
-        (last-c nil)
-        (next-is-new t)
-        (in-ignore nil)
-        (brackets  nil))
-    (loop for c across str do
+  (let ((comment    comment-start)
+        (block-depth 0)
+        (arity 0)
+        (in-arg nil))
+    ;; increase arity if we're not inside an argument
+    (cl-flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
+                                    (incf arity)
+                                    (setq in-arg t))))
+      (with-temp-buffer
+        (set-syntax-table erlang-mode-syntax-table)
+        (save-excursion (insert str))
+        (skip-chars-forward "[:space:]")
+        (while (< (point) (point-max))
           (cond
-           ;; inside string or comment, next-is-new must be nil.
-           ((and (eq c in-ignore) (not (eq ?\\ last-c)))
-            (setq in-ignore nil)) ;; terminate string
-           ((and (eq ?\% in-ignore) (eq ?\n c) (not (eq ?\\ last-c)))
-            (setq in-ignore nil));; terminate comment
-           (in-ignore nil) ;; ignore character
-
-            ;; entering new bracket-pair
-           ((member c '(?\( ?\[ ?\{))
-            (when next-is-new  ;; count up
-              (incf arity)
-              (setq next-is-new nil))
-            (push c brackets))
-
-           ;; entering string/comment
-           ((member c '(?\" ?\' ?\%))
-            (when next-is-new  ;; count up
-              (incf arity)
-              (setq next-is-new nil))
-            (setq in-ignore c))
-
-           ;; inside brackets, next-is-new must be nil.
-           ;; terminate bracket-pair
-           ((and (member c (member c '(?\) ?\] ?\}))) brackets) (pop brackets))
-           ;; ignore character
-           (brackets nil)
-
-           ; not inside string, comment or brackets
-           ((eq ?, c) (setq next-is-new t))
-
-           (next-is-new  ;; count up
-            (incf arity)
-            (setq next-is-new nil)))
-          (setq last-c c))
-    arity))
+           ;; start of block
+           ((looking-at ferl-block-start-regexp)
+            (maybe-inc-arity)
+            (incf block-depth)
+            (forward-word))
+           ;; end of block
+           ((looking-at "\\<end\\>")
+            (when (eq (decf block-depth) 0)
+              (setq in-arg nil))
+            (forward-word))
+           ;; start of paired delimiter
+           ((looking-at "[\\\"'<\\[{(]")
+            (maybe-inc-arity)
+            (forward-sexp))
+           ;; comment
+           ((looking-at comment)
+            (forward-comment 1))
+           ;; end of argument
+           ((looking-at ",")
+            (setq in-arg nil)
+            (forward-char))
+           ;; any other character
+           (t
+            (maybe-inc-arity)
+            (forward-char)))
+          (skip-chars-forward "[:space:]")))
+      arity)))
 
 
 (when (member 'ert features)
 
   (ert-deftest ferl-paren-arity-test ()
-    (should (eq 0 (ferl-paren-arity "")))
-    (should (eq 1 (ferl-paren-arity "a")))
-    (should (eq 1 (ferl-paren-arity "[]")))
-    (should (eq 1 (ferl-paren-arity "a,")))
-    (should (eq 2 (ferl-paren-arity "a,a")))
-    (should (eq 1 (ferl-paren-arity ",a")))
-    (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
+    (let ((comment-start "%"))
+      (should (eq 0 (ferl-paren-arity "")))
+      (should (eq 1 (ferl-paren-arity "a")))
+      (should (eq 1 (ferl-paren-arity "[]")))
+      (should (eq 1 (ferl-paren-arity "a,")))
+      (should (eq 2 (ferl-paren-arity "a,a")))
+      (should (eq 1 (ferl-paren-arity ",a")))
+      (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
 
-    (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
-    (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
-    (should (eq 2 (ferl-paren-arity "\"a'a,b'b\", cc")))
-    (should (eq 1 (ferl-paren-arity "'aa,bb'")))
-    (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
-    (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
-    (should (eq 3 (ferl-paren-arity "a,%a,b\nb, cc")))
-    (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
-    (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
-    (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
-    (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
-    (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
+      (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
+      (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
+      (should (eq 2 (ferl-paren-arity "\"a'a,b'b\", cc")))
+      (should (eq 1 (ferl-paren-arity "'aa,bb'")))
+      (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
+      (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
+      (should (eq 3 (ferl-paren-arity "a,%a,b\nb, cc")))
+      (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
+      (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
+      (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
+      (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
+      (should (eq 2 (ferl-paren-arity "#a{a,b}, cc")))
+
+      (should (eq 1 (ferl-paren-arity "fun() -> ok end")))
+      (should (eq 2 (ferl-paren-arity "fun() -> ok end, fun() -> ok end")))
+      (should (eq 1 (ferl-paren-arity "fun() -> begin%a, b\n ok end end")))
+      ))
 
   (ert-deftest slash-arity-test ()
     (should (eq 2 (ferl-slash-arity "/2")))))
