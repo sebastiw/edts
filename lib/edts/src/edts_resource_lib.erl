@@ -294,7 +294,7 @@ modules_exists_p(_ReqData, Ctx) ->
     Modules ->
       Nodename = orddict:fetch(nodename, Ctx),
       Loaded = edts_dist:call(Nodename, code, all_loaded, []),
-      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Modules) end, Loaded)
+      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Loaded) end, Modules)
   end.
 
 
