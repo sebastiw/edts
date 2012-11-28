@@ -130,7 +130,7 @@ disable comint-highligt-input face for input."
 
 (defun edts-shell--set-output-face (start end)
   "Set the face to `edts-shell-output-face' from START to END."
-  (put-text-property start p 'font-lock-face 'edts-shell-output-face))
+  (put-text-property start end 'font-lock-face 'edts-shell-output-face))
 
 (defun edts-shell--disable-highlight-input (start end)
   "Find and disable comint's input highlighting."
