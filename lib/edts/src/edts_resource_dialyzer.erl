@@ -85,14 +85,12 @@ resource_exists(ReqData, Ctx) ->
   {Exists, ReqData, orddict:store(result, Result, Ctx)}.
 
 to_json(ReqData, Ctx) ->
-  IsPassed = fun ({Type, _, _, _}) -> Type =:= 'passed-test' end,
-  {Passed, Failed} = lists:partition(IsPassed, orddict:fetch(result, Ctx)),
-  Struct = [ {passed, {array, [format_test(Test) || Test <- Passed]}}
-           , {failed, {array, [format_test(Test) || Test <- Failed]}}],
+  Result = orddict:fetch(result, Ctx),
+  Struct = [ {warnings, {array, [format_warning(Test) || Test <- Result]}}],
   {mochijson2:encode({struct, Struct}), ReqData, Ctx}.
 
 
-format_test({Type, File, Line, Desc}) ->
+format_warning({Type, File, Line, Desc}) ->
   {struct, [ {type, Type}
            , {file, list_to_binary(File)}
            , {line, Line}
@@ -154,13 +152,13 @@ to_json_test() ->
                to_json(req_data, Ctx)),
   meck:unload().
 
-format_test_test() ->
+format_warning_test() ->
   ?assertEqual({struct, [{type, t},
                          {file, <<"file">>},
                          {line, 1337},
                          {description, <<"desc">>}]},
-               format_test({t, "file", 1337, "desc"})),
-  ?assertError(badarg, format_test({t, file, 1337, "desc"})).
+               format_warning({t, "file", 1337, "desc"})),
+  ?assertError(badarg, format_warning({t, file, 1337, "desc"})).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
