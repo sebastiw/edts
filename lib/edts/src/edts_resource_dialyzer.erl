@@ -61,8 +61,16 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  Validators = [nodename, module, files, {file, otp_plt}, {file, out_plt}],
-  edts_resource_lib:validate(ReqData, Ctx, Validators).
+  % Non-standard validation
+  OtpPlt = wrq:get_qs_value(otp_plt, ReqData),
+  OutPlt = wrq:get_qs_value(out_plt, ReqData),
+  case (OtpPlt =/= undefined andalso not filelib:is_file(OtpPlt)) orelse
+    (OutPlt =:= undefined) of
+    true  -> {true, ReqData, Ctx};
+    false ->
+      Validators = [nodename, modules],
+      edts_resource_lib:validate(ReqData, Ctx, Validators)
+  end.
 
 resource_exists(ReqData, Ctx) ->
   Nodename     = orddict:fetch(nodename, Ctx),

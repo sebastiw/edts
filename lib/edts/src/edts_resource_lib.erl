@@ -77,8 +77,12 @@ validate(ReqData0, Ctx0, Keys) ->
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
   catch throw:{error, Key} = E ->
+      KeyString = case Key of
+                    {_Type, KeyAtom} -> atom_to_list(KeyAtom);
+                    KeyAtom          -> atom_to_list(KeyAtom)
+                  end,
       edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
-                     [Key, wrq:get_qs_value(atom_to_list(Key), ReqData0)]),
+                     [Key, wrq:get_qs_value(KeyString, ReqData0)]),
       {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
@@ -104,6 +108,7 @@ term_to_validate(function)     -> fun function_validate/2;
 term_to_validate(info_level)   -> fun info_level_validate/2;
 term_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
 term_to_validate(module)       -> fun module_validate/2;
+term_to_validate(modules)      -> fun modules_validate/2;
 term_to_validate(nodename)     -> fun nodename_validate/2;
 term_to_validate(project_root) -> fun project_root_validate/2;
 term_to_validate(xref_checks)  -> fun xref_checks_validate/2;
@@ -246,6 +251,21 @@ lib_dirs_validate(ReqData, Ctx) ->
 module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
 
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a list of modules.
+%% @end
+-spec modules_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
+%%------------------------------------------------------------------------------
+modules_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("modules", ReqData) of
+    undefined -> {ok, all};
+    "all"     -> {ok, all};
+    Val        -> {ok, [list_to_atom(Mod) || Mod <- string:tokens(Val, ",")]}
+  end.
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate module
@@ -416,6 +436,13 @@ module_validate_test() ->
   meck:new(wrq),
   meck:expect(wrq, path_info, fun(module, _) -> "foo" end),
   ?assertEqual({ok, foo}, module_validate(foo, bar)),
+  meck:unload().
+
+modules_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("modules", _) -> "foo,bar" end),
+  ?assertEqual({ok, [foo, bar]}, modules_validate(foo, bar)),
   meck:unload().
 
 nodename_validate_test() ->
