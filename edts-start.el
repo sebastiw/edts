@@ -124,6 +124,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 (defun edts-setup ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (edts-ensure-server-started)
   (edts-buffer-init)
   (ad-activate-regexp "edts-face.*")
@@ -167,6 +168,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 (defun edts-teardown ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (ad-deactivate-regexp "edts-.*")
   (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
   (auto-highlight-symbol-mode -1)
