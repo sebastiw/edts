@@ -250,8 +250,8 @@ localhost."
 (defun edts-build-epmd-message (msg)
   "Build a message for the epmd from MSG. Logic taken from distel's epmd.el."
   (let* ((len (length msg))
-(len-msb (ash len -8))
-(len-lsb (logand len 255)))
+         (len-msb (ash len -8))
+         (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
 (defun edts-register-node-when-ready (node-name root libs &optional retries)
@@ -264,12 +264,14 @@ node, optionally retrying RETRIES times."
    #'edts-register-node-when-ready-function node-name root libs retries)))
 
 (defun edts-register-node-when-ready-function (node-name root libs retries)
-  (if (edts-node-started-p node-name)
-      (edts-register-node node-name root libs)
-      (if (> retries 0)
-          (edts-register-node-when-ready node-name root libs (- retries 1))
-          (null (edts-log-error
-                 "Error: edts could not register node '%s'" node-name)))))
+  (cond
+   ((edts-node-started-p node-name)
+    (edts-register-node node-name root libs retries))
+   ((> retries 0)
+    (edts-register-node-when-ready node-name root (1- retries)))
+   (t
+    (edts-log-error "Error: edts could not register node '%s'" node-name)
+    nil)))
 
 (defun edts-register-node (node-name root libs retries)
   "Register NODE-NAME with the edts node.

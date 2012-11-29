@@ -108,8 +108,8 @@ PWD and running COMMAND."
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
       (make-local-variable 'kill-buffer-hook)
       (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook)))
-    (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
-    (get-buffer buffer-name))
+  (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
+  (get-buffer buffer-name))
 
 (defun edts-shell-syntax-propertize-function (start end)
   "Set text properties from START to END; find and set face for process
