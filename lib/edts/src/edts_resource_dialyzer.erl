@@ -66,7 +66,8 @@ malformed_request(ReqData, Ctx0) ->
   OutPlt = wrq:get_qs_value("out_plt", ReqData),
   case (OtpPlt =/= undefined andalso not filelib:is_file(OtpPlt)) orelse
     (OutPlt =:= undefined) of
-    true  -> {true, ReqData, Ctx0};
+    true  ->
+      {true, ReqData, Ctx0};
     false ->
       Validators = [nodename, modules],
       Ctx =
@@ -114,31 +115,40 @@ content_types_provided_test() ->
 
 malformed_request_test() ->
   meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("otp_plt", _)         -> undefined;
+                                    ("out_plt", req_data3) -> undefined;
+                                    ("out_plt", _)         -> out_plt
+                                 end),
   meck:new(edts_resource_lib),
-  Validators0 = [nodename, module, files, {file, otp_plt}, {file, out_plt}],
+  Validators0 = [nodename, modules],
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], Validators) when Validators =:= Validators0 ->
-                  {false, req_data, []};
+              fun(req_data, Ctx, Validators) when Validators =:= Validators0 ->
+                  {false, req_data, Ctx};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
               end),
-  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
-  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  ?assertEqual({false, req_data, [{otp_plt, undefined},
+                                  {out_plt, out_plt}]},
+               malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, [{otp_plt, undefined},
+                                  {out_plt, out_plt}]},
+               malformed_request(req_data2, [])),
+  ?assertEqual({true, req_data3, []}, malformed_request(req_data3, [])),
   meck:unload().
 
 resource_exists_test() ->
   Ctx = orddict:from_list([{nodename, node},
-                           {module,   mod},
+                           {modules,   mod},
                            {otp_plt,  otp},
-                           {out_plt,  out},
-                           {files,    [file1, file2]}]),
+                           {out_plt,  out}]),
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
   meck:new(edts),
-  meck:expect(edts, get_dialyzer_result, fun(_, _, _, _) -> {ok, []} end),
+  meck:expect(edts, get_dialyzer_result, fun(_, _, _, _) -> ok end),
   ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
-  ?assertEqual([], orddict:fetch(result,
+  ?assertEqual(ok, orddict:fetch(result,
                                  element(3, resource_exists(req_data, Ctx)))),
   meck:unload().
 
@@ -147,8 +157,7 @@ to_json_test() ->
   meck:unload(),
   meck:new(mochijson2),
   meck:expect(mochijson2, encode, fun(Data) -> Data end),
-  ?assertMatch({{struct, [ {passed, {array, []}}
-                         , {failed, {array, [_]}}]}, req_data, Ctx},
+  ?assertMatch({{struct, [ {warnings, {array, [_]}}]}, req_data, Ctx},
                to_json(req_data, Ctx)),
   meck:unload().
 
