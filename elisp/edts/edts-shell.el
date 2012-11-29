@@ -78,10 +78,11 @@ PWD and running COMMAND."
       ;; generic stuff
       (when (fboundp 'show-paren-mode)
         (make-local-variable 'show-paren-mode)
-        (show-paren-mode t))
+        (show-paren-mode 1))
       (linum-mode -1)
       (make-local-variable 'show-trailing-whitepace)
       (setq show-trailing-whitespace nil)
+      (visual-line-mode 1)
 
       ;; comint-variables
       (make-local-variable 'comint-output-filter-functions)
