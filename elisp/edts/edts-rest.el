@@ -107,16 +107,16 @@ CALLBACK-ARGS."
         (port edts-rest-port)
         (path (mapconcat #'identity resource "/"))
         (args (edts-rest-encode-args args)))
-    (message "2@args %s" args)
-    (format "http://%s:%s/%s?%s" host port path args)))
+    (format "http://%s:%s/%s%s" host port path args)))
 
 (defun edts-rest-encode-args (args)
   "Encode ARGS as a list of url-arguments."
-  (let ((encoded "")
+  (let ((encoded "?")
         (arg nil))
     (while args
       (setq arg (edts-rest-encode-arg (pop args)))
       (when arg (setq encoded (concat encoded arg "&"))))
+    ;; strip the last &, or the ? if there where no args or only empty args.
     (substring encoded 0 -1)))
 
 (defun edts-rest-encode-arg (arg)
