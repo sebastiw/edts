@@ -39,11 +39,11 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
   (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
       'none
       (save-excursion
-        (let ((match (re-search-backward "['\"]")))
-          (when match
-            (let ((char          (char-after match))
-                  (string-face-p (equal 'font-lock-string-face;
-                                        (get-text-property (- match 1) 'face))))
+          (when (re-search-backward "\\([^\\]\\|^\\)\\(['\"]\\)" nil t)
+            (let* ((start (match-beginning 2))
+                   (char (char-after start))
+                   (string-face-p (equal 'font-lock-string-face
+                                         (get-text-property (1- start) 'face))))
            (cond
             ; we're inside a double quoted string if either:
             ; we hit a " and the preceding char is not string
@@ -60,7 +60,7 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
             ; fontified
             ((and (equal ?\" char) string-face-p)             'single-quoted)
             ; Otherwise we're not inside quotes
-            ('otherwise                                       'none))))))))
+            ('otherwise                                       'none)))))))
 
 
 (defun edts-complete-single-quote-terminate (str)
