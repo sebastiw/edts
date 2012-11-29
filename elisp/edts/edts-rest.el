@@ -20,6 +20,7 @@
 ;;
 ;; edts' library for communicating with it's erlang node.
 
+(require 'cl)
 (require 'url)
 (require 'json)
 
@@ -105,16 +106,27 @@ CALLBACK-ARGS."
   (let ((host edts-rest-host)
         (port edts-rest-port)
         (path (mapconcat #'identity resource "/"))
-        (args (mapconcat #'edts-rest-encode-arg args "&")))
+        (args (edts-rest-encode-args args)))
+    (message "2@args %s" args)
     (format "http://%s:%s/%s?%s" host port path args)))
+
+(defun edts-rest-encode-args (args)
+  "Encode ARGS as a list of url-arguments."
+  (let ((encoded "")
+        (arg nil))
+    (while args
+      (setq arg (edts-rest-encode-arg (pop args)))
+      (when arg (setq encoded (concat encoded arg "&"))))
+    (substring encoded 0 -1)))
 
 (defun edts-rest-encode-arg (arg)
   "Encode ARG as a url-argument"
   (let ((var (car arg))
         (val (cdr arg)))
-    (if (listp val)
-        (concat var "=" (mapconcat #'identity val ","))
-        (concat var "=" val))))
+    (cond
+     ((null val) nil)
+     ((listp val) (concat var "=" (mapconcat #'identity val ",")))
+     (t (concat var "=" val)))))
 
 (defun edts-rest-encode (data)
   "Encode DATA as json."
