@@ -80,11 +80,16 @@ PWD and running COMMAND."
         (make-local-variable 'show-paren-mode)
         (show-paren-mode t))
       (linum-mode -1)
+      (make-local-variable 'show-trailing-whitepace)
+      (setq show-trailing-whitespace nil)
 
       ;; comint-variables
       (make-local-variable 'comint-output-filter-functions)
       (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
+      (make-local-variable 'comint-preoutput-filter-functions)
+      (add-hook 'comint-preoutput-filter-functions 'edts-shell-comint-prefilter)
       (make-local-variable 'comint-prompt-read-only)
+      (setq comint-input-sender-no-newline t)
       (setq comint-process-echoes t)
       (setq comint-prompt-read-only t)
 
@@ -116,17 +121,31 @@ disable comint-highligt-input face for input."
 (defun edts-shell--set-output-field-face (start end)
   "Find output fields from START to END and set their font-lock-face to
 `edts-shell-output-face."
-  (let ((output-start nil))
-    (loop for p from start to end do
-          (if (eq (get-text-property p 'field) 'output)
-              (when (not output-start) ;; entering output field
-                (setq output-start p))
+  (save-excursion
+    (goto-char start)
+    (flet ((output-p (p) (eq (get-text-property p 'field) 'output)))
+      (let ((output-start nil))
+        (while (<= (point) (min end (1- (point-max))))
+          (cond
+           ;; Found a prompt, let's leave it as it is.
+           ((looking-at edts-shell-prompt-regexp)
+            ;; Set face output before prompt
             (when output-start
-              ;; just went outside of output field
-              (edts-shell--set-output-face output-start p)
-              (setq output-start nil))))
-    (when output-start ;; in case last position was inside output
-      (edts-shell--set-output-face output-start p))))
+              (edts-shell--set-output-face output-start (point))
+              (setq output-start nil))
+            ;; subtract one so the forward-char below doesn't become incorrect
+            (goto-char (1- (match-end 0))))
+           ;; Entering output field
+           ((and (output-p (point)) (not output-start))
+            (setq output-start (point)))
+           ;; just went outside of output field
+           ((and (not (output-p (point))) output-start)
+            (edts-shell--set-output-face output-start (point))
+            (setq output-start nil)))
+          ;; ...and hop
+          (forward-char))
+        (when output-start ;; in case last position was inside output
+          (edts-shell--set-output-face output-start (point)))))))
 
 (defun edts-shell--set-output-face (start end)
   "Set the face to `edts-shell-output-face' from START to END."
@@ -155,6 +174,19 @@ disable comint-highligt-input face for input."
       (when (string= (car args) "-sname")
         (return (cadr args)))
       (pop args))))
+
+(defvar edts-shell-prompt-output-p nil
+  "Non nil if the Erlang shell has output its first prompt.")
+(make-variable-buffer-local 'edts-shell-prompt-output-p)
+
+(defun edts-shell-comint-prefilter (arg)
+  "Pre-filtering of comint output. Added to
+`comint-preoutput-filter-functions'."
+  (unless edts-shell-prompt-output-p
+    (when (string-match edts-shell-prompt-regexp arg)
+      (setq edts-shell-prompt-output-p t))
+    (setq arg (replace-regexp-in-string "\\^G" "C-q C-g RET" arg)))
+  arg)
 
 (defun edts-shell-comint-filter (arg)
   "Make comint output read-only. Added to `comint-output-filter-functions'."
