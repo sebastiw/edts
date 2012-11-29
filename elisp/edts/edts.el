@@ -271,23 +271,30 @@ node, optionally retrying RETRIES times."
           (null (edts-log-error
                  "Error: edts could not register node '%s'" node-name)))))
 
-(defun edts-register-node (node-name root libs)
+(defun edts-register-node (node-name root libs retries)
   "Register NODE-NAME with the edts node.
 
 If called interactively, fetch arguments from project of
 current-buffer."
   (interactive (let ((proj (edts-project-buffer-project (current-buffer))))
-                           (list edts-buffer-node-name
-                                 (edts-project-root      proj)
-                                 (edts-project-lib-dirs  proj))))
+                           (list edts-buffer-node-name ;; node-name
+                                 (edts-project-root      proj) ;; root
+                                 (edts-project-lib-dirs  proj) ;; libs
+                                 0))) ;; retries
   (let* ((resource (list "nodes" node-name))
          (args     (list (cons "project_root" root)
                          (cons "lib_dirs"     libs)))
-         (res (edts-rest-post resource args)))
-    (if (equal (assoc 'result res) '(result "201" "Created"))
-        node-name
-        (null (edts-log-error
-               "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+         (rest-callback #'edts-handle-registration-result)
+         (callback-args (list node-name root libs retries)))
+    (edts-log-debug "Registering node %s" node-name)
+    (edts-rest-post-async resource args rest-callback callback-args)))
+
+(defun edts-handle-registration-result (result node-name root lib retries)
+  "Handles the result when trying to register a node with edts."
+  (unless (equal (assoc 'result result)
+                 '(result "201" "Created"))
+    (edts-register-node-when-ready node-name root libs (1- retries))
+    (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result result)))))
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
