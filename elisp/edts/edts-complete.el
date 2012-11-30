@@ -30,6 +30,11 @@
 (load "edts-complete-record-source" nil edts-start-inhibit-load-msgs)
 (load "edts-complete-keyword-source" nil edts-start-inhibit-load-msgs)
 
+(defcustom edts-complete-inhibit nil
+  "Inhibit EDTS' auto-completion"
+  :type  'boolean
+  :group 'edts)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
 
@@ -133,5 +138,11 @@ buffers.")
   ;; above.
   (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
 
-  (auto-complete-mode))
+  (edts-complete 1))
+
+(defun edts-complete (&optional arg)
+  "Call `auto-complete-mode' with ARG unless `edts-complete-inhibit' is
+non-nil."
+  (unless edts-complete-inhibit
+    (auto-complete-mode arg)))
 

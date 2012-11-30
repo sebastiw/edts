@@ -83,12 +83,15 @@ PWD and running COMMAND."
       (make-local-variable 'show-trailing-whitepace)
       (setq show-trailing-whitespace nil)
       (visual-line-mode 1)
+      (make-local-variable 'ac-auto-show-menu)
 
       ;; comint-variables
-      (make-local-variable 'comint-output-filter-functions)
-      (add-hook 'comint-output-filter-functions 'edts-shell-comint-filter)
-      (make-local-variable 'comint-preoutput-filter-functions)
-      (add-hook 'comint-preoutput-filter-functions 'edts-shell-comint-prefilter)
+      (add-hook
+       'comint-preoutput-filter-functions 'edts-shell-comint-prefilter t t)
+      (add-hook
+       'comint-output-filter-functions 'edts-shell-comint-filter t t)
+      (add-hook
+       'comint-input-filter-functions 'edts-shell-comint-input-filter t t)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-input-sender-no-newline t)
       (setq comint-process-echoes t)
@@ -197,13 +200,27 @@ disable comint-highligt-input face for input."
            (output-end (save-excursion
                         (goto-char comint-last-output-start)
                         (if (re-search-forward edts-shell-prompt-regexp limit t)
-                            (1- (match-beginning 0))
+                            (progn
+                              (edts-complete 1)
+                              (1- (match-beginning 0)))
                           (point-max)))))
       (put-text-property
        comint-last-input-start comint-last-input-end 'read-only t)
       (add-text-properties
        comint-last-output-start output-end
        '(field output read-only t)))))
+
+(defconst edts-shell-escape-key-regexp
+  (format ".*%s\n$" (char-to-string ?\^G)))
+
+(defun edts-shell-comint-input-filter (arg)
+  "Pre-filtering of comint output. Added to
+`comint-input-filter-functions'."
+  (message "1 -%s- length %s" arg (length arg))
+  (when (string-match edts-shell-escape-key-regexp arg)
+    (edts-complete -1))
+  arg)
+
 
 (defun edts-shell-find-by-path (path)
   "Return the buffer of the first found shell with PATH as its
