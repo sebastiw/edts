@@ -21,7 +21,7 @@
           "ert"
           "popup-el"))
 
-(when (boundp 'erlang-root-dir)
+(when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
   (add-to-list
    'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
