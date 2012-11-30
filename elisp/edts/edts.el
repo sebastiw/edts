@@ -54,7 +54,7 @@ node."
   (let ((project (edts-project-buffer-project (current-buffer))))
     (if project
         (edts--project-buffer-init project)
-        (edts--independent-buffer-init))))
+      (edts--independent-buffer-init))))
 
 (defun edts--project-buffer-init (project)
   "Initializes a project buffer"
@@ -257,21 +257,20 @@ localhost."
 (defun edts-register-node-when-ready (node-name root libs &optional retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
-  (let ((retries (if retries retries 20)))
-  (run-with-timer
-   0.5
-   nil
-   #'edts-register-node-when-ready-function node-name root libs retries)))
+  (let ((retries (or retries 5)))
+    (edts-log-debug "Waiting to register node, (retries %s)" retries)
+    (run-with-timer
+     0.5
+     nil
+     #'edts-register-node-when-ready-function node-name root libs retries)))
 
 (defun edts-register-node-when-ready-function (node-name root libs retries)
-  (cond
-   ((edts-node-started-p node-name)
-    (edts-register-node node-name root libs retries))
-   ((> retries 0)
-    (edts-register-node-when-ready node-name root (1- retries)))
-   (t
-    (edts-log-error "Error: edts could not register node '%s'" node-name)
-    nil)))
+  (if (> retries 0)
+      (if (edts-node-started-p node-name)
+          (edts-register-node node-name root libs retries)
+        (edts-register-node-when-ready node-name root (1- retries)))
+    (edts-log-error "Could not register node '%s'" node-name)
+    nil))
 
 (defun edts-register-node (node-name root libs retries)
   "Register NODE-NAME with the edts node.
@@ -291,12 +290,12 @@ current-buffer."
     (edts-log-debug "Registering node %s" node-name)
     (edts-rest-post-async resource args rest-callback callback-args)))
 
-(defun edts-handle-registration-result (result node-name root lib retries)
+(defun edts-handle-registration-result (result node-name root libs retries)
   "Handles the result when trying to register a node with edts."
   (unless (equal (assoc 'result result)
                  '(result "201" "Created"))
-    (edts-register-node-when-ready node-name root libs (1- retries))
-    (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result result)))))
+    (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result result)))
+    (edts-register-node-when-ready node-name root libs (1- retries))))
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
