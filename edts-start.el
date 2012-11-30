@@ -128,9 +128,6 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
   (edts-buffer-init)
   (ad-activate-regexp "edts-.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
-  (add-hook 'edts-code-after-compilation-hook 'edts-code-eunit t t)
-  (add-hook 'edts-code-after-compilation-hook
-            'edts-code-xref-analyze-project t t)
 
   ;; Auto-activate erlang mode for some additional extensions.
   (mapcar

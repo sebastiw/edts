@@ -23,7 +23,9 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
-(defvar edts-code-after-compilation-hook nil
+(defvar edts-code-after-compilation-hook
+  '(edts-code-eunit
+    edts-code-xref-analyze-related)
   "Hooks to run after compilation finishes.")
 
 (defcustom edts-code-xref-checks '(undefined_function_calls)
