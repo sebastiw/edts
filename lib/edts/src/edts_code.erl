@@ -65,7 +65,7 @@
 %% @end
 -spec add_path(filename:filename()) -> code:add_path_ret().
 %%------------------------------------------------------------------------------
-add_path(Path) -> code:add_path(shorten_path(Path)).
+add_path(Path) -> code:add_patha(shorten_path(Path)).
 
 %%------------------------------------------------------------------------------
 %% @doc
