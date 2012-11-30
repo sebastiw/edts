@@ -209,6 +209,12 @@ wait_until_started() ->
       wait_until_started()
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Ensure that all new beam-files are added to the xref-server state.
+%% @end
+-spec update_paths([filename:filename()], [filename:filename()]) -> ok.
+%%------------------------------------------------------------------------------
 update_paths(LibDirs, AppDirs) ->
   ok = xref:set_library_path(?SERVER, LibDirs),
   ModsToLoad =

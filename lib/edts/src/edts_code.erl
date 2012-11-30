@@ -133,8 +133,8 @@ compile_and_load(File0, Opts) ->
         ok ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
-          update_xref(),
           add_path(OutDir),
+          update_xref(),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
