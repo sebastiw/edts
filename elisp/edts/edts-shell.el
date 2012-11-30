@@ -201,7 +201,10 @@ disable comint-highligt-input face for input."
                         (goto-char comint-last-output-start)
                         (if (re-search-forward edts-shell-prompt-regexp limit t)
                             (progn
-                              (edts-complete 1)
+                              ;; Switch auto-completion back on if it's off, ie
+                              ;; if we were previously in the job control
+                              (unless auto-complete-mode
+                                (edts-complete 1))
                               (1- (match-beginning 0)))
                           (point-max)))))
       (put-text-property
@@ -216,8 +219,8 @@ disable comint-highligt-input face for input."
 (defun edts-shell-comint-input-filter (arg)
   "Pre-filtering of comint output. Added to
 `comint-input-filter-functions'."
-  (message "1 -%s- length %s" arg (length arg))
   (when (string-match edts-shell-escape-key-regexp arg)
+    ;; Entering the shell job control, switch off auto completion
     (edts-complete -1))
   arg)
 
