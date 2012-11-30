@@ -97,19 +97,43 @@ with severity as key and a lists of issues as values"
         (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
         result))))
 
+(defun edts-code-xref-analyze-related (&optional result)
+  "Runs xref-checks for all live buffers related to current
+buffer either by belonging to the same project or, if current buffer
+does not belongi to any project, being in the same directory as the
+current buffer's file."
+  (let ((proj (edts-project-buffer-project (current-buffer))))
+    (if proj
+        (edts-code-xref-analyze-project proj result)
+      (edts-code-xref-analyze-no-project result))))
 
-(defun edts-code-xref-analyze-project (&optional result)
+(defun edts-code-xref-analyze-project (proj &optional result)
   "Runs xref-checks for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (interactive '(ok))
-  (let ((proj (edts-project-buffer-project (current-buffer))))
-    (mapcar
+  (interactive (list (edts-project-buffer-project (current-buffer)) 'ok))
+    (when proj
+      (mapc
+       #'(lambda(buf)
+           (when (buffer-live-p buf)
+             (with-current-buffer buf
+               (let ((file (buffer-file-name)))
+                 (when (and edts-mode
+                            (edts-project-file-in-project-p proj file))
+                   (edts-code-xref-analyze result)))))
+           (buffer-list)))))
+
+(defun edts-code-xref-analyze-no-project (&optional result)
+  "Runs xref-checks for all live buffers with its file in current
+buffer's directory, on the node related to that buffer."
+  (interactive ('ok))
+  (let ((dir default-directory))
+    (mapc
      #'(lambda(buf)
-         (with-current-buffer buf
-           (let ((file (buffer-file-name)))
-             (when (and edts-mode (edts-project-file-in-project-p proj file))
+         (when (buffer-live-p buf)
+           (with-current-buffer buf
+             (when (and edts-mode (string= default-directory dir))
                (edts-code-xref-analyze result)))))
-     (buffer-list))))
+         (buffer-list))))
 
 
 (defun edts-code-xref-analyze (result)
