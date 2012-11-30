@@ -21,51 +21,53 @@
 ;; Logging stuff.
 
 
-(defcustom edts-log-level 1
+(defcustom edts-log-level 'warning
   "The current EDTS log-level."
   :group 'edts)
 
-(defconst edts-log-default-level 1
+(defconst edts-log-default-level 'error
   "The current EDTS log-level.")
 
-(defconst edts-log-level-error 0
-  "EDTS error log-level.")
-
-(defconst edts-log-level-warning 1
-  "EDTS warning log-level.")
-
-(defconst edts-log-level-info 2
-  "EDTS info log-level.")
-
-(defconst edts-log-level-debug 3
-  "EDTS debug log-level.")
+(defconst edts-log-levels
+  '((error   . 0)
+    (warning . 1)
+    (info    . 2)
+    (debug   . 3))
+  "The different edts log levels.")
 
 (defun edts-log-set-level (level)
   "Set the EDTS log-level."
   (interactive
    (list
-    (read-input
-     (format "EDTS log-level (default %s): " edts-log-default-level))))
-  (setq edts-log-level (string-to-int level)))
+    (intern
+     (ido-completing-read
+      (format "EDTS log-level (default %s): " edts-log-default-level)
+      (mapcar #'(lambda (lvl) (format "%s" (car lvl))) edts-log-levels)))))
+  (setq edts-log-level level))
 
 (defun edts-log-error (msg &rest args)
   "Log MSG at error-level."
-  (apply #'edts-log-message edts-log-level-error msg args))
+  (apply #'edts-log-message 'error msg args))
 
 (defun edts-log-warning (msg &rest args)
   "Log MSG at warning-level."
-  (apply #'edts-log-message edts-log-level-warning msg args))
+  (apply #'edts-log-message 'warning msg args))
 
 (defun edts-log-info (msg &rest args)
   "Log MSG at info-level."
-  (apply #'edts-log-message edts-log-level-info msg args))
+  (apply #'edts-log-message 'info msg args))
 
 (defun edts-log-debug (msg &rest args)
   "Log MSG at debug-level."
-  (apply #'edts-log-message edts-log-level-debug msg args))
+  (apply #'edts-log-message 'debug msg args))
 
 (defun edts-log-message (level msg &rest args)
   "Log MSG at LEVEL"
-  (when (<= level edts-log-level)
-    (message (concat "EDTS: " (apply #'format msg args)))))
+  (when (<= (edts-log--level-to-number level)
+            (edts-log--level-to-number edts-log-level))
+    (message (format "EDTS [%s]: %s" level (apply #'format msg args)))))
+
+(defun edts-log--level-to-number (level)
+  "Convert an edts-log log-level symbol to a number for comparison."
+  (cdr (assoc level edts-log-levels)))
 

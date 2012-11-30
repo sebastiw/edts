@@ -119,8 +119,8 @@ buffer's project, on the node related to that project."
                (let ((file (buffer-file-name)))
                  (when (and edts-mode
                             (edts-project-file-in-project-p proj file))
-                   (edts-code-xref-analyze result)))))
-           (buffer-list)))))
+                   (edts-code-xref-analyze result))))))
+           (buffer-list))))
 
 (defun edts-code-xref-analyze-no-project (&optional result)
   "Runs xref-checks for all live buffers with its file in current
