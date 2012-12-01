@@ -70,22 +70,23 @@ CALLBACK-ARGS."
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
          (url-show-status           nil)
-         (callback-args             (cons callback callback-args)))
+         (callback-args             (append
+                                     (list (current-buffer) callback)
+                                     callback-args)))
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
         (url-retrieve url #'edts-rest-request-callback callback-args)
       (make-local-variable 'url-show-status)
       (setq url-show-status nil))))
 
-(defun edts-rest-request-callback (events &rest args)
+(defun edts-rest-request-callback (events orig-buf callback &rest callback-args)
   "Callback for asynchronous http requests."
-  (let* ((callback      (car args))
-         (callback-args (cdr args))
-         (reply         (edts-rest-parse-http-response))
+  (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply))))
     (edts-log-debug "Reply received, %s" status)
     (url-mark-buffer-as-dead (current-buffer))
-    (apply callback reply callback-args)))
+    (with-current-buffer orig-buf
+        (apply callback reply callback-args))))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
