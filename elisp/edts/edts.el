@@ -268,7 +268,7 @@ node, optionally retrying RETRIES times."
   (if (> retries 0)
       (if (edts-node-started-p node-name)
           (edts-register-node node-name root libs retries)
-        (edts-register-node-when-ready node-name root (1- retries)))
+        (edts-register-node-when-ready node-name root libs (1- retries)))
     (edts-log-error "Could not register node '%s'" node-name)
     nil))
 
