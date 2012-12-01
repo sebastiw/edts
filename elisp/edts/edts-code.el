@@ -100,7 +100,7 @@ with severity as key and a lists of issues as values"
 (defun edts-code-xref-analyze-related (&optional result)
   "Runs xref-checks for all live buffers related to current
 buffer either by belonging to the same project or, if current buffer
-does not belongi to any project, being in the same directory as the
+does not belong to any project, being in the same directory as the
 current buffer's file."
   (let ((proj (edts-project-buffer-project (current-buffer))))
     (if proj

@@ -202,9 +202,15 @@ further.
                                               buffer and display results.
 \\[edts-code-xref-analyze]                  - Run xref analysis on current
                                               buffer.
-\\[edts-code-xref-analyze-project]          - Run xref analysis on all buffers
-                                              belonging to the same project as
-                                              current buffer.
+\\[edts-code-xref-analyze-related]          - Runs xref-checks for all
+                                              live buffers related to
+                                              current buffer either by
+                                              belonging to the same
+                                              project or, if current
+                                              buffer does not belong to
+                                              any project, being in the
+                                              same directory as the
+                                              current buffer's file.
 \\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
 \\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
                                               if not already running.
