@@ -178,6 +178,65 @@ buffer's project."
       (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
 
 
+(defun edts-code-dialyze-related (&optional result)
+  "Runs dialyzer for all live buffers related to current
+buffer either by belonging to the same project or, if current buffer
+does not belongi to any project, being in the same directory as the
+current buffer's file."
+  (interactive '(ok))
+  (let ((proj (edts-project-buffer-project (current-buffer))))
+    (if proj
+        (edts-code-dialyze-project proj result)
+      (edts-code-dialyze-no-project result))))
+
+(defun edts-code-dialyze-project (proj result)
+  "Runs dialyzer for all live buffers with its file in current
+buffer's project, on the node related to that project."
+  (let ((mods (mapcar #'ferl-get-module (edts-project-buffer-list proj t)))
+        (otp-plt nil)
+        (out-plt (edts-path-join edts-data-directory
+                                 (concat (edts-project-name proj) ".plt"))))
+    (edts-get-dialyzer-analysis-async mods #'edts-code-handle-dialyze-result)))
+
+(defun edts-code-dialyze-no-project (&optional result)
+  "Runs dialyzer for all live buffers with its file in current
+buffer's directory, on the node related to that buffer."
+  (let* ((dir     default-directory)
+         (otp-plt nil)
+         (out-plt (edts-path-join edts-data-directory
+                                  (concat (file-name-nondirectory dir) ".plt")))
+         (mods (edts-code--buffers-in-dir dir)))
+    (edts-get-dialyzer-analysis-async
+     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
+
+(defun edts-code--buffers-in-dir (dir)
+  "Return a list of all edts buffers visiting a file in DIR,
+non-recursive."
+  (reduce
+   #'(lambda (acc buf)
+       (let ((buf-dir (buffer-local-value 'default-directory buf)))
+         (if (and (buffer-live-p buf) (string= dir buf-dir))
+             (cons arg acc)
+           acc)))
+   (buffer-list)
+   :key #'(lambda (arg) arg)
+   :initial-value nil))
+
+(defun edts-code-dialyze (result)
+  "Runs dialyzer for current buffer on the node related to that
+buffer's project."
+  (error "not implemented"))
+  ;; (interactive '(ok))
+  ;; (when (string= "erl" (file-name-extension (buffer-file-name)))
+  ;;   (edts-face-remove-overlays '("edts-code-xref"))
+  ;;   (when (and edts-code-xref-checks (not (eq result 'error)))
+  ;;     (let ((module (ferl-get-module)))
+  ;;       (edts-get-module-xref-analysis-async
+  ;;        module edts-code-xref-checks
+  ;;        #'edts-code-handle-xref-analysis-result (current-buffer))))))
+
+
+
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
   (mapcar

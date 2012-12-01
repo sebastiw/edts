@@ -33,6 +33,19 @@ activated for the first file that is located inside a project."
 ;; Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun edts-project-buffer-list (project &optional modules-only)
+  "Return a list of all live buffers that are related to PROJECT. If
+MODULES-ONLY is non-nil, return only buffers containing Erlang-modules"
+  (remove-if-not
+   #'(lambda (buf)
+       (and (buffer-live-p buf)
+            (buffer-local-value 'edts-mode buf)
+            (edts-project-file-in-project-p proj (buffer-file-name buf))
+            (if modules-only
+                (ferl-get-module buf)
+              t)))
+   (buffer-list)))
+
 (defun edts-project-ensure-buffer-node-started (buffer)
   "Start BUFFER's project's node if it is not already started."
   (edts-project-ensure-node-started (edts-project-buffer-project buffer)))

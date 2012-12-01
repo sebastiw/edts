@@ -69,8 +69,8 @@ node."
          ; The beam-file to look for
          (beam-name (concat (edts--path-root-base-name file) ".beam"))
          ; Look for beam-file in this directory
-         (ebin-dir  (edts--path-join (edts--path-pop file 2) "ebin"))
-         (beam-abs  (edts--path-join ebin-dir beam-name))
+         (ebin-dir  (edts-path-join (edts--path-pop file 2) "ebin"))
+         (beam-abs  (edts-path-join ebin-dir beam-name))
          ; Where to start the node
          (root-dir (if (file-exists-p beam-abs)
                        ebin-dir
@@ -96,7 +96,7 @@ component) of PATH"
       (setq path (directory-file-name (file-name-directory path))))
     path))
 
-(defun edts--path-join (&rest paths)
+(defun edts-path-join (&rest paths)
   "Join strings in PATHS with a direcory separator in between each
 element."
   (mapconcat #'identity paths "/"))
@@ -397,7 +397,7 @@ parsed response as the single argument"
     (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
 (defun edts-get-module-eunit-async (module callback)
-  "Run eunit tests in MODULE on the node associated with BUFFER,
+  "Run eunit tests in MODULE on the node associated with current-buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
   (let* ((resource      (list "nodes"   edts-buffer-node-name
@@ -417,6 +417,20 @@ parsed response as the single argument."
          (cb-args   (list callback 201)))
     (edts-log-debug "Compiling %s async on %s" module edts-buffer-node-name)
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
+
+(defun edts-get-dialyzer-analysis (modules otp-plt out-plt callback)
+  "Run dialyzer analysis on MODULES on the node associated with
+current-buffer asynchronously. When the request terminates, call
+CALLBACK with the parsed response as the single argument."
+  (let* ((resource (list "nodes"   edts-buffer-node-name
+                         "dialyzer_analysis"))
+         (args     (list "modules" modules
+                         "otp_plt" otp-plt
+                         "out-plt" out-plt))
+         (cb-args (list callback 200)))
+    (edts-log-debug
+     "running dialyzer on %s async on %s" modules edts-buffer-node-name)
+    (edts-rest-get-async resource args #'edts-async-callback cb-args)))
 
 
 (defun edts-async-callback (reply callback expected &rest args)
