@@ -52,10 +52,12 @@ current-buffer"
           (+ (point) 1)
           (point)))))
 
-(defun ferl-get-module ()
-  "Try to find the name of the erlang module in current buffer"
-  (or (erlang-get-module)
-      (erlang-get-module-from-file-name)))
+(defun ferl-get-module (&optional buffer)
+  "Try to find the name of the erlang module in BUFFER, or current
+buffer if no argument is given"
+  (with-current-buffer (or buffer (current-buffer))
+    (or (erlang-get-module)
+        (erlang-get-module-from-file-name))))
 
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position
