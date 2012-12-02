@@ -51,7 +51,12 @@
 %%------------------------------------------------------------------------------
 exists_p(ReqData, Ctx, Keys) ->
   F = fun(Key) -> (atom_to_exists_p(Key))(ReqData, Ctx) end,
-  lists:all(F, Keys).
+  case lists:partition(F, Keys) of
+    {_, []}       -> true;
+    {_, NoExists} ->
+      edts_log:debug("resource_exists failed: ~p", [NoExists]),
+      false
+  end.
 
 
 %%------------------------------------------------------------------------------

@@ -206,21 +206,23 @@ buffer's directory, on the node related to that buffer."
          (otp-plt nil)
          (out-plt (edts-path-join edts-data-directory
                                   (concat (file-name-nondirectory dir) ".plt")))
-         (mods (edts-code--buffers-in-dir dir)))
+         (mods (edts-code--modules-in-dir dir)))
     (edts-get-dialyzer-analysis-async
      mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
 
-(defun edts-code--buffers-in-dir (dir)
+(defun edts-code--modules-in-dir (dir)
   "Return a list of all edts buffers visiting a file in DIR,
 non-recursive."
   (reduce
    #'(lambda (acc buf)
-       (let ((buf-dir (buffer-local-value 'default-directory buf)))
-         (if (and (buffer-live-p buf) (string= dir buf-dir))
-             (cons arg acc)
-           acc)))
+       (if (not (buffer-live-p buf))
+           acc
+         (let ((module (ferl-get-module buf)))
+           (if (and (string= dir (buffer-local-value 'default-directory buf))
+                    module)
+               (cons module acc)
+             acc))))
    (buffer-list)
-   :key #'(lambda (arg) arg)
    :initial-value nil))
 
 (defun edts-code-handle-dialyze-result (analysis-res)
