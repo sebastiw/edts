@@ -68,11 +68,11 @@ malformed_request(ReqData, Ctx0) ->
   if
     OtpPlt =/= undefined andalso not OtpPltExistsP ->
       edts_log:error("API input validation failed. Key otp_plt, "
-                     "Rsn: no_exists"),
+                     "Rsn: no_exists", []),
       {true, ReqData, Ctx0};
     OutPlt =:= undefined ->
       edts_log:error("API input validation failed. Key out_plt, "
-                     "Rsn: undefined"),
+                     "Rsn: undefined", []),
       {true, ReqData, Ctx0};
     true ->
       Validators = [nodename, modules],
