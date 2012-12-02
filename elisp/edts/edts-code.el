@@ -226,7 +226,7 @@ non-recursive."
 (defun edts-code-handle-dialyze-result (analysis-res)
   (when analysis-res
     (let ((warnings (cdr (assoc 'warnings analysis-res))))
-      (edts-code--set-issues 'edts-code-dialyzer (list 'error warnings))
+      (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
       (edts-code-display-warning-overlays "edts-code-dialyzer" warnings)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status))
       warnings)))
