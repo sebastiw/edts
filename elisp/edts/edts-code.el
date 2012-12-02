@@ -196,7 +196,8 @@ buffer's project, on the node related to that project."
         (otp-plt nil)
         (out-plt (edts-path-join edts-data-directory
                                  (concat (edts-project-name proj) ".plt"))))
-    (edts-get-dialyzer-analysis-async mods #'edts-code-handle-dialyze-result)))
+    (edts-get-dialyzer-analysis-async
+     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
 
 (defun edts-code-dialyze-no-project (&optional result)
   "Runs dialyzer for all live buffers with its file in current
@@ -222,19 +223,13 @@ non-recursive."
    :key #'(lambda (arg) arg)
    :initial-value nil))
 
-(defun edts-code-dialyze (result)
-  "Runs dialyzer for current buffer on the node related to that
-buffer's project."
-  (error "not implemented"))
-  ;; (interactive '(ok))
-  ;; (when (string= "erl" (file-name-extension (buffer-file-name)))
-  ;;   (edts-face-remove-overlays '("edts-code-xref"))
-  ;;   (when (and edts-code-xref-checks (not (eq result 'error)))
-  ;;     (let ((module (ferl-get-module)))
-  ;;       (edts-get-module-xref-analysis-async
-  ;;        module edts-code-xref-checks
-  ;;        #'edts-code-handle-xref-analysis-result (current-buffer))))))
-
+(defun edts-code-handle-dialyze-result (analysis-res)
+  (when analysis-res
+    (let ((warnings (cdr (assoc 'warnings analysis-res))))
+      (edts-code--set-issues 'edts-code-dialyzer (list 'error warnings))
+      (edts-code-display-warning-overlays "edts-code-dialyzer" warnings)
+      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+      warnings)))
 
 
 (defun edts-code-display-error-overlays (type errors)
@@ -277,7 +272,8 @@ buffer's project."
          (overlay-type type)
          (prio         (edts-code-overlay-priority
                         (cdr (assoc 'type issue)))))
-    (edts-face-display-overlay face line help overlay-type prio)))
+    (when (integerp line)
+      (edts-face-display-overlay face line help overlay-type prio))))
 
 (defun edts-code-find-issue-overlay-line (issue)
   "Tries to find where in current buffer to display overlay for `ISSUE'."

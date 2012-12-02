@@ -418,15 +418,15 @@ parsed response as the single argument."
     (edts-log-debug "Compiling %s async on %s" module edts-buffer-node-name)
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
 
-(defun edts-get-dialyzer-analysis (modules otp-plt out-plt callback)
+(defun edts-get-dialyzer-analysis-async (modules otp-plt out-plt callback)
   "Run dialyzer analysis on MODULES on the node associated with
 current-buffer asynchronously. When the request terminates, call
 CALLBACK with the parsed response as the single argument."
   (let* ((resource (list "nodes"   edts-buffer-node-name
                          "dialyzer_analysis"))
-         (args     (list "modules" modules
-                         "otp_plt" otp-plt
-                         "out-plt" out-plt))
+         (args     `(("modules" . ,modules)
+                     ("otp_plt" . ,otp-plt)
+                     ("out_plt" . ,out-plt)))
          (cb-args (list callback 200)))
     (edts-log-debug
      "running dialyzer on %s async on %s" modules edts-buffer-node-name)

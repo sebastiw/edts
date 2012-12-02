@@ -64,11 +64,17 @@ malformed_request(ReqData, Ctx0) ->
   % Non-standard validation
   OtpPlt = wrq:get_qs_value("otp_plt", ReqData),
   OutPlt = wrq:get_qs_value("out_plt", ReqData),
-  case (OtpPlt =/= undefined andalso not filelib:is_file(OtpPlt)) orelse
-    (OutPlt =:= undefined) of
-    true  ->
+  OtpPltExistsP = filelib:is_file(OtpPlt),
+  if
+    OtpPlt =/= undefined andalso not OtpPltExistsP ->
+      edts_log:error("API input validation failed. Key otp_plt, "
+                     "Rsn: no_exists"),
       {true, ReqData, Ctx0};
-    false ->
+    OutPlt =:= undefined ->
+      edts_log:error("API input validation failed. Key out_plt, "
+                     "Rsn: undefined"),
+      {true, ReqData, Ctx0};
+    true ->
       Validators = [nodename, modules],
       Ctx =
         orddict:store(otp_plt, OtpPlt, orddict:store(out_plt, OutPlt, Ctx0)),
