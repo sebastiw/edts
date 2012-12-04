@@ -84,6 +84,11 @@ PWD and running COMMAND."
       (setq show-trailing-whitespace nil)
       (visual-line-mode 1)
       (make-local-variable 'ac-auto-show-menu)
+      ;; We don't like tabs in our shells. The tab-key should only be used for
+      ;; completion and is set to do just that when auto-complete-mode's
+      ;; mode-map is active.
+      (make-local-variable 'comint-mode-map)
+      (define-key comint-mode-map "\t" 'ignore)
 
       ;; comint-variables
       (add-hook
