@@ -211,6 +211,8 @@ further.
                                               any project, being in the
                                               same directory as the
                                               current buffer's file.
+\\[edts-code-dialyze-related]               - Same as the xref-check
+                                              above, but for dialyzer.
 \\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
 \\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
                                               if not already running.

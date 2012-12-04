@@ -28,6 +28,7 @@ Currently EDTS provides:
 - A snazzy erlang shell wrapper with syntax highlighting and auto-completion.
 - In-buffer flymake-like compilation
 - In-buffer xref checks
+- Dialyzer integration
 - Rudimentary project support
 - Code navigation.
 - Auto-completion, using auto-complete-mode
@@ -36,7 +37,6 @@ Currently EDTS provides:
 - In-buffer running of unit tests
 
 In the works:
-- Dialyzer integration
 - A nice interface to the erlang debugger
 
 For more information, hit M-x describe-minor-mode RET edts-mode RET.
