@@ -115,7 +115,9 @@ come on you have to do *something* yourself!"
 (defun edts-project-node-name (project)
   "Returns the edts-project PROJECT's erlang node-name. Currently only
 short names are supported."
-  (or (edts-project-property 'node-sname project) (edts-project-name project)))
+  (let ((name (or (edts-project-property 'node-sname project)
+                  (edts-project-name project))))
+    (replace-regexp-in-string "[^A-Za-z-_0-9]+" "-" name)))
 
 (defun edts-project-start-command (project)
   "Returns the edts-project PROJECT's command for starting it's project
@@ -209,7 +211,7 @@ make sure it ends with a '/'."
   (defvar edts-project-test-project-1
     '((name          . "dev")
       (root          . "/foo")
-      (node-sname    . "dev-node")
+      (node-sname    . "dev.node")
       (lib-dirs . ("lib" "test"))))
 
   ;; Incorrectly defined project
