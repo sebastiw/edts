@@ -117,7 +117,8 @@ come on you have to do *something* yourself!"
 short names are supported."
   (let ((name (or (edts-project-property 'node-sname project)
                   (edts-project-name project))))
-    (replace-regexp-in-string "[^A-Za-z-_0-9]+" "-" name)))
+    (when name
+      (replace-regexp-in-string "[^A-Za-z-_0-9]+" "-" name))))
 
 (defun edts-project-start-command (project)
   "Returns the edts-project PROJECT's command for starting it's project
