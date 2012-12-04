@@ -64,9 +64,10 @@ is bounded by START and END."
   "Extract documentation from source. Search is bounded by
 START and END."
   (goto-char start)
-  (when (re-search-forward "^%% @doc\\([[:ascii:]]+?\\)\n[^%]" end t)
-    (replace-regexp-in-string
-     "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
-     " "
-     (buffer-substring (match-beginning 1) (match-end 1)))))
+  (let ((re "^%% @doc\\([[:ascii:]]+?\\)\\(\n[^%]\\|@end\\)"))
+    (when (re-search-forward re end t)
+      (replace-regexp-in-string
+       "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
+       " "
+       (buffer-substring (match-beginning 1) (match-end 1))))))
 
