@@ -351,12 +351,14 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 init_xref() ->
   File = xref_file(),
-  try file:read_file(File) of
+  try
+    case file:read_file(File) of
       {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
       {error, enoent}     -> edts_xref:start();
       {error, _} = Error  ->
       error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
       edts_xref:start()
+    end
   catch
     C:E ->
       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
