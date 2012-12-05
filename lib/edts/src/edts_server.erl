@@ -124,7 +124,7 @@ node_available_p(Node) ->
 -spec node_registered_p(node()) -> boolean().
 %%------------------------------------------------------------------------------
 node_registered_p(Node) ->
-  gen_server:call(?SERVER, {node_available_p, Node}, infinity).
+  gen_server:call(?SERVER, {node_registered_p, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
