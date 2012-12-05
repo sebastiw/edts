@@ -57,7 +57,9 @@ current-buffer"
 buffer if no argument is given"
   (with-current-buffer (or buffer (current-buffer))
     (or (erlang-get-module)
-        (erlang-get-module-from-file-name))))
+        (and
+         (string= (file-name-extension (buffer-file-name buffer)) "erl")
+         (erlang-get-module-from-file-name)))))
 
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position

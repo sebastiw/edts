@@ -47,12 +47,12 @@
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
          (url-request-data          body)
-         (url-show-status           nil)
-         (buffer (url-retrieve-synchronously url)))
+         (url-show-status           nil))
     (edts-log-debug "Sending %s-request to %s" method url)
-    (when buffer
-      (with-current-buffer buffer
-        (edts-rest-parse-http-response)))))
+    (let ((buffer (url-retrieve-synchronously url)))
+      (when buffer
+        (with-current-buffer buffer
+          (edts-rest-parse-http-response))))))
 
 (defun edts-rest-get-async (resource args callback callback-args)
   "Send a post request to RESOURCE with ARGS"
