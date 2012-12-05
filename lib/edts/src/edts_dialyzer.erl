@@ -52,11 +52,86 @@
 %%------------------------------------------------------------------------------
 run(Plts, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
-    gather_beam_files(code:lib_dir(), code:all_loaded()),
-  Warnings = dialyzer:run(get_options(LoadedFiles, OutPlt, Plts)),
+    non_otp_beam_files(code:lib_dir(), code:all_loaded()),
+  ok = update_plt(LoadedFiles, OutPlt, Plts),
+  Warnings = check_plt(Modules, OutPlt),
   format_warnings(filter_warnings(Modules, Warnings)).
 
 %%%_* Internal functions =======================================================
+
+check_plt(Modules, Plt) ->
+  {ok, PltFiles} = dialyzer_plt:included_files(Plt),
+  Files = beam_files_to_analyze(Modules, PltFiles),
+  Opts = [{files, Files},
+          {init_plt, Plt},
+          {output_plt, Plt},
+          {analysis_type, plt_check}],
+  dialyzer:run(Opts).
+
+beam_files_to_analyze(Modules, PltFiles) ->
+  F = fun(M, Acc) -> beam_files_to_analyze_aux(M, PltFiles, Acc) end,
+  lists:foldl(F, [], Modules).
+
+beam_files_to_analyze_aux(M, PltFiles, Acc) ->
+  case code:is_loaded(M) of
+    false     -> Acc;
+    {M, Beam} ->
+      case lists:member(Beam, PltFiles) of
+        true  -> [Beam|Acc];
+        false -> Acc
+      end
+  end.
+
+update_plt(LoadedFiles, Plts, OutPlt) ->
+  case filelib:is_file(OutPlt) of
+    true  -> create_plt(LoadedFiles, Plts, OutPlt);
+    false ->
+      {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
+      case LoadedFiles -- OldFiles of
+        []         -> ok;
+        FilesToAdd -> add_to_plt(FilesToAdd, OutPlt)
+      end,
+      case OldFiles -- LoadedFiles of
+        []            -> ok;
+        FilesToRemove -> remove_from_plt(FilesToRemove, OutPlt)
+      end,
+      ok
+  end.
+
+remove_from_plt(Files, Plt) ->
+  Opts = [{files, Files},
+          {init_plt, Plt},
+          {output_plt, Plt},
+          {analysis_type, plt_remove}],
+  dialyzer:run(Opts).
+
+
+add_to_plt(Files, Plt) ->
+  Opts = [{files, Files},
+          {init_plt, Plt},
+          {output_plt, Plt},
+          {analysis_type, plt_add}],
+  dialyzer:run(Opts).
+
+create_plt(LoadedFiles, Plts, OutPlt) ->
+  Opts = [{files, LoadedFiles},
+          {output_plt, OutPlt},
+          {plts, Plts},
+          {analysis_type, plt_build}],
+  dialyzer:run(Opts).
+
+non_otp_beam_files(OtpLibDir, LoadedModules) ->
+  F = fun({_M, Loc}, Acc) when is_list(Loc) ->
+          % Loaded from file and not an otp library.
+          case filename:extension(Loc) =:= ".beam" andalso
+               not lists:prefix(OtpLibDir, Loc) of
+            true  -> [Loc|Acc];
+            false -> Acc
+          end;
+         (_, Acc) -> Acc
+      end,
+  lists:foldl(F, [], LoadedModules).
+
 
 filter_warnings(Modules, Warnings) ->
   case Modules of
@@ -71,53 +146,6 @@ filter_warnings(Modules, Warnings) ->
   end.
 
 
-get_options(LoadedFiles, OutPlt, Plts) ->
-  Opts =
-    case filelib:is_file(OutPlt) of
-      false -> %% Build plt from scratch, dialyzer will analyze in the process
-        [{files, LoadedFiles},
-         {output_plt, OutPlt},
-         {plts, Plts},
-         {analysis_type, plt_build}];
-      true ->
-        {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
-        case LoadedFiles -- OldFiles of
-          [] ->
-            %% No new files to add, may need to force an analysis
-            case dialyzer_plt:check_plt(OutPlt, [], []) of
-              ok -> % No changes to any files, exlplicit call needed
-                [{files, LoadedFiles},
-                 {init_plt, OutPlt},
-                 {analysis_type, succ_typings}];
-              {error, _}  = Err -> throw(Err); %% Something went wrong
-              _ -> % Some file changed. dialyzer will update plt and analyze
-                [{files, LoadedFiles},
-                 {init_plt, OutPlt},
-                 {output_plt, OutPlt},
-                 {analysis_type, plt_check}]
-            end;
-          FilesToAdd ->
-            %% Add new files. This will cause dialyzer to run analysis
-            [{files, FilesToAdd},
-             {init_plt, OutPlt},
-             {output_plt, OutPlt},
-             {analysis_type, plt_add}]
-        end
-    end,
-  [{get_warnings, true}|Opts].
-
-
-gather_beam_files(OtpLibDir, LoadedModules) ->
-  F = fun({_M, Loc}, Acc) when is_list(Loc) ->
-          case lists:suffix(".beam", Loc) andalso % \ Loaded from file and
-               not lists:prefix(OtpLibDir, Loc) of   % / not an otp library.
-            true  -> [Loc|Acc];
-            false -> Acc
-          end;
-         (_, Acc) -> Acc
-      end,
-  lists:foldl(F, [], LoadedModules).
-
 format_warnings(Warnings) ->
   F = fun({_, {File, Line}, _} = Warning) ->
           {warning, File, Line, dialyzer:format_warning(Warning)}
@@ -126,74 +154,31 @@ format_warnings(Warnings) ->
 
 %%%_* Unit tests ===============================================================
 
+
+non_otp_beam_files_test_() ->
+  {ok, Cwd} = file:get_cwd(),
+  OtpDir = filename:join([Cwd, "otp", "lib"]),
+  [?_assertEqual([], non_otp_beam_files(OtpDir, [{test, preloaded}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test, OtpDir}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test, "test"}])),
+   ?_assertEqual(["test.beam"],
+                 non_otp_beam_files(OtpDir, [{test, "test.beam"}]))].
+
 filter_warnings_test_() ->
-  [?_assertEqual([foo], filter_warnings(all, [foo])),
-   ?_assertEqual([], filter_warnings(all, [])),
-   ?_assertEqual([], filter_warnings([],  [{error, {"src/foo.erl", 1}, bla}])),
-   ?_assertEqual([], filter_warnings([bar],  [{error, {"src/foo.erl", 1}, bla}])),
+  [?_assertEqual([foo],
+                 filter_warnings(all, [foo])),
+   ?_assertEqual([],
+                 filter_warnings(all, [])),
+   ?_assertEqual([],
+                 filter_warnings([],    [{error, {"src/foo.erl", 1}, bla}])),
+   ?_assertEqual([],
+                 filter_warnings([bar], [{error, {"src/foo.erl", 1}, bla}])),
    ?_assertEqual([{error, {"src/foo.erl", 1}, bla}],
                  filter_warnings([foo],  [{error, {"src/foo.erl", 1}, bla},
                                           {error, {"src/bar.erl", 1}, bla}])),
    ?_assertEqual([{error, {"src/foo.erl", 1}, bla}],
                  filter_warnings([foo, bar], [{error, {"src/foo.erl", 1}, bla}]))
   ].
-
-get_options_test_() ->
-  File1 = filename:join(code:priv_dir(edts), "out_plt1"),
-  File2 = filename:join(code:priv_dir(edts), "out_plt2"),
-  ok = file:write_file(File2, <<"">>),
-  File3 = filename:join(code:priv_dir(edts), "out_plt3"),
-  ok = file:write_file(File3, <<"">>),
-  File4 = filename:join(code:priv_dir(edts), "out_plt4"),
-  ok = file:write_file(File4, <<"">>),
-  [{setup,
-    fun() ->
-        meck:unload(),
-        meck:new(dialyzer),
-        meck:new(dialyzer_plt),
-        meck:expect(dialyzer_plt, included_files,
-                    fun(F) when F =:= File2 orelse
-                                F =:= File3 orelse
-                                F =:= File4 -> {ok, ["one"]}
-                    end),
-        meck:expect(dialyzer_plt, check_plt,
-                    fun(F2, [], []) when F2 =:= File2 -> ok;
-                       (F3, [], []) when F3 =:= File3 -> {error, some_error};
-                       (F4, [], []) when F4 =:= File4 -> changed
-                    end)
-    end,
-    fun(_) ->
-        meck:unload(),
-        file:delete(File2),
-        file:delete(File3),
-        file:delete(File4)
-    end,
-    [?_assertEqual(lists:sort([{get_warnings, true},
-                               {files, ["one"]},
-                               {output_plt, File1},
-                               {plts, ["otp_plt"]},
-                               {analysis_type, plt_build}]),
-                   lists:sort(get_options(["one"], File1, ["otp_plt"]))),
-     ?_assertEqual(lists:sort([{get_warnings, true},
-                              {files, ["one"]},
-                              {init_plt, File2},
-                              {analysis_type, succ_typings}]),
-                   lists:sort(get_options(["one"], File2, ["otp_plt"]))),
-     ?_assertThrow({error, some_error},
-                   get_options(["one"], File3, ["otp_plt"])),
-     ?_assertEqual(lists:sort([{get_warnings, true},
-                              {files, ["one"]},
-                              {init_plt, File4},
-                              {output_plt, File4},
-                              {analysis_type, plt_check}]),
-                   lists:sort(get_options(["one"], File4, ["otp_plt"]))),
-     ?_assertEqual(lists:sort([{get_warnings, true},
-                              {files, ["two"]},
-                              {init_plt, File2},
-                              {output_plt, File2},
-                              {analysis_type, plt_add}]),
-                   lists:sort(get_options(["one", "two"], File2, ["otp_plt"])))
-    ]}].
 
 format_warnings_test_() ->
   [{setup,
@@ -209,14 +194,6 @@ format_warnings_test_() ->
     [?_assertEqual([{warning, "file", 1337, "warning"}],
                    format_warnings([{foo, {"file", 1337}, "warning"}]))]}].
 
-gather_beam_files_test_() ->
-  {ok, Cwd} = file:get_cwd(),
-  OtpDir = filename:join([Cwd, "otp", "lib"]),
-  [?_assertEqual([], gather_beam_files(OtpDir, [{test, preloaded}])),
-   ?_assertEqual([], gather_beam_files(OtpDir, [{test, OtpDir}])),
-   ?_assertEqual([], gather_beam_files(OtpDir, [{test, "test"}])),
-   ?_assertEqual(["test.beam"],
-                 gather_beam_files(OtpDir, [{test, "test.beam"}]))].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

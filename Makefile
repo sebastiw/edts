@@ -11,7 +11,17 @@ clean:
 	rm -rfv elisp/*/*.elc
 	@cd lib/edts && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" clean
 
-.PHONY: test
-test: all
-	@(cd lib/edts; ./rebar eunit skip_deps=true) && \
+.PHONY: ert
+test-el:
 	emacs -Q --batch -l edts-start.el -f ert-run-tests-batch-and-exit
+
+.PHONY: eunit
+eunit:
+	@(cd lib/edts; ./rebar eunit skip_deps=true)
+
+.PHONY: ct
+ct:
+	@(cd lib/edts; ./rebar ct skip_deps=true)
+
+.PHONY: test
+test: all ert eunit ct

@@ -43,11 +43,11 @@
 
 (defun edts-rest-request (method resource args &optional body)
   "Send a get request to RESOURCE with ARGS"
-  (let* ((url                       (edts-rest-resource-url resource args))
-         (url-request-method        method)
-         (url-request-extra-headers (list edts-rest-content-type-hdr))
-         (url-request-data          body)
-         (url-show-status           nil))
+  (let ((url                       (edts-rest-resource-url resource args))
+        (url-request-method        method)
+        (url-request-extra-headers (list edts-rest-content-type-hdr))
+        (url-request-data          body)
+        (url-show-status           nil))
     (edts-log-debug "Sending %s-request to %s" method url)
     (let ((buffer (url-retrieve-synchronously url)))
       (when buffer
