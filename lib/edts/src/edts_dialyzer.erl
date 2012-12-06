@@ -46,14 +46,14 @@
 %% Add Files to OutPlt, creating it if it doesn't exist. Then analyze OtpPlt and
 %% OutPlt together.
 %% @end
--spec run(Plts::filename:filename() | undefined,
+-spec run(BasePlt::filename:filename() | undefined,
           OutPlt::filename:filename(),
           Files::[filename:filename()] | all) -> ok.
 %%------------------------------------------------------------------------------
-run(Plts, OutPlt, Modules) ->
+run(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
-  ok = update_plt(Plts, OutPlt, LoadedFiles),
+  ok = update_plt(BasePlt, OutPlt, LoadedFiles),
   Warnings = check_plt(Modules, OutPlt),
   format_warnings(filter_warnings(Modules, Warnings)).
 
@@ -82,10 +82,10 @@ beam_files_to_analyze_aux(M, PltFiles, Acc) ->
       end
   end.
 
-update_plt(Plts, OutPlt, Files) ->
+update_plt(BasePlt, OutPlt, Files) ->
   %% FIXME What to do if any of Plts have changed?
   case filelib:is_file(OutPlt) of
-    false  -> create_plt(Plts, OutPlt, Files);
+    false  -> create_plt(BasePlt, OutPlt, Files);
     true ->
       {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
       case Files -- OldFiles of
@@ -100,7 +100,8 @@ update_plt(Plts, OutPlt, Files) ->
   ok.
 
 remove_from_plt(Plt, Files) ->
-  Opts = [{files, Files},
+  Opts = [{get_warnings, false},
+          {files, Files},
           {init_plt, Plt},
           {output_plt, Plt},
           {analysis_type, plt_remove}],
@@ -108,18 +109,24 @@ remove_from_plt(Plt, Files) ->
 
 
 add_to_plt(Plt, Files) ->
-  Opts = [{files, Files},
+  Opts = [{get_warnings, false},
+          {files, Files},
           {init_plt, Plt},
           {output_plt, Plt},
           {analysis_type, plt_add}],
   dialyzer:run(Opts).
 
-create_plt(Plts, OutPlt, Files) ->
-  Opts = [{files, Files},
-          {output_plt, OutPlt},
-          {plts, Plts},
-          {analysis_type, plt_build}],
-  dialyzer:run(Opts).
+create_plt(BasePlt, OutPlt, Files) ->
+  BaseOpts =
+    [{get_warnings, false},
+     {files, Files},
+     {output_plt, OutPlt}],
+  VarOpts =
+    case BasePlt of
+      undefined -> [{analysis_type, plt_build}];
+      _         -> [{plts, [BasePlt]}, {analysis_type, plt_add}]
+    end,
+  dialyzer:run(BaseOpts ++ VarOpts).
 
 %%------------------------------------------------------------------------------
 %% @doc
