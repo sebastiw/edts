@@ -65,6 +65,12 @@ the erlang process."
       buffer)))
 
 (defadvice start-process (around edts-shell-start-process-advice)
+  "Sets the TERM environment variable to vt100 to ensure that erl is
+compatible with edts-shell. The reason for doing it here is that setting
+it on the command-line is problematic for projects that call their own
+start-scripts and because the TERM variable in `process-environment' is
+unconditionally set by comint before calling `process-start' so that any
+previous value is overwritten."
   (let ((process-environment (cons "TERM=vt100" process-environment)))
     ad-do-it))
 
