@@ -53,7 +53,7 @@
 run(Plts, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
-  ok = update_plt(LoadedFiles, OutPlt, Plts),
+  ok = update_plt(Plts, OutPlt, LoadedFiles),
   Warnings = check_plt(Modules, OutPlt),
   format_warnings(filter_warnings(Modules, Warnings)).
 
@@ -82,23 +82,24 @@ beam_files_to_analyze_aux(M, PltFiles, Acc) ->
       end
   end.
 
-update_plt(LoadedFiles, Plts, OutPlt) ->
+update_plt(Plts, OutPlt, Files) ->
+  %% FIXME What to do if any of Plts have changed?
   case filelib:is_file(OutPlt) of
-    true  -> create_plt(LoadedFiles, Plts, OutPlt);
-    false ->
+    false  -> create_plt(Plts, OutPlt, Files);
+    true ->
       {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
-      case LoadedFiles -- OldFiles of
+      case Files -- OldFiles of
         []         -> ok;
-        FilesToAdd -> add_to_plt(FilesToAdd, OutPlt)
+        FilesToAdd -> add_to_plt(OutPlt, FilesToAdd)
       end,
-      case OldFiles -- LoadedFiles of
+      case OldFiles -- Files of
         []            -> ok;
-        FilesToRemove -> remove_from_plt(FilesToRemove, OutPlt)
-      end,
-      ok
-  end.
+        FilesToRemove -> remove_from_plt(OutPlt, FilesToRemove)
+      end
+  end,
+  ok.
 
-remove_from_plt(Files, Plt) ->
+remove_from_plt(Plt, Files) ->
   Opts = [{files, Files},
           {init_plt, Plt},
           {output_plt, Plt},
@@ -106,31 +107,43 @@ remove_from_plt(Files, Plt) ->
   dialyzer:run(Opts).
 
 
-add_to_plt(Files, Plt) ->
+add_to_plt(Plt, Files) ->
   Opts = [{files, Files},
           {init_plt, Plt},
           {output_plt, Plt},
           {analysis_type, plt_add}],
   dialyzer:run(Opts).
 
-create_plt(LoadedFiles, Plts, OutPlt) ->
-  Opts = [{files, LoadedFiles},
+create_plt(Plts, OutPlt, Files) ->
+  Opts = [{files, Files},
           {output_plt, OutPlt},
           {plts, Plts},
           {analysis_type, plt_build}],
   dialyzer:run(Opts).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of the beam-files of all currently loaded modules that where
+%% loaded from such, compiled with debug-info and are not otp-modules.
+-spec non_otp_beam_files(filename:filename(),
+                         [{module(), filename:filename()}]) ->
+                            [filename:filename()].
+%%------------------------------------------------------------------------------
 non_otp_beam_files(OtpLibDir, LoadedModules) ->
-  F = fun({_M, Loc}, Acc) when is_list(Loc) ->
-          % Loaded from file and not an otp library.
-          case filename:extension(Loc) =:= ".beam" andalso
-               not lists:prefix(OtpLibDir, Loc) of
+  F = fun({M, Loc}, Acc) ->
+          case non_otp_beam_file_p(OtpLibDir, M, Loc) of
             true  -> [Loc|Acc];
             false -> Acc
-          end;
-         (_, Acc) -> Acc
+          end
       end,
   lists:foldl(F, [], LoadedModules).
+
+non_otp_beam_file_p(_OtpLibDir, _M, Loc) when is_atom(Loc) -> false;
+non_otp_beam_file_p( OtpLibDir,  M, Loc)                   ->
+  Opts = proplists:get_value(options, M:module_info(compile), []),
+  lists:member(debug_info, Opts) andalso
+    filename:extension(Loc) =:= ".beam" andalso
+    not lists:prefix(OtpLibDir, Loc).
 
 
 filter_warnings(Modules, Warnings) ->
@@ -158,11 +171,12 @@ format_warnings(Warnings) ->
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
-  [?_assertEqual([], non_otp_beam_files(OtpDir, [{test, preloaded}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test, OtpDir}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test, "test"}])),
+  [?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, preloaded}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, OtpDir}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, "test"}])),
    ?_assertEqual(["test.beam"],
-                 non_otp_beam_files(OtpDir, [{test, "test.beam"}]))].
+                 non_otp_beam_files(OtpDir, [{?MODULE, "test.beam"}]))
+  ].
 
 filter_warnings_test_() ->
   [?_assertEqual([foo],

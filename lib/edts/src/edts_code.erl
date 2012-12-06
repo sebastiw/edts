@@ -255,7 +255,7 @@ do_get_module_info(M, basic) ->
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
-  {ok, ModSrc}                    = get_module_source(M, Info),
+  {ok, ModSrc}                 = get_module_source(M, Info),
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
