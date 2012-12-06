@@ -89,12 +89,12 @@ that we can reset our face remappings.")
   "Face used for marking lesser warning lines."
   :group 'edts)
 
-(defadvice next-line (after edts-next-line)
+(defadvice next-line (after edts-face-next-line)
   "Moves point to the next line and then prints the help-echo of the highest
 priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
 
-(defadvice previous-line (after edts-previous-line)
+(defadvice previous-line (after edts-face-previous-line)
   "Moves point to the previous line and then prints the help-echo of
 the highest priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))

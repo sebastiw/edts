@@ -64,6 +64,10 @@ the erlang process."
       (when switch-to (switch-to-buffer buffer))
       buffer)))
 
+(defadvice start-process (around edts-shell-start-process-advice)
+  (let ((process-environment (cons "TERM=vt100" process-environment)))
+    ad-do-it))
+
 (defun edts-shell-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
 PWD and running COMMAND."
@@ -72,8 +76,9 @@ PWD and running COMMAND."
          (node-name (edts-shell-node-name-from-args args))
          (pwd  (expand-file-name pwd)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
-    (apply #'make-comint-in-buffer cmd buffer-name cmd nil
-           (append '("-env" "TERM" "vt100") args))
+    (ad-activate-regexp "edts-shell-start-process-advice")
+    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
+    (ad-deactivate-regexp "edts-shell-start-process-advice")
     (with-current-buffer buffer-name
       ;; generic stuff
       (when (fboundp 'show-paren-mode)
