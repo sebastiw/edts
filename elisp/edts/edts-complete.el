@@ -132,6 +132,7 @@ buffers.")
   (setq ac-use-dictionary-as-stop-words nil)
   (define-key ac-menu-map (kbd "C-n") 'ac-next)
   (define-key ac-menu-map (kbd "C-p") 'ac-previous)
+  (ad-activate-regexp "edts-complete-.*")
 
   ;; this is to allow completion inside quoted atoms. As a side-effect we
   ;; get completion inside strings, which must be handled in the sources
