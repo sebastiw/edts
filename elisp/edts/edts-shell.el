@@ -50,16 +50,16 @@ the erlang process."
 (defconst edts-shell-prompt-regexp
   "([a-zA-Z0-9_-]*\\(@[a-zA-Z0-9_-]*\\)?)[0-9]*> ")
 
-(defun edts-shell (&optional switch-to)
+(defun edts-shell (&optional pwd switch-to)
   "Start an interactive erlang shell."
-  (interactive '(t))
+  (interactive '(nil t))
   (edts-ensure-server-started)
   (let*((buffer-name (format "*edts[%s]*" edts-shell-next-shell-id))
         (node-name   (format "edts-%s" edts-shell-next-shell-id))
         (command     (list edts-erl-command "-sname" node-name))
-        (root        (expand-file-name default-directory)))
+        (root        (expand-file-name (or pwd default-directory))))
     (incf edts-shell-next-shell-id)
-    (let ((buffer (edts-shell-make-comint-buffer buffer-name "." command)))
+    (let ((buffer (edts-shell-make-comint-buffer buffer-name pwd command)))
       (edts-register-node-when-ready node-name root nil)
       (when switch-to (switch-to-buffer buffer))
       buffer)))
@@ -97,7 +97,7 @@ PWD and running COMMAND."
       (make-local-variable 'ac-auto-show-menu)
       ;; We don't like tabs in our shells. The tab-key should only be used for
       ;; completion and is set to do just that when auto-complete-mode's
-      ;; mode-map is active.
+      ;; keymap is active.
       (make-local-variable 'comint-mode-map)
       (define-key comint-mode-map "\t" 'ignore)
 

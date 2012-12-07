@@ -76,7 +76,7 @@ node."
                        ebin-dir
                        (edts--path-pop file)))
          (shell-buffer (or (edts-shell-find-by-path root-dir)
-                           (progn (cd root-dir) (edts-shell nil)))))
+                           (progn (edts-shell root-dir nil)))))
     ;; If we came to this module by navigating from a module that _is_
     ;; a in a project, then the node-name should already be set.
     (or edts-buffer-node-name
