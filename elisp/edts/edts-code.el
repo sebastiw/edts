@@ -297,6 +297,7 @@ non-recursive."
   (interactive)
   (push-mark)
   (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
+                                                    "edts-code-dialyzer"
                                                     "edts-code-xref"
                                                     "edts-code-eunit-failed"))))
     (if overlay
@@ -311,6 +312,7 @@ non-recursive."
   (push-mark)
   (let* ((overlay (edts-face-previous-overlay (point)
                                               '("edts-code-compile"
+                                                "edts-code-dialyzer"
                                                 "edts-code-xref"
                                                 "edts-code-eunit-failed"))))
     (if overlay
