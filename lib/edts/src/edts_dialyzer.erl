@@ -173,15 +173,15 @@ format_warnings(Warnings) ->
 
 %%%_* Unit tests ===============================================================
 
-
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
-  [?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, preloaded}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, OtpDir}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{?MODULE, "test"}])),
+  c:l(test_module),
+  [?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, preloaded}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, OtpDir}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, "test"}])),
    ?_assertEqual(["test.beam"],
-                 non_otp_beam_files(OtpDir, [{?MODULE, "test.beam"}]))
+                 non_otp_beam_files(OtpDir, [{test_module, "test.beam"}]))
   ].
 
 filter_warnings_test_() ->
