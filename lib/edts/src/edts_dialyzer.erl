@@ -64,8 +64,7 @@ check_plt(Modules, Plt) ->
   Files = beam_files_to_analyze(Modules, PltFiles),
   Opts = [{files, Files},
           {init_plt, Plt},
-          {output_plt, Plt},
-          {analysis_type, plt_check}],
+          {analysis_type, succ_typings}],
   dialyzer:run(Opts).
 
 beam_files_to_analyze(Modules, PltFiles) ->
@@ -75,7 +74,7 @@ beam_files_to_analyze(Modules, PltFiles) ->
 beam_files_to_analyze_aux(M, PltFiles, Acc) ->
   case code:is_loaded(M) of
     false     -> Acc;
-    {M, Beam} ->
+    {file, Beam} ->
       case lists:member(Beam, PltFiles) of
         true  -> [Beam|Acc];
         false -> Acc
