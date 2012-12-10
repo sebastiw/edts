@@ -59,7 +59,7 @@ the erlang process."
         (command     (list edts-erl-command "-sname" node-name))
         (root        (expand-file-name (or pwd default-directory))))
     (incf edts-shell-next-shell-id)
-    (let ((buffer (edts-shell-make-comint-buffer buffer-name pwd command)))
+    (let ((buffer (edts-shell-make-comint-buffer buffer-name root command)))
       (edts-register-node-when-ready node-name root nil)
       (when switch-to (switch-to-buffer buffer))
       buffer)))
@@ -235,9 +235,13 @@ disable comint-highligt-input face for input."
 (defun edts-shell-comint-input-filter (arg)
   "Pre-filtering of comint output. Added to
 `comint-input-filter-functions'."
-  (when (string-match edts-shell-escape-key-regexp arg)
+  (if (string-match edts-shell-escape-key-regexp arg)
     ;; Entering the shell job control, switch off auto completion
-    (edts-complete -1))
+      (edts-complete -1)
+    ;; Switch auto-completion back on if it's off, ie
+    ;; if we were previously in the job control
+    (unless auto-complete-mode
+      (edts-complete 1)))
   arg)
 
 
