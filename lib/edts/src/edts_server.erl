@@ -366,14 +366,14 @@ init_node_test() ->
   end,
   meck:unload().
 
-is_node_test() ->
+node_registered_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({reply, true, S1},
-               handle_call({is_node, N1#node.name}, self(), S1)),
+               handle_call({node_registered_p, N1#node.name}, self(), S1)),
   ?assertEqual({reply, false, S1},
-               handle_call({is_node, N2#node.name}, self(), S1)).
+               handle_call({node_registered_p, N2#node.name}, self(), S1)).
 
 node_available_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},
