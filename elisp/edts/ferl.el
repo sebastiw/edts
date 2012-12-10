@@ -171,7 +171,8 @@ Should be called with point directly before the opening ( or /."
   "Return the arity of an argument string within a parenthesis."
   (let ((block-depth 0)
         (arity 0)
-        (in-arg nil))
+        (in-arg nil)
+        (case-fold-search nil))
     ;; increase arity if we're not inside an argument
     (flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
                                  (incf arity)
