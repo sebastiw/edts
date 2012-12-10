@@ -217,7 +217,7 @@ init_node(Node, ProjectRoot, LibDirs) ->
 -spec is_node(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
 is_node(Node) ->
-  edts_server:is_node(Node).
+  edts_server:node_registered_p(Node).
 
 %%------------------------------------------------------------------------------
 %% @doc

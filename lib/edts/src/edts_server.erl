@@ -31,7 +31,6 @@
 %% API
 -export([ wait_for_node/1
         , init_node/3
-        , is_node/1
         , node_available_p/1
         , node_registered_p/1
         , nodes/0
@@ -92,16 +91,6 @@ wait_for_node(Node) ->
 %%------------------------------------------------------------------------------
 init_node(Node, ProjectRoot, LibDirs) ->
   gen_server:call(?SERVER, {init_node, Node, ProjectRoot, LibDirs}, infinity).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true iff Node is registered with this edts instance.
-%% @end
-%%
--spec is_node(node()) -> boolean().
-%%------------------------------------------------------------------------------
-is_node(Node) ->
-  gen_server:call(?SERVER, {is_node, Node}, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -193,12 +182,6 @@ handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
       edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
       {reply, Err, State}
   end;
-handle_call({is_node, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
-            #node{} -> true;
-            false   -> false
-          end,
-  {reply, Reply, State};
 handle_call({node_available_p, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
             #node{promises = []} -> true;
