@@ -291,7 +291,7 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
-                     [Node, C, E]),
+                     [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
 
