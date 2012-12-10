@@ -115,17 +115,28 @@ add_to_plt(Plt, Files) ->
           {analysis_type, plt_add}],
   dialyzer:run(Opts).
 
-create_plt(BasePlt, OutPlt, Files) ->
+create_plt(BasePlt0, OutPlt, Files) ->
   BaseOpts =
     [{get_warnings, false},
      {files, Files},
      {output_plt, OutPlt}],
-  VarOpts =
-    case BasePlt of
-      undefined -> [{analysis_type, plt_build}];
-      _         -> [{plts, [BasePlt]}, {analysis_type, plt_add}]
+
+  BasePlt =
+    case BasePlt0 of
+      undefined ->
+        try dialyzer_plt:get_default_plt()
+        catch throw:{dialyzer_error, _} -> undefined
+        end;
+      _ when is_list(BasePlt0) -> BasePlt0
     end,
+  VarOpts =
+    case filelib:is_file(BasePlt) of
+      true  -> [{plts, [BasePlt]}, {analysis_type, plt_add}];
+      false -> [{analysis_type, plt_build}]
+    end,
+
   dialyzer:run(BaseOpts ++ VarOpts).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -180,7 +191,7 @@ update_plt_test_() ->
   [{setup,
     fun() ->
         meck:unload(),
-        meck:new(dialyzer_plt),
+        meck:new(dialyzer_plt, [passthrough]),
         meck:sequence(dialyzer_plt, included_files, 1,
                       [{ok, ["file1"]},
                        {ok, ["file1"]},
@@ -198,20 +209,64 @@ update_plt_test_() ->
           meck:expect(dialyzer, run, fun(_) -> ok end)
       end,
       fun(_) -> ok end,
-      [?_assertEqual({analysis_type, plt_add},
+      [%% Base plt doesn't exist
+       ?_assertEqual({analysis_type, plt_build},
                      begin
                        ok = update_plt("", BadFile, ["file1"]),
                        Hist = meck:history(dialyzer),
                        [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
                        lists:keyfind(analysis_type, 1, Arg)
                      end),
-       ?_assertEqual({analysis_type, plt_build},
+       %% Base plt is 'undefined' and default_plt does not exist
+       {setup,
+        fun() ->
+            meck:expect(dialyzer_plt, get_default_plt, fun() -> "foo.plt" end),
+            ok = update_plt(undefined, BadFile, ["file1"])
+        end,
+        fun(_) -> ok end,
+        [?_assertEqual({analysis_type, plt_build},
+                       begin
+                         Hist = meck:history(dialyzer),
+                         [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
+                         lists:keyfind(analysis_type, 1, Arg)
+                       end)]},
+       %% Base plt is 'undefined' and default_plt throws exception
+       {setup,
+        fun() ->
+            meck:expect(dialyzer_plt,
+                        get_default_plt,
+                        fun() ->
+                            meck:exception(throw, {dialyzer_error, foo})
+                        end),
+                       ok = update_plt(undefined, BadFile, ["file1"])
+        end,
+        fun(_) -> ok end,
+        [?_assertEqual({analysis_type, plt_build},
                      begin
-                       ok = update_plt(undefined, BadFile, ["file1"]),
                        Hist = meck:history(dialyzer),
                        [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
                        lists:keyfind(analysis_type, 1, Arg)
-                     end),
+                     end)]},
+       %% Base plt is 'undefined' and default_plt exists
+       {setup,
+        fun() ->
+            PltFile = "foo.plt",
+            meck:expect(dialyzer_plt, get_default_plt, fun() -> PltFile end),
+            meck:new(filelib, [passthrough, unstick]),
+            meck:expect(filelib, is_file, fun(F) when F =:= PltFile -> true;
+                                             (A) -> meck:passthrough([A])
+                                          end),
+            ok = update_plt(undefined, BadFile, ["file1"])
+        end,
+        fun(_) -> ok end,
+        [?_assertEqual({analysis_type, plt_add},
+                       begin
+                         Hist = meck:history(dialyzer),
+                         [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
+                         lists:keyfind(analysis_type, 1, Arg)
+                       end)]},
+
+
        ?_assertEqual([],
                      begin
                        ok = update_plt("", File, ["file1"]),
