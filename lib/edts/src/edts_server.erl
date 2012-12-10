@@ -290,7 +290,8 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
     {ok, edts_dist:ensure_services_started(Node, [edts_code])}
   catch
     C:E ->
-      edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
+      edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
+                     [Node, C, E]),
       E
   end.
 
