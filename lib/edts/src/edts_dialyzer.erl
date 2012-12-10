@@ -173,6 +173,84 @@ format_warnings(Warnings) ->
 
 %%%_* Unit tests ===============================================================
 
+update_plt_test_() ->
+  {ok, Cwd} = file:get_cwd(),
+  File = filename:join(Cwd, "foo1"),
+  BadFile = filename:join(Cwd, "foo2"),
+  [{setup,
+    fun() ->
+        meck:unload(),
+        meck:new(dialyzer_plt),
+        meck:sequence(dialyzer_plt, included_files, 1,
+                      [{ok, ["file1"]},
+                       {ok, ["file1"]},
+                       {ok, ["file1", "file2"]}]),
+        file:write_file(File, "foo")
+    end,
+    fun(_) ->
+        file:delete(File),
+        meck:unload()
+    end,
+    [{foreach,
+      fun() ->
+          catch meck:unload(dialyzer),
+          meck:new(dialyzer),
+          meck:expect(dialyzer, run, fun(_) -> ok end)
+      end,
+      fun(_) -> ok end,
+      [?_assertEqual({analysis_type, plt_add},
+                     begin
+                       ok = update_plt("", BadFile, ["file1"]),
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
+                       lists:keyfind(analysis_type, 1, Arg)
+                     end),
+       ?_assertEqual({analysis_type, plt_build},
+                     begin
+                       ok = update_plt(undefined, BadFile, ["file1"]),
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
+                       lists:keyfind(analysis_type, 1, Arg)
+                     end),
+       ?_assertEqual([],
+                     begin
+                       ok = update_plt("", File, ["file1"]),
+                       meck:history(dialyzer)
+                     end),
+       ?_assertEqual({analysis_type, plt_add},
+                     begin
+                       ok = update_plt("", File, ["file1", "file2"]),
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg2]}, ok}] = Hist,
+                       lists:keyfind(analysis_type, 1, Arg2)
+                     end),
+       ?_assertEqual({analysis_type, plt_remove},
+                     begin
+                       ok = update_plt("", File, ["file1"]),
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg3]}, ok}] = Hist,
+                       lists:keyfind(analysis_type, 1, Arg3)
+                     end),
+       ?_assertEqual({{analysis_type, plt_add},{analysis_type, plt_remove}},
+                     begin
+                       ok = update_plt("", File, ["file1", "file3"]),
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg4]}, ok},
+                        {_, {dialyzer, run, [Arg5]}, ok}] = Hist,
+                       Type1 = lists:keyfind(analysis_type, 1, Arg4),
+                       Type2 = lists:keyfind(analysis_type, 1, Arg5),
+                       {Type1, Type2}
+                     end)
+      ]}]}].
+
+beam_files_to_analyze_test_() ->
+  {file, F} = code:is_loaded(?MODULE),
+  [?_assertEqual([], beam_files_to_analyze([], ["file1"])),
+   ?_assertEqual([], beam_files_to_analyze([foo], ["file1"])),
+   ?_assertEqual([], beam_files_to_analyze([?MODULE], ["file1"])),
+   ?_assertEqual([F], beam_files_to_analyze([?MODULE], [F]))
+  ].
+
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
