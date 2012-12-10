@@ -94,7 +94,6 @@ PWD and running COMMAND."
       (make-local-variable 'show-trailing-whitepace)
       (setq show-trailing-whitespace nil)
       (visual-line-mode 1)
-      (make-local-variable 'ac-auto-show-menu)
       ;; We don't like tabs in our shells. The tab-key should only be used for
       ;; completion and is set to do just that when auto-complete-mode's
       ;; keymap is active.
@@ -213,16 +212,17 @@ disable comint-highligt-input face for input."
   (when (and arg (not (string= arg "")))
     (setq buffer-undo-list nil)
     (let* ((limit (+ (point) (length arg)))
+           (proc-mark (process-mark (get-buffer-process (current-buffer))))
            (output-end (save-excursion
                         (goto-char comint-last-output-start)
                         (if (re-search-forward edts-shell-prompt-regexp limit t)
                             (progn
                               ;; Switch auto-completion back on if it's off, ie
                               ;; if we were previously in the job control
-                              (unless auto-complete-mode
-                                (edts-complete 1))
+                              ;; (unless auto-complete-mode
+                              ;;   (edts-complete 1))
                               (1- (match-beginning 0)))
-                          (point-max)))))
+                          proc-mark))))
       (put-text-property
        comint-last-input-start comint-last-input-end 'read-only t)
       (add-text-properties
