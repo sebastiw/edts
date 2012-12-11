@@ -222,6 +222,9 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-paren-arity "a,a")))
     (should (eq 1 (ferl-paren-arity ",a")))
     (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
+    ;; Make sure case is not ignored, a Variable named the same as a block
+    ;; opener should not open a block.
+    (should (eq 3 (ferl-paren-arity "Fun,bb,cc")))
 
     (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
     (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
