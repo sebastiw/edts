@@ -212,9 +212,12 @@ for ARITY will give a regexp matching any arity."
   (interactive)
   (when (edts-node-started-p "edts")
     (error "EDTS: Server already running"))
-  (let ((pwd (concat edts-lib-directory "/..")))
+  (let* ((pwd (edts-path-join
+               (directory-file-name edts-lib-directory)
+               ".."))
+         (command (list "./start.sh" pwd edts-erl-command)))
     (with-current-buffer
-        (edts-shell-make-comint-buffer "*edts*" pwd '("./start.sh"))
+        (edts-shell-make-comint-buffer "*edts*" pwd command)
     (setq edts-buffer-node-name "edts"))))
 
 (defun edts-ensure-node-not-started (node-name)
