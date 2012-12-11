@@ -69,7 +69,7 @@ determine which file to look in, with the following algorithm:
    ((edts-header-under-point-p)    (edts-find-header-source))
    ((edts-macro-under-point-p)     (edts-find-macro-source))
    ((edts-record-under-point-p)    (edts-find-record-source))
-   ((edts-behaviour-under-point-p) (edts-find-behaviour-source)
+   ((edts-behaviour-under-point-p) (edts-find-behaviour-source))
    ;; look for a M:F/A
    ((apply #'edts-find-source
            (or (ferl-mfa-at-point) (error "No call at point."))))))
@@ -85,7 +85,8 @@ directive."
   "Return non nil if the form under point is a behaviour directive."
   (save-excursion
     (beginning-of-line)
-    (let ((re (format "-behaviou?r\\s-*(?\\s-*%s\\s-*)?." erlang-atom-regexp)))
+    (let ((re (format "-behaviou?r\\s-*(?\\s-*\\(%s\\)\\s-*)?."
+                      erlang-atom-regexp)))
       (looking-at re))))
 
 (defun edts-macro-under-point-p ()
@@ -107,6 +108,15 @@ directive."
       (beginning-of-line)
       (when (re-search-forward "-include\\(_lib\\)?\\s-*(\\s-*\"\\s-*" bound t)
         (thing-at-point 'filename)))))
+
+(defun edts-find-behaviour-source ()
+  (save-excursion
+    (beginning-of-line)
+    (let ((bound (ferl-last-char-on-line-at (point)))
+          (re (format "-behaviou?r\\s-*(?\\s-*\\(%s\\)\\s-*)?."
+                      erlang-atom-regexp)))
+      (when (re-search-forward re bound t)
+        (edts-find-source (match-string 1) "behaviour_info" 1)))))
 
 (defun edts-find-header-source ()
   "Open the source for the header file under point."
