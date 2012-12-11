@@ -12,7 +12,7 @@ clean:
 	@cd lib/edts && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: ert
-test-el:
+ert:
 	emacs -Q --batch -l edts-start.el -f ert-run-tests-batch-and-exit
 
 .PHONY: eunit
