@@ -66,9 +66,10 @@ determine which file to look in, with the following algorithm:
   (interactive)
   (cond
    ;; look for a include/include_lib
-   ((edts-header-under-point-p) (edts-find-header-source))
-   ((edts-macro-under-point-p)  (edts-find-macro-source))
-   ((edts-record-under-point-p) (edts-find-record-source))
+   ((edts-header-under-point-p)    (edts-find-header-source))
+   ((edts-macro-under-point-p)     (edts-find-macro-source))
+   ((edts-record-under-point-p)    (edts-find-record-source))
+   ((edts-behaviour-under-point-p) (edts-find-behaviour-source)
    ;; look for a M:F/A
    ((apply #'edts-find-source
            (or (ferl-mfa-at-point) (error "No call at point."))))))
@@ -79,6 +80,13 @@ directive."
   (save-excursion
     (beginning-of-line)
     (looking-at "-include\\(_lib\\)?\\s-*(\\s-*.*")))
+
+(defun edts-behaviour-under-point-p ()
+  "Return non nil if the form under point is a behaviour directive."
+  (save-excursion
+    (beginning-of-line)
+    (let ((re (format "-behaviou?r\\s-*(?\\s-*%s\\s-*)?." erlang-atom-regexp)))
+      (looking-at re))))
 
 (defun edts-macro-under-point-p ()
   "Return non nil if the form under point is a macro."
