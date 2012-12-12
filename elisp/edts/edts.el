@@ -215,7 +215,7 @@ for ARITY will give a regexp matching any arity."
   (let* ((pwd (edts--path-join
                (directory-file-name edts-lib-directory)
                ".."))
-         (command (list "./start.sh" pwd edts-erl-command)))
+         (command (list "./start.sh" edts-data-directory edts-erl-command)))
     (with-current-buffer
         (edts-shell-make-comint-buffer "*edts*" pwd command)
     (setq edts-buffer-node-name "edts"))))
