@@ -144,7 +144,9 @@ short names are supported."
 
 (defun edts-project-dialyzer-plt (project)
   "Returns the path to PROJECT's custom dialyzer plt location, if any."
-  (edts-project-property 'dialyzer-plt project))
+  (let ((file-name(edts-project-property 'dialyzer-plt project)))
+    (when file-name
+      (expand-file-name file-name))))
 
 (defun edts-project-property (prop project)
   "Returns the value of the property of name PROP from PROJECT."
@@ -295,9 +297,11 @@ make sure it ends with a '/'."
                      (edts-project-otp-path edts-project-test-project-2))))
 
   (ert-deftest edts-project-dialyzer-plt-test ()
-    (should (eq nil (edts-project-dialyzer-plt edts-project-test-project-1)))
-    (should (string= "~/r15.plt"
-                     (edts-project-dialyzer-plt edts-project-test-project-2))))
+    (let ((home (expand-file-name "~")))
+      (should (eq nil (edts-project-dialyzer-plt edts-project-test-project-1)))
+      (should (string= (concat home "/r15.plt")
+                       (edts-project-dialyzer-plt
+                        edts-project-test-project-2)))))
 
   (ert-deftest edts-project-path-expand-test ()
     (let ((home (expand-file-name "~")))
