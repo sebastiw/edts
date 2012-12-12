@@ -58,32 +58,10 @@ run(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
   ok = update_plt(BasePlt, OutPlt, LoadedFiles),
-  Warnings = check_plt(Modules, OutPlt),
+  Warnings = get_plt_warnings(OutPlt),
   format_warnings(filter_warnings(Modules, Warnings)).
 
 %%%_* Internal functions =======================================================
-
-check_plt(Modules, Plt) ->
-  {ok, PltFiles} = dialyzer_plt:included_files(Plt),
-  Files = beam_files_to_analyze(Modules, PltFiles),
-  Opts = [{files, Files},
-          {init_plt, Plt},
-          {analysis_type, succ_typings}],
-  dialyzer:run(Opts).
-
-beam_files_to_analyze(Modules, PltFiles) ->
-  F = fun(M, Acc) -> beam_files_to_analyze_aux(M, PltFiles, Acc) end,
-  lists:foldl(F, [], Modules).
-
-beam_files_to_analyze_aux(M, PltFiles, Acc) ->
-  case code:is_loaded(M) of
-    false     -> Acc;
-    {file, Beam} ->
-      case lists:member(Beam, PltFiles) of
-        true  -> [Beam|Acc];
-        false -> Acc
-      end
-  end.
 
 update_plt(BasePlt, OutPlt, Files) ->
   %% FIXME What to do if BasePlt has changed?
@@ -91,16 +69,39 @@ update_plt(BasePlt, OutPlt, Files) ->
     false  -> create_plt(BasePlt, OutPlt, Files);
     true ->
       {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
-      case Files -- OldFiles of
-        []         -> ok;
-        FilesToAdd -> add_to_plt(OutPlt, FilesToAdd)
-      end,
-      case OldFiles -- Files of
-        []            -> ok;
-        FilesToRemove -> remove_from_plt(OutPlt, FilesToRemove)
+      FileSet    = ordsets:from_list(Files),
+      case ordsets:from_list(OldFiles) of
+        FileSet    -> check_plt(OutPlt, Files);
+        OldFileSet ->
+          Files2Add    = ordsets:to_list(ordsets:subtract(FileSet, OldFileSet)),
+          Files2Remove = ordsets:to_list(ordsets:subtract(OldFileSet, FileSet)),
+          case Files2Add of
+            [] -> ok;
+            _  -> add_to_plt(OutPlt, Files2Add)
+          end,
+          case Files2Remove of
+            [] -> ok;
+            _  -> remove_from_plt(OutPlt, Files2Remove)
+          end
       end
   end,
   ok.
+
+get_plt_warnings(Plt) ->
+  {ok, PltFiles} = dialyzer_plt:included_files(Plt),
+  Opts2 = [{files, PltFiles},
+           {plts, [Plt]},
+           {analysis_type, succ_typings}],
+  dialyzer:run(Opts2).
+
+
+check_plt(Plt, Files) ->
+  Opts = [{get_warnings, false},
+          {files, Files},
+          {plts, [Plt]},
+          {analysis_type, plt_check}],
+  dialyzer:run(Opts).
+
 
 remove_from_plt(Plt, Files) ->
   Opts = [{get_warnings, false},
@@ -118,6 +119,7 @@ add_to_plt(Plt, Files) ->
           {output_plt, Plt},
           {analysis_type, plt_add}],
   dialyzer:run(Opts).
+
 
 create_plt(BasePlt0, OutPlt, Files) ->
   BaseOpts =
@@ -270,11 +272,12 @@ update_plt_test_() ->
                          lists:keyfind(analysis_type, 1, Arg)
                        end)]},
 
-
-       ?_assertEqual([],
+       ?_assertEqual({analysis_type, plt_check},
                      begin
                        ok = update_plt("", File, ["file1"]),
-                       meck:history(dialyzer)
+                       Hist = meck:history(dialyzer),
+                       [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
+                       lists:keyfind(analysis_type, 1, Arg)
                      end),
        ?_assertEqual({analysis_type, plt_add},
                      begin
@@ -301,14 +304,6 @@ update_plt_test_() ->
                        {Type1, Type2}
                      end)
       ]}]}].
-
-beam_files_to_analyze_test_() ->
-  {file, F} = code:is_loaded(?MODULE),
-  [?_assertEqual([], beam_files_to_analyze([], ["file1"])),
-   ?_assertEqual([], beam_files_to_analyze([foo], ["file1"])),
-   ?_assertEqual([], beam_files_to_analyze([?MODULE], ["file1"])),
-   ?_assertEqual([F], beam_files_to_analyze([?MODULE], [F]))
-  ].
 
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
