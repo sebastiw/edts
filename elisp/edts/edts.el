@@ -69,8 +69,8 @@ node."
          ; The beam-file to look for
          (beam-name (concat (edts--path-root-base-name file) ".beam"))
          ; Look for beam-file in this directory
-         (ebin-dir  (edts-path-join (edts--path-pop file 2) "ebin"))
-         (beam-abs  (edts-path-join ebin-dir beam-name))
+         (ebin-dir  (edts--path-join (edts--path-pop file 2) "ebin"))
+         (beam-abs  (edts--path-join ebin-dir beam-name))
          ; Where to start the node
          (root-dir (if (file-exists-p beam-abs)
                        ebin-dir
@@ -96,7 +96,7 @@ component) of PATH"
       (setq path (directory-file-name (file-name-directory path))))
     path))
 
-(defun edts-path-join (&rest paths)
+(defun edts--path-join (&rest paths)
   "Join strings in PATHS with a direcory separator in between each
 element."
   (mapconcat #'identity paths "/"))

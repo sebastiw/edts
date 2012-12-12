@@ -194,7 +194,7 @@ current buffer's file."
 buffer's project, on the node related to that project."
   (let ((mods (mapcar #'ferl-get-module (edts-project-buffer-list proj t)))
         (otp-plt nil)
-        (out-plt (edts-path-join edts-data-directory
+        (out-plt (edts--path-join edts-data-directory
                                  (concat (edts-project-name proj) ".plt"))))
     (edts-get-dialyzer-analysis-async
      mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
@@ -204,7 +204,7 @@ buffer's project, on the node related to that project."
 buffer's directory, on the node related to that buffer."
   (let* ((dir     default-directory)
          (otp-plt nil)
-         (out-plt (edts-path-join edts-data-directory
+         (out-plt (edts--path-join edts-data-directory
                                   (concat (file-name-nondirectory dir) ".plt")))
          (mods (edts-code--modules-in-dir dir)))
     (edts-get-dialyzer-analysis-async
