@@ -184,6 +184,7 @@ buffer either by belonging to the same project or, if current buffer
 does not belongi to any project, being in the same directory as the
 current buffer's file."
   (interactive '(ok))
+  (edts-face-remove-overlays '("edts-code-dialyzer"))
   (let ((proj (edts-project-buffer-project (current-buffer))))
     (if proj
         (edts-code-dialyze-project proj result)
