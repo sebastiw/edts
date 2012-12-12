@@ -43,12 +43,16 @@
 %% @doc
 %% Runs dialyzer.
 %%
-%% Add Files to OutPlt, creating it if it doesn't exist. Then analyze OtpPlt and
-%% OutPlt together.
+%% If OutPlt doesn't exist, create it based on BasePlt and add all loaded non-
+%% otp modules to it. If it exists, update it to ensure that it's files are the
+%% same ones as the currently loaded modules. Try to use Dialyzer's default plt
+%% if BasePlt is 'undefined' or the file does not exist. Then analyze the plt
+%% and return warnings for all modules in Modules or for all modules if
+%% Modules =:= 'all'.
 %% @end
 -spec run(BasePlt::filename:filename() | undefined,
-          OutPlt::filename:filename(),
-          Files::[filename:filename()] | all) -> ok.
+          OutPlt ::filename:filename(),
+          Modules::[filename:filename()] | all) -> ok.
 %%------------------------------------------------------------------------------
 run(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
@@ -82,7 +86,7 @@ beam_files_to_analyze_aux(M, PltFiles, Acc) ->
   end.
 
 update_plt(BasePlt, OutPlt, Files) ->
-  %% FIXME What to do if any of Plts have changed?
+  %% FIXME What to do if BasePlt has changed?
   case filelib:is_file(OutPlt) of
     false  -> create_plt(BasePlt, OutPlt, Files);
     true ->
