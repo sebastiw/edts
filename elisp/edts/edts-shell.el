@@ -93,7 +93,6 @@ PWD and running COMMAND."
       (linum-mode -1)
       (make-local-variable 'show-trailing-whitepace)
       (setq show-trailing-whitespace nil)
-      (visual-line-mode 1)
       ;; We don't like tabs in our shells. The tab-key should only be used for
       ;; completion and is set to do just that when auto-complete-mode's
       ;; keymap is active.
