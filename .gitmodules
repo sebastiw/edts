@@ -7,3 +7,6 @@
 [submodule "elisp/popup-el"]
 	path = elisp/popup-el
 	url = https://github.com/tjarvstrand/popup-el.git
+[submodule "elisp/eproject"]
+	path = elisp/eproject
+	url = git://github.com/jrockway/eproject.git
