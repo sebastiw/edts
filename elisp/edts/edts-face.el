@@ -139,7 +139,7 @@ the highest priority any edts overlay at new point if any."
         (overlay-put overlay 'priority prio)
         overlay))))
 
-(defun edts-face-remove-overlays (type)
+(defun edts-face-remove-overlays (&optional type)
   "Removes all overlays with the name TYPE"
   (interactive)
   (save-restriction

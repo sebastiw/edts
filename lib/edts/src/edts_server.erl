@@ -31,8 +31,8 @@
 %% API
 -export([ wait_for_node/1
         , init_node/3
-        , is_node/1
         , node_available_p/1
+        , node_registered_p/1
         , nodes/0
         , start_link/0]).
 
@@ -94,16 +94,6 @@ init_node(Node, ProjectRoot, LibDirs) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns true iff Node is registered with this edts instance.
-%% @end
-%%
--spec is_node(node()) -> boolean().
-%%------------------------------------------------------------------------------
-is_node(Node) ->
-  gen_server:call(?SERVER, {is_node, Node}, infinity).
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Returns true iff Node is registered with this edts instance and has finished
 %% its initialization.
 %% @end
@@ -112,6 +102,18 @@ is_node(Node) ->
 %%------------------------------------------------------------------------------
 node_available_p(Node) ->
   gen_server:call(?SERVER, {node_available_p, Node}, infinity).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is registered with this edts instance, but has possibly
+%% not finished its initialization.
+%% @end
+%%
+-spec node_registered_p(node()) -> boolean().
+%%------------------------------------------------------------------------------
+node_registered_p(Node) ->
+  gen_server:call(?SERVER, {node_registered_p, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -180,17 +182,17 @@ handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
       edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
       {reply, Err, State}
   end;
-handle_call({is_node, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
-            #node{} -> true;
-            false   -> false
-          end,
-  {reply, Reply, State};
 handle_call({node_available_p, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
+          end,
+  {reply, Reply, State};
+handle_call({node_registered_p, Name}, _From, State) ->
+  Reply = case node_find(Name, State) of
+            #node{} -> true;
+            false   -> false
           end,
   {reply, Reply, State};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
@@ -278,12 +280,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 do_init_node(Node, ProjectRoot, LibDirs) ->
   try
-    ok = edts_dist:load_modules(Node, [ edts_code
-                                      , edts_eunit
-                                      , edts_eunit_listener
-                                      , edts_xref
-                                      ]),
+    ok = edts_dist:remote_load_modules(Node, [edts_code,
+                                              edts_dialyzer,
+                                              edts_eunit,
+                                              edts_eunit_listener,
+                                              edts_xref]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
+    {ok, _Modules} = edts_dist:load_all(Node),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
@@ -344,7 +347,8 @@ init_node_test() ->
 
   meck:new(edts_dist),
   meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_modules,            fun(foo, _) -> ok end),
+  meck:expect(edts_dist, load_all,                fun(foo)    -> ok end),
+  meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok end),
   meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
   meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
   ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
@@ -364,14 +368,14 @@ init_node_test() ->
   end,
   meck:unload().
 
-is_node_test() ->
+node_registered_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({reply, true, S1},
-               handle_call({is_node, N1#node.name}, self(), S1)),
+               handle_call({node_registered_p, N1#node.name}, self(), S1)),
   ?assertEqual({reply, false, S1},
-               handle_call({is_node, N2#node.name}, self(), S1)).
+               handle_call({node_registered_p, N2#node.name}, self(), S1)).
 
 node_available_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},

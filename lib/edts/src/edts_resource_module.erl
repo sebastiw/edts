@@ -91,9 +91,13 @@ resource_exists(ReqData, Ctx) ->
   Module   = orddict:fetch(module, Ctx),
   case wrq:method(ReqData) of
     'GET'  ->
-      InfoLevel = orddict:fetch(info_level, Ctx),
-      Info      = edts:get_module_info(Nodename, Module, InfoLevel),
-      {Info =/= {error, not_found}, ReqData, orddict:store(info, Info, Ctx)};
+      case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) of
+        false -> {false, ReqData, Ctx};
+        true  ->
+          InfoLevel = orddict:fetch(info_level, Ctx),
+          Info      = edts:get_module_info(Nodename, Module, InfoLevel),
+          {Info =/= {error, not_found}, ReqData, orddict:store(info, Info, Ctx)}
+      end;
     'POST' ->
       Exists = edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]),
       {Exists, ReqData, Ctx}

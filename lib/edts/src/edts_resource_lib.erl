@@ -51,7 +51,12 @@
 %%------------------------------------------------------------------------------
 exists_p(ReqData, Ctx, Keys) ->
   F = fun(Key) -> (atom_to_exists_p(Key))(ReqData, Ctx) end,
-  lists:all(F, Keys).
+  case lists:partition(F, Keys) of
+    {_, []}       -> true;
+    {_, NoExists} ->
+      edts_log:debug("resource_exists failed: ~p", [NoExists]),
+      false
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -77,8 +82,12 @@ validate(ReqData0, Ctx0, Keys) ->
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
   catch throw:{error, Key} = E ->
+      KeyString = case Key of
+                    {_Type, KeyAtom} -> atom_to_list(KeyAtom);
+                    KeyAtom          -> atom_to_list(KeyAtom)
+                  end,
       edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
-                     [Key, wrq:get_qs_value(atom_to_list(Key), ReqData0)]),
+                     [Key, wrq:get_qs_value(KeyString, ReqData0)]),
       {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
@@ -94,7 +103,8 @@ make_nodename(NameStr) ->
 
 %%%_* Internal functions =======================================================
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
-atom_to_exists_p(module)   -> fun module_exists_p/2.
+atom_to_exists_p(module)   -> fun module_exists_p/2;
+atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 term_to_validate(arity)        -> fun arity_validate/2;
 term_to_validate(exported)     -> fun exported_validate/2;
@@ -104,6 +114,7 @@ term_to_validate(function)     -> fun function_validate/2;
 term_to_validate(info_level)   -> fun info_level_validate/2;
 term_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
 term_to_validate(module)       -> fun module_validate/2;
+term_to_validate(modules)      -> fun modules_validate/2;
 term_to_validate(nodename)     -> fun nodename_validate/2;
 term_to_validate(project_root) -> fun project_root_validate/2;
 term_to_validate(xref_checks)  -> fun xref_checks_validate/2;
@@ -246,9 +257,25 @@ lib_dirs_validate(ReqData, Ctx) ->
 module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
 
+
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate module
+%% Validate a list of modules.
+%% @end
+-spec modules_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
+%%------------------------------------------------------------------------------
+modules_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("modules", ReqData) of
+    undefined -> {ok, all};
+    "all"     -> {ok, all};
+    Val        -> {ok, [list_to_atom(Mod) || Mod <- string:tokens(Val, ",")]}
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Check that module exists on the relevant node.
 %% @end
 -spec module_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
@@ -259,6 +286,22 @@ module_exists_p(_ReqData, Ctx) ->
     {badrpc, _} -> false;
     _ -> true
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Check that all of a list of modules exist on the relevant node.
+%% @end
+-spec modules_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+modules_exists_p(_ReqData, Ctx) ->
+  case orddict:fetch(modules, Ctx) of
+    all     -> true;
+    Modules ->
+      Nodename = orddict:fetch(nodename, Ctx),
+      Loaded = edts_dist:call(Nodename, code, all_loaded, []),
+      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Loaded) end, Modules)
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -416,6 +459,13 @@ module_validate_test() ->
   meck:new(wrq),
   meck:expect(wrq, path_info, fun(module, _) -> "foo" end),
   ?assertEqual({ok, foo}, module_validate(foo, bar)),
+  meck:unload().
+
+modules_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("modules", _) -> "foo,bar" end),
+  ?assertEqual({ok, [foo, bar]}, modules_validate(foo, bar)),
   meck:unload().
 
 nodename_validate_test() ->

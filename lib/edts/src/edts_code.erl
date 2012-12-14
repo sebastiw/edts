@@ -38,6 +38,7 @@
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
+         load_all/0,
          modules/0,
          parse_expressions/1,
          start/0,
@@ -51,12 +52,25 @@
 -define(SERVER, ?MODULE).
 
 %%%_* Types ====================================================================
+-export_type([issue/0]).
+
 -type issue() :: { Type        :: atom()
                  , File        :: string()
                  , Line        :: non_neg_integer()
                  , Description :: string()}.
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load all beam-files present in the current code-path.
+%% @end
+-spec load_all() -> {ok, [module()]}.
+%%------------------------------------------------------------------------------
+load_all() ->
+  {ok, lists:flatmap(fun load_all_in_dir/1, code:get_path())}.
+
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Add a new path to the code-path. Uniqueness is determined after shortening
@@ -67,6 +81,7 @@
 %%------------------------------------------------------------------------------
 add_path(Path) -> code:add_patha(shorten_path(Path)).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Call add_path/1 for each path in Paths.
@@ -74,6 +89,7 @@ add_path(Path) -> code:add_patha(shorten_path(Path)).
 -spec add_paths([filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
 add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -89,6 +105,7 @@ check_module(Module, Checks) ->
   end,
   edts_xref:check_module(Module, Checks).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Equivalent to compile_and_load(Module, []).
@@ -98,6 +115,7 @@ check_module(Module, Checks) ->
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   compile_and_load(Module, []).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -145,6 +163,7 @@ compile_and_load(File0, Opts) ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Returns information about Function as defined in Module.
@@ -168,6 +187,7 @@ get_function_info(M, F, A) ->
     {ok, {FunSrc, Line}} ->
       make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc)
   end.
+
 
 make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc) ->
   %% Get rid of any local paths, in case function was defined in a
@@ -253,7 +273,7 @@ do_get_module_info(M, basic) ->
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
-  {ok, ModSrc}                    = get_module_source(M, Info),
+  {ok, ModSrc}                 = get_module_source(M, Info),
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
@@ -348,6 +368,25 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 
 %%%_* Internal functions =======================================================
+
+load_all_in_dir(Dir) ->
+  Files = filelib:wildcard(filename:join(Dir, "*.beam")),
+  [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
+
+ensure_loaded(File) ->
+  LoadFileName = filename:rootname(File),
+  M = list_to_atom(filename:basename(LoadFileName)),
+  Loaded =
+    case code:is_loaded(M) of
+      {file, File} -> false;
+      {file, _}    -> code:purge(M),
+                      {module, M} = code:load_abs(LoadFileName),
+                      true;
+      false        -> {module, M} = code:load_abs(LoadFileName),
+                      true
+    end,
+  {Loaded, M}.
+
 
 init_xref() ->
   File = xref_file(),
@@ -489,14 +528,9 @@ reload_module(M) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
--spec format_errors( ErrType % warning | error
-                   , Errors::[{ File::string(), [term()]}]) ->
-                       [{ErrType,
-                         File::string(),
-                         Line::non_neg_integer(),
-                         Description::string()}].
+-spec format_errors( ErrType ::warning | error
+                   , Errors  ::[{ File::string(), [term()]}]) -> issue().
 %%------------------------------------------------------------------------------
-
 format_errors(Type, Errors) ->
    lists:append(
      [[{Type, File, Line, lists:flatten(Source:format_error(Error))}

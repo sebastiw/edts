@@ -33,6 +33,19 @@ activated for the first file that is located inside a project."
 ;; Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun edts-project-buffer-list (project &optional modules-only)
+  "Return a list of all live buffers that are related to PROJECT. If
+MODULES-ONLY is non-nil, return only buffers containing Erlang-modules"
+  (remove-if-not
+   #'(lambda (buf)
+       (and (buffer-live-p buf)
+            (buffer-local-value 'edts-mode buf)
+            (edts-project-file-in-project-p proj (buffer-file-name buf))
+            (if modules-only
+                (ferl-get-module buf)
+              t)))
+   (buffer-list)))
+
 (defun edts-project-ensure-buffer-node-started (buffer)
   "Start BUFFER's project's node if it is not already started."
   (edts-project-ensure-node-started (edts-project-buffer-project buffer)))
@@ -126,9 +139,14 @@ short names are supported."
   (edts-project-property 'start-command project))
 
 (defun edts-project-otp-path (project)
-  "Returns the edts-project PROJECT's command for starting it's project
- node."
+  "Returns the path to PROJECT's custom otp-release, if any."
   (edts-project-property 'otp-path project))
+
+(defun edts-project-dialyzer-plt (project)
+  "Returns the path to PROJECT's custom dialyzer plt location, if any."
+  (let ((file-name(edts-project-property 'dialyzer-plt project)))
+    (when file-name
+      (expand-file-name file-name))))
 
 (defun edts-project-property (prop project)
   "Returns the value of the property of name PROP from PROJECT."
@@ -218,7 +236,8 @@ make sure it ends with a '/'."
   ;; Incorrectly defined project
   (defvar edts-project-test-project-2
     '((start-command . "bin/start.sh -i")
-      (otp-path      . "/usr/bin")))
+      (otp-path      . "/usr/bin")
+      (dialyzer-plt . "~/r15.plt")))
 
   (defvar edts-project-test-project-3
     '((name          . "dev")
@@ -276,6 +295,13 @@ make sure it ends with a '/'."
     (should (eq nil (edts-project-otp-path edts-project-test-project-1)))
     (should (string= "/usr/bin"
                      (edts-project-otp-path edts-project-test-project-2))))
+
+  (ert-deftest edts-project-dialyzer-plt-test ()
+    (let ((home (expand-file-name "~")))
+      (should (eq nil (edts-project-dialyzer-plt edts-project-test-project-1)))
+      (should (string= (concat home "/r15.plt")
+                       (edts-project-dialyzer-plt
+                        edts-project-test-project-2)))))
 
   (ert-deftest edts-project-path-expand-test ()
     (let ((home (expand-file-name "~")))

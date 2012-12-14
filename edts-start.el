@@ -21,7 +21,7 @@
           "ert"
           "popup-el"))
 
-(when (boundp 'erlang-root-dir)
+(when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
   (add-to-list
    'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
@@ -124,6 +124,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 (defun edts-setup ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (edts-ensure-server-started)
   (edts-buffer-init)
   (ad-activate-regexp "edts-face.*")
@@ -167,6 +168,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 (defun edts-teardown ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (ad-deactivate-regexp "edts-.*")
   (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
   (auto-highlight-symbol-mode -1)
@@ -200,9 +202,17 @@ further.
                                               buffer and display results.
 \\[edts-code-xref-analyze]                  - Run xref analysis on current
                                               buffer.
-\\[edts-code-xref-analyze-project]          - Run xref analysis on all buffers
-                                              belonging to the same project as
-                                              current buffer.
+\\[edts-code-xref-analyze-related]          - Runs xref-checks for all
+                                              live buffers related to
+                                              current buffer either by
+                                              belonging to the same
+                                              project or, if current
+                                              buffer does not belong to
+                                              any project, being in the
+                                              same directory as the
+                                              current buffer's file.
+\\[edts-code-dialyze-related]               - Same as the xref-check
+                                              above, but for dialyzer.
 \\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
 \\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
                                               if not already running.

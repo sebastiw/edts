@@ -25,7 +25,8 @@
 
 (defvar edts-code-after-compilation-hook
   '(edts-code-eunit
-    edts-code-xref-analyze-related)
+    edts-code-xref-analyze-related
+    edts-code-dialyze-related-hook-fun)
   "Hooks to run after compilation finishes.")
 
 (defcustom edts-code-xref-checks '(undefined_function_calls)
@@ -39,6 +40,11 @@ current buffer. It is a plist with one entry for each type (compilation,
 xref, eunit, etc). Each entry in turn is an plist with an entry for each
 issue severity (error, warning, etc).")
 (make-variable-buffer-local 'edts-code-buffer-issues)
+
+(defcustom edts-code-inhibit-dialyzer-on-save t
+  "If non-nil, don't run dialyzer analysis on every save."
+  :group 'edts
+  :type 'boolean)
 
 (defconst edts-code-issue-overlay-priorities
   '((passed-test . 900)
@@ -79,38 +85,38 @@ with severity as key and a lists of issues as values"
   (edts-face-remove-overlays '("edts-code-compile"))
   (let ((module   (ferl-get-module))
         (file     (buffer-file-name)))
-    (when (string= "erl" (file-name-extension file))
+    (when module
       (edts-compile-and-load-async
-       module file #'edts-code-handle-compilation-result (current-buffer)))))
+       module file #'edts-code-handle-compilation-result))))
 
-(defun edts-code-handle-compilation-result (comp-res buffer)
+(defun edts-code-handle-compilation-result (comp-res)
   (when comp-res
-    (with-current-buffer buffer
-      (let ((result   (cdr (assoc 'result comp-res)))
-            (errors   (cdr (assoc 'errors comp-res)))
-            (warnings (cdr (assoc 'warnings comp-res))))
-        (edts-code--set-issues 'edts-code-compile (list 'error   errors
-                                                        'warning warnings))
-        (edts-code-display-error-overlays "edts-code-compile" errors)
-        (edts-code-display-warning-overlays "edts-code-compile" warnings)
-        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-        (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
-        result))))
+    (let ((result   (cdr (assoc 'result comp-res)))
+          (errors   (cdr (assoc 'errors comp-res)))
+          (warnings (cdr (assoc 'warnings comp-res))))
+      (edts-code--set-issues 'edts-code-compile (list 'error   errors
+                                                      'warning warnings))
+      (edts-code-display-error-overlays "edts-code-compile" errors)
+      (edts-code-display-warning-overlays "edts-code-compile" warnings)
+      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+      (run-hook-with-args 'edts-code-after-compilation-hook (intern result))
+      result)))
 
 (defun edts-code-xref-analyze-related (&optional result)
   "Runs xref-checks for all live buffers related to current
 buffer either by belonging to the same project or, if current buffer
-does not belongi to any project, being in the same directory as the
+does not belong to any project, being in the same directory as the
 current buffer's file."
-  (let ((proj (edts-project-buffer-project (current-buffer))))
-    (if proj
-        (edts-code-xref-analyze-project proj result)
-      (edts-code-xref-analyze-no-project result))))
+  (interactive ('ok))
+  (when (and edts-code-xref-checks (not (eq 'error result)))
+    (let ((proj (edts-project-buffer-project (current-buffer))))
+      (if proj
+          (edts-code-xref-analyze-project proj result)
+        (edts-code-xref-analyze-no-project result)))))
 
 (defun edts-code-xref-analyze-project (proj &optional result)
   "Runs xref-checks for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (interactive (list (edts-project-buffer-project (current-buffer)) 'ok))
     (when proj
       (mapc
        #'(lambda(buf)
@@ -125,7 +131,6 @@ buffer's project, on the node related to that project."
 (defun edts-code-xref-analyze-no-project (&optional result)
   "Runs xref-checks for all live buffers with its file in current
 buffer's directory, on the node related to that buffer."
-  (interactive ('ok))
   (let ((dir default-directory))
     (mapc
      #'(lambda(buf)
@@ -140,46 +145,104 @@ buffer's directory, on the node related to that buffer."
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
   (interactive '(ok))
-  (when (string= "erl" (file-name-extension (buffer-file-name)))
-    (edts-face-remove-overlays '("edts-code-xref"))
-    (when (and edts-code-xref-checks (not (eq result 'error)))
-      (let ((module (ferl-get-module)))
-        (edts-get-module-xref-analysis-async
-         module edts-code-xref-checks
-         #'edts-code-handle-xref-analysis-result (current-buffer))))))
+  (let ((module (ferl-get-module)))
+    (when module
+      (edts-face-remove-overlays '("edts-code-xref"))
+      (edts-get-module-xref-analysis-async
+       module edts-code-xref-checks
+       #'edts-code-handle-xref-analysis-result))))
 
-(defun edts-code-handle-xref-analysis-result (analysis-res buffer)
+(defun edts-code-handle-xref-analysis-result (analysis-res)
   (when analysis-res
-    (with-current-buffer buffer
-      (let ((errors (cdr (assoc 'errors analysis-res))))
-        (edts-code--set-issues 'edts-code-xref (list 'error errors))
-        (edts-code-display-error-overlays "edts-code-xref" errors)
-        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-        errors))))
+    (let ((errors (cdr (assoc 'errors analysis-res))))
+      (edts-code--set-issues 'edts-code-xref (list 'error errors))
+      (edts-code-display-error-overlays "edts-code-xref" errors)
+      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+      errors)))
 
 (defun edts-code-eunit (result)
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
   (interactive '(ok))
-  (when (string= "erl" (file-name-extension (buffer-file-name)))
-    (edts-face-remove-overlays '("edts-code-eunit-passed"))
-    (edts-face-remove-overlays '("edts-code-eunit-failed"))
-    (when (not (eq result 'error))
-      (let ((module (ferl-get-module)))
+  (let ((module (ferl-get-module)))
+    (when module
+      (edts-face-remove-overlays '("edts-code-eunit-passed"))
+      (edts-face-remove-overlays '("edts-code-eunit-failed"))
+      (when (not (eq result 'error))
 	(edts-get-module-eunit-async
-	 module #'edts-code-handle-eunit-result (current-buffer))))))
+	 module #'edts-code-handle-eunit-result)))))
 
-(defun edts-code-handle-eunit-result (eunit-res buffer)
+(defun edts-code-handle-eunit-result (eunit-res)
   (when eunit-res
-    (with-current-buffer buffer
-      (let ((failed (cdr (assoc 'failed eunit-res)))
-            (passed (cdr (assoc 'passed eunit-res))))
-        (edts-code--set-issues 'edts-code-eunit (list 'error failed))
-        (edts-code-display-passed-test-overlays
-         "edts-code-eunit-passed" passed)
-        (edts-code-display-failed-test-overlays
-         "edts-code-eunit-failed" failed)
-        (edts-face-update-buffer-mode-line (edts-code-buffer-status))))))
+    (let ((failed (cdr (assoc 'failed eunit-res)))
+          (passed (cdr (assoc 'passed eunit-res))))
+      (edts-code--set-issues 'edts-code-eunit (list 'error failed))
+      (edts-code-display-passed-test-overlays
+       "edts-code-eunit-passed" passed)
+      (edts-code-display-failed-test-overlays
+       "edts-code-eunit-failed" failed)
+      (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
+
+(defun edts-code-dialyze-related-hook-fun (result)
+  "Runs dialyzer as a hook if `edts-code-inhibit-dialyzer-on-save' is nil"
+  (unless edts-code-inhibit-dialyzer-on-save
+    (edts-code-dialyze-related result)))
+
+(defun edts-code-dialyze-related (&optional result)
+  "Runs dialyzer for all live buffers related to current
+buffer either by belonging to the same project or, if current buffer
+does not belongi to any project, being in the same directory as the
+current buffer's file."
+  (interactive '(ok))
+  (edts-face-remove-overlays '("edts-code-dialyzer"))
+  (let ((proj (edts-project-buffer-project (current-buffer))))
+    (if proj
+        (edts-code-dialyze-project proj result)
+      (edts-code-dialyze-no-project result))))
+
+(defun edts-code-dialyze-project (proj result)
+  "Runs dialyzer for all live buffers with its file in current
+buffer's project, on the node related to that project."
+  (let ((mods (mapcar #'ferl-get-module (edts-project-buffer-list proj t)))
+        (otp-plt nil)
+        (out-plt (edts--path-join edts-data-directory
+                                 (concat (edts-project-name proj) ".plt"))))
+    (edts-get-dialyzer-analysis-async
+     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
+
+(defun edts-code-dialyze-no-project (&optional result)
+  "Runs dialyzer for all live buffers with its file in current
+buffer's directory, on the node related to that buffer."
+  (let* ((dir     default-directory)
+         (otp-plt nil)
+         (out-plt (edts--path-join edts-data-directory
+                                  (concat (file-name-nondirectory dir) ".plt")))
+         (mods (edts-code--modules-in-dir dir)))
+    (edts-get-dialyzer-analysis-async
+     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
+
+(defun edts-code--modules-in-dir (dir)
+  "Return a list of all edts buffers visiting a file in DIR,
+non-recursive."
+  (reduce
+   #'(lambda (acc buf)
+       (if (not (buffer-live-p buf))
+           acc
+         (let ((module (ferl-get-module buf)))
+           (if (and (string= dir (buffer-local-value 'default-directory buf))
+                    module)
+               (cons module acc)
+             acc))))
+   (buffer-list)
+   :initial-value nil))
+
+(defun edts-code-handle-dialyze-result (analysis-res)
+  (when analysis-res
+    (let ((warnings (cdr (assoc 'warnings analysis-res))))
+      (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
+      (edts-code-display-warning-overlays "edts-code-dialyzer" warnings)
+      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+      warnings)))
 
 
 (defun edts-code-display-error-overlays (type errors)
@@ -222,7 +285,8 @@ buffer's project."
          (overlay-type type)
          (prio         (edts-code-overlay-priority
                         (cdr (assoc 'type issue)))))
-    (edts-face-display-overlay face line help overlay-type prio)))
+    (when (integerp line)
+      (edts-face-display-overlay face line help overlay-type prio))))
 
 (defun edts-code-find-issue-overlay-line (issue)
   "Tries to find where in current buffer to display overlay for `ISSUE'."
@@ -244,6 +308,7 @@ buffer's project."
   (interactive)
   (push-mark)
   (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
+                                                    "edts-code-dialyzer"
                                                     "edts-code-xref"
                                                     "edts-code-eunit-failed"))))
     (if overlay
@@ -258,6 +323,7 @@ buffer's project."
   (push-mark)
   (let* ((overlay (edts-face-previous-overlay (point)
                                               '("edts-code-compile"
+                                                "edts-code-dialyzer"
                                                 "edts-code-xref"
                                                 "edts-code-eunit-failed"))))
     (if overlay

@@ -93,11 +93,6 @@ PWD and running COMMAND."
       (linum-mode -1)
       (make-local-variable 'show-trailing-whitepace)
       (setq show-trailing-whitespace nil)
-      ;; We don't like tabs in our shells. The tab-key should only be used for
-      ;; completion and is set to do just that when auto-complete-mode's
-      ;; keymap is active.
-      (make-local-variable 'comint-mode-map)
-      (define-key comint-mode-map "\t" 'ignore)
 
       ;; comint-variables
       (add-hook
@@ -110,6 +105,12 @@ PWD and running COMMAND."
       (setq comint-input-sender-no-newline t)
       (setq comint-process-echoes t)
       (setq comint-prompt-read-only t)
+      (setq comint-scroll-to-bottom-on-input t)
+      ;; We don't like tabs in our shells. The tab-key should only be used for
+      ;; completion and is set to do just that when auto-complete-mode's
+      ;; keymap is active.
+      (make-local-variable 'comint-mode-map)
+      (define-key comint-mode-map "\t" 'ignore)
 
       ;; erlang-mode syntax highlighting
       (erlang-syntax-table-init)

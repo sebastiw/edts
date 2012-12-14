@@ -383,72 +383,66 @@ LEVEL is either basic or detailed."
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-module-xref-analysis-async (module checks callback buffer)
-  "Compile MODULE in FILE on the node associated with current buffer,
+(defun edts-get-module-xref-analysis-async (module checks callback)
+  "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
-parsed response as the single argument."
-  (let* ((resource      (list "nodes" edts-buffer-node-name
-                              "modules" module
-                              "xref_analysis"))
-         (args (list    (cons "xref_checks" (mapcar #'symbol-name checks))))
-         (rest-callback #'(lambda (result callback buffer)
-                            (if (equal (assoc 'result result)
-                                       '(result "200" "OK"))
-                                (apply
-                                 callback
-                                 (list
-                                  (cdr (assoc 'body result))
-                                  buffer))
-                                (null
-                                 (edts-log-error
-                                  "Unexpected reply: %s"
-                                  (cdr (assoc 'result result))))))))
+parsed response as the single argument"
+  (let* ((resource  (list "nodes" edts-buffer-node-name
+                          "modules" module
+                          "xref_analysis"))
+         (rest-args (list (cons "xref_checks" (mapcar #'symbol-name checks))))
+         (cb-args   (list callback 200)))
     (edts-log-debug
      "fetching xref-analysis of %s async on %s" module edts-buffer-node-name)
-    (edts-rest-get-async resource args rest-callback (list callback buffer))))
+    (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
-(defun edts-get-module-eunit-async (module callback buffer)
-  "Run eunit tests in MODULE on the node associated with current buffer,
+(defun edts-get-module-eunit-async (module callback)
+  "Run eunit tests in MODULE on the node associated with current-buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
   (let* ((resource      (list "nodes"   edts-buffer-node-name
                               "modules" module "eunit"))
-         (rest-callback #'(lambda (result callback buffer)
-                            (if (equal (assoc 'result result)
-                                       '(result "200" "OK"))
-                                (apply
-                                 callback
-                                 (list
-                                  (cdr (assoc 'body result))
-                                  buffer))
-                                (null
-                                 (edts-log-error
-                                  "Unexpected reply: %s"
-                                  (cdr (assoc 'result result))))))))
+         (cb-args (list callback 200)))
     (edts-log-debug
      "running eunit tests in %s async on %s" module edts-buffer-node-name)
-    (edts-rest-get-async resource nil rest-callback (list callback buffer))))
+    (edts-rest-get-async resource nil #'edts-async-callback cb-args)))
 
-(defun edts-compile-and-load-async (module file callback buffer)
+
+(defun edts-compile-and-load-async (module file callback)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((resource      (list "nodes" edts-buffer-node-name "modules" module))
-         (args (list    (cons "file" file)))
-         (rest-callback #'(lambda (result callback buffer)
-                            (if (equal (assoc 'result result)
-                                       '(result "201" "Created"))
-                                (apply
-                                 callback
-                                 (list
-                                  (cdr (assoc 'body result))
-                                  buffer))
-                                (null
-                                 (edts-log-error
-                                  "Unexpected reply: %s"
-                                  (cdr (assoc 'result result))))))))
+  (let* ((resource  (list "nodes" edts-buffer-node-name "modules" module))
+         (rest-args (list (cons "file" file)))
+         (cb-args   (list callback 201)))
     (edts-log-debug "Compiling %s async on %s" module edts-buffer-node-name)
-    (edts-rest-post-async resource args rest-callback (list callback buffer))))
+    (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
+
+(defun edts-get-dialyzer-analysis-async (modules otp-plt out-plt callback)
+  "Run dialyzer analysis on MODULES on the node associated with
+current-buffer asynchronously. When the request terminates, call
+CALLBACK with the parsed response as the single argument."
+  (let* ((resource (list "nodes"   edts-buffer-node-name
+                         "dialyzer_analysis"))
+         (args     `(("modules" . ,modules)
+                     ("otp_plt" . ,otp-plt)
+                     ("out_plt" . ,out-plt)))
+         (cb-args (list callback 200)))
+    (edts-log-debug
+     "running dialyzer on %s async on %s" modules edts-buffer-node-name)
+    (edts-rest-get-async resource args #'edts-async-callback cb-args)))
+
+
+(defun edts-async-callback (reply callback expected &rest args)
+  "Generic callback-function for handling the reply of rest-requests.
+If the http return-code (an integer) of REPLY equals EXPECTED, call
+CALLBACK with the http-body part of REPLY as the first argument and
+ARGS as the other arguments"
+  (let ((result (cadr (assoc 'result reply))))
+    (if (and result (eq (string-to-number result) expected))
+        (apply callback (cdr (assoc 'body reply)) args)
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply)))))))
 
 (defun edts-compile-and-load (module file)
   "Compile MODULE in FILE on the node associated with current buffer."
