@@ -25,7 +25,8 @@
 
 (defvar edts-code-after-compilation-hook
   '(edts-code-eunit
-    edts-code-xref-analyze-related)
+    edts-code-xref-analyze-related
+    edts-code-dialyze-related-hook-fun)
   "Hooks to run after compilation finishes.")
 
 (defcustom edts-code-xref-checks '(undefined_function_calls)
@@ -39,6 +40,11 @@ current buffer. It is a plist with one entry for each type (compilation,
 xref, eunit, etc). Each entry in turn is an plist with an entry for each
 issue severity (error, warning, etc).")
 (make-variable-buffer-local 'edts-code-buffer-issues)
+
+(defcustom edts-code-inhibit-dialyzer-on-save t
+  "If non-nil, don't run dialyzer analysis on every save."
+  :group 'edts
+  :type 'boolean)
 
 (defconst edts-code-issue-overlay-priorities
   '((passed-test . 900)
@@ -177,6 +183,10 @@ buffer's project."
        "edts-code-eunit-failed" failed)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
 
+(defun edts-code-dialyze-related-hook-fun (result)
+  "Runs dialyzer as a hook if `edts-code-inhibit-dialyzer-on-save' is nil"
+  (unless edts-code-inhibit-dialyzer-on-save
+    (edts-code-dialyze-related result)))
 
 (defun edts-code-dialyze-related (&optional result)
   "Runs dialyzer for all live buffers related to current
