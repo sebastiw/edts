@@ -347,7 +347,7 @@ init_node_test() ->
 
   meck:new(edts_dist),
   meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_all,                fun(foo)    -> ok end),
+  meck:expect(edts_dist, load_all,                fun(foo)    -> {ok, []} end),
   meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok end),
   meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
   meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
