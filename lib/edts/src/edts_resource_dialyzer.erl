@@ -122,7 +122,8 @@ content_types_provided_test() ->
 malformed_request_test() ->
   meck:unload(),
   meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("otp_plt", _)         -> undefined;
+  meck:expect(wrq, get_qs_value, fun("otp_plt", req_data4)  -> "otp.plt";
+                                    ("otp_plt", _)         -> undefined;
                                     ("out_plt", req_data3) -> undefined;
                                     ("out_plt", _)         -> out_plt
                                  end),
@@ -141,6 +142,7 @@ malformed_request_test() ->
                                   {out_plt, out_plt}]},
                malformed_request(req_data2, [])),
   ?assertEqual({true, req_data3, []}, malformed_request(req_data3, [])),
+  ?assertEqual({true, req_data4, []}, malformed_request(req_data4, [])),
   meck:unload().
 
 resource_exists_test() ->
