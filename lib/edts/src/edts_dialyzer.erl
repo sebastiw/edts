@@ -68,9 +68,8 @@ update_plt(BasePlt, OutPlt, Files) ->
   case filelib:is_file(OutPlt) of
     false  -> create_plt(BasePlt, OutPlt, Files);
     true ->
-      {ok, OldFiles} = dialyzer_plt:included_files(OutPlt),
       FileSet    = ordsets:from_list(Files),
-      case ordsets:from_list(OldFiles) of
+      case ordsets:from_list(get_included_files(OutPlt)) of
         FileSet    -> check_plt(OutPlt, Files);
         OldFileSet ->
           Files2Add    = ordsets:to_list(ordsets:subtract(FileSet, OldFileSet)),
@@ -88,8 +87,7 @@ update_plt(BasePlt, OutPlt, Files) ->
   ok.
 
 get_plt_warnings(Plt) ->
-  {ok, PltFiles} = dialyzer_plt:included_files(Plt),
-  Opts2 = [{files, PltFiles},
+  Opts2 = [{files, get_included_files(Plt)},
            {plts, [Plt]},
            {analysis_type, succ_typings}],
   dialyzer:run(Opts2).
@@ -142,6 +140,11 @@ create_plt(BasePlt0, OutPlt, Files) ->
     end,
 
   dialyzer:run(BaseOpts ++ VarOpts).
+
+get_included_files(Plt) ->
+  {ok, Info} = dialyzer:plt_info(Plt),
+  {files, Files} = lists:keyfind(files, 1, Info),
+  Files.
 
 
 %%------------------------------------------------------------------------------
@@ -198,10 +201,6 @@ update_plt_test_() ->
     fun() ->
         meck:unload(),
         meck:new(dialyzer_plt, [passthrough]),
-        meck:sequence(dialyzer_plt, included_files, 1,
-                      [{ok, ["file1"]},
-                       {ok, ["file1"]},
-                       {ok, ["file1", "file2"]}]),
         file:write_file(File, "foo")
     end,
     fun(_) ->
@@ -272,38 +271,59 @@ update_plt_test_() ->
                          lists:keyfind(analysis_type, 1, Arg)
                        end)]},
 
-       ?_assertEqual({analysis_type, plt_check},
-                     begin
-                       ok = update_plt("", File, ["file1"]),
-                       Hist = meck:history(dialyzer),
-                       [{_, {dialyzer, run, [Arg]}, ok}] = Hist,
-                       lists:keyfind(analysis_type, 1, Arg)
-                     end),
-       ?_assertEqual({analysis_type, plt_add},
-                     begin
-                       ok = update_plt("", File, ["file1", "file2"]),
-                       Hist = meck:history(dialyzer),
-                       [{_, {dialyzer, run, [Arg2]}, ok}] = Hist,
-                       lists:keyfind(analysis_type, 1, Arg2)
-                     end),
-       ?_assertEqual({analysis_type, plt_remove},
-                     begin
-                       ok = update_plt("", File, ["file1"]),
-                       Hist = meck:history(dialyzer),
-                       [{_, {dialyzer, run, [Arg3]}, ok}] = Hist,
-                       lists:keyfind(analysis_type, 1, Arg3)
-                     end),
-       ?_assertEqual({{analysis_type, plt_add},{analysis_type, plt_remove}},
-                     begin
-                       ok = update_plt("", File, ["file1", "file3"]),
-                       Hist = meck:history(dialyzer),
-                       [{_, {dialyzer, run, [Arg4]}, ok},
-                        {_, {dialyzer, run, [Arg5]}, ok}] = Hist,
-                       Type1 = lists:keyfind(analysis_type, 1, Arg4),
-                       Type2 = lists:keyfind(analysis_type, 1, Arg5),
-                       {Type1, Type2}
-                     end)
-      ]}]}].
+       {setup,
+        fun() ->
+            meck:expect(dialyzer, plt_info, 1, {ok, [{files, ["file1"]}]})
+        end,
+        fun(_) -> ok end,
+        ?_assertEqual({analysis_type, plt_check},
+                       begin
+                         ok = update_plt("", File, ["file1"]),
+                         Hist = meck_history(dialyzer, run, 1),
+                         [{[Arg], ok}] = Hist,
+                         lists:keyfind(analysis_type, 1, Arg)
+                       end)},
+       {setup,
+        fun() ->
+            meck:expect(dialyzer, plt_info, 1, {ok, [{files, ["file1"]}]})
+        end,
+        fun(_) -> ok end,
+        ?_assertEqual({analysis_type, plt_add},
+                      begin
+                        ok = update_plt("", File, ["file1", "file2"]),
+                        Hist = meck_history(dialyzer, run, 1),
+                        [{[Arg], ok}] = Hist,
+                        lists:keyfind(analysis_type, 1, Arg)
+                      end)},
+       {setup,
+        fun() ->
+            Ret = {ok, [{files, ["file1", "file2"]}]},
+            meck:expect(dialyzer, plt_info, 1, Ret)
+        end,
+        fun(_) -> ok end,
+        ?_assertEqual({analysis_type, plt_remove},
+                      begin
+                        ok = update_plt("", File, ["file1"]),
+                        Hist = meck_history(dialyzer, run, 1),
+                        [{[Arg], ok}] = Hist,
+                        lists:keyfind(analysis_type, 1, Arg)
+                      end)},
+       {setup,
+        fun() ->
+            Ret = {ok, [{files, ["file1", "file2"]}]},
+            meck:expect(dialyzer, plt_info, 1, Ret)
+        end,
+        fun(_) -> ok end,
+        ?_assertEqual({{analysis_type, plt_add},{analysis_type, plt_remove}},
+                      begin
+                        ok = update_plt("", File, ["file1", "file3"]),
+                        Hist = meck_history(dialyzer, run, 1),
+                        [{[Arg4], ok}, {[Arg5], ok}] = Hist,
+                        Type1 = lists:keyfind(analysis_type, 1, Arg4),
+                        Type2 = lists:keyfind(analysis_type, 1, Arg5),
+                        {Type1, Type2}
+                      end)}
+       ]}]}].
 
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
@@ -346,6 +366,13 @@ format_warnings_test_() ->
     [?_assertEqual([{warning, "file", 1337, "warning"}],
                    format_warnings([{foo, {"file", 1337}, "warning"}]))]}].
 
+%%%_* Unit test helpers =======================================================-
+
+meck_history(M0, F0, A0) ->
+  [{Args, Ret} || {_, {M, F, Args}, Ret} <- meck:history(M0),
+                                            M =:= M0,
+                                            F =:= F0,
+                                            length(Args) =:= A0].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
