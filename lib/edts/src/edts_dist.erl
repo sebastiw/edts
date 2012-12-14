@@ -28,16 +28,17 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ add_paths/2
-        , call/3
-        , call/4
-        , connect/1
-        , connect_all/0
-        , load_modules/2
-        , make_sname/1
-        , make_sname/2
-        , set_app_env/4
-        , ensure_services_started/2]).
+-export([add_paths/2,
+         call/3,
+         call/4,
+         connect/1,
+         connect_all/0,
+         load_all/1,
+         make_sname/1,
+         make_sname/2,
+         remote_load_modules/2,
+         set_app_env/4,
+         ensure_services_started/2]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -106,6 +107,17 @@ connect_all() ->
                 end,
                 Nodes).
 
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load all modules on Node that are in its code-path.
+%% @end
+-spec load_all(node()) -> {ok, [module()]}.
+%%------------------------------------------------------------------------------
+load_all(Node) ->
+  call(Node, edts_code, load_all).
+
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Converts a string to a valid erlang sname for localhost.
@@ -133,12 +145,12 @@ make_sname(Name, Hostname) ->
 %% @doc
 %% Loads Mods on Node.
 %% @end
--spec load_modules(Node::node(), Mods::[module()]) -> ok.
+-spec remote_load_modules(Node::node(), Mods::[module()]) -> ok.
 %%------------------------------------------------------------------------------
-load_modules(Node, Mods) ->
-  lists:foreach(fun(Mod) -> load_module(Node, Mod) end, Mods).
+remote_load_modules(Node, Mods) ->
+  lists:foreach(fun(Mod) -> remote_load_module(Node, Mod) end, Mods).
 
-load_module(Node, Mod) ->
+remote_load_module(Node, Mod) ->
   %% Compile code on the remote in case it runs an OTP release that is
   %% incompatible with the binary format of the EDTS node's OTP release.
   %% Kind of ugly to have to use two rpc's but I can't find a better way to

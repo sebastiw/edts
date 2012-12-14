@@ -280,12 +280,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 do_init_node(Node, ProjectRoot, LibDirs) ->
   try
-    ok = edts_dist:load_modules(Node, [edts_code,
-                                       edts_dialyzer,
-                                       edts_eunit,
-                                       edts_eunit_listener,
-                                       edts_xref]),
+    ok = edts_dist:remote_load_modules(Node, [edts_code,
+                                              edts_dialyzer,
+                                              edts_eunit,
+                                              edts_eunit_listener,
+                                              edts_xref]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
+    {ok, _Modules} = edts_dist:load_all(Node),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
@@ -346,7 +347,8 @@ init_node_test() ->
 
   meck:new(edts_dist),
   meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_modules,            fun(foo, _) -> ok end),
+  meck:expect(edts_dist, load_all,                fun(foo)    -> ok end),
+  meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok end),
   meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
   meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
   ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
