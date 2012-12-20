@@ -215,7 +215,7 @@ disable comint-highligt-input face for input."
   "Make comint output read-only. Added to `comint-output-filter-functions'."
   (when (and arg (not (string= arg "")))
     (setq buffer-undo-list nil)
-    (let* ((limit (+ (point) (length arg)))
+    (let* ((limit (+ comint-last-output-start (length arg)))
            (proc-mark (process-mark (get-buffer-process (current-buffer))))
            (output-end (save-excursion
                         (goto-char comint-last-output-start)
