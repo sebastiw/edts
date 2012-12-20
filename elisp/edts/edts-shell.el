@@ -205,6 +205,10 @@ disable comint-highligt-input face for input."
     (when (string-match edts-shell-prompt-regexp arg)
       (setq edts-shell-prompt-output-p t))
     (setq arg (replace-regexp-in-string "\\^G" "C-q C-g RET" arg)))
+  (save-excursion
+    (let ((inhibit-field-text-motion t)) (beginning-of-line))
+    (when (looking-at-p edts-shell-prompt-regexp)
+      (setq arg (concat "\^M" arg))))
   arg)
 
 (defun edts-shell-comint-filter (arg)
