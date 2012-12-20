@@ -126,7 +126,7 @@ buffers.")
   (make-local-variable 'ac-use-dictionary-as-stop-words)
   (make-local-variable 'ac-disable-faces)
 
-  (setq ac-sources (or edts-complete-sources sources))
+  (setq ac-sources (or sources edts-complete-sources))
   (setq ac-ignore-case 'smart)
   (setq ac-use-menu-map t)
   (setq ac-use-dictionary-as-stop-words nil)
