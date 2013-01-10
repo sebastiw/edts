@@ -370,22 +370,26 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 %%%_* Internal functions =======================================================
 
 load_all_in_dir(Dir) ->
-  Files = filelib:wildcard(filename:join(Dir, "*.beam")),
+  Files = filelib:wildcard(filename:join(filename:absname(Dir), "*.beam")),
   [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
 
 ensure_loaded(File) ->
   LoadFileName = filename:rootname(File),
   M = list_to_atom(filename:basename(LoadFileName)),
-  Loaded =
-    case code:is_loaded(M) of
-      {file, File} -> false;
-      {file, _}    -> code:purge(M),
-                      {module, M} = code:load_abs(LoadFileName),
-                      true;
-      false        -> {module, M} = code:load_abs(LoadFileName),
-                      true
-    end,
-  {Loaded, M}.
+  case code:is_sticky(M) of
+    true  -> {false, M};
+    false ->
+      Loaded =
+        case code:is_loaded(M) of
+          {file, File} -> false;
+          {file, _}    -> code:purge(M),
+                          {module, M} = code:load_abs(LoadFileName),
+                          true;
+          false        -> {module, M} = code:load_abs(LoadFileName),
+                          true
+        end,
+      {Loaded, M}
+  end.
 
 
 init_xref() ->
