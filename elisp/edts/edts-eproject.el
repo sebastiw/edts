@@ -43,7 +43,10 @@
                    "\\.escript$"
                    "\\.eterm$"
                    "\\.script$"
-                   "\\.yaws$"))
+                   "\\.yaws$")
+  :irrelevant-files (".edts"
+                     ".gitignore"
+                     ".gitmodules"))
 
 (defun edts-eproject-file-visit-hook ()
   "Called the first time a buffer is opened in a project."
@@ -100,24 +103,3 @@ projects and there is no previous .edts-file."
 (defun edts-eproject--config-file (project)
   "Return the path to projects eproject configuration file."
   (path-util-join (edts-project-root project) ".edts"))
-
-
-
-
-
-;; (defun edts-eproject--old-project-from-root (root)
-;;   "Tries to find an edts-project that ROOT belongs to"
-;;   (when (and (boundp 'edts-projects) edts-projects)
-;;     (warn "Deprecated project definitions present. Please see the README.")
-;;     (edts-project-file-project (directory-file-name root))))
-
-;; (defun edts-attr-condition (root)
-;;   (message "calling condition root %s" root))
-
-;; (defun edts-attr-value (&rest args)
-;;   (message "calling value with args %s" args)
-;;   "foo2")
-
-;; (define-project-attribute
-;;   (lambda (&rest args) (apply 'edts-attr-condition args))
-;;   (list :name (lambda (&rest args) (apply 'edts-attr-value args))))
