@@ -192,7 +192,7 @@ otherwise nil."
           (edts-project (match-string 1 buffer-name))))))
 
 (defun edts-project (project-name)
-  "Returns the edts-project name PROJECT-NAME if it exists, otherwise
+  "Returns the edts-project named PROJECT-NAME if it exists, otherwise
 nil."
   (find-if  #'(lambda (p) (string= (edts-project-name p) project-name))
             edts-projects))
