@@ -382,13 +382,24 @@ ensure_loaded(File) ->
       Loaded =
         case code:is_loaded(M) of
           {file, File} -> false;
-          {file, _}    -> code:purge(M),
-                          {module, M} = code:load_abs(LoadFileName),
-                          true;
-          false        -> {module, M} = code:load_abs(LoadFileName),
-                          true
+          {file, _}    -> try_load(M, LoadFileName);
+          false        -> try_load(M, LoadFileName)
         end,
       {Loaded, M}
+  end.
+
+
+try_load(Mod, File) ->
+  try
+    code:purge(Mod),
+    case code:load_abs(File) of
+      {module, Mod} -> true;
+      {error, Rsn}  -> error(Rsn)
+    end
+  catch
+    C:E ->
+      error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
+      false
   end.
 
 
