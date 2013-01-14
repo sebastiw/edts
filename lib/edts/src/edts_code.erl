@@ -375,17 +375,17 @@ load_all_in_dir(Dir) ->
 
 ensure_loaded(File) ->
   LoadFileName = filename:rootname(File),
-  M = list_to_atom(filename:basename(LoadFileName)),
-  case code:is_sticky(M) of
-    true  -> {false, M};
+  Mod = list_to_atom(filename:basename(LoadFileName)),
+  case code:is_sticky(Mod) of
+    true  -> {false, Mod};
     false ->
       Loaded =
-        case code:is_loaded(M) of
+        case code:is_loaded(Mod) of
           {file, File} -> false;
-          {file, _}    -> try_load(M, LoadFileName);
-          false        -> try_load(M, LoadFileName)
+          {file, _}    -> try_load(Mod, LoadFileName);
+          false        -> try_load(Mod, LoadFileName)
         end,
-      {Loaded, M}
+      {Loaded, Mod}
   end.
 
 
