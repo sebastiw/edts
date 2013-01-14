@@ -23,6 +23,9 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
+(require 'eproject-extras)
+(require 'path-util)
+
 (defvar edts-code-after-compilation-hook
   '(edts-code-eunit
     edts-code-xref-analyze-related
@@ -107,41 +110,24 @@ with severity as key and a lists of issues as values"
 buffer either by belonging to the same project or, if current buffer
 does not belong to any project, being in the same directory as the
 current buffer's file."
-  (interactive ('ok))
-  (when (and edts-code-xref-checks (not (eq 'error result)))
-    (let ((proj (edts-project-buffer-project (current-buffer))))
-      (if proj
-          (edts-code-xref-analyze-project proj result)
-        (edts-code-xref-analyze-no-project result)))))
+  (interactive '(ok))
+  (when (and edts-code-xref-checks (not (eq result 'error)))
+    (if eproject-mode
+        (with-each-buffer-in-project
+            (eproject-root)
+            (edts-code-xref-analyze))
+      (edts-code-xref-analyze-no-project))))
 
-(defun edts-code-xref-analyze-project (proj &optional result)
-  "Runs xref-checks for all live buffers with its file in current
-buffer's project, on the node related to that project."
-    (when proj
-      (mapc
-       #'(lambda(buf)
-           (when (buffer-live-p buf)
-             (with-current-buffer buf
-               (let ((file (buffer-file-name)))
-                 (when (and edts-mode
-                            (edts-project-file-in-project-p proj file))
-                   (edts-code-xref-analyze result))))))
-           (buffer-list))))
 
-(defun edts-code-xref-analyze-no-project (&optional result)
+(defun edts-code-xref-analyze-no-project ()
   "Runs xref-checks for all live buffers with its file in current
 buffer's directory, on the node related to that buffer."
-  (let ((dir default-directory))
-    (mapc
-     #'(lambda(buf)
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (when (and edts-mode (string= default-directory dir))
-               (edts-code-xref-analyze result)))))
-         (buffer-list))))
+  (mapc
+   #'(lambda (buf) (with-current-buffer buf (edts-code-xref-analyze))))
+  (edts-code--modules-in-dir default-directory))
 
 
-(defun edts-code-xref-analyze (result)
+(defun edts-code-xref-analyze ()
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
   (interactive '(ok))
@@ -185,56 +171,56 @@ buffer's project."
 
 (defun edts-code-dialyze-related-hook-fun (result)
   "Runs dialyzer as a hook if `edts-code-inhibit-dialyzer-on-save' is nil"
-  (unless edts-code-inhibit-dialyzer-on-save
-    (edts-code-dialyze-related result)))
+  (unless (or edts-code-inhibit-dialyzer-on-save (eq result 'error))
+    (edts-code-dialyze-related)))
 
-(defun edts-code-dialyze-related (&optional result)
+(defun edts-code-dialyze-related ()
   "Runs dialyzer for all live buffers related to current
 buffer either by belonging to the same project or, if current buffer
 does not belongi to any project, being in the same directory as the
 current buffer's file."
-  (interactive '(ok))
+  (interactive)
   (edts-face-remove-overlays '("edts-code-dialyzer"))
-  (let ((proj (edts-project-buffer-project (current-buffer))))
-    (if proj
-        (edts-code-dialyze-project proj result)
-      (edts-code-dialyze-no-project result))))
+  (if eproject-mode
+      (edts-code-dialyze-project)
+    (edts-code-dialyze-no-project)))
 
-(defun edts-code-dialyze-project (proj result)
+(defun edts-code-dialyze-project ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (let ((mods (mapcar #'ferl-get-module (edts-project-buffer-list proj t)))
-        (otp-plt nil)
-        (out-plt (edts--path-join edts-data-directory
-                                 (concat (edts-project-name proj) ".plt"))))
+  (let* ((bufs (edts-eproject-buffer-list (eproject-root) '(ferl-get-module)))
+         (mods (mapcar #'buffer-file-name bufs))
+         (otp-plt nil)
+         (out-plt (path-util-join edts-data-directory
+                                  (concat (eproject-name) ".plt"))))
     (edts-get-dialyzer-analysis-async
      mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
 
-(defun edts-code-dialyze-no-project (&optional result)
+(defun edts-code-dialyze-no-project ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's directory, on the node related to that buffer."
-  (let* ((dir     default-directory)
-         (otp-plt nil)
-         (out-plt (edts--path-join edts-data-directory
-                                  (concat (file-name-nondirectory dir) ".plt")))
-         (mods (edts-code--modules-in-dir dir)))
+  (let* ((dir      default-directory)
+         (otp-plt  nil)
+         (plt-file (concat (file-name-nondirectory dir) ".plt"))
+         (out-plt  (edts--path-join edts-data-directory plt-file))
+         (mods     (edts-code--modules-in-dir dir)))
     (edts-get-dialyzer-analysis-async
      mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
 
 (defun edts-code--modules-in-dir (dir)
   "Return a list of all edts buffers visiting a file in DIR,
 non-recursive."
-  (reduce
-   #'(lambda (acc buf)
-       (if (not (buffer-live-p buf))
-           acc
-         (let ((module (ferl-get-module buf)))
-           (if (and (string= dir (buffer-local-value 'default-directory buf))
-                    module)
+  (let ((dir (directory-file-name dir)))
+    (reduce
+     #'(lambda (acc buf)
+         (with-current-buffer buf
+           (if (and (buffer-live-p buf)
+                    (string= dir (path-util-dir-name (buffer-file-name)))
+                    (ferl-get-module buf))
                (cons module acc)
-             acc))))
-   (buffer-list)
-   :initial-value nil))
+             acc)))
+     (buffer-list)
+     :initial-value nil)))
 
 (defun edts-code-handle-dialyze-result (analysis-res)
   (when analysis-res

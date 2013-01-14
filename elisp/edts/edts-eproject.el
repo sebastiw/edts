@@ -103,3 +103,18 @@ projects and there is no previous .edts-file."
 (defun edts-eproject--config-file (project)
   "Return the path to projects eproject configuration file."
   (path-util-join (edts-project-root project) ".edts"))
+
+(defun edts-eproject-buffer-list (project-root &optional predicates)
+  "Given PROJECT-ROOT, return a list of the corresponding projects open
+buffers, for which all PREDICATES hold true."
+  (reduce
+   #'(lambda (acc buf)
+       (with-current-buffer buf
+         (if (and (buffer-live-p buf)
+                  eproject-mode
+                  (string= project-root (eproject-root))
+                  (every #'(lambda (pred) (funcall pred)) predicates))
+             (cons buf acc)
+           acc)))
+   (buffer-list)
+   :initial-value nil))
