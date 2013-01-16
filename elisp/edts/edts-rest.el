@@ -84,7 +84,7 @@ CALLBACK-ARGS."
   (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply))))
     (edts-log-debug "Reply received, %s" status)
-    (url-mark-buffer-as-dead (current-buffer))
+    (kill-buffer (current-buffer))
     (with-current-buffer orig-buf
         (apply callback reply callback-args))))
 
