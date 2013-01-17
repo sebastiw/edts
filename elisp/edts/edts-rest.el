@@ -79,14 +79,20 @@ CALLBACK-ARGS."
       (make-local-variable 'url-show-status)
       (setq url-show-status nil))))
 
-(defun edts-rest-request-callback (events orig-buf callback &rest callback-args)
+(defun edts-rest-request-callback (events cb-buf callback &rest callback-args)
   "Callback for asynchronous http requests."
   (let* ((reply         (edts-rest-parse-http-response))
-         (status        (cdr (assoc 'result reply))))
+         (status        (cdr (assoc 'result reply)))
+         (orig-buf      (current-buffer)))
     (edts-log-debug "Reply received, %s" status)
-    (kill-buffer (current-buffer))
-    (with-current-buffer orig-buf
-        (apply callback reply callback-args))))
+    (url-mark-buffer-as-dead (current-buffer))
+    (with-current-buffer cb-buf
+      (apply callback reply callback-args))
+    ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
+    ;; when we are back outside the `with-current-buffer'. This seems to be
+    ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
+    (unless (eq (current-buffer) orig-buf)
+      (set-buffer orig-buf))))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
