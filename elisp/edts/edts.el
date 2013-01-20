@@ -51,17 +51,9 @@ node."
 
 (defun edts-buffer-init ()
   "Buffer specific initialization."
-  (let ((project (edts-project-buffer-project (current-buffer))))
-    (if project
-        (edts--project-buffer-init project)
-      (edts--independent-buffer-init))))
-
-(defun edts--project-buffer-init (project)
-  "Initializes a project buffer"
-  (setq edts-buffer-node-name (edts-project-node-name project))
-  ;; Start the buffer's project-node if not already running.
-  (when project edts-project-auto-start-node
-        (edts-project-ensure-node-started project)))
+  ;; TODO handle this somewhere else
+  (unless eproject-mode
+    (edts--independent-buffer-init)))
 
 (defun edts--independent-buffer-init ()
   "Initializes a buffer not associated with any project"
@@ -280,11 +272,10 @@ node, optionally retrying RETRIES times."
 
 If called interactively, fetch arguments from project of
 current-buffer."
-  (interactive (let ((proj (edts-project-buffer-project (current-buffer))))
-                           (list edts-buffer-node-name ;; node-name
-                                 (edts-project-root      proj) ;; root
-                                 (edts-project-lib-dirs  proj) ;; libs
-                                 0))) ;; retries
+  (interactive (list (eproject-attribute :node-sname)
+                     (eproject-attribute :root)
+                     (eproject-attribute :lib-dirs)
+                     0))
   (let* ((resource (list "nodes" node-name))
          (args     (list (cons "project_root" root)
                          (cons "lib_dirs"     libs)))

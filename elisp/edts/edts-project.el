@@ -56,17 +56,7 @@ MODULES-ONLY is non-nil, return only buffers containing Erlang-modules"
       (edts-project-register-node-when-ready project)
       (edts-project-start-node project)))
 
-(defun edts-project-start-node (project)
-  "Starts a new erlang node for PROJECT."
-  (let* ((project-root (edts-project-root project))
-         (buffer-name  (concat "*" (edts-project-name project) "*"))
-         (command      (edts-project-build-project-command project))
-         (exec-path    (edts-project-build-exec-path project))
-         (process-environment (edts-project-build-env project)))
-    (edts-ensure-node-not-started edts-buffer-node-name)
-    (edts-shell-make-comint-buffer buffer-name project-root command)
-    (edts-project-register-node-when-ready project)
-    (get-buffer buffer-name)))
+
 
 (defun edts-project-register-node-when-ready (project)
   "Asynchronously register PROJECT's node with EDTS as soon at his has
