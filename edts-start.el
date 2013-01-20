@@ -65,7 +65,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (load "edts-navigate" nil edts-start-inhibit-load-msgs)
 (load "edts-refactor" nil edts-start-inhibit-load-msgs)
 (load "edts-shell" nil edts-start-inhibit-load-msgs)
-(load "edts-eproject" nil edts-start-inhibit-load-msgs)
+(load "edts-project" nil edts-start-inhibit-load-msgs)
 
 ;; External
 (require 'auto-highlight-symbol)
