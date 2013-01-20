@@ -32,6 +32,7 @@
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
+                   "\\.erl$"
                    "\\.es$"
                    "\\.escript$"
                    "\\.eterm$"
