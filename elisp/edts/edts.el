@@ -95,7 +95,7 @@ element."
 
 
 (defun edts-buffer-node-name ()
-  "Return the node sname of the erlang node connected to current
+  "Print the node sname of the erlang node connected to current
 buffer. The node is either:
 - The module's project node, if current buffer is an erlang module, or
 - The buffer's erlang node if buffer is an edts-shell buffer.
@@ -104,9 +104,7 @@ buffer. The node is either:
   any project (eg. an \"externally\" loaded module such as an otp-module or a
   module loaded by ~/.erlang)."
   (interactive)
-  (when (called-interactively-p 'any)
-    (message "%s" edts-buffer-node-name))
-  edts-buffer-node-name)
+  (message "%s" (eproject-attribute :node-sname)))
 
 (defun edts-find-module-macros ()
   (let ((includes (edts-get-includes)))
@@ -209,8 +207,7 @@ for ARITY will give a regexp matching any arity."
                ".."))
          (command (list "./start.sh" edts-data-directory edts-erl-command)))
     (with-current-buffer
-        (edts-shell-make-comint-buffer "*edts*" pwd command)
-    (setq edts-buffer-node-name "edts"))))
+        (edts-shell-make-comint-buffer "*edts*" "edts" pwd command))))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -293,7 +290,7 @@ current-buffer."
 
 (defun edts-get-who-calls (node module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on NODE."
-  (let* ((resource (list "nodes" edts-buffer-node-name
+  (let* ((resource (list "nodes" (eproject-attribute :node-sname)
                          "modules" module
                          "functions" function
                          (number-to-string arity)
@@ -307,7 +304,7 @@ current-buffer."
 (defun edts-get-function-info (node module function arity)
   "Fetches info MODULE on the node associated with
 current buffer."
-  (let* ((resource (list "nodes"     edts-buffer-node-name
+  (let* ((resource (list "nodes"     (eproject-attribute :node-sname)
                          "modules"   module
                          "functions" function
                          (number-to-string arity)))
@@ -320,7 +317,7 @@ current buffer."
 (defun edts-get-modules ()
   "Fetches all available erlang modules for the node associated with
 current buffer."
-  (let* ((resource (list "nodes" edts-buffer-node-name "modules"))
+  (let* ((resource (list "nodes" (eproject-attribute :node-sname) "modules"))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'body res))
@@ -331,7 +328,7 @@ current buffer."
   "Fetches all exported functions of MODULE on the node associated with
 current buffer. Does not fetch detailed information about the individual
 functions."
-  (let* ((resource (list "nodes" edts-buffer-node-name
+  (let* ((resource (list "nodes" (eproject-attribute :node-sname)
                          "modules" module))
          (res      (edts-rest-get resource '(("info_level" . "basic")))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -366,7 +363,7 @@ buffer"
 (defun edts-get-module-info (module level)
   "Fetches info about MODULE on the node associated with current buffer.
 LEVEL is either basic or detailed."
-  (let* ((resource (list "nodes" edts-buffer-node-name "modules" module))
+  (let* ((resource (list "nodes" (eproject-attribute :node-sname) "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
          (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -378,24 +375,26 @@ LEVEL is either basic or detailed."
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
-  (let* ((resource  (list "nodes" edts-buffer-node-name
+  (let* ((node-name (eproject-attribute :node-sname))
+         (resource  (list "nodes" node-name
                           "modules" module
                           "xref_analysis"))
          (rest-args (list (cons "xref_checks" (mapcar #'symbol-name checks))))
          (cb-args   (list callback 200)))
     (edts-log-debug
-     "fetching xref-analysis of %s async on %s" module edts-buffer-node-name)
+     "fetching xref-analysis of %s async on %s" module node-name)
     (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
 (defun edts-get-module-eunit-async (module callback)
   "Run eunit tests in MODULE on the node associated with current-buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((resource      (list "nodes"   edts-buffer-node-name
+  (let* ((node-name (eproject-attribute :node-sname))
+         (resource      (list "nodes"   node-name
                               "modules" module "eunit"))
          (cb-args (list callback 200)))
     (edts-log-debug
-     "running eunit tests in %s async on %s" module edts-buffer-node-name)
+     "running eunit tests in %s async on %s" module node-name)
     (edts-rest-get-async resource nil #'edts-async-callback cb-args)))
 
 
@@ -403,24 +402,26 @@ parsed response as the single argument."
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument."
-  (let* ((resource  (list "nodes" edts-buffer-node-name "modules" module))
+  (let* ((node-name (eproject-attribute :node-sname))
+         (resource  (list "nodes" node-name "modules" module))
          (rest-args (list (cons "file" file)))
          (cb-args   (list callback 201)))
-    (edts-log-debug "Compiling %s async on %s" module edts-buffer-node-name)
+    (edts-log-debug "Compiling %s async on %s" module node-name)
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
 
 (defun edts-get-dialyzer-analysis-async (modules otp-plt out-plt callback)
   "Run dialyzer analysis on MODULES on the node associated with
 current-buffer asynchronously. When the request terminates, call
 CALLBACK with the parsed response as the single argument."
-  (let* ((resource (list "nodes"   edts-buffer-node-name
+  (let* ((node-name (eproject-attribute :node-sname))
+         (resource (list "nodes"   node-name
                          "dialyzer_analysis"))
          (args     `(("modules" . ,modules)
                      ("otp_plt" . ,otp-plt)
                      ("out_plt" . ,out-plt)))
          (cb-args (list callback 200)))
     (edts-log-debug
-     "running dialyzer on %s async on %s" modules edts-buffer-node-name)
+     "running dialyzer on %s async on %s" modules node-name)
     (edts-rest-get-async resource args #'edts-async-callback cb-args)))
 
 
@@ -437,9 +438,9 @@ ARGS as the other arguments"
 
 (defun edts-compile-and-load (module file)
   "Compile MODULE in FILE on the node associated with current buffer."
-  (edts-log-debug "Compiling %s on %s" module edts-buffer-node-name)
+  (edts-log-debug "Compiling %s on %s" module (eproject-attribute :node-sname))
   (let* ((resource
-          (list "nodes" edts-buffer-node-name "modules" module))
+          (list "nodes" (eproject-attribute :node-sname) "modules" module))
          (args (list (cons "file" file)))
          (res (edts-rest-post resource args)))
     (if (equal (assoc 'result res) '(result "201" "Created"))
