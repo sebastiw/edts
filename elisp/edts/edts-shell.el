@@ -22,6 +22,15 @@
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
+(defvar edts-shell-node-name nil
+  "The shell's node-name.")
+(make-variable-buffer-local 'edts-shell-node-name)
+
+(defun edts-shell-node-name (shell-buffer)
+  "The shell's node-name."
+  (buffer-local-value 'edts-shell-node-name shell-buffer))
+
+
 (defvar edts-shell-list nil
   "An alist of currently alive edts-shell buffer's. Each entry in the
 list is itself an alist of the shell's properties.")
@@ -59,7 +68,11 @@ the erlang process."
         (command     (list edts-erl-command "-sname" node-name))
         (root        (expand-file-name (or pwd default-directory))))
     (incf edts-shell-next-shell-id)
-    (let ((buffer (edts-shell-make-comint-buffer buffer-name root command)))
+    (let ((buffer (edts-shell-make-comint-buffer
+                   buffer-name
+                   node-name
+                   root
+                   command)))
       (edts-register-node-when-ready node-name root nil)
       (when switch-to (switch-to-buffer buffer))
       buffer)))
@@ -74,12 +87,11 @@ previous value is overwritten."
   (let ((process-environment (cons "TERM=vt100" process-environment)))
     ad-do-it))
 
-(defun edts-shell-make-comint-buffer (buffer-name pwd command)
+(defun edts-shell-make-comint-buffer (buffer-name node-name pwd command)
   "In a comint-mode buffer Starts a node with BUFFER-NAME by cd'ing to
 PWD and running COMMAND."
   (let* ((cmd  (car command))
          (args (cdr command))
-         (node-name (edts-shell-node-name-from-args args))
          (pwd  (expand-file-name pwd)))
     (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
     (ad-activate-regexp "edts-shell-start-process-advice")
@@ -120,7 +132,7 @@ PWD and running COMMAND."
            'edts-shell-syntax-propertize-function)
 
       ;; edts-specifics
-      (setq edts-buffer-node-name (edts-shell-node-name-from-args args))
+      (setq edts-shell-node-name (edts-shell-node-name-from-args args))
       (edts-complete-setup edts-shell-ac-sources)
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
