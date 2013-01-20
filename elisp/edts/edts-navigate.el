@@ -225,12 +225,8 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-find-file-existing (file)
   "EDTS wrapper for find-file-existing."
-  (let ((node-name edts-buffer-node-name))
-    (find-file-existing file)  ; Fixme, catch error
-    ;; current buffer has been changed so we need to set up the buffer-local
-    ;; value for edts-buffer-node-name.
-    (setq edts-buffer-node-name node-name)
-    (ring-insert-at-beginning (edts-window-history-ring) mark)))
+  (find-file-existing file)  ; Fixme, catch error
+  (ring-insert-at-beginning (edts-window-history-ring) mark))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
