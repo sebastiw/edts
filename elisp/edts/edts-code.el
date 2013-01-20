@@ -202,7 +202,7 @@ buffer's directory, on the node related to that buffer."
   (let* ((dir      default-directory)
          (otp-plt  nil)
          (plt-file (concat (file-name-nondirectory dir) ".plt"))
-         (out-plt  (edts--path-join edts-data-directory plt-file))
+         (out-plt  (path-util-join edts-data-directory plt-file))
          (mods     (edts-code--modules-in-dir dir)))
     (edts-get-dialyzer-analysis-async
      mods otp-plt out-plt #'edts-code-handle-dialyze-result)))

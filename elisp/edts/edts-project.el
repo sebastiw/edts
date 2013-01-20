@@ -21,8 +21,9 @@
 (require 'eproject)
 (require 'path-util)
 
+(setq eproject-prefer-subproject nil)
 
-;(define-project-type edts (generic)
+;; (define-project-type edts (generic)
 (define-project-type edts ()
   (progn
      (edts-project-maybe-create file)
@@ -43,39 +44,94 @@
                      ".gitmodules")
   :lib-dirs ("lib"))
 
-(defun edts-project-file-visit-hook ()
-  "Called each time a buffer is opened in a project."
-  (when (eq (eproject-type) 'edts)
-    ;; TODO Handle non-project-files.
+(defun temp-selector (file)
+  (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
+    (path-util-dir-name file)))
 
-    ;; OVERRIDE the configuration of the current buffer's eproject with the
-    ;; values from PROJECT. The PROJECT's `root' is assumed to already be the
-    ;; same as the current eproject's, if it's not then calling this function
-    ;; will most likely break something in eproject.
-    (when (boundp 'edts-projects)
-      (let ((project (edts-project--find-by-root (eproject-root))))
-        (when project
-          (edts-project-set-attributes project))))
+(define-project-type edts-temp ()
+;; (define-project-type edts-temp (generic)
+  (temp-selector file)
+  :config-file nil
+  :relevant-files ("^\\.erlang$"
+                   "\\.app$"
+                   "\\.app.src$"
+                   "\\.config$"
+                   "\\.erl$"
+                   "\\.es$"
+                   "\\.escript$"
+                   "\\.eterm$"
+                   "\\.hrl$"
+                   "\\.script$"
+                   "\\.yaws$")
+  :irrelevant-files (".gitignore"
+                     ".gitmodules")
+  :lib-dirs nil)
 
-    ;; Set values of absent config parameters whose defaults are derived from
-    ;; other values.
-    (unless (eproject-attribute :node-sname)
-      (edts-project-set-attribute :node-sname (eproject-name)))
-    (unless (eproject-attribute :start-command)
-      (edts-project-set-attribute :start-command
-                                   (format "erl -sname %s"
-                                           (eproject-attribute :node-sname))))
+(defun edts-project-init-buffer ()
+  "Called each time a buffer inside a configured edts-project is opened."
+  ;; OVERRIDE the configuration of the current buffer's eproject with the
+  ;; values from PROJECT. The PROJECT's `root' is assumed to already be the
+  ;; same as the current eproject's, if it's not then calling this function
+  ;; will most likely break something in eproject.
+  (when (boundp 'edts-projects)
+    (let ((project (edts-project--find-by-root (eproject-root))))
+      (when project
+        (edts-project-set-attributes project))))
 
-    ;; Make necessary initializations if opened file is relevant to its project.
-    (when (eproject-classify-file (buffer-file-name))
-      (edts-project-ensure-node-started))))
-(add-hook 'edts-project-file-visit-hook 'edts-project-file-visit-hook)
+  ;; Set values of absent config parameters whose defaults are derived from
+  ;; other values.
+  (unless (eproject-attribute :node-sname)
+    (edts-project-set-attribute :node-sname (eproject-name)))
+  (unless (eproject-attribute :start-command)
+    (edts-project-set-attribute :start-command (edts-project--make-command)))
+
+  ;; Make necessary initializations if opened file is relevant to its project.
+  (when (eproject-classify-file (buffer-file-name))
+    (edts-project-ensure-node-started)))
+(add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+
+(defun edts-project-init-temp ()
+  "Sets up values for a temporary project when visiting a non-project module."
+  ;; TODO handle the case when we arrive in a non-project module by navigating
+  ;; from a project module, as in the case with otp-modules.
+  (let* ((file (buffer-file-name))
+         (root-dir (edts-project--temp-root file))
+         (node-name (path-util-base-name (path-util-dir-name file))))
+    (unless (edts-shell-find-by-path root-dir)
+      (edts-shell-make-comint-buffer
+       (format "*%s*" node-name) ; buffer-name
+       node-name ; node-name
+       root-dir ; pwd
+       (list "erl" "-sname" node-name)) ; command
+      (edts-register-node-when-ready node-name root-dir nil))
+    (edts-project-set-attribute :node-sname node-name)))
+(add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
+
+(defun edts-project--temp-root (file)
+  "Find the appropriate root directory for a temporary project for
+FILE."
+  (let* ; The beam-file to look for
+      ((beam-name (concat (path-util-root-base-name file) ".beam"))
+       ; Look for beam-file in this directory
+       (ebin-dir  (path-util-join (path-util-pop file 2) "ebin")))
+    (if (file-exists-p (path-util-join ebin-dir beam-name))
+        ebin-dir
+      (path-util-pop file))))
+
+(defun edts-project--make-command (&optional node-name)
+  "Construct a default command line to start current buffer's project node."
+  (let ((node-name (or node-name (eproject-attribute :node-sname))))
+    (format "erl -sname %s" (edts-project--make-node-name node-name))))
+
+(defun edts-project--make-node-name (src)
+  "Construct a default node-sname for current buffer's project node."
+  (replace-regexp-in-string "[^A-Za-z0-9_-]" "" src))
 
 (defun edts-project-ensure-node-started ()
   "Start current-buffer's project's node if it is not already started."
-  (if (edts-node-started-p (eproject-attribute :node-name))
+  (if (edts-node-started-p (eproject-attribute :node-sname))
       (edts-register-node-when-ready
-       (eproject-attribute :node-name)
+       (eproject-attribute :node-sname)
        (eproject-root)
        (eproject-attribute :lib-dirs))
     (edts-project-start-node)))
@@ -85,11 +141,12 @@
   (let* ((buffer-name (concat "*" (eproject-name) "*"))
          (command (split-string (eproject-attribute :start-command)))
          (exec-path (edts-project-build-exec-path))
-         (process-environment (edts-project-build-env)))
-    (edts-ensure-node-not-started edts-buffer-node-name)
-    (edts-shell-make-comint-buffer buffer-name (eproject-root) command)
+         (process-environment (edts-project-build-env))
+         (node (eproject-attribute :node-sname)))
+    (edts-ensure-node-not-started node)
+    (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
     (edts-register-node-when-ready
-     (eproject-attribute :node-name)
+     (eproject-attribute :node-sname)
      (eproject-root)
      (eproject-attribute :lib-dirs))
     (get-buffer buffer-name)))

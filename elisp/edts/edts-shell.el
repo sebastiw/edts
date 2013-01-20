@@ -26,9 +26,10 @@
   "The shell's node-name.")
 (make-variable-buffer-local 'edts-shell-node-name)
 
-(defun edts-shell-node-name (shell-buffer)
+(defun edts-shell-node-name (&optional shell-buffer)
   "The shell's node-name."
-  (buffer-local-value 'edts-shell-node-name shell-buffer))
+  (let ((buffer (or shell-buffer (current-buffer))))
+    (buffer-local-value 'edts-shell-node-name buffer)))
 
 
 (defvar edts-shell-list nil
@@ -136,8 +137,7 @@ PWD and running COMMAND."
       (edts-complete-setup edts-shell-ac-sources)
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
-      (make-local-variable 'kill-buffer-hook)
-      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook)))
+      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t)))
   (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
   (get-buffer buffer-name))
 
@@ -276,7 +276,11 @@ default directory if it exists, otherwise nil."
 
 (when (member 'ert features)
   (ert-deftest edts-shell-make-comint-buffer-test ()
-    (let ((buffer (edts-shell-make-comint-buffer "edts-test" "." '("erl"))))
+    (let ((buffer (edts-shell-make-comint-buffer
+                   "edts-test"
+                   "edts-test"
+                   "."
+                   '("erl"))))
       (should (bufferp buffer))
       (should (string= "edts-test" (buffer-name buffer)))
       (should (string-match "erl\\(<[0-9]*>\\)?"

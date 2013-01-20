@@ -208,8 +208,7 @@ When FUNCTION is specified, the point is moved to its start."
               (unless (eq (marker-position mark) (point))
                 (ring-insert-at-beginning (edts-window-history-ring) mark)))
             (error "Function %s:%s/%s not found" module function arity))
-        (let* ((node (eproject-attribute :node-sname))
-               (info (edts-get-function-info node module function arity)))
+        (let* ((info (edts-get-function-info module function arity)))
           (if info
               (let ((line (cdr (assoc 'line info))))
                 (edts-find-file-existing (cdr (assoc 'source info)))
@@ -251,17 +250,17 @@ When FUNCTION is specified, the point is moved to its start."
   (interactive)
   (let ((mfa (ferl-mfa-at-point)))
     (if mfa
-        (apply #'edts-find-callers (cons (eproject-attribute :node-sname) mfa))
+        (apply #'edts-find-callers  mfa)
       (error "No call at point."))))
 
 (defvar edts-found-caller-items nil
   "The callers found during the last call to edts-who-calls")
 
-(defun edts-find-callers (node module function arity)
+(defun edts-find-callers (module function arity)
   "Jump to any all functions calling `module':`function'/`arity' in the
 current buffer's project."
   (edts-log-info "Finding callers of %s:%s/%s" module function arity)
-  (let* ((callers (edts-get-who-calls node module function arity))
+  (let* ((callers (edts-get-who-calls module function arity))
          (caller-items (mapcar #'edts-function-popup-item callers)))
     (edts-do-find-callers caller-items)))
 
