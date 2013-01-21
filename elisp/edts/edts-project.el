@@ -277,16 +277,13 @@ they are both expanded."
 current buffer's project's value of ATTR to VAL. ATTR can be either a
 keyword, or a symbol, in which case it will be converted to a keyword."
   ;; This function is really dirty but I can't think of a better way to do it.
-  (message "attrs %s" attrs)
   (let* ((el         (assoc root eproject-attributes-alist))
          (old-attrs  (cdr el)))
     (loop for (k v) on attrs by #'cddr do
           (if (edts-project--config-prop-p k)
                 (setq old-attrs (plist-put old-attrs k v))
             (edts-log-error "invalid configuration property %s" k)))
-    (message "attrs-alist %s" eproject-attributes-alist)
     (setq eproject-attributes-alist (delq el eproject-attributes-alist))
-    (message "attrs-alist %s" eproject-attributes-alist)
     (push (cons root old-attrs) eproject-attributes-alist)))
 
 (defun edts-project-maybe-create (file)

@@ -78,13 +78,15 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 
-- Configure your projects. EDTS projects are stored in the variable
-  `edts-projects'. `edts-projects' is a list of projects, where each project is
-  an association list. The properties should all be strings, except lib-dirs
-  which is a list of strings. The ones that can be set for each project are:
+- Configure your projects. EDTS projects configured by creating a file called
+  .edts in your project's root. The configuration file is a number of lines,
+  where each line is on the form:
+  :<property> <value>
 
-  root          - The top level directory of where you have your project
-                  contents. This is the only required field.
+  Values that are lists must be quoted, eg. '("lib"). See example below.
+
+  The properties should all be strings, except lib-dirs which is a list of
+  strings. Valid properties are:
   name          - The name of the project. Defaults to the last component
                   of the project root-directory (eg a root set to "~/src/p"
                   would yield "p" as the project name if not explicitly set.
@@ -99,7 +101,7 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                   the node's sname to be the same as the value specified in the
                   project's node-sname. The command must also not set the
                   erlang cookie to anything other than the default
-                  ~/.erlang.cookie.
+                  ~/.erlang.cookie. Defaults to "erl -sname <node-sname>".
   otp-path      - The path to any custom OTP-version to use for the project. You
                   only have to set this if the project uses a different OTP-
                   release than the one that comes first in your `exec-path'. The
@@ -112,23 +114,34 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                   is not appropriate for the project. The plt-file will not be
                   overwritten.
 
-  Example:
-  (setq edts-projects
-      '(( ;; My basic project
-         (root       . "~/src/simple_stuff"))
-        ( ;; My awesome project.
-         (name       . "awesome_stuff")
-         (root       . "~/src/awesome_stuff")
-         (node-sname . "awesome")
-         (otp-path   . "~/otp/r15b02"
-         (start-command . "./start-being-awesome.sh"))
-        ( ;; My other project.
-         (name       . "other_stuff")
-         (root       . "~/src/other_stuff")
-         (node-sname . "not_as_awesome")
-         (lib-dirs   . ("lib" "test")))))
+  Example configuration:
+  :name "awesome_stuff"
+  :node-sname "awesome"
+  :lib-dirs '("lib" "test")
+
+  Local modifications to project configurations can be done to project
+  configurations in two ways:
+  - Edit the project configuration file directly. If you do this in Emacs, the
+    project will be automatically re-initialized as soon as you save the .edts-
+    file.
+  - Add overrides by calling `edts-project-override' in your .emacs.
+    `edts-project-override' takes a project-root and a plist of configuration
+    values to override.
+
+    Example:
+    (edts-project-override "~/my-project" (:name "my-project-dev"
+                                           :node-sname "my-project-dev")
+                                           :lib-dirs '("lib" "test" "hacks"))
 
 That should be all it takes. If it's not, please report any issues on github.
+
+## Backward compatibility note ##
+
+If you have previously configured EDTS 'the old way' in `edts-projects', you
+can still keep this configuration and everything should work as before.
+However, EDTS will conveniently convert your old configuration and create a
+.edts-file in your project root. You can turn off this behaviour by setting
+`edts-project-inhibit-conversion' to a non-nil value.
 
 ## How it works ##
 
