@@ -22,6 +22,7 @@
 (require 'path-util)
 
 (setq eproject-prefer-subproject nil)
+(add-to-list 'auto-mode-alist '("\\.edts\\'" . dot-eproject-mode))
 
 ;; (define-project-type edts (generic)
 (define-project-type edts ()
