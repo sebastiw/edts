@@ -24,11 +24,52 @@
 (setq eproject-prefer-subproject nil)
 (add-to-list 'auto-mode-alist '("\\.edts\\'" . dot-eproject-mode))
 
-;; (define-project-type edts (generic)
-(define-project-type edts ()
-  (progn
-     (edts-project-maybe-create file)
-     (look-for ".edts"))
+(defcustom edts-project-inhibit-conversion nil
+  "If non-nil, don't convert old-style projects into .edts-files."
+  :group 'edts
+  :type 'boolean)
+
+(defvar edts-project-overrides nil
+  "Local overrides for project configurations")
+
+(defun edts-project-override (root properties)
+  "Add overrides for in ROOT. PROPERTIES is a plist with the properties
+to set, and their new values.
+
+Example:
+ (edts-project-override \"~/my-project\" (:name \"my-project-dev\"
+                                          :node-sname \"my-project-dev\"))"
+  (interactive)
+  (let ((exp-root (file-name-as-directory (expand-file-name root)))
+        (invalid (delete-if #'edts-project--config-prop-p
+                            (edts-project--plist-keys properties))))
+    (when invalid
+      (error "Invalid configuration properties:"))
+    (edts-project-set-attributes exp-root properties)
+    (push (cons exp-root properties) edts-project-overrides)))
+
+(defun edts-project--config-prop-p (prop)
+  "Return non-nil if PROP is a valid keyword for edts project configurations."
+  (let ((valid '(:name
+                 :node-sname
+                 :lib-dirs
+                 :start-command
+                 :otp-path
+                 :dialyzer-plt)))
+    (member prop valid)))
+
+(defun edts-project--plist-keys (plist)
+  "Return all the keys of PLIST."
+  (let ((ret nil))
+    (while plist
+      (unless (keywordp (car plist))
+        (error "Invalid config plist"))
+      (push (car plist) ret)
+      (setq plist (cddr plist)))
+    (reverse ret)))
+
+(define-project-type edts (generic)
+  (edts-project-selector file)
   :config-file ".edts"
   :relevant-files ("^\\.erlang$"
                    "\\.app$"
@@ -45,45 +86,62 @@
                      ".gitmodules")
   :lib-dirs ("lib"))
 
-(defun otp-selector (file)
+(defun edts-project-selector (file)
+  "Try to figure out if FILE should be part of an edts-project."
+  (edts-project-maybe-create file)
+  (look-for ".edts"))
+
+(define-project-type edts-otp (edts)
+  (edts-project-otp-selector file)
+  :config-file nil
+  :lib-dirs ("lib/erlang/lib"))
+
+(defun edts-project-otp-selector (file)
+  "Try to figure out if FILE should be part of an otp-project."
   (let ((path (look-for "bin/erl")))
     (when (and path (string-match "\\(.*\\)/lib/erlang[/]?$" path))
       (match-string 1 path))))
 
-(define-project-type edts-otp (edts)
-  (otp-selector file)
-  :config-file nil
-  :lib-dirs ("lib/erlang/lib"))
-
 (define-project-type edts-temp (edts)
-  (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
-    (path-util-dir-name file))
+  (edts-project-temp-selector file)
   :config-file nil
   :lib-dirs nil)
 
+(defun edts-project-temp-selector (file)
+  "Try to figure out if FILE should be part of a temp-project."
+  (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
+    (path-util-dir-name file)))
+
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
-  ;; OVERRIDE the configuration of the current buffer's eproject with the
-  ;; values from PROJECT. The PROJECT's `root' is assumed to already be the
-  ;; same as the current eproject's, if it's not then calling this function
-  ;; will most likely break something in eproject.
   (edts-log-debug "Initializing project for %s" (current-buffer))
-  (when (boundp 'edts-projects)
-    (let ((project (edts-project--find-by-root (eproject-root))))
-      (when project
-        (edts-project-set-attributes project))))
+  (let ((root (eproject-root)))
 
-  ;; Set values of absent config parameters whose defaults are derived from
-  ;; other values.
-  (unless (eproject-attribute :node-sname)
-    (edts-project-set-attribute :node-sname (eproject-name)))
-  (unless (eproject-attribute :start-command)
-    (edts-project-set-attribute :start-command (edts-project--make-command)))
+    (when (boundp 'edts-projects)
+      ;; -- Backward compatibility code --
+      ;; Override the configuration of the current buffer's eproject with the
+      ;; values from the corresponding entry in `edts-projects'.
+      (edts-project-set-attributes root (edts-project--old-plist-by-root root)))
 
-  ;; Make necessary initializations if opened file is relevant to its project.
-  (when (eproject-classify-file (buffer-file-name))
-    (edts-project-ensure-node-started)))
-(add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+    ;; Local project configuration overrides. These overrides take precedence
+    ;; over the ones in `edts-projects'.
+    (edts-project-set-attributes root (cdr (assoc root edts-project-overrides)))
+
+    ;; Set values of absent config parameters whose defaults are derived from
+    ;; other values.
+    (unless (eproject-attribute :node-sname)
+      (edts-project-set-attribute
+       root
+       :node-sname (eproject-name)))
+    (unless (eproject-attribute :start-command)
+      (edts-project-set-attribute
+       root
+       :start-command (edts-project--make-command)))
+
+    ;; Make necessary initializations if opened file is relevant to its project.
+    (when (eproject-classify-file (buffer-file-name))
+      (edts-project-ensure-node-started))))
+  (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
@@ -98,7 +156,7 @@
        root-dir ; pwd
        (list "erl" "-sname" node-name)) ; command
       (edts-register-node-when-ready node-name root-dir nil))
-    (edts-project-set-attribute :node-sname node-name)))
+    (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
 (defun edts-project-init-otp ()
@@ -115,7 +173,7 @@
        root-dir ; pwd
        (list erl "-sname" node-name)) ; command
       (edts-register-node-when-ready node-name root-dir nil))
-    (edts-project-set-attribute :node-sname node-name)))
+    (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
 
@@ -132,7 +190,9 @@ FILE."
 
 (defun edts-project--make-command (&optional node-name)
   "Construct a default command line to start current buffer's project node."
-  (let ((node-name (or node-name (eproject-attribute :node-sname))))
+  (let ((node-name (or node-name
+		       (eproject-attribute :node-sname)
+		       (eproject-name))))
     (format "erl -sname %s" (edts-project--make-node-name node-name))))
 
 (defun edts-project--make-node-name (src)
@@ -188,10 +248,18 @@ named erl."
         (when erl
           (path-util-dir-name erl))))))
 
-(defun edts-project--find-by-root (root)
+(defun edts-project--old-plist-by-root (root)
+  "Finds the entry from `edts-projects' whose `root' equals ROOT after
+they are both expanded and converts it into a plist."
+  (let ((project (edts-project--find-old-by-root root)))
+    (loop for (k . v) in project append
+          (when (edts-project--config-prop-p k)
+            (list (intern (format ":%s" k)) v)))))
+
+(defun edts-project--find-old-by-root (root)
   "Returns the entry from `edts-projects' whose `root' equal ROOT after
 they are both expanded."
-  (let ((exp-root (expand-file-name root)))
+  (let ((exp-root (file-name-as-directory (expand-file-name root))))
     (find-if
      #'(lambda (project)
          (string= (file-name-as-directory
@@ -200,52 +268,57 @@ they are both expanded."
                   exp-root))
      edts-projects)))
 
-(defun edts-project-set-attribute (attr val)
+(defun edts-project-set-attribute (root attr val)
   "Set current buffer's project's value of ATTR to VAL."
-  (edts-project-set-attributes (list (cons attr val))))
+  (edts-project-set-attributes root (list attr val)))
 
-(defun edts-project-set-attributes (attrs)
+(defun edts-project-set-attributes (root attrs)
   "ATTRS is an alist of (ATTR . VAL). For each element in ATTRS, set
 current buffer's project's value of ATTR to VAL. ATTR can be either a
 keyword, or a symbol, in which case it will be converted to a keyword."
   ;; This function is really dirty but I can't think of a better way to do it.
-  (let* ((root       (eproject-root))
-         (el         (assoc root eproject-attributes-alist))
+  (message "attrs %s" attrs)
+  (let* ((el         (assoc root eproject-attributes-alist))
          (old-attrs  (cdr el)))
-    (loop for (k . v) in attrs do
-          (unless (keywordp k)
-            (setq k (intern (format ":%s" k))))
-          (setq old-attrs (plist-put old-attrs k v)))
+    (loop for (k v) on attrs by #'cddr do
+          (if (edts-project--config-prop-p k)
+                (setq old-attrs (plist-put old-attrs k v))
+            (edts-log-error "invalid configuration property %s" k)))
+    (message "attrs-alist %s" eproject-attributes-alist)
     (setq eproject-attributes-alist (delq el eproject-attributes-alist))
+    (message "attrs-alist %s" eproject-attributes-alist)
     (push (cons root old-attrs) eproject-attributes-alist)))
 
 (defun edts-project-maybe-create (file)
   "Automatically creates a .edts-file from a an old-style project
 definition if `edts-projects' is bound and, FILE is inside one of its
 projects and there is no previous .edts-file."
-  (when (boundp 'edts-projects)
-    (let ((project (edts-project--file-override-project file)))
+  (when (and (boundp 'edts-projects)
+             (not edts-project-inhibit-conversion))
+    (let ((project (edts-project--file-old-project file)))
       (when (and project
                  (not (file-exists-p (edts-project--config-file project))))
         (edts-project--create project)
         (edts-log-info "Created .edts configuration file for project: ~p"
                        (cdr (assoc 'name project)))))))
 
-(defun edts-project--file-override-project (file)
+(defun edts-project--file-old-project (file)
   "Return the entry in `edts-projects' that FILE belongs to, if any."
   (find-if
    #'(lambda (p) (path-util-file-in-dir-p file (cdr (assoc 'root p))))
    edts-projects))
 
 (defun edts-project--create (project)
+  "Create the .edts configuration file for PROJECT in its root directory."
   (with-temp-file (edts-project--config-file project)
-    (loop for field in project do
-          (if (listp (cdr field))
-              (insert (format ":%s '%S\n" (car field) (cdr field)))
-            (insert (format ":%s %S\n" (car field) (cdr field)))))))
+    (loop for (k . v) in project do
+          (when (edts-project--config-prop-p (intern (format ":%s" k)))
+            (if (listp v)
+                (insert (format ":%s '%S\n" k v)) ;; quote value if list
+              (insert (format ":%s %S\n" k v)))))))
 
 (defun edts-project--config-file (project)
-  "Return the path to projects eproject configuration file."
+  "Return the path to PROJECT's eproject configuration file."
   (path-util-join (cdr (assoc 'root project)) ".edts"))
 
 (defun edts-project-buffer-list (project-root &optional predicates)
