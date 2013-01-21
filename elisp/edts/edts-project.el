@@ -47,7 +47,7 @@
 
 (defun otp-selector (file)
   (let ((path (look-for "bin/erl")))
-    (when (string-match "\\(.*\\)/lib/erlang[/]?$" path)
+    (when (and path (string-match "\\(.*\\)/lib/erlang[/]?$" path))
       (match-string 1 path))))
 
 (define-project-type edts-otp (edts)
@@ -66,6 +66,7 @@
   ;; values from PROJECT. The PROJECT's `root' is assumed to already be the
   ;; same as the current eproject's, if it's not then calling this function
   ;; will most likely break something in eproject.
+  (edts-log-debug "Initializing project for %s" (current-buffer))
   (when (boundp 'edts-projects)
     (let ((project (edts-project--find-by-root (eproject-root))))
       (when project
@@ -85,6 +86,7 @@
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
+  (edts-log-debug "Initializing temporary project for %s" (current-buffer))
   (let* ((file (buffer-file-name))
          (root-dir (edts-project--temp-root file))
          (node-name (path-util-base-name (path-util-dir-name file))))
@@ -100,6 +102,7 @@
 
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
+  (edts-log-debug "Initializing otp project for %s" (current-buffer))
   (let* ((file (buffer-file-name))
          (root-dir (eproject-root))
          (node-name (format "otp-%s" (eproject-name)))
