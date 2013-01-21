@@ -57,7 +57,7 @@
 (define-project-type edts-temp (edts)
   (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
     (path-util-dir-name file))
-  :config-file nil)
+  :config-file nil
   :lib-dirs nil)
 
 (defun edts-project-init-buffer ()
@@ -102,7 +102,7 @@
   "Sets up values for a temporary project when visiting an otp-module."
   (let* ((file (buffer-file-name))
          (root-dir (eproject-root))
-         (node-name (format "otp-%s") (eproject-name))
+         (node-name (format "otp-%s" (eproject-name)))
          (erl (path-util-join (eproject-root) "bin/erl")))
     (unless (edts-shell-find-by-path root-dir)
       (edts-shell-make-comint-buffer
