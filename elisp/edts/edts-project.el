@@ -43,29 +43,21 @@
   :irrelevant-files (".edts"
                      ".gitignore"
                      ".gitmodules")
-  :lib-dirs ("lib"))
+  :lib-dirs ("lib/erlang/lib"))
 
-(defun temp-selector (file)
+(defun otp-selector (file)
+  (let ((path (look-for "bin/erl")))
+    (when (string-match "\\(.*\\)/lib/erlang[/]?$" path)
+      (match-string 1 path))))
+
+(define-project-type edts-otp (edts)
+  (otp-selector file)
+  :config-file nil)
+
+(define-project-type edts-temp (edts)
   (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
-    (path-util-dir-name file)))
-
-(define-project-type edts-temp ()
-;; (define-project-type edts-temp (generic)
-  (temp-selector file)
-  :config-file nil
-  :relevant-files ("^\\.erlang$"
-                   "\\.app$"
-                   "\\.app.src$"
-                   "\\.config$"
-                   "\\.erl$"
-                   "\\.es$"
-                   "\\.escript$"
-                   "\\.eterm$"
-                   "\\.hrl$"
-                   "\\.script$"
-                   "\\.yaws$")
-  :irrelevant-files (".gitignore"
-                     ".gitmodules")
+    (path-util-dir-name file))
+  :config-file nil)
   :lib-dirs nil)
 
 (defun edts-project-init-buffer ()
@@ -93,8 +85,6 @@
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
-  ;; TODO handle the case when we arrive in a non-project module by navigating
-  ;; from a project module, as in the case with otp-modules.
   (let* ((file (buffer-file-name))
          (root-dir (edts-project--temp-root file))
          (node-name (path-util-base-name (path-util-dir-name file))))
@@ -107,6 +97,23 @@
       (edts-register-node-when-ready node-name root-dir nil))
     (edts-project-set-attribute :node-sname node-name)))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
+
+(defun edts-project-init-otp ()
+  "Sets up values for a temporary project when visiting an otp-module."
+  (let* ((file (buffer-file-name))
+         (root-dir (eproject-root))
+         (node-name (format "otp-%s") (eproject-name))
+         (erl (path-util-join (eproject-root) "bin/erl")))
+    (unless (edts-shell-find-by-path root-dir)
+      (edts-shell-make-comint-buffer
+       (format "*%s*" node-name) ; buffer-name
+       node-name ; node-name
+       root-dir ; pwd
+       (list erl "-sname" node-name)) ; command
+      (edts-register-node-when-ready node-name root-dir nil))
+    (edts-project-set-attribute :node-sname node-name)))
+(add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
+
 
 (defun edts-project--temp-root (file)
   "Find the appropriate root directory for a temporary project for
