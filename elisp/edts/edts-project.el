@@ -43,7 +43,7 @@
   :irrelevant-files (".edts"
                      ".gitignore"
                      ".gitmodules")
-  :lib-dirs ("lib/erlang/lib"))
+  :lib-dirs ("lib"))
 
 (defun otp-selector (file)
   (let ((path (look-for "bin/erl")))
@@ -52,7 +52,8 @@
 
 (define-project-type edts-otp (edts)
   (otp-selector file)
-  :config-file nil)
+  :config-file nil
+  :lib-dirs ("lib/erlang/lib"))
 
 (define-project-type edts-temp (edts)
   (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
