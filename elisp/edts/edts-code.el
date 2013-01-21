@@ -113,8 +113,7 @@ current buffer's file."
   (interactive '(ok))
   (when (and edts-code-xref-checks (not (eq result 'error)))
     (if eproject-mode
-        (with-each-buffer-in-project
-            (eproject-root)
+        (with-each-buffer-in-project (gensym) (eproject-root)
             (edts-code-xref-analyze))
       (edts-code-xref-analyze-no-project))))
 
@@ -130,7 +129,7 @@ buffer's directory, on the node related to that buffer."
 (defun edts-code-xref-analyze ()
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
-  (interactive '(ok))
+  (interactive)
   (let ((module (ferl-get-module)))
     (when module
       (edts-face-remove-overlays '("edts-code-xref"))
