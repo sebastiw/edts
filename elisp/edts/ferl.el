@@ -172,7 +172,8 @@ Should be called with point directly before the opening ( or /."
   (let ((block-depth 0)
         (arity 0)
         (in-arg nil)
-        (case-fold-search nil))
+        (case-fold-search nil)
+        (slashfun-re (format "\\<fun\s%s\s*/\s*[0-9]*\\>" erlang-atom-regexp)))
     ;; increase arity if we're not inside an argument
     (flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
                                  (incf arity)
@@ -183,6 +184,10 @@ Should be called with point directly before the opening ( or /."
         (skip-chars-forward "[:space:]")
         (while (< (point) (point-max))
           (cond
+           ;; Skip over "fun some_fun/<x>" expression
+           ((looking-at slashfun-re)
+            (maybe-inc-arity)
+            (goto-char (match-end 0)))
            ;; start of block
            ((looking-at ferl-block-start-regexp)
             (maybe-inc-arity)
@@ -242,6 +247,7 @@ Should be called with point directly before the opening ( or /."
     (should (eq 1 (ferl-paren-arity "fun() -> ok end")))
     (should (eq 2 (ferl-paren-arity "fun() -> ok end, fun() -> ok end")))
     (should (eq 1 (ferl-paren-arity "fun() -> begin%a, b\n ok end end")))
+    (should (eq 2 (ferl-paren-arity "fun foo/2, Arg")))
     )
 
   (ert-deftest slash-arity-test ()
