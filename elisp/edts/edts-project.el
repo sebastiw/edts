@@ -332,3 +332,14 @@ buffers, for which all PREDICATES hold true."
            acc)))
    (buffer-list)
    :initial-value nil))
+
+;;;;;;;;;;;;;;;;;;;;
+;; Commands
+
+(defun edts-project-revert-all-buffers ()
+  "Revert all buffers belonging to current buffer's project. Ignores
+auto-save data."
+  (interactive)
+  (when (y-or-n-p (format "Revert all buffers in %s" (eproject-name)))
+    (with-each-buffer-in-project (gensym) (eproject-root)
+      (revert-buffer t t t))))
