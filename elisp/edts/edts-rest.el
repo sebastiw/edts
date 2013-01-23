@@ -52,7 +52,10 @@
     (let ((buffer (url-retrieve-synchronously url)))
       (when buffer
         (with-current-buffer buffer
-          (edts-rest-parse-http-response))))))
+          (let* ((reply  (edts-rest-parse-http-response))
+                 (status (cdr (assoc 'result reply))))
+            (edts-log-debug "Reply %s received for request to %s" status url)
+            reply))))))
 
 (defun edts-rest-get-async (resource args callback callback-args)
   "Send a post request to RESOURCE with ARGS"
@@ -71,7 +74,7 @@ CALLBACK-ARGS."
          (url-request-extra-headers (list edts-rest-content-type-hdr))
          (url-show-status           nil)
          (callback-args             (append
-                                     (list (current-buffer) callback)
+                                     (list url (current-buffer) callback)
                                      callback-args)))
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
@@ -79,20 +82,20 @@ CALLBACK-ARGS."
       (make-local-variable 'url-show-status)
       (setq url-show-status nil))))
 
-(defun edts-rest-request-callback (events cb-buf callback &rest callback-args)
+(defun edts-rest-request-callback (events url cb-buf cb &rest cb-args)
   "Callback for asynchronous http requests."
   (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply)))
-         (orig-buf      (current-buffer)))
-    (edts-log-debug "Reply received, %s" status)
-    (url-mark-buffer-as-dead (current-buffer))
+         (reply-buf     (current-buffer)))
+    (edts-log-debug "Reply %s received for request to %s" status url)
     (with-current-buffer cb-buf
-      (apply callback reply callback-args))
+      (apply cb reply cb-args))
     ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
     ;; when we are back outside the `with-current-buffer'. This seems to be
     ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
-    (unless (eq (current-buffer) orig-buf)
-      (set-buffer orig-buf))))
+    (unless (eq (current-buffer) reply-buf)
+      (set-buffer reply-buf))
+    (url-mark-buffer-as-dead reply-buf)))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
