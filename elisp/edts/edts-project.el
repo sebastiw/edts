@@ -19,6 +19,7 @@
 
 (require 'cl)
 (require 'eproject)
+(require 'eproject-extras)
 (require 'path-util)
 
 (setq eproject-prefer-subproject nil)
