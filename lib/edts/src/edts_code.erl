@@ -137,15 +137,15 @@ compile_and_load(File0, Opts) ->
            true  -> lists:nthtail(length(Cwd) + 1, File0);
            false -> File0
          end,
-  CompileOpts =
-    [{cwd, Cwd}, binary, debug_info, return|Opts] ++ extract_compile_opts(File),
+  OutDir  = get_compile_outdir(File0),
+  CompileOpts = [{cwd, Cwd}, binary, debug_info,
+		 {outdir, OutDir}, return|Opts] ++ extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
   case compile:file(File, CompileOpts) of
     {ok, Mod, Bin, Warnings} ->
-      OutDir  = get_compile_outdir(File0),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
