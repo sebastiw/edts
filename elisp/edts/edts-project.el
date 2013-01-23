@@ -186,8 +186,8 @@ FILE."
        ; Look for beam-file in this directory
        (ebin-dir  (path-util-join (path-util-pop file 2) "ebin")))
     (if (file-exists-p (path-util-join ebin-dir beam-name))
-        ebin-dir
-      (path-util-pop file))))
+        (file-name-as-directory ebin-dir)
+      (file-name-as-directory (path-util-pop file)))))
 
 (defun edts-project--make-command (&optional node-name)
   "Construct a default command line to start current buffer's project node."
