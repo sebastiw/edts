@@ -138,8 +138,11 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
-  CompileOpts = [{cwd, Cwd}, binary, debug_info,
-		 {outdir, OutDir}, return|Opts] ++ extract_compile_opts(File),
+  CompileOpts = [{cwd, Cwd},
+                 {outdir, OutDir},
+                 binary,
+                 debug_info,
+                 return|Opts] ++ extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
@@ -456,7 +459,7 @@ xref_file() ->
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
   Opts = try proplists:get_value(options, Mod:module_info(compile), [])
-         catch error:undef -> []
+         catch error:undef -> [] %% No beam-file
          end,
   get_compile_outdir(File, Opts).
 
