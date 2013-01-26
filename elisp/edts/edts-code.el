@@ -187,8 +187,8 @@ current buffer's file."
 (defun edts-code-dialyze-project ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (let* ((bufs (edts-eproject-buffer-list (eproject-root) '(ferl-get-module)))
-         (mods (mapcar #'buffer-file-name bufs))
+  (let* ((bufs (edts-project-buffer-list (eproject-root) '(ferl-get-module)))
+         (mods (mapcar #'ferl-get-module bufs))
          (otp-plt nil)
          (out-plt (path-util-join edts-data-directory
                                   (concat (eproject-name) ".plt"))))
