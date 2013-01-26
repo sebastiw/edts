@@ -155,8 +155,8 @@ Example:
        (format "*%s*" node-name) ; buffer-name
        node-name ; node-name
        root-dir ; pwd
-       (list "erl" "-sname" node-name)) ; command
-      (edts-register-node-when-ready node-name root-dir nil))
+       (list "erl" "-sname" node-name))) ; command
+    (edts-register-node-when-ready node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
@@ -172,8 +172,8 @@ Example:
        (format "*%s*" node-name) ; buffer-name
        node-name ; node-name
        root-dir ; pwd
-       (list erl "-sname" node-name)) ; command
-      (edts-register-node-when-ready node-name root-dir nil))
+       (list erl "-sname" node-name))) ; command
+    (edts-register-node-when-ready node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
