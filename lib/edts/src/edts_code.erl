@@ -3,7 +3,7 @@
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -74,12 +74,12 @@ load_all() ->
 %%------------------------------------------------------------------------------
 %% @doc
 %% Add a new path to the code-path. Uniqueness is determined after shortening
-%% the path using ?MODULE:shorten_path/1, which means symbolic links could cause
-%% duplicate paths to be added.
+%% the path using edts_util:shorten_path/1, which means symbolic links could
+%% cause duplicate paths to be added.
 %% @end
 -spec add_path(filename:filename()) -> code:add_path_ret().
 %%------------------------------------------------------------------------------
-add_path(Path) -> code:add_patha(shorten_path(Path)).
+add_path(Path) -> code:add_patha(edts_util:shorten_path(Path)).
 
 
 %%------------------------------------------------------------------------------
@@ -424,21 +424,6 @@ init_xref() ->
       edts_xref:start()
   end.
 
-shorten_path("") -> "";
-shorten_path(P)  ->
-  case shorten_path(filename:split(P), []) of
-    [Component] -> Component;
-    Components  -> filename:join(Components)
-  end.
-
-shorten_path([],           [])         -> ["."];
-shorten_path([],           Acc)        -> lists:reverse(Acc);
-shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
-shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
-shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
-shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
-shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
-
 update_xref() ->
   edts_xref:update(),
   spawn(?MODULE, save_xref_state, []).
@@ -684,15 +669,6 @@ extract_compile_opt_p({no_auto_import,  _})    -> true;
 extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
-shorten_path_test_() ->
-  [ ?_assertEqual("", shorten_path("")),
-    ?_assertEqual(".", shorten_path(".")),
-    ?_assertEqual("..", shorten_path("..")),
-    ?_assertEqual("../..", shorten_path("../..")),
-    ?_assertEqual("../ebin", shorten_path("../ebin")),
-    ?_assertEqual("..", shorten_path("../ebin/..")),
-    ?_assertEqual("..", shorten_path("../ebin/./.."))
-  ].
 
 format_errors_test_() ->
   SetupF = fun() ->

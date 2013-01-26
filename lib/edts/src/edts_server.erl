@@ -284,7 +284,8 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
                                               edts_dialyzer,
                                               edts_eunit,
                                               edts_eunit_listener,
-                                              edts_xref]),
+                                              edts_xref,
+                                              edts_util]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, _Modules} = edts_dist:load_all(Node),
     {ok, ProjectDir} =

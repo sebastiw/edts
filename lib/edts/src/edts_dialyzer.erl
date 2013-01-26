@@ -3,7 +3,7 @@
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -158,7 +158,7 @@ get_included_files(Plt) ->
 non_otp_beam_files(OtpLibDir, LoadedModules) ->
   F = fun({M, Loc}, Acc) ->
           case non_otp_beam_file_p(OtpLibDir, M, Loc) of
-            true  -> [Loc|Acc];
+            true  -> [edts_util:shorten_path(Loc)|Acc];
             false -> Acc
           end
       end,
