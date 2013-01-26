@@ -46,8 +46,9 @@
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))
-        (url-request-data          body)
-        (url-show-status           nil))
+        (url-request-data          body))
+    (make-local-variable 'url-show-status)
+    (setq url-show-status nil)
     (edts-log-debug "Sending %s-request to %s" method url)
     (let ((buffer (url-retrieve-synchronously url)))
       (when buffer
@@ -72,10 +73,11 @@ CALLBACK-ARGS."
   (let* ((url                       (edts-rest-resource-url resource args))
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
-         (url-show-status           nil)
          (callback-args             (append
                                      (list url (current-buffer) callback)
                                      callback-args)))
+    (make-local-variable 'url-show-status)
+    (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
         (url-retrieve url #'edts-rest-request-callback callback-args)
