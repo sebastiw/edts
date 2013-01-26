@@ -111,7 +111,7 @@ Example:
 (defun edts-project-temp-selector (file)
   "Try to figure out if FILE should be part of a temp-project."
   (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
-    (path-util-dir-name file)))
+    (edts-project--temp-root file)))
 
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
@@ -149,7 +149,7 @@ Example:
   (edts-log-debug "Initializing temporary project for %s" (current-buffer))
   (let* ((file (buffer-file-name))
          (root-dir (edts-project--temp-root file))
-         (node-name (path-util-base-name (path-util-dir-name file))))
+         (node-name (path-util-base-name root-dir)))
     (unless (edts-shell-find-by-path root-dir)
       (edts-shell-make-comint-buffer
        (format "*%s*" node-name) ; buffer-name
@@ -181,13 +181,12 @@ Example:
 (defun edts-project--temp-root (file)
   "Find the appropriate root directory for a temporary project for
 FILE."
-  (let* ; The beam-file to look for
-      ((beam-name (concat (path-util-root-base-name file) ".beam"))
-       ; Look for beam-file in this directory
-       (ebin-dir  (path-util-join (path-util-pop file 2) "ebin")))
-    (if (file-exists-p (path-util-join ebin-dir beam-name))
-        (file-name-as-directory ebin-dir)
-      (file-name-as-directory (path-util-pop file)))))
+  (let* ((dir        (path-util-dir-name file))
+         (parent-dir (path-util-dir-name dir)))
+    (if (and (string-match "/src[/]?$" dir)
+             (file-exists-p (path-util-join parent-dir "ebin")))
+        (file-name-as-directory parent-dir)
+      (file-name-as-directory dir))))
 
 (defun edts-project--make-command (&optional node-name)
   "Construct a default command line to start current buffer's project node."
