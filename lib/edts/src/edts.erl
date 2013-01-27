@@ -239,7 +239,6 @@ node_available_p(Node) ->
 -spec modules(Node::node()) -> [module()].
 %%------------------------------------------------------------------------------
 modules(Node) ->
-  edts_server:wait_for_node(Node),
   edts_dist:call(Node, edts_code, modules).
 
 

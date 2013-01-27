@@ -325,7 +325,7 @@ pop_dirs(Source0, Rel) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all modules known to the edts_code xref-server.
+%% Returns a list of all modules known currently loaded on the node.
 %% @end
 -spec modules() -> [atom()].
 %%------------------------------------------------------------------------------
