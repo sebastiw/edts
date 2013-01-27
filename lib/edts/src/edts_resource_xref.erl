@@ -62,14 +62,14 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, xref_checks]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
+  Modules   = orddict:fetch(modules, Ctx),
   Checks   = orddict:fetch(xref_checks, Ctx),
-  Analysis = edts:get_module_xref_analysis(Nodename, Module, Checks),
-  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module])
+  Analysis = edts:get_module_xref_analysis(Nodename, Modules, Checks),
+  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules])
               andalso not (Analysis =:= {error, not_found})),
   {Exists, ReqData, orddict:store(analysis, Analysis, Ctx)}.
 
@@ -104,7 +104,7 @@ malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, module, xref_checks]) ->
+              fun(req_data, [], [nodename, modules, xref_checks]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
@@ -115,7 +115,7 @@ malformed_request_test() ->
 
 resource_exists_test() ->
   Ctx = orddict:from_list([{nodename, node},
-                           {module,   mod},
+                           {modules,   [mod]},
                            {xref_checks, [undefined_function_calls]}]),
   meck:unload(),
   meck:new(edts_resource_lib),

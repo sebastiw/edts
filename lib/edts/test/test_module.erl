@@ -24,10 +24,8 @@
 
 -module(test_module).
 
--export([bar/1,
-         baz/0]).
+-export([bar/1]).
 
--ignore_xref([baz/0]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -37,8 +35,6 @@
 -spec bar(Atom::atom()) -> atom().
 bar(ping) -> pong;
 bar(_Hej) -> 'bar'(ping).
-
-baz() -> ok.
 
 baz_test() -> ok.
 baz_test_() -> [?_assert(true)].

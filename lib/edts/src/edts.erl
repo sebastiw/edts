@@ -180,19 +180,19 @@ get_module_eunit_result(Node, Module) ->
 %% Returns the result of xref checks of Module on Node
 %% @end
 %%
--spec get_module_xref_analysis(Node::node(), Module::module(),
+-spec get_module_xref_analysis(Node::node(), [Modules::module()],
                       Checks::[atom()]) ->
                          {ok, [{error,
                                 File::file:filename(),
                                 non_neg_integer(),
                                 Desc::string()}]}.
 %%------------------------------------------------------------------------------
-get_module_xref_analysis(Node, Module, Checks) ->
+get_module_xref_analysis(Node, Modules, Checks) ->
   edts_log:debug("get_module_xref_analysis ~p, ~p on ~p",
-                 [Module, Checks, Node]),
-  case edts_dist:call(Node, edts_code, check_module, [Module, Checks]) of
+                 [Modules, Checks, Node]),
+  case edts_dist:call(Node, edts_code, check_modules, [Modules, Checks]) of
     {badrpc, E} ->
-      Fmt = "Error in remote call edts_code:check_module/2 on ~p: ~p",
+      Fmt = "Error in remote call edts_code:check_modules/2 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
     Info  -> Info
@@ -269,8 +269,9 @@ nodes() ->
 %%%_* Tests ====================================================================
 
 get_module_eunit_result_test_() ->
-  [?_assertMatch({ok, [{'passed-test', _Source, 43, "no asserts failed"},
-                       {'passed-test', _Source, 44, "no asserts failed"}]},
+  [?_assertMatch({ok, [{'passed-test', _Source, Line1, "no asserts failed"},
+                       {'passed-test', _Source, Line2, "no asserts failed"}]}
+                 when is_integer(Line1) andalso is_integer(Line2),
                  get_module_eunit_result(node(), test_module)),
    ?_assertEqual({error, not_found},
                  get_module_eunit_result(not_a_node, test_module)),

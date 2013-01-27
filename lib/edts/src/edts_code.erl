@@ -31,7 +31,7 @@
 %%%_* Exports ==================================================================
 
 -export([add_paths/1,
-         check_module/2,
+         check_modules/2,
          compile_and_load/1,
          free_vars/1,
          free_vars/2,
@@ -95,15 +95,19 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 %% @doc
 %% Do an xref-analysis of Module, applying Checks
 %% @end
--spec check_module(Module::module(), Checks::[xref:analysis()]) ->
-                      {ok, [issue()]}.
+-spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
+                       {ok, [issue()]}.
 %%------------------------------------------------------------------------------
-check_module(Module, Checks) ->
-  case code:is_loaded(Module) of
-    false      -> reload_module(Module);
-    {file, _F} -> ok
-  end,
-  edts_xref:check_module(Module, Checks).
+check_modules(Modules, Checks) ->
+  MaybeReloadFun =
+    fun(Module) ->
+        case code:is_loaded(Module) of
+          false      -> reload_module(Module);
+          {file, _F} -> ok
+        end
+    end,
+  ok = lists:foreach(MaybeReloadFun, Modules),
+  edts_xref:check_modules(Modules, Checks).
 
 
 %%------------------------------------------------------------------------------
