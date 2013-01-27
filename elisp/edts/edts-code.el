@@ -110,12 +110,18 @@ with severity as key and a lists of issues as values"
 buffer either by belonging to the same project or, if current buffer
 does not belong to any project, being in the same directory as the
 current buffer's file."
-  (interactive '(ok))
   (when (and edts-code-xref-checks (not (eq result 'error)))
-    (if eproject-mode
-        (with-each-buffer-in-project (gensym) (eproject-root)
-            (edts-code-xref-analyze))
-      (edts-code-xref-analyze-no-project))))
+    (interactive '(ok))
+    (let* ((mods nil))
+      (with-each-buffer-in-project (gen-sym) (eproject-root)
+        (let ((mod (ferl-get-module)))
+          (when mod
+            (edts-face-remove-overlays '("edts-code-xref"))
+            (push mod mods))))
+      (edts-get-module-xref-analysis-async
+       mods
+       edts-code-xref-checks
+       #'edts-code-handle-xref-analysis-result))))
 
 
 (defun edts-code-xref-analyze-no-project ()
@@ -134,16 +140,32 @@ buffer's project."
     (when module
       (edts-face-remove-overlays '("edts-code-xref"))
       (edts-get-module-xref-analysis-async
-       module edts-code-xref-checks
+       (list module) edts-code-xref-checks
        #'edts-code-handle-xref-analysis-result))))
 
 (defun edts-code-handle-xref-analysis-result (analysis-res)
   (when analysis-res
-    (let ((errors (cdr (assoc 'errors analysis-res))))
-      (edts-code--set-issues 'edts-code-xref (list 'error errors))
-      (edts-code-display-error-overlays "edts-code-xref" errors)
-      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-      errors)))
+    (let* ((all-errors (cdr (assoc 'errors analysis-res)))
+           (err-alist  (edts-code--issue-to-file-map all-errors)))
+      ;; Set the error list in each project-buffer
+      (with-each-buffer-in-project (gen-sym) (eproject-root)
+        (let ((errors (cdr (assoc (buffer-file-name) err-alist))))
+          (edts-code--set-issues 'edts-code-xref (list 'error errors))
+          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+          (when errors
+            (edts-code-display-error-overlays "edts-code-xref" errors)))))))
+
+(defun edts-code--issue-to-file-map (issues)
+  "Creates an alist with mapping between filenames and related elements
+of ISSUES."
+  (let* ((issue-alist nil))
+    (mapc
+     #'(lambda (e)
+         (let* ((file (cdr (assoc 'file e)))
+                (new-e (cons e (cdr (assoc file issue-alist)))))
+           (push (cons file new-e) issue-alist)))
+     issues)
+    issue-alist))
 
 (defun edts-code-eunit (result)
   "Runs eunit tests for current buffer on node related to that
@@ -223,11 +245,15 @@ non-recursive."
 
 (defun edts-code-handle-dialyze-result (analysis-res)
   (when analysis-res
-    (let ((warnings (cdr (assoc 'warnings analysis-res))))
-      (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
-      (edts-code-display-warning-overlays "edts-code-dialyzer" warnings)
-      (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-      warnings)))
+    (let* ((all-warnings (cdr (assoc 'warnings analysis-res)))
+           (warn-alist  (edts-code--issue-to-file-map all-warnings)))
+      ;; Set the warning list in each project-buffer
+      (with-each-buffer-in-project (gen-sym) (eproject-root)
+        (let ((warnings (cdr (assoc (buffer-file-name) warn-alist))))
+          (edts-code--set-issues 'edts-code-xref (list 'warning warnings))
+          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+          (when warnings
+            (edts-code-display-warning-overlays "edts-code-xref" warnings)))))))
 
 
 (defun edts-code-display-error-overlays (type errors)

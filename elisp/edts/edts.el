@@ -326,18 +326,18 @@ LEVEL is either basic or detailed."
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-module-xref-analysis-async (module checks callback)
+(defun edts-get-module-xref-analysis-async (modules checks callback)
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
   (let* ((node-name (edts-node-name))
          (resource  (list "nodes" node-name
-                          "modules" module
                           "xref_analysis"))
-         (rest-args (list (cons "xref_checks" (mapcar #'symbol-name checks))))
+         (rest-args `(("xref_checks" . ,(mapcar #'symbol-name checks))
+                      ("modules"     . ,modules)))
          (cb-args   (list callback 200)))
     (edts-log-debug
-     "fetching xref-analysis of %s async on %s" module node-name)
+     "fetching xref-analysis of %s async on %s" modules node-name)
     (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
 (defun edts-get-module-eunit-async (module callback)
