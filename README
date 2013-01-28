@@ -129,9 +129,9 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
     values to override.
 
     Example:
-    (edts-project-override "~/my-project" (:name "my-project-dev"
-                                           :node-sname "my-project-dev")
-                                           :lib-dirs '("lib" "test" "hacks"))
+    (edts-project-override "~/my-project" '(:name "my-project-dev"
+                                            :node-sname "my-project-dev")
+                                            :lib-dirs '("lib" "test" "hacks"))
 
 That should be all it takes. If it's not, please report any issues on github.
 
