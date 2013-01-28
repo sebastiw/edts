@@ -140,7 +140,7 @@ Example:
        :start-command (edts-project--make-command)))
 
     ;; Make necessary initializations if opened file is relevant to its project.
-    (when (eproject-classify-file (buffer-file-name))
+    (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
       (edts-project-ensure-node-started))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
