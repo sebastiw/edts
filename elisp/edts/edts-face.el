@@ -20,8 +20,14 @@
 ;;
 ;; Utilities for displaying things
 
-
+(require 'face-remap)
 ;; Faces for highlighting
+
+(defcustom edts-face-inhibit-mode-line-updates nil
+  "If non-nil, don't make any changes to the mode-line appearance."
+  :group 'edts
+  :type 'boolean)
+
 (defface edts-face-error-line
   '((((class color) (background dark)) (:background "Firebrick"))
     (((class color) (background light)) (:background "LightPink1"))
@@ -35,6 +41,21 @@
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
+
+(defface edts-face-error-mode-line
+  '((default (:foreground "white" :inherit edts-face-error-line)))
+  "The face to use for the modeline when there are errors in the buffer"
+  :group 'edts)
+
+(defface edts-face-warning-mode-line
+  '((default (:foreground "white" :inherit edts-face-warning-line)))
+  "The face to use for the modeline when there are warnings in the buffer"
+  :group 'edts)
+
+(defvar edts-face-modeline-remap-cookie nil
+  "A list of The 'cookies' returned from face-remap-add-relative, so
+that we can reset our face remappings.")
+(make-variable-buffer-local 'edts-face-modeline-remap-cookie)
 
 (defface edts-face-passed-test-line
   '((((class color) (background dark))  (:background "dark olive green"
@@ -80,12 +101,12 @@
   "Face used for marking the current line during debugging"
   :group 'edts)
 
-(defadvice next-line (after edts-next-line)
+(defadvice next-line (after edts-face-next-line)
   "Moves point to the next line and then prints the help-echo of the highest
 priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
 
-(defadvice previous-line (after edts-previous-line)
+(defadvice previous-line (after edts-face-previous-line)
   "Moves point to the previous line and then prints the help-echo of
 the highest priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
@@ -132,8 +153,8 @@ the highest priority any edts overlay at new point if any."
         (overlay-put overlay 'priority prio)
         overlay))))
 
-(defun edts-face-remove-overlays (types)
-  "Removes all overlays belonging to any of TYPES"
+(defun edts-face-remove-overlays (&optional type)
+  "Removes all overlays with the name TYPE"
   (interactive)
   (save-restriction
     (widen)
@@ -177,3 +198,23 @@ from POS."
    (or (null types)
        (member (overlay-get overlay 'edts-face-overlay-type) types))))
 
+(defun edts-face-update-buffer-mode-line (status)
+  "Sets the mode-line face unless `edts-face-inhibit-mode-line-updates'
+is non-nil."
+  (edts-face-reset-mode-line)
+  (unless edts-face-inhibit-mode-line-updates
+    (setq edts-face-modeline-remap-cookie
+          (edts-face--remap-modeline-face status))))
+
+(defun edts-face--remap-modeline-face (status)
+  "Set a relative mapping to mode-line face for STATUS."
+  (case status
+    (warning (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
+    (error   (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
+    (ok      nil)))
+
+(defun edts-face-reset-mode-line ()
+  "Reset mode-line face remapping."
+  (when edts-face-modeline-remap-cookie
+    (face-remap-remove-relative edts-face-modeline-remap-cookie)
+    (setq edts-face-modeline-remap-cookie nil)))

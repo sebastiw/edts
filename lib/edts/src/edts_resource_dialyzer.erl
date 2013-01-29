@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc module resource
+%%% @doc dialyzer resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_xref).
+-module(edts_resource_dialyzer).
 
 %%%_* Exports ==================================================================
 
@@ -46,7 +46,6 @@
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-
 %% Webmachine callbacks
 init(_Config) ->
   edts_log:debug("Call to ~p", [?MODULE]),
@@ -61,28 +60,48 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
-malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
+malformed_request(ReqData, Ctx0) ->
+  % Non-standard validation
+  OtpPlt = wrq:get_qs_value("otp_plt", ReqData),
+  OutPlt = wrq:get_qs_value("out_plt", ReqData),
+  OtpPltExistsP = filelib:is_file(OtpPlt),
+  if
+    OtpPlt =/= undefined andalso not OtpPltExistsP ->
+      edts_log:error("API input validation failed. Key otp_plt, "
+                     "Rsn: no_exists", []),
+      {true, ReqData, Ctx0};
+    OutPlt =:= undefined ->
+      edts_log:error("API input validation failed. Key out_plt, "
+                     "Rsn: undefined", []),
+      {true, ReqData, Ctx0};
+    true ->
+      Validators = [nodename, modules],
+      Ctx =
+        orddict:store(otp_plt, OtpPlt, orddict:store(out_plt, OutPlt, Ctx0)),
+      edts_resource_lib:validate(ReqData, Ctx, Validators)
+  end.
 
 resource_exists(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Modules   = orddict:fetch(modules, Ctx),
-  Checks   = orddict:fetch(xref_checks, Ctx),
-  Analysis = edts:get_module_xref_analysis(Nodename, Modules, Checks),
-  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules])
-              andalso not (Analysis =:= {error, not_found})),
-  {Exists, ReqData, orddict:store(analysis, Analysis, Ctx)}.
+  OtpPlt   = orddict:fetch(otp_plt, Ctx),
+  OutPlt   = orddict:fetch(out_plt, Ctx),
+  Files    = orddict:fetch(modules, Ctx),
+  Result   = edts:get_dialyzer_result(Nodename, OtpPlt, OutPlt, Files),
+  Exists       = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules])
+                  andalso not (Result =:= {error, not_found})),
+  {Exists, ReqData, orddict:store(result, Result, Ctx)}.
 
 to_json(ReqData, Ctx) ->
-  Errors = {array, [format_error(Err) || Err <- orddict:fetch(analysis, Ctx)]},
-  {mochijson2:encode({struct, [{errors, Errors}]}), ReqData, Ctx}.
+  Result = orddict:fetch(result, Ctx),
+  Struct = [ {warnings, {array, [format_warning(Test) || Test <- Result]}}],
+  {mochijson2:encode({struct, Struct}), ReqData, Ctx}.
 
 
-format_error({Type, File, Line, Desc}) ->
+format_warning({Type, File, Line, Desc}) ->
   {struct, [ {type, Type}
            , {file, list_to_binary(File)}
            , {line, Line}
-           , {description, list_to_binary(Desc)}]}.
+           , {description, unicode:characters_to_binary(Desc)}]}.
 
 %%%_* Internal functions =======================================================
 
@@ -102,47 +121,61 @@ content_types_provided_test() ->
 
 malformed_request_test() ->
   meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("otp_plt", req_data4)  -> "otp.plt";
+                                    ("otp_plt", _)         -> undefined;
+                                    ("out_plt", req_data3) -> undefined;
+                                    ("out_plt", _)         -> out_plt
+                                 end),
   meck:new(edts_resource_lib),
+  Validators0 = [nodename, modules],
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, modules, xref_checks]) ->
-                  {false, req_data, []};
+              fun(req_data, Ctx, Validators) when Validators =:= Validators0 ->
+                  {false, req_data, Ctx};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
               end),
-  ?assertEqual({false, req_data,  []}, malformed_request(req_data, [])),
-  ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
+  ?assertEqual({false, req_data, [{otp_plt, undefined},
+                                  {out_plt, out_plt}]},
+               malformed_request(req_data, [])),
+  ?assertEqual({true, req_data2, [{otp_plt, undefined},
+                                  {out_plt, out_plt}]},
+               malformed_request(req_data2, [])),
+  ?assertEqual({true, req_data3, []}, malformed_request(req_data3, [])),
+  ?assertEqual({true, req_data4, []}, malformed_request(req_data4, [])),
   meck:unload().
 
 resource_exists_test() ->
   Ctx = orddict:from_list([{nodename, node},
-                           {modules,   [mod]},
-                           {xref_checks, [undefined_function_calls]}]),
+                           {modules,   mod},
+                           {otp_plt,  otp},
+                           {out_plt,  out}]),
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
   meck:new(edts),
-  meck:expect(edts, get_module_xref_analysis, fun(_, _, _) -> [] end),
+  meck:expect(edts, get_dialyzer_result, fun(_, _, _, _) -> ok end),
   ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
-  ?assertEqual([], orddict:fetch(analysis,
+  ?assertEqual(ok, orddict:fetch(result,
                                  element(3, resource_exists(req_data, Ctx)))),
   meck:unload().
 
-to_json_test_() ->
-  Ctx = orddict:from_list([{analysis, [{t, "file", 1337, "desc"}]}]),
+to_json_test() ->
+  Ctx = orddict:from_list([{result, [{t, "file", 1337, "desc"}]}]),
   meck:unload(),
   meck:new(mochijson2),
   meck:expect(mochijson2, encode, fun(Data) -> Data end),
-  ?assertMatch({{struct, [{errors, {array, [_]}}]}, req_data, Ctx},
+  ?assertMatch({{struct, [ {warnings, {array, [_]}}]}, req_data, Ctx},
                to_json(req_data, Ctx)),
   meck:unload().
 
-format_error_test() ->
+format_warning_test() ->
   ?assertEqual({struct, [{type, t},
                          {file, <<"file">>},
                          {line, 1337},
                          {description, <<"desc">>}]},
-               format_error({t, "file", 1337, "desc"})),
-  ?assertError(badarg, format_error({t, file, 1337, "desc"})).
+               format_warning({t, "file", 1337, "desc"})),
+  ?assertError(badarg, format_warning({t, file, 1337, "desc"})).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

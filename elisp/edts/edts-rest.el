@@ -20,6 +20,7 @@
 ;;
 ;; edts' library for communicating with it's erlang node.
 
+(require 'cl)
 (require 'url)
 (require 'json)
 
@@ -42,16 +43,20 @@
 
 (defun edts-rest-request (method resource args &optional body)
   "Send a get request to RESOURCE with ARGS"
-  (let* ((url                       (edts-rest-resource-url resource args))
-         (url-request-method        method)
-         (url-request-extra-headers (list edts-rest-content-type-hdr))
-         (url-request-data          body)
-         (url-show-status           nil)
-         (buffer (url-retrieve-synchronously url)))
+  (let ((url                       (edts-rest-resource-url resource args))
+        (url-request-method        method)
+        (url-request-extra-headers (list edts-rest-content-type-hdr))
+        (url-request-data          body))
+    (make-local-variable 'url-show-status)
+    (setq url-show-status nil)
     (edts-log-debug "Sending %s-request to %s" method url)
-    (when buffer
-      (with-current-buffer buffer
-        (edts-rest-parse-http-response)))))
+    (let ((buffer (url-retrieve-synchronously url)))
+      (when buffer
+        (with-current-buffer buffer
+          (let* ((reply  (edts-rest-parse-http-response))
+                 (status (cdr (assoc 'result reply))))
+            (edts-log-debug "Reply %s received for request to %s" status url)
+            reply))))))
 
 (defun edts-rest-get-async (resource args callback callback-args)
   "Send a post request to RESOURCE with ARGS"
@@ -68,19 +73,31 @@ CALLBACK-ARGS."
   (let* ((url                       (edts-rest-resource-url resource args))
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
-         (url-show-status           nil)
-         (callback-args             (cons callback callback-args)))
+         (callback-args             (append
+                                     (list url (current-buffer) callback)
+                                     callback-args)))
+    (make-local-variable 'url-show-status)
+    (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
-    (url-retrieve url #'edts-rest-request-callback callback-args)))
+    (with-current-buffer
+        (url-retrieve url #'edts-rest-request-callback callback-args)
+      (make-local-variable 'url-show-status)
+      (setq url-show-status nil))))
 
-(defun edts-rest-request-callback (events &rest args)
+(defun edts-rest-request-callback (events url cb-buf cb &rest cb-args)
   "Callback for asynchronous http requests."
-  (let* ((callback      (car args))
-         (callback-args (cdr args))
-         (reply         (edts-rest-parse-http-response))
-         (status        (cdr (assoc 'result reply))))
-    (edts-log-debug "Reply received, %s" status)
-    (apply callback (edts-rest-parse-http-response) callback-args)))
+  (let* ((reply         (edts-rest-parse-http-response))
+         (status        (cdr (assoc 'result reply)))
+         (reply-buf     (current-buffer)))
+    (edts-log-debug "Reply %s received for request to %s" status url)
+    (with-current-buffer cb-buf
+      (apply cb reply cb-args))
+    ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
+    ;; when we are back outside the `with-current-buffer'. This seems to be
+    ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
+    (unless (eq (current-buffer) reply-buf)
+      (set-buffer reply-buf))
+    (url-mark-buffer-as-dead reply-buf)))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
@@ -101,16 +118,27 @@ CALLBACK-ARGS."
   (let ((host edts-rest-host)
         (port edts-rest-port)
         (path (mapconcat #'identity resource "/"))
-        (args (mapconcat #'edts-rest-encode-arg args "&")))
-    (format "http://%s:%s/%s?%s" host port path args)))
+        (args (edts-rest-encode-args args)))
+    (format "http://%s:%s/%s%s" host port path args)))
+
+(defun edts-rest-encode-args (args)
+  "Encode ARGS as a list of url-arguments."
+  (let ((encoded "?")
+        (arg nil))
+    (while args
+      (setq arg (edts-rest-encode-arg (pop args)))
+      (when arg (setq encoded (concat encoded arg "&"))))
+    ;; strip the last &, or the ? if there where no args or only empty args.
+    (substring encoded 0 -1)))
 
 (defun edts-rest-encode-arg (arg)
   "Encode ARG as a url-argument"
   (let ((var (car arg))
         (val (cdr arg)))
-    (if (listp val)
-        (concat var "=" (mapconcat #'identity val ","))
-        (concat var "=" val))))
+    (cond
+     ((null val) nil)
+     ((listp val) (concat var "=" (mapconcat #'identity val ",")))
+     (t (concat var "=" val)))))
 
 (defun edts-rest-encode (data)
   "Encode DATA as json."

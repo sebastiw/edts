@@ -35,8 +35,7 @@
         (let* ((choice (edts-query "Module: " modules))
                (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
                (mark (copy-marker (point-marker))))
-          (find-file-existing file) ; Fixme, catch error
-          (ring-insert-at-beginning (edts-window-history-ring) mark)
+          (edts-find-file-existing file)
           (edts-find-local-function))
         (error "No module found"))))
 
@@ -67,9 +66,10 @@ determine which file to look in, with the following algorithm:
   (interactive)
   (cond
    ;; look for a include/include_lib
-   ((edts-header-under-point-p) (edts-find-header-source))
-   ((edts-macro-under-point-p)  (edts-find-macro-source))
-   ((edts-record-under-point-p) (edts-find-record-source))
+   ((edts-header-under-point-p)    (edts-find-header-source))
+   ((edts-macro-under-point-p)     (edts-find-macro-source))
+   ((edts-record-under-point-p)    (edts-find-record-source))
+   ((edts-behaviour-under-point-p) (edts-find-behaviour-source))
    ;; look for a M:F/A
    ((apply #'edts-find-source
            (or (ferl-mfa-at-point) (error "No call at point."))))))
@@ -79,7 +79,15 @@ determine which file to look in, with the following algorithm:
 directive."
   (save-excursion
     (beginning-of-line)
-    (looking-at "-include\\(_lib\\)\\s-*(\\s-*.*")))
+    (looking-at "-include\\(_lib\\)?\\s-*(\\s-*.*")))
+
+(defun edts-behaviour-under-point-p ()
+  "Return non nil if the form under point is a behaviour directive."
+  (save-excursion
+    (beginning-of-line)
+    (let ((re (format "-behaviou?r\\s-*(?\\s-*\\(%s\\)\\s-*)?."
+                      erlang-atom-regexp)))
+      (looking-at re))))
 
 (defun edts-macro-under-point-p ()
   "Return non nil if the form under point is a macro."
@@ -98,19 +106,29 @@ directive."
   (let ((bound (ferl-last-char-on-line-at (point))))
     (save-excursion
       (beginning-of-line)
-      (when (re-search-forward "-include\\(_lib\\)\\s-*(\\s-*\"\\s-*" bound t)
+      (when (re-search-forward "-include\\(_lib\\)?\\s-*(\\s-*\"\\s-*" bound t)
         (thing-at-point 'filename)))))
+
+(defun edts-find-behaviour-source ()
+  (save-excursion
+    (beginning-of-line)
+    (let ((bound (ferl-last-char-on-line-at (point)))
+          (re (format "-behaviou?r\\s-*(?\\s-*\\(%s\\)\\s-*)?."
+                      erlang-atom-regexp)))
+      (when (re-search-forward re bound t)
+        (edts-find-source (match-string 1) "behaviour_info" 1)))))
 
 (defun edts-find-header-source ()
   "Open the source for the header file under point."
   (let* ((headerfile (edts-header-at-point))
          (mark (copy-marker (point-marker))) ;; Add us to the history list
          (includes (edts-get-includes))
-         (file (find-if #'(lambda(x) (edts-has-suffix headerfile x))
+         (file (find-if #'(lambda(x) (string=
+                                      (file-name-nondirectory headerfile)
+                                      (file-name-nondirectory x)))
                         includes)))
     (if file
-        (progn (ring-insert-at-beginning (edts-window-history-ring) mark)
-               (find-file-existing file)
+        (progn (edts-find-file-existing file)
                (goto-char (point-min)))
         (null (error "No header filename at point")))))
 
@@ -122,13 +140,12 @@ directive."
   "Jump to the record-definition under point."
   (let* ((mark (copy-marker (point-marker)))
          (rec-name (thing-at-point 'symbol))
-         (info (edts-get-detailed-module-info (erlang-get-module)))
+         (info (edts-get-detailed-module-info (ferl-get-module)))
          (records (cdr (assoc 'records info)))
          (record (edts-nav-find-record rec-name records)))
     (if record
         (progn
-          (ring-insert-at-beginning (edts-window-history-ring) mark)
-          (find-file-existing (cdr (assoc 'source record)))
+          (edts-find-file-existing (cdr (assoc 'source record)))
           (ferl-goto-line (cdr (assoc 'line   record))))
       (null (error "No record at point")))))
 
@@ -171,33 +188,44 @@ Move point there and make an entry in edts-window-history-ring."
           (when (re-search-forward re nil t) (setq found (car includes)))
           (pop includes))))
     (when found
-      (find-file-existing found)
+      (edts-find-file-existing found)
       (goto-char (point-min))
       (re-search-forward re nil t)
-      (beginning-of-line)
-      (ring-insert-at-beginning (edts-window-history-ring) mark))))
+      (beginning-of-line))
+    found))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
 When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
   (let ((mark (copy-marker (point-marker))))
-    (if (or (equal module (erlang-get-module))
+    (if (or (equal module (ferl-get-module))
             (string-equal module "MODULE"))
+        ;; Function is local
         (if function
             (progn
-              (ring-insert-at-beginning (edts-window-history-ring) mark)
-              (ferl-search-function function arity))
-            (null (error "Function %s:%s/%s not found" module function arity)))
-        (let* ((node (edts-project-buffer-node-name (current-buffer)))
-               (info (edts-get-function-info node module function arity)))
+              (ferl-search-function function arity)
+              (unless (eq (marker-position mark) (point))
+                (ring-insert-at-beginning (edts-window-history-ring) mark)))
+            (error "Function %s:%s/%s not found" module function arity))
+        (let* ((info (edts-get-function-info module function arity)))
           (if info
-              (progn
-                (find-file-existing (cdr (assoc 'source info)))
-                (ring-insert-at-beginning (edts-window-history-ring) mark)
-                (ferl-goto-line (cdr (assoc 'line   info))))
-              (null
-               (error "Function %s:%s/%s not found" module function arity)))))))
+              (let ((line (cdr (assoc 'line info))))
+                (edts-find-file-existing (cdr (assoc 'source info)))
+                (cond
+                 ((integerp line) ;; We're ok
+                  (ferl-goto-line line))
+                 ((string= line "is_bif") ;; Function is a bif
+                  (edts-log-error "%s:%s/%s is a bif" module function arity))
+                 (edts-log-error ;; Some unknown error
+                  "Function %s:%s/%s not found" module function arity)))
+            (edts-log-error
+              "Function %s:%s/%s not found" module function arity))))))
+
+(defun edts-find-file-existing (file)
+  "EDTS wrapper for find-file-existing."
+  (find-file-existing file)  ; Fixme, catch error
+  (ring-insert-at-beginning (edts-window-history-ring) mark))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
@@ -220,20 +248,19 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-who-calls ()
   (interactive)
-  (let ((node (edts-project-buffer-node-name (current-buffer)))
-        (mfa  (ferl-mfa-at-point)))
+  (let ((mfa (ferl-mfa-at-point)))
     (if mfa
-        (apply #'edts-find-callers (cons node mfa))
-        (error "No call at point."))))
+        (apply #'edts-find-callers  mfa)
+      (error "No call at point."))))
 
 (defvar edts-found-caller-items nil
   "The callers found during the last call to edts-who-calls")
 
-(defun edts-find-callers (node module function arity)
+(defun edts-find-callers (module function arity)
   "Jump to any all functions calling `module':`function'/`arity' in the
 current buffer's project."
   (edts-log-info "Finding callers of %s:%s/%s" module function arity)
-  (let* ((callers (edts-get-who-calls node module function arity))
+  (let* ((callers (edts-get-who-calls module function arity))
          (caller-items (mapcar #'edts-function-popup-item callers)))
     (edts-do-find-callers caller-items)))
 
@@ -241,7 +268,7 @@ current buffer's project."
   (if caller-items
       (progn
         (setq edts-found-caller-items caller-items)
-        (let* ((choice       (popup-menu* caller-items))
+        (let* ((choice       (popup-menu* caller-items :scroll-bar t))
                (module       (cdr (assoc 'module   choice)))
                (function     (cdr (assoc 'function choice)))
                (arity        (cdr (assoc 'arity    choice))))

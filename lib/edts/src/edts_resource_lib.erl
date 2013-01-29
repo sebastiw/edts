@@ -52,7 +52,12 @@
 %%------------------------------------------------------------------------------
 exists_p(ReqData, Ctx, Keys) ->
   F = fun(Key) -> (atom_to_exists_p(Key))(ReqData, Ctx) end,
-  lists:all(F, Keys).
+  case lists:partition(F, Keys) of
+    {_, []}       -> true;
+    {_, NoExists} ->
+      edts_log:debug("resource_exists failed: ~p", [NoExists]),
+      false
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -65,17 +70,26 @@ exists_p(ReqData, Ctx, Keys) ->
 %%------------------------------------------------------------------------------
 validate(ReqData0, Ctx0, Keys) ->
   F = fun(Key, {ReqData, Ctx}) ->
-          case (atom_to_validate(Key))(ReqData, Ctx) of
+          case (term_to_validate(Key))(ReqData, Ctx) of
             {ok, Value} ->
               {ReqData, orddict:store(Key, Value, Ctx)};
-            error       ->
+            {error, Rsn} ->
+              edts_log:error("API input validation failed. Key ~p, Rsn: ~p",
+                             [Key, Rsn]),
               throw({error, Key})
           end
       end,
   try
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
-  catch throw:{error, _} = E -> {true, ReqData0, orddict:store(error, E, Ctx0)}
+  catch throw:{error, Key} = E ->
+      KeyString = case Key of
+                    {_Type, KeyAtom} -> atom_to_list(KeyAtom);
+                    KeyAtom          -> atom_to_list(KeyAtom)
+                  end,
+      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
+                     [Key, wrq:get_qs_value(KeyString, ReqData0)]),
+      {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
 %%------------------------------------------------------------------------------
@@ -90,22 +104,28 @@ make_nodename(NameStr) ->
 
 %%%_* Internal functions =======================================================
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
-atom_to_exists_p(module)   -> fun module_exists_p/2.
+atom_to_exists_p(module)   -> fun module_exists_p/2;
+atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
-atom_to_validate(arity)        -> fun arity_validate/2;
-atom_to_validate(cmd)          -> fun cmd_validate/2;
-atom_to_validate(exclusions)   -> fun exclusions_validate/2;
-atom_to_validate(exported)     -> fun exported_validate/2;
-atom_to_validate(file)         -> fun file_validate/2;
-atom_to_validate(function)     -> fun function_validate/2;
-atom_to_validate(info_level)   -> fun info_level_validate/2;
-atom_to_validate(interpret)    -> fun interpret_validate/2;
-atom_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
-atom_to_validate(line)         -> fun line_validate/2;
-atom_to_validate(module)       -> fun module_validate/2;
-atom_to_validate(nodename)     -> fun nodename_validate/2;
-atom_to_validate(project_root) -> fun project_root_validate/2;
-atom_to_validate(xref_checks)  -> fun xref_checks_validate/2.
+term_to_validate(arity)        -> fun arity_validate/2;
+term_to_validate(cmd)          -> fun cmd_validate/2;
+term_to_validate(exlcusions)   -> fun exclusions_validate/2;
+term_to_validate(exported)     -> fun exported_validate/2;
+term_to_validate(file)         -> fun file_validate/2;
+term_to_validate(files)        -> fun files_validate/2;
+term_to_validate(function)     -> fun function_validate/2;
+term_to_validate(info_level)   -> fun info_level_validate/2;
+term_to_validate(interpret)    -> fun interpret_validate/2;
+term_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
+term_to_validate(line)         -> fun line_validate/2;
+term_to_validate(module)       -> fun module_validate/2;
+term_to_validate(modules)      -> fun modules_validate/2;
+term_to_validate(nodename)     -> fun nodename_validate/2;
+term_to_validate(project_root) -> fun project_root_validate/2;
+term_to_validate(xref_checks)  -> fun xref_checks_validate/2;
+
+term_to_validate({file, Key})  ->
+  fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, atom_to_list(Key)) end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -157,7 +177,7 @@ exclusions_validate(ReqData, _Ctx) ->
 %% Validate export parameter
 %% @end
 -spec exported_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok,  boolean() | all} | error.
+                    {ok,  boolean() | all} | {error, {illegal, string()}}.
 %%------------------------------------------------------------------------------
 exported_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("exported", ReqData) of
@@ -165,27 +185,63 @@ exported_validate(ReqData, _Ctx) ->
     "all"     -> {ok, all};
     "true"    -> {ok, true};
     "false"   -> {ok, false};
-    _         -> error
+    V         -> {error, {illegal, V}}
   end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate path to a file.
 %% @end
--spec file_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec file_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
 %%------------------------------------------------------------------------------
-file_validate(ReqData, _Ctx) ->
-  File = wrq:get_qs_value("file", ReqData),
+file_validate(ReqData, Ctx) ->
+  file_validate(ReqData, Ctx, "file").
+
+file_validate(ReqData, _Ctx, Key) ->
+  File = wrq:get_qs_value(Key, ReqData),
+  do_file_validate(File).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a list of paths.
+%% @end
+-spec files_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
+%%------------------------------------------------------------------------------
+files_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("files", ReqData) of
+    undefined                     -> {ok, all};
+    "all"                         -> {ok, all};
+    [F|_] = Files when is_list(F) ->
+      NotExistsP =
+        fun(File) ->
+            %% Filter out the files that don't exist.
+            case do_file_validate(File) of
+              {error, _} -> true;
+              {ok, _}    -> false
+            end
+        end,
+      case lists:filter(NotExistsP, Files) of
+        []                  -> {ok, Files};
+        [_|_] = NonExisting -> {error ,{no_exists, NonExisting}}
+      end
+  end.
+
+
+do_file_validate(File) ->
   case filelib:is_file(File) of
     true  -> {ok, File};
-    false -> error
+    false -> {error, {no_exists, File}}
   end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate function
 %% @end
--spec function_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()} | error.
+-spec function_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()}.
 %%------------------------------------------------------------------------------
 function_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(function, ReqData))}.
@@ -196,14 +252,14 @@ function_validate(ReqData, _Ctx) ->
 %% Validate arity
 %% @end
 -spec info_level_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok, basic | detailed} | error.
+                    {ok, basic | detailed} | {error, {illegal, string()}}.
 %%------------------------------------------------------------------------------
 info_level_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("info_level", ReqData) of
     undefined  -> {ok, basic};
     "basic"    -> {ok, basic};
     "detailed" -> {ok, detailed};
-    _          -> error
+    V          -> {error, {illegal, V}}
   end.
 
 %%------------------------------------------------------------------------------
@@ -212,7 +268,7 @@ info_level_validate(ReqData, _Ctx) ->
 %% specified in Ctx.
 %% @end
 -spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) ->
-                           {ok, file:filename()} | error.
+                           {ok, file:filename()}.
 %%------------------------------------------------------------------------------
 lib_dirs_validate(ReqData, Ctx) ->
   Root       = orddict:fetch(project_root, Ctx),
@@ -253,15 +309,30 @@ line_validate(ReqData, _Ctx) ->
 %% @doc
 %% Validate module
 %% @end
--spec module_validate(wrq:req_data(), orddict:orddict()) ->
-                    {ok, module()} | error.
+-spec module_validate(wrq:req_data(), orddict:orddict()) -> {ok, module()}.
 %%------------------------------------------------------------------------------
 module_validate(ReqData, _Ctx) ->
   {ok, list_to_atom(wrq:path_info(module, ReqData))}.
 
+
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate module
+%% Validate a list of modules.
+%% @end
+-spec modules_validate(wrq:req_data(), orddict:orddict()) ->
+                       {ok, filename:filename()} |
+                       {error, {no_exists, string()}}.
+%%------------------------------------------------------------------------------
+modules_validate(ReqData, _Ctx) ->
+  case wrq:get_qs_value("modules", ReqData) of
+    undefined -> {ok, all};
+    "all"     -> {ok, all};
+    Val        -> {ok, [list_to_atom(Mod) || Mod <- string:tokens(Val, ",")]}
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Check that module exists on the relevant node.
 %% @end
 -spec module_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
@@ -275,10 +346,25 @@ module_exists_p(_ReqData, Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Check that all of a list of modules exist on the relevant node.
+%% @end
+-spec modules_exists_p(wrq:req_data(), orddict:orddict()) -> boolean().
+%%------------------------------------------------------------------------------
+modules_exists_p(_ReqData, Ctx) ->
+  case orddict:fetch(modules, Ctx) of
+    all     -> true;
+    Modules ->
+      Nodename = orddict:fetch(nodename, Ctx),
+      Loaded = edts_dist:call(Nodename, code, all_loaded, []),
+      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Loaded) end, Modules)
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Validate nodename
 %% @end
--spec nodename_validate(wrq:req_data(), orddict:orddict()) ->
-               {ok, node()} | error.
+-spec nodename_validate(wrq:req_data(), orddict:orddict()) -> {ok, node()}.
 %%------------------------------------------------------------------------------
 nodename_validate(ReqData, _Ctx) ->
   {ok, make_nodename(wrq:path_info(nodename, ReqData))}.
@@ -297,7 +383,8 @@ nodename_exists_p(_ReqData, Ctx) ->
 %% Validate path to a project root directory
 %% @end
 -spec project_root_validate(wrq:req_data(), orddict:orddict()) ->
-                               {ok, file:filename()} | error.
+                               {ok, file:filename()} |
+                               {error, {not_dir, string()}}.
 %%------------------------------------------------------------------------------
 project_root_validate(ReqData, _Ctx) ->
   case wrq:get_qs_value("project_root", ReqData) of
@@ -305,7 +392,7 @@ project_root_validate(ReqData, _Ctx) ->
     Root      ->
       case filelib:is_dir(Root) of
         true  -> {ok, Root};
-        false -> error
+        false -> {error, {not_dir, Root}}
       end
   end.
 
@@ -314,17 +401,21 @@ project_root_validate(ReqData, _Ctx) ->
 %% @doc
 %% Validate xref_checks
 %% @end
--spec xref_checks_validate(wrq:req_data(), orddict:orddict()) -> boolean().
+-spec xref_checks_validate(wrq:req_data(), orddict:orddict()) ->
+                              {ok, [edts_xref:xref_check()]} |
+                              {error, {illegal, [atom()]}}.
 %%------------------------------------------------------------------------------
 xref_checks_validate(ReqData, _Ctx) ->
-  Allowed = [undefined_function_calls, unused_exports],
   case wrq:get_qs_value("xref_checks", ReqData) of
     undefined  -> {ok, [undefined_function_calls]};
     Val        ->
-      Checks = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
-      case lists:all(fun(Check) -> lists:member(Check, Allowed) end, Checks) of
-        true  -> {ok, Checks};
-        false -> error
+      Checks   = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
+      IsLegalF = fun(Check) ->
+                     lists:member(Check, edts_xref:allowed_checks())
+                 end,
+      case lists:partition(IsLegalF, Checks) of
+        {Legal, []}       -> {ok, Legal};
+        {_Legal, Illegal} -> {error, {illegal, Illegal}}
       end
   end.
 
@@ -399,7 +490,7 @@ exported_validate_test() ->
   meck:expect(wrq, get_qs_value, fun("exported", _) -> "false" end),
   ?assertEqual({ok, false}, exported_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("exported", _) -> true end),
-  ?assertEqual(error, exported_validate(foo, bar)),
+  ?assertEqual({error, {illegal, true}}, exported_validate(foo, bar)),
   meck:unload().
 
 file_validate_test() ->
@@ -408,9 +499,26 @@ file_validate_test() ->
   {ok, Cwd} = file:get_cwd(),
   meck:expect(wrq, get_qs_value, fun("file", _) -> Cwd end),
   ?assertEqual({ok, Cwd}, file_validate(foo, bar)),
+  Filename = filename:join(Cwd, "asotehu"),
   meck:expect(wrq, get_qs_value,
-              fun("file", _) -> filename:join(Cwd, "asotehu") end),
-  ?assertEqual(error, file_validate(foo, bar)),
+              fun("file", _) ->  Filename end),
+  ?assertEqual({error, {no_exists, Filename}}, file_validate(foo, bar)),
+
+  ?assertError(function_clause, file_validate(foo, bar, "f")),
+  meck:expect(wrq, get_qs_value, fun("f", _) -> Cwd end),
+  ?assertEqual({ok, Cwd}, file_validate(foo, bar, "f")),
+  meck:unload().
+
+files_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  {ok, Cwd} = file:get_cwd(),
+  meck:expect(wrq, get_qs_value, fun("files", _) -> [Cwd, Cwd] end),
+  ?assertEqual({ok, [Cwd, Cwd]}, files_validate(foo, bar)),
+  Filename = filename:join(Cwd, "asotehu"),
+  meck:expect(wrq, get_qs_value,
+              fun("files", _) ->  [Cwd, Filename] end),
+  ?assertEqual({error, {no_exists, [Filename]}}, files_validate(foo, bar)),
   meck:unload().
 
 function_validate_test() ->
@@ -430,7 +538,7 @@ info_level_validate_test() ->
   meck:expect(wrq, get_qs_value, fun("info_level", _) -> "detailed" end),
   ?assertEqual({ok, detailed}, info_level_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("info_level", _) -> true end),
-  ?assertEqual(error, info_level_validate(foo, bar)),
+  ?assertEqual({error, {illegal, true}}, info_level_validate(foo, bar)),
   meck:unload().
 
 interpret_validate_test() ->
@@ -466,6 +574,13 @@ module_validate_test() ->
   ?assertEqual({ok, foo}, module_validate(foo, bar)),
   meck:unload().
 
+modules_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, get_qs_value, fun("modules", _) -> "foo,bar" end),
+  ?assertEqual({ok, [foo, bar]}, modules_validate(foo, bar)),
+  meck:unload().
+
 nodename_validate_test() ->
   meck:unload(),
   meck:new(wrq),
@@ -481,9 +596,10 @@ root_validate_test() ->
   {ok, Cwd} = file:get_cwd(),
   meck:expect(wrq, get_qs_value, fun("project_root", _) -> Cwd end),
   ?assertEqual({ok, Cwd}, project_root_validate(foo, bar)),
+  Path = filename:join(Cwd, "asotehu"),
   meck:expect(wrq, get_qs_value,
-              fun("project_root", _) -> filename:join(Cwd, "asotehu") end),
-  ?assertEqual(error, project_root_validate(foo, bar)),
+              fun("project_root", _) -> Path end),
+  ?assertEqual({error, {not_dir, Path}}, project_root_validate(foo, bar)),
   meck:unload().
 
 xref_checks_validate_test() ->
@@ -497,10 +613,10 @@ xref_checks_validate_test() ->
   ?assertEqual({ok, [undefined_function_calls]},
                xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> "something" end),
-  ?assertEqual(error, xref_checks_validate(foo, bar)),
+  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun("xref_checks", _) ->
-                                     "something, undefined_function_calls" end),
-  ?assertEqual(error, xref_checks_validate(foo, bar)),
+                                     "something,undefined_function_calls" end),
+  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
   meck:expect(wrq, get_qs_value,
               fun("xref_checks", _) ->
                   "undefined_function_calls,unused_exports"

@@ -3,7 +3,7 @@
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -31,15 +31,18 @@
 %%%_* Exports ==================================================================
 
 -export([add_paths/1,
-         check_module/2,
+         check_modules/2,
          compile_and_load/1,
          free_vars/1,
          free_vars/2,
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
+         load_all/0,
          modules/0,
+         parse_expressions/1,
          start/0,
+         started_p/0,
          who_calls/3]).
 
 %% internal exports
@@ -49,21 +52,35 @@
 -define(SERVER, ?MODULE).
 
 %%%_* Types ====================================================================
+-export_type([issue/0]).
+
 -type issue() :: { Type        :: atom()
                  , File        :: string()
                  , Line        :: non_neg_integer()
                  , Description :: string()}.
 
 %%%_* API ======================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load all beam-files present in the current code-path.
+%% @end
+-spec load_all() -> {ok, [module()]}.
+%%------------------------------------------------------------------------------
+load_all() ->
+  {ok, lists:flatmap(fun load_all_in_dir/1, code:get_path())}.
+
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Add a new path to the code-path. Uniqueness is determined after shortening
-%% the path using ?MODULE:shorten_path/1, which means symbolic links could cause
-%% duplicate paths to be added.
+%% the path using edts_util:shorten_path/1, which means symbolic links could
+%% cause duplicate paths to be added.
 %% @end
 -spec add_path(filename:filename()) -> code:add_path_ret().
 %%------------------------------------------------------------------------------
-add_path(Path) -> code:add_path(shorten_path(Path)).
+add_path(Path) -> code:add_patha(edts_util:shorten_path(Path)).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -73,19 +90,25 @@ add_path(Path) -> code:add_path(shorten_path(Path)).
 %%------------------------------------------------------------------------------
 add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Do an xref-analysis of Module, applying Checks
 %% @end
--spec check_module(Module::module(), Checks::[xref:analysis()]) ->
-                      {ok, [issue()]}.
+-spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
+                       {ok, [issue()]}.
 %%------------------------------------------------------------------------------
-check_module(Module, Checks) ->
-  case code:is_loaded(Module) of
-    false      -> reload_module(Module);
-    {file, _F} -> ok
-  end,
-  edts_xref:check_module(Module, Checks).
+check_modules(Modules, Checks) ->
+  MaybeReloadFun =
+    fun(Module) ->
+        case code:is_loaded(Module) of
+          false      -> reload_module(Module);
+          {file, _F} -> ok
+        end
+    end,
+  ok = lists:foreach(MaybeReloadFun, Modules),
+  edts_xref:check_modules(Modules, Checks).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -97,12 +120,13 @@ check_module(Module, Checks) ->
 compile_and_load(Module) ->
   compile_and_load(Module, []).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Compiles Module with Options and returns a list of any errors and warnings.
 %% If there are no errors, the module will be loaded. Compilation options
 %% always include 'return', and 'debug_info' (and also 'binary', but
-%% the module will be written to file by EDTS instead).
+%% the returned binary will be written to file by EDTS).
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
@@ -111,31 +135,39 @@ compile_and_load(Module) ->
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
   compile_and_load(File, Opts);
-compile_and_load(File, Opts) ->
-  AbsPath  = filename:absname(File),
+compile_and_load(File0, Opts) ->
+  {ok, Cwd}   = file:get_cwd(),
+  File = case lists:prefix(Cwd, File0) of
+           true  -> lists:nthtail(length(Cwd) + 1, File0);
+           false -> File0
+         end,
+  OutDir  = get_compile_outdir(File0),
+  CompileOpts = [{cwd, Cwd},
+                 {outdir, OutDir},
+                 binary,
+                 debug_info,
+                 return|Opts] ++ extract_compile_opts(File),
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
   %% at all for other analyses (xref etc.).
-  case compile:file(AbsPath, [binary, debug_info, return|Opts]) of
+  case compile:file(File, CompileOpts) of
     {ok, Mod, Bin, Warnings} ->
-      OutDir = get_compile_outdir(File),
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
-      Result = case file:write_file(OutFile ++ ".beam", Bin) of
-                 ok ->
-                   WasInterpreted = maybe_uninterpret_module(Mod),
-                   code:purge(Mod),
-                   {module, Mod} = code:load_abs(OutFile),
-                   update_xref(),
-                   add_path(OutDir),
-                   maybe_interpret_module(Mod, WasInterpreted),
-                   {ok, {[], format_errors(warning, Warnings)}};
-                 {error, _} = Err ->
-                   error_logger:error_msg("(~p) Failed to write ~p: ~p",
-                                          [node(), OutFile, Err]),
-                   Err
-               end,
-      Result;
+      case file:write_file(OutFile ++ ".beam", Bin) of
+        ok ->
+          WasInterpreted = maybe_uninterpret_module(Mod),
+          code:purge(Mod),
+          {module, Mod} = code:load_abs(OutFile),
+          add_path(OutDir),
+          update_xref(),
+          maybe_interpret_module(Mod, WasInterpreted),
+          {ok, {[], format_errors(warning, Warnings)}};
+        {error, _} = Err ->
+          error_logger:error_msg("(~p) Failed to write ~p: ~p",
+                                 [node(), OutFile, Err]),
+          Err
+      end;
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
@@ -160,35 +192,44 @@ maybe_interpret_module(Module, WasInterpreted) ->
 -spec get_function_info(M::module(), F0::atom(), A0::non_neg_integer()) ->
                            [{atom(), term()}].
 %%------------------------------------------------------------------------------
-get_function_info(M, F0, A0) ->
+get_function_info(M, F, A) ->
   reload_module(M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  OrigSource = proplists:get_value(source, M:module_info(compile)),
-  case get_file_and_line(M, F0, A0, OrigSource, Abstract) of
-    {error, _} = Err   -> Err;
-    {ok, {File, Line}} ->
-      %% Get rid of any local paths, in case function was defined in a
-      %% file include with a relative path.
-      Source =
-        case filename:pathtype(File) of
-          absolute -> File;
-          relative ->
-            % Deals with File = "./src". Must be a better way to do this.
-            case lists:suffix(File, OrigSource) of
-              true  -> OrigSource;
-              false ->
-                filename:join(filename:dirname(OrigSource), File)
-            end
-        end,
-      [ {module,   M}
-      , {function, F0}
-      , {arity,    A0}
-      , {exported, lists:member({F0, A0}, M:module_info(exports))}
-      , {source,   Source}
-      , {line,     Line}]
+  ExportedP = lists:member({F, A}, M:module_info(exports)),
+  {ok, ModSrc} = get_module_source(M, M:module_info()),
+  case get_file_and_line(M, F, A, ModSrc, Abstract) of
+    {error, _} = Err   ->
+      case ExportedP of
+        false -> Err;
+        true  -> make_function_info(M, F, A, ExportedP, ModSrc, is_bif, ModSrc)
+      end;
+    {ok, {FunSrc, Line}} ->
+      make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc)
   end.
+
+
+make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc) ->
+  %% Get rid of any local paths, in case function was defined in a
+  %% file include with a relative path.
+  Source =
+    case filename:pathtype(FunSrc) of
+      absolute -> FunSrc;
+      relative ->
+        % Deals with File = "./src". Must be a better way to do this.
+        case lists:suffix(FunSrc, ModSrc) of
+          true  -> ModSrc;
+          false -> filename:join(filename:dirname(ModSrc), FunSrc)
+        end
+    end,
+  [ {module,   M}
+  , {function, F}
+  , {arity,    A}
+  , {exported, ExportedP}
+  , {source,   Source}
+  , {line,     Line}].
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -200,6 +241,7 @@ get_function_info(M, F0, A0) ->
 %%------------------------------------------------------------------------------
 free_vars(Snippet) -> free_vars(Snippet, 1).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Equivalent to free_vars(Snippet, 1).
@@ -209,20 +251,23 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Text, StartLine) ->
-  %% StartLine/EndLine may be useful in error messages.
-  {ok, Ts, EndLine} = erl_scan:string(Text, StartLine),
-  %%Ts1 = reverse(strip(reverse(Ts))),
-  Ts2 = [{'begin', 1}] ++ Ts ++ [{'end', EndLine}, {dot, EndLine}],
-  case erl_parse:parse_exprs(Ts2) of
-    {ok, Es} ->
-      E = erl_syntax:block_expr(Es),
-      E1 = erl_syntax_lib:annotate_bindings(E, ordsets:new()),
-      {value, {free, Vs}} =
-        lists:keysearch(free, 1, erl_syntax:get_ann(E1)),
-      {ok, Vs};
-    {error, {_Line, erl_parse, _Reason} = Err} ->
-        {error, format_errors(error, {"Snippet", [Err]})}
-    end.
+  case edts_syntax:free_vars(Text, StartLine) of
+    {ok, _} = Res    -> Res;
+    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Tokenize and parse String as a sequence of expressions.
+%% @end
+-spec parse_expressions(string()) -> Forms::erl_parse:abstract_form().
+%%------------------------------------------------------------------------------
+parse_expressions(String) ->
+  case edts_syntax:parse_expressions(String) of
+    {ok, Forms}      -> Forms;
+    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -249,10 +294,11 @@ do_get_module_info(M, basic) ->
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
   {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
+  {ok, ModSrc}                 = get_module_source(M, Info),
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
   , {time, {{Y, Mo, D}, {H, Mi, S}}}
-  , lists:keyfind(source,  1, Compile)];
+  , {source, ModSrc}];
 do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
@@ -293,7 +339,7 @@ pop_dirs(Source0, Rel) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all modules known to the edts_code xref-server.
+%% Returns a list of all modules known currently loaded on the node.
 %% @end
 -spec modules() -> [atom()].
 %%------------------------------------------------------------------------------
@@ -310,28 +356,27 @@ modules_at_path(Path) ->
 %% @doc
 %% Starts the edts xref-server on the local node.
 %% @end
--spec start() -> {ok , node()} | {error, already_started}.
+-spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  File = xref_file(),
-  try
-    case file:read_file(File) of
-      {ok, BinState} ->
-        edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> edts_xref:start();
-      {error, _} = Error  ->
-        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error])
-    end,
-    {node(), ok}
-  catch
-    C:E ->
-      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p",
-                             [File, C, E]),
-      case edts_xref:started_p() of
-        true  -> ok;
-        false -> edts_xref:start()
+  case edts_xref:started_p() of
+    true  -> {error, already_started};
+    false ->
+      case init_xref() of
+        {error, _} = Err -> Err;
+        {ok, _Pid}       -> {node(), ok}
       end
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if the edts_code service has been started.
+%% @end
+-spec started_p() -> boolean().
+%%------------------------------------------------------------------------------
+started_p() -> edts_xref:started_p().
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -342,22 +387,60 @@ start() ->
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
+
 %%%_* Internal functions =======================================================
 
-shorten_path("") -> "";
-shorten_path(P)  ->
-  case shorten_path(filename:split(P), []) of
-    [Component] -> Component;
-    Components  -> filename:join(Components)
+load_all_in_dir(Dir) ->
+  Files = filelib:wildcard(filename:join(filename:absname(Dir), "*.beam")),
+  [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
+
+ensure_loaded(File) ->
+  LoadFileName = filename:rootname(File),
+  Mod = list_to_atom(filename:basename(LoadFileName)),
+  case code:is_sticky(Mod) of
+    true  -> {false, Mod};
+    false ->
+      Loaded =
+        case code:is_loaded(Mod) of
+          {file, File} -> false;
+          {file, _}    -> try_load(Mod, LoadFileName);
+          false        -> try_load(Mod, LoadFileName)
+        end,
+      {Loaded, Mod}
   end.
 
-shorten_path([],           [])         -> ["."];
-shorten_path([],           Acc)        -> lists:reverse(Acc);
-shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
-shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
-shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
-shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
-shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
+
+try_load(Mod, File) ->
+  try
+    code:purge(Mod),
+    case code:load_abs(File) of
+      {module, Mod} -> true;
+      {error, Rsn}  -> error(Rsn)
+    end
+  catch
+    C:E ->
+      error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
+      false
+  end.
+
+
+init_xref() ->
+  File = xref_file(),
+  try
+    case file:read_file(File) of
+      {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
+      {error, enoent}     -> edts_xref:start();
+      {error, _} = Error  ->
+      error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+      edts_xref:start()
+    end
+  catch
+    C:E ->
+      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
+                             "Starting with clean state instead.",
+                             [File, C, E]),
+      edts_xref:start()
+  end.
 
 update_xref() ->
   edts_xref:update(),
@@ -379,7 +462,7 @@ xref_file() ->
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
   Opts = try proplists:get_value(options, Mod:module_info(compile), [])
-         catch error:undef -> []
+         catch error:undef -> [] %% No beam-file
          end,
   get_compile_outdir(File, Opts).
 
@@ -402,6 +485,52 @@ filename_to_outdir(File) ->
   end.
 
 %%------------------------------------------------------------------------------
+%% @doc Try to find the source of M using (in order):
+%% - The beam-file source compile attribute if present.
+%% - If the module is located in a directory called ebin, the src subfolder of
+%%   the that directory's parent directory (eg foo/src for a module located in
+%%   foo/ebin).
+%% - The module beam-file's location (eg foo for a module in foo).
+%% - The erts application source-directory. This is for modules located in the
+%%   'preloaded' directory of otp.
+-spec get_module_source(M::module(), MInfo::[{atom(), term()}]) ->
+                           {ok, string()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+get_module_source(M, MInfo) ->
+  case get_module_source_from_info(MInfo) of
+    {ok, _Src} = Res   -> Res;
+    {error, not_found} -> get_module_source_from_beam(M)
+  end.
+
+get_module_source_from_info(MInfo) ->
+  try
+    {compile, Compile} = lists:keyfind(compile, 1, MInfo),
+    {source,  ModSrc}  = lists:keyfind(source,  1, Compile),
+    true               = filelib:is_regular(ModSrc),
+    {ok, ModSrc}
+  catch
+    error:_ -> {error, not_found}
+  end.
+
+get_module_source_from_beam(M) ->
+  try
+    ModPath = code:where_is_file(atom_to_list(M) ++ ".beam"),
+    SrcFile = atom_to_list(M) ++ ".erl",
+    SplitPath = filename:split(filename:dirname(ModPath)),
+    [Dir|Rest] = lists:reverse(SplitPath),
+    SrcAbs =
+      case Dir of
+        "ebin" -> filename:join(lists:reverse(Rest) ++ ["src", SrcFile]);
+        _      -> filename:join(SplitPath ++ [SrcFile])
+      end,
+    true = filelib:is_regular(SrcAbs),
+    {ok, SrcAbs}
+  catch
+    error:_ -> {error, not_found}
+  end.
+
+
+%%------------------------------------------------------------------------------
 %% @doc Reloads a module unless it is sticky.
 -spec reload_module(M::module()) -> ok.
 %%------------------------------------------------------------------------------
@@ -420,14 +549,9 @@ reload_module(M) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
--spec format_errors( ErrType % warning | error
-                   , Errors::[{ File::string(), [term()]}]) ->
-                       [{ErrType,
-                         File::string(),
-                         Line::non_neg_integer(),
-                         Description::string()}].
+-spec format_errors( ErrType ::warning | error
+                   , Errors  ::[{ File::string(), [term()]}]) -> issue().
 %%------------------------------------------------------------------------------
-
 format_errors(Type, Errors) ->
    lists:append(
      [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
@@ -441,6 +565,10 @@ format_errors(Type, Errors) ->
                         File::string(), Abstract::[term()])->
                            {ok, {File::string(), Line::non_neg_integer()}}.
 %%------------------------------------------------------------------------------
+get_file_and_line(M, new, A, CurFile,
+                  [{attribute, Line, module, {M, Attrs}}|_T])
+  when length(Attrs) =:= A ->
+  {ok, {CurFile, Line}};
 get_file_and_line(_M, F, A, CurFile, [{function, Line, F, A, _Clauses}|_T]) ->
   {ok, {CurFile, Line}};
 get_file_and_line(M, F, A, _CurFile, [{attribute, _, file, {File, _}}|T]) ->
@@ -469,7 +597,7 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
   %% %% Get rid of any local paths, in case function was defined in a
   %% %% file include with a relative path.
   BeamSource = path_flatten(orddict:fetch(source, Acc0)),
-  Src =
+  ModSrc =
     case filename:pathtype(Src0) of
       absolute ->
         path_flatten(Src0);
@@ -478,12 +606,12 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
     end,
   %% Update list of all files.
   Acc =
-    case Src of
+    case ModSrc of
       BeamSource -> Acc0;
-      Src        -> orddict:update(includes, fun(I) -> [Src|I] end, Acc0)
+      ModSrc        -> orddict:update(includes, fun(I) -> [ModSrc|I] end, Acc0)
     end,
   %% Update current file.
-  orddict:store(cur_file, Src, Acc);
+  orddict:store(cur_file, ModSrc, Acc);
 parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
              , {function, F}
@@ -535,18 +663,30 @@ path_flatten([_Dir|Rest], [_|Back], Acc) ->
 path_flatten([Dir|Rest], Back, Acc) ->
   path_flatten(Rest, Back, [Dir|Acc]).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Extracts compile options from module, if it exists
+%% @end
+-spec extract_compile_opts(file:filename()) -> [compile:option()].
+%%------------------------------------------------------------------------------
+extract_compile_opts(File) ->
+  Module = list_to_atom(filename:basename(File, ".erl")),
+  case code:is_loaded(Module) of
+    false     -> [];
+    {file, _} ->
+      Opts = proplists:get_value(options, Module:module_info(compile)),
+      [Opt || Opt <- Opts, extract_compile_opt_p(Opt)]
+  end.
 
+extract_compile_opt_p({parse_transform, _})    -> true;
+extract_compile_opt_p({i,               _})    -> true;
+extract_compile_opt_p({d,               _})    -> true;
+extract_compile_opt_p({d,               _, _}) -> true;
+extract_compile_opt_p(export_all)              -> true;
+extract_compile_opt_p({no_auto_import,  _})    -> true;
+extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
-shorten_path_test_() ->
-  [ ?_assertEqual("", shorten_path("")),
-    ?_assertEqual(".", shorten_path(".")),
-    ?_assertEqual("..", shorten_path("..")),
-    ?_assertEqual("../..", shorten_path("../..")),
-    ?_assertEqual("../ebin", shorten_path("../ebin")),
-    ?_assertEqual("..", shorten_path("../ebin/..")),
-    ?_assertEqual("..", shorten_path("../ebin/./.."))
-  ].
 
 format_errors_test_() ->
   SetupF = fun() ->
@@ -558,50 +698,95 @@ format_errors_test_() ->
   CleanupF = fun(_) ->
                  meck:unload()
              end,
-  { setup, SetupF, CleanupF
-  , [ ?_assertEqual( [ {warning, file1, 1337, "error1"}
-                     , {warning, file1, 1338, "error2"}
-                     , {warning, file2, 1339, "error3"}
-                     , {warning, file2, 1340, "error4"} ]
-                   , format_errors( warning
-                                  , [ {file1, [ {1337, source, error1}
-                                              , {1338, source, error2}]}
-                                    , {file2, [ {1339, source, error3}
-                                              , {1340, source, error4}]} ]))
-    , ?_assertEqual( [ {error, file1, 1337, "error1"}
-                     , {error, file1, 1338, "error2"}
-                     , {error, file2, 1339, "error3"}
-                     , {error, file2, 1340, "error4"} ]
-                   , format_errors( error
-                                  , [ {file1, [ {1337, source, error1}
-                                              , {1338, source, error2}]}
-                                    , {file2, [ {1339, source, error3}
-                                              , {1340, source, error4}]} ]))
+  { setup, SetupF, CleanupF,
+    [ ?_assertEqual( [ {warning, file1, 1337, "error1"},
+                       {warning, file1, 1338, "error2"},
+                       {warning, file2, 1339, "error3"},
+                       {warning, file2, 1340, "error4"} ],
+                     format_errors(warning,
+                                   [ {file1, [ {1337, source, error1},
+                                               {1338, source, error2}]},
+                                     {file2, [ {1339, source, error3},
+                                               {1340, source, error4}]}
+                                   ])),
+      ?_assertEqual( [ {error, file1, 1337, "error1"},
+                       {error, file1, 1338, "error2"},
+                       {error, file2, 1339, "error3"},
+                       {error, file2, 1340, "error4"} ],
+                     format_errors( error,
+                                    [ {file1, [ {1337, source, error1},
+                                                {1338, source, error2}]},
+                                      {file2, [ {1339, source, error3},
+                                                {1340, source, error4}]}
+                                    ]))
     ]}.
 
 get_file_and_line_test_() ->
-  [ ?_assertEqual({error, not_found}, get_file_and_line(m, f, a, "foo.erl", []))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [{function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"bar.erl", 1337}}
-                 , get_file_and_line( m, f, 0, "foo.erl"
-                                    , [ {attribute, '', file, {"bar.erl", ''}}
-                                      , {function, 1337, f, 0, ''}]))
-  , ?_assertEqual( {ok, {"foo.erl", 1337}}
-                 , get_file_and_line(m, f, 0, "foo.erl",
-                                     [ {function, 1335, f0, 0, ''}
-                                     , {function, 1337, f, 0, ''}]))
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_nodule.erl",
+  Mod   = non_parametrised_nodule,
+  [ ?_assertEqual( {error, not_found},
+                   get_file_and_line(Mod, f, a, File, [])),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {"bar.erl", 12}},
+                   get_file_and_line(Mod, foo, 0, File,
+                                     [ {attribute, '', file, {"bar.erl", ''}}
+                                       | Forms]))
+  ].
+
+get_file_and_line_parametrised_mod_test_() ->
+  Forms = test_file_forms("parametrised-module"),
+  File  = "parametrised_module.erl",
+  Mod   = parametrised_module,
+  [ ?_assertEqual( {ok, {File, 3}},
+                   get_file_and_line(Mod, new, 1, File, Forms)),
+    ?_assertEqual( {ok, {File, 10}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, new, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 14}},
+                   get_file_and_line(Mod, new, 2, File, Forms))
+  ].
+
+get_file_and_line_non_parametrised_new_test_() ->
+  Forms = test_file_forms("non-parametrised-module"),
+  File  = "non_parametrised_module.erl",
+  Mod   =  non_parametrised_module,
+  [ ?_assertEqual( {error, not_found},
+                   get_file_and_line(Mod, new, 1, File, Forms)),
+    ?_assertEqual( {ok, {File, 12}},
+                   get_file_and_line(Mod, foo, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 14}},
+                   get_file_and_line(Mod, new, 0, File, Forms)),
+    ?_assertEqual( {ok, {File, 16}},
+                   get_file_and_line(Mod, new, 2, File, Forms))
+  ].
+
+get_module_source_test_() ->
+  ErlangAbsName = filename:join([code:lib_dir(erts, src), "erlang.erl"]),
+  [?_assertEqual({error, not_found},
+                 get_module_source_from_info(erlang:module_info())),
+   ?_assertEqual({ok, ErlangAbsName},
+                 get_module_source_from_beam(erlang)),
+   ?_assertEqual({error, not_found},
+                 get_module_source_from_info([])),
+   ?_assertEqual({error, not_found},
+                 get_module_source_from_beam(erlang_foo)),
+   ?_assertEqual({ok, ErlangAbsName},
+                get_module_source(erlang, erlang:module_info())),
+   ?_assertEqual({error, not_found},
+                get_module_source(erlang_foo, []))
   ].
 
 path_flatten_test_() ->
-  [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten("./bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten("../foo/bar.erl"))
-  , ?_assertEqual("./bar.erl",     path_flatten(".././foo/bar.erl"))
-  , ?_assertEqual("./foo/bar.erl", path_flatten("bar/../foo/bar.erl"))
-  , ?_assertEqual("../bar.erl",    path_flatten("bar/../foo/../../bar.erl"))
-  , ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
+  [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten("./bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten("../foo/bar.erl")),
+    ?_assertEqual("./bar.erl",     path_flatten(".././foo/bar.erl")),
+    ?_assertEqual("./foo/bar.erl", path_flatten("bar/../foo/bar.erl")),
+    ?_assertEqual("../bar.erl",    path_flatten("bar/../foo/../../bar.erl")),
+    ?_assertEqual("./foo/bar.erl", path_flatten("./././foo//bar.erl"))
    ].
 
 parse_abstract_function_test_() ->
@@ -614,26 +799,26 @@ parse_abstract_function_test_() ->
   meck:unload(),
   meck:new(Mod, [no_link]),
   meck:expect(Mod, Fun, fun(_) -> ok end),
-  Acc = orddict:from_list([ {module,    Mod}
-                          , {cur_file,  CurFile}
-                          , {exports,   Exports}
-                          , {functions, []}]),
+  Acc = orddict:from_list([ {module,    Mod},
+                            {cur_file,  CurFile},
+                            {exports,   Exports},
+                            {functions, []}]),
   Res = parse_abstract({function, Line, Fun, Arity, []}, Acc),
   meck:unload(),
   [ ?_assertEqual(
        lists:sort([module, cur_file, exports, functions]),
-       lists:sort(orddict:fetch_keys(Res)))
-  , ?_assertEqual(Mod,     orddict:fetch(module, Res))
-  , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
-  , ?_assertEqual(Exports, orddict:fetch(exports, Res))
-  , ?_assertMatch([_],     orddict:fetch(functions, Res))
-  , ?_assertEqual(lists:sort([ {module, Mod}
-                             , {function, Fun}
-                             , {arity,    Arity}
-                             , {source,   CurFile}
-                             , {line,     Line}
-                             , {exported, true}])
-                  , lists:sort(hd(orddict:fetch(functions, Res))))
+       lists:sort(orddict:fetch_keys(Res))),
+    ?_assertEqual(Mod,     orddict:fetch(module, Res)),
+    ?_assertEqual(CurFile, orddict:fetch(cur_file, Res)),
+    ?_assertEqual(Exports, orddict:fetch(exports, Res)),
+    ?_assertMatch([_],     orddict:fetch(functions, Res)),
+    ?_assertEqual(lists:sort([ {module, Mod},
+                               {function, Fun},
+                               {arity,    Arity},
+                               {source,   CurFile},
+                               {line,     Line},
+                               {exported, true}]),
+                  lists:sort(hd(orddict:fetch(functions, Res))))
   ].
 
 parse_abstract_include_test_() ->
@@ -642,31 +827,31 @@ parse_abstract_include_test_() ->
   Source1 = "test.erl",
   Include0 = "test.hrl",
   CompileCwd = "/foo",
-  Acc = orddict:from_list([ {source,      Source0}
-                          , {compile_cwd, CompileCwd}
-                          , {includes,    []}]),
+  Acc = orddict:from_list([ {source,      Source0},
+                            {compile_cwd, CompileCwd},
+                            {includes,    []}]),
   Res0 = parse_abstract({attribute, Line, file, {Source0, Line}}, Acc),
   Res1 = parse_abstract({attribute, Line, file, {Source1, Line}}, Acc),
   Res2 = parse_abstract({attribute, Line, file, {Include0, Line}}, Acc),
   [ ?_assertEqual(
-       lists:sort([source, compile_cwd, includes, cur_file])
-     , lists:sort(orddict:fetch_keys(Res0)))
-  , ?_assertEqual(Source0, orddict:fetch(source, Res0))
-  , ?_assertEqual(CompileCwd, orddict:fetch(compile_cwd, Res0))
-  , ?_assertEqual([], orddict:fetch(includes, Res0))
-  , ?_assertEqual([], orddict:fetch(includes, Res1))
-  , ?_assertEqual(["/foo/test.hrl"], orddict:fetch(includes, Res2))
+       lists:sort([source, compile_cwd, includes, cur_file]),
+       lists:sort(orddict:fetch_keys(Res0))),
+    ?_assertEqual(Source0, orddict:fetch(source, Res0)),
+    ?_assertEqual(CompileCwd, orddict:fetch(compile_cwd, Res0)),
+    ?_assertEqual([], orddict:fetch(includes, Res0)),
+    ?_assertEqual([], orddict:fetch(includes, Res1)),
+    ?_assertEqual(["/foo/test.hrl"], orddict:fetch(includes, Res2))
   ].
 
 parse_abstract_import_test_() ->
   Acc = orddict:from_list([ {imports, []}]),
   Res0 = parse_abstract({attribute, 0, import, {foo, [{bar, 1}]}}, Acc),
-  [ ?_assertEqual([imports], orddict:fetch_keys(Res0))
-  , ?_assertMatch([_], orddict:fetch(imports, Res0))
-  , ?_assertEqual( lists:sort([ {module,   foo}
-                              , {function, bar}
-                              , {arity,    1}])
-                 , lists:sort(hd(orddict:fetch(imports, Res0))))
+  [ ?_assertEqual([imports], orddict:fetch_keys(Res0)),
+    ?_assertMatch([_], orddict:fetch(imports, Res0)),
+    ?_assertEqual( lists:sort([ {module,   foo},
+                                {function, bar},
+                                {arity,    1}]),
+                   lists:sort(hd(orddict:fetch(imports, Res0))))
   ].
 
 parse_abstract_record_test_() ->
@@ -698,24 +883,31 @@ modules_test() ->
 get_compile_outdir_test_() ->
   Good = "good/../ebin",
   F    = fun get_compile_outdir/2,
-  [{ setup
-   , fun () ->
+  [{ setup,
+     fun () ->
          meck:new(filelib, [passthrough, unstick]),
          meck:expect(filelib, is_dir, fun ("good/../ebin") -> true;
                                           (_)              -> false
                                        end)
-     end
-   , fun (_) -> meck:unload() end
-   , [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}]))
-     , ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}]))
-     , ?_assertEqual("foo", F("foo/mod.erl" , []))
-     , ?_assertEqual(Good , F("good/mod.erl", []))
+     end,
+     fun (_) -> meck:unload() end,
+     [ ?_assertEqual(Good , F("foo/mod.erl" , [{outdir, Good}])),
+       ?_assertEqual(Good , F("good/mod.erl", [{outdir, "foo"}])),
+       ?_assertEqual("foo", F("foo/mod.erl" , [])),
+       ?_assertEqual(Good , F("good/mod.erl", []))
      ]
    }].
+
+%%%_* Test helpers =============================================================
+
+test_file_forms(File) ->
+  Path = filename:join([code:priv_dir(edts), "test/modules", File]),
+  {ok, Bin} = file:read_file(Path),
+  {ok, Forms} = edts_syntax:parse_forms(unicode:characters_to_list(Bin)),
+  Forms.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-

@@ -57,6 +57,15 @@ current-buffer"
           (+ (point) 1)
           (point)))))
 
+(defun ferl-get-module (&optional buffer)
+  "Try to find the name of the erlang module in BUFFER, or current
+buffer if no argument is given"
+  (with-current-buffer (or buffer (current-buffer))
+    (or (erlang-get-module)
+        (and
+         (string= (file-name-extension (buffer-file-name buffer)) "erl")
+         (erlang-get-module-from-file-name)))))
+
 (defun ferl-point-beginning-of-function ()
   "If point is inside an Erlang function, return the starting position
 of that function, otherwise nil."
@@ -144,9 +153,10 @@ of (function-name . starting-point)."
 Should be called with point directly before the opening ( or /."
   (save-excursion
     (save-match-data
+      (skip-chars-forward "[:space:]")
       (cond
        ((looking-at "/")
-        (re-search-forward "/[0-9]+")
+        (re-search-forward "/\s*[0-9]+" nil t)
         (ferl-slash-arity (match-string 0)))
        ((looking-at "(")
         (let ((start (+ (point) 1))
@@ -158,51 +168,58 @@ Should be called with point directly before the opening ( or /."
   "Return the arity of an argument-string after a slash."
   (string-to-number (substring str 1)))
 
+(defconst ferl-block-start-regexp
+  "\\<\\(case\\|if\\|begin\\|try\\|fun\\|receive\\)\\>"
+  "Regexp to match the start of a new block")
 
 (defun ferl-paren-arity (str)
   "Return the arity of an argument string within a parenthesis."
-  (let ((arity     0)
-        (last-c nil)
-        (next-is-new t)
-        (in-ignore nil)
-        (brackets  nil))
-    (loop for c across str do
+  (let ((block-depth 0)
+        (arity 0)
+        (in-arg nil)
+        (case-fold-search nil)
+        (slashfun-re (format "\\<fun\s%s\s*/\s*[0-9]*\\>" erlang-atom-regexp)))
+    ;; increase arity if we're not inside an argument
+    (flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
+                                 (incf arity)
+                                 (setq in-arg t))))
+      (with-temp-buffer
+        (set-syntax-table erlang-mode-syntax-table)
+        (save-excursion (insert str))
+        (skip-chars-forward "[:space:]")
+        (while (< (point) (point-max))
           (cond
-           ;; inside string or comment, next-is-new must be nil.
-           ((and (eq c in-ignore) (not (eq ?\\ last-c)))
-            (setq in-ignore nil)) ;; terminate string
-           ((and (eq ?\% in-ignore) (eq ?\n c) (not (eq ?\\ last-c)))
-            (setq in-ignore nil));; terminate comment
-           (in-ignore nil) ;; ignore character
-
-            ;; entering new bracket-pair
-           ((member c '(?\( ?\[ ?\{))
-            (when next-is-new  ;; count up
-              (incf arity)
-              (setq next-is-new nil))
-            (push c brackets))
-
-           ;; entering string/comment
-           ((member c '(?\" ?\' ?\%))
-            (when next-is-new  ;; count up
-              (incf arity)
-              (setq next-is-new nil))
-            (setq in-ignore c))
-
-           ;; inside brackets, next-is-new must be nil.
-           ;; terminate bracket-pair
-           ((and (member c (member c '(?\) ?\] ?\}))) brackets) (pop brackets))
-           ;; ignore character
-           (brackets nil)
-
-           ; not inside string, comment or brackets
-           ((eq ?, c) (setq next-is-new t))
-
-           (next-is-new  ;; count up
-            (incf arity)
-            (setq next-is-new nil)))
-          (setq last-c c))
-    arity))
+           ;; Skip over "fun some_fun/<x>" expression
+           ((looking-at slashfun-re)
+            (maybe-inc-arity)
+            (goto-char (match-end 0)))
+           ;; start of block
+           ((looking-at ferl-block-start-regexp)
+            (maybe-inc-arity)
+            (incf block-depth)
+            (forward-word))
+           ;; end of block
+           ((looking-at "\\<end\\>")
+            (when (eq (decf block-depth) 0)
+              (setq in-arg nil))
+            (forward-word))
+           ;; start of paired delimiter
+           ((looking-at "[\\\"'<\\[{(]")
+            (maybe-inc-arity)
+            (forward-sexp))
+           ;; comment
+           ((eq (char-syntax (char-after (point))) ?<)
+            (forward-comment 1))
+           ;; end of argument
+           ((looking-at ",")
+            (setq in-arg nil)
+            (forward-char))
+           ;; any other character
+           (t
+            (maybe-inc-arity)
+            (forward-char)))
+          (skip-chars-forward "[:space:]")))
+      arity)))
 
 
 (when (member 'ert features)
@@ -215,6 +232,9 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-paren-arity "a,a")))
     (should (eq 1 (ferl-paren-arity ",a")))
     (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
+    ;; Make sure case is not ignored, a Variable named the same as a block
+    ;; opener should not open a block.
+    (should (eq 3 (ferl-paren-arity "Fun,bb,cc")))
 
     (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
     (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
@@ -227,20 +247,25 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
     (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
     (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
-    (should (eq 2 (ferl-paren-arity "#a{a,b}, cc"))))
+    (should (eq 2 (ferl-paren-arity "#a{a,b}, cc")))
+
+    (should (eq 1 (ferl-paren-arity "fun() -> ok end")))
+    (should (eq 2 (ferl-paren-arity "fun() -> ok end, fun() -> ok end")))
+    (should (eq 1 (ferl-paren-arity "fun() -> begin%a, b\n ok end end")))
+    (should (eq 2 (ferl-paren-arity "fun foo/2, Arg")))
+    )
 
   (ert-deftest slash-arity-test ()
     (should (eq 2 (ferl-slash-arity "/2")))))
 
 ;; Based on code from distel and erlang-mode
-;; FIXME Butt-ugly function, split to cheek-size.
 (defun ferl-mfa-at-point (&optional default-module)
   "Return the module and function under the point, or nil.
 
 Should no explicit module name be present at the point, the
 list of imported functions is searched. If there is still no result
 use DEFAULT-MODULE."
-  (when (null default-module) (setq default-module (erlang-get-module)))
+  (when (null default-module) (setq default-module (ferl-get-module)))
   (save-excursion
     (save-match-data
       (ferl-goto-end-of-call-name)
@@ -289,9 +314,8 @@ use DEFAULT-MODULE."
         (setq match t)))
     (if match
         (beginning-of-line)
-        (progn
-          (goto-char origin)
-          (error "function %s/%s not found" function arity)))))
+      (goto-char origin)
+      (error "function %s/%s not found" function arity))))
 
 
 (provide 'ferl)

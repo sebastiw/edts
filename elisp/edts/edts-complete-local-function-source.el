@@ -28,7 +28,7 @@
     (document   . edts-complete-local-function-doc)
     (init       . edts-complete-local-function-init)
     (symbol     . "f")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)
     ))
 
@@ -70,7 +70,7 @@ candidates, except we single-quote-terminate candidates."
 
 (defun edts-complete-local-function-doc (candidate)
   "Find the documentation for CANDIDATE."
-  (let* ((module   (erlang-get-module))
+  (let* ((module   (ferl-get-module))
          (split    (split-string candidate "/"))
          (function (car split))
          (arity    (string-to-number (cadr split))))

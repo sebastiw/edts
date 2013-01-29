@@ -20,15 +20,20 @@
 (require 'auto-complete)
 (require 'ferl)
 
-(load-library "edts-complete-variable-source")
-(load-library "edts-complete-local-function-source")
-(load-library "edts-complete-imported-function-source")
-(load-library "edts-complete-built-in-function-source")
-(load-library "edts-complete-exported-function-source")
-(load-library "edts-complete-module-source")
-(load-library "edts-complete-macro-source")
-(load-library "edts-complete-record-source")
-(load-library "edts-complete-keyword-source")
+(load "edts-complete-variable-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-local-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-imported-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-built-in-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-exported-function-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-module-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-macro-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-record-source" nil edts-start-inhibit-load-msgs)
+(load "edts-complete-keyword-source" nil edts-start-inhibit-load-msgs)
+
+(defcustom edts-complete-inhibit nil
+  "Inhibit EDTS' auto-completion"
+  :type  'boolean
+  :group 'edts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -39,11 +44,11 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
   (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
       'none
       (save-excursion
-        (let ((match (re-search-backward "['\\\"]")))
-          (when match
-            (let ((char          (char-after match))
-                  (string-face-p (equal 'font-lock-string-face;
-                                        (get-text-property (- match 1) 'face))))
+          (when (re-search-backward "\\([^\\]\\|^\\)\\(['\"]\\)" nil t)
+            (let* ((start (match-beginning 2))
+                   (char (char-after start))
+                   (string-face-p (equal 'font-lock-string-face
+                                         (get-text-property (1- start) 'face))))
            (cond
             ; we're inside a double quoted string if either:
             ; we hit a " and the preceding char is not string
@@ -60,7 +65,7 @@ single quotes and 'none otherwise. Relies on font-lock-string-face to work."
             ; fontified
             ((and (equal ?\" char) string-face-p)             'single-quoted)
             ; Otherwise we're not inside quotes
-            ('otherwise                                       'none))))))))
+            ('otherwise                                       'none)))))))
 
 
 (defun edts-complete-single-quote-terminate (str)
@@ -86,15 +91,13 @@ character before that."
 
 (defadvice ac-expand-string (before edts-complete-trim-arity)
   "Removes any /x at the end of completion string"
-  (message "string %s" (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0)))
   (ad-set-arg 0 (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
 
 (defcustom edts-complete-sources
-  '(
-    edts-complete-keyword-source
+  '(edts-complete-keyword-source
     edts-complete-variable-source
     edts-complete-local-function-source
     edts-complete-imported-function-source
@@ -102,11 +105,18 @@ character before that."
     edts-complete-built-in-function-source
     edts-complete-module-source
     edts-complete-macro-source
-    edts-complete-record-source
-    )
+    edts-complete-record-source)
   "Sources that EDTS uses for auto-completion.")
 
-(defun edts-complete-setup ()
+(defcustom edts-complete-shell-sources
+  '(edts-complete-keyword-source
+    edts-complete-exported-function-source
+    edts-complete-built-in-function-source
+    edts-complete-module-source)
+  "Sources that EDTS uses for auto-completion in shell (comint)
+buffers.")
+
+(defun edts-complete-setup (&optional sources)
   "Set edts completion defaults local to current buffer."
   (make-local-variable 'ac-sources)
   (make-local-variable 'ac-disable-faces)
@@ -116,17 +126,24 @@ character before that."
   (make-local-variable 'ac-use-dictionary-as-stop-words)
   (make-local-variable 'ac-disable-faces)
 
-  (setq ac-sources edts-complete-sources)
+  (setq ac-sources (or sources edts-complete-sources))
   (setq ac-ignore-case 'smart)
   (setq ac-use-menu-map t)
   (setq ac-use-dictionary-as-stop-words nil)
   (define-key ac-menu-map (kbd "C-n") 'ac-next)
   (define-key ac-menu-map (kbd "C-p") 'ac-previous)
+  (ad-activate-regexp "edts-complete-.*")
 
   ;; this is to allow completion inside quoted atoms. As a side-effect we
   ;; get completion inside strings, which must be handled in the sources
   ;; above.
   (setq ac-disable-faces (delete 'font-lock-string-face ac-disable-faces))
 
-  (auto-complete-mode))
+  (edts-complete 1))
+
+(defun edts-complete (&optional arg)
+  "Call `auto-complete-mode' with ARG unless `edts-complete-inhibit' is
+non-nil."
+  (unless edts-complete-inhibit
+    (auto-complete-mode arg)))
 

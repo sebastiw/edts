@@ -2,6 +2,7 @@
 .eunit
 deps
 ebin
+elisp/ert
 lib/lager
 lib/mochiweb
 lib/meck

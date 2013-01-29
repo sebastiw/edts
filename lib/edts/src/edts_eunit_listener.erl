@@ -104,8 +104,10 @@ add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
 
 -spec mk_fail({edts_eunit:reason(), proplists:proplist()}
               | edts_eunit:reason()) -> edts_eunit:info().
-mk_fail({Reason, Info}) -> orddict:from_list([{reason, Reason}|Info]);
-mk_fail(Reason)         -> orddict:from_list([{reason, Reason}]).
+mk_fail({Reason, Info}) when is_list(Info) ->
+  orddict:from_list([{reason, Reason}|Info]);
+mk_fail(Reason) ->
+  orddict:from_list([{reason, Reason}]).
 
 -spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
 handle_cancel(L, Data, State) ->
@@ -176,7 +178,7 @@ terminate_test() ->
   ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
   ?assertEqual(Exp, receive Exp -> Exp end),
   ?assertEqual({error, foo}, terminate(foo, State)),
-  ?assertEqual({error, foo}, receive ExpErr -> ExpErr end).
+  ?assertEqual({error, foo}, receive {error, _} = ExpErr -> ExpErr end).
 
 mk_fail_test_() ->
   [ ?_assertEqual([{reason, foo}],             mk_fail(foo))

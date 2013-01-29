@@ -1,0 +1,9 @@
+language: erlang
+otp-release:
+ - R14B04
+before_install:
+ - sudo apt-key add ./ubuntu_extras_pub_key
+ - sudo apt-get update -qq
+ - sudo apt-get install -y -qq emacs23 erlang-mode
+ - "./install-ert.sh"
+script: "make -s test"

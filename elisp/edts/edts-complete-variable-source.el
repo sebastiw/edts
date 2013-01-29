@@ -28,7 +28,7 @@
     (init       . edts-complete-variable-init)
     (document   . nil)
     (symbol     . "v")
-    (requires   . nil)
+    (requires   . 0)
     (limit      . nil)
     ))
 

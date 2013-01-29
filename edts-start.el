@@ -4,26 +4,46 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defvar edts-start-inhibit-load-msgs t
+  "If non-nil, don't print messages when loading edts-packages.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
 (defvar edts-lib-directory
   (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "/elisp/")
+            (or (locate-library "edts-start") load-file-name)) "elisp/")
   "Directory where edts libraries are located.")
 
 (mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
         '("auto-complete"
           "auto-highlight-symbol-mode"
           "edts"
+          "eproject"
+          "ert"
+          "path-util"
           "popup-el"))
 
-(when (boundp 'erlang-root-dir)
+(when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
   (add-to-list
    'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
+
+;; workaround to get proper variable highlighting in the shell.
+(defvar erlang-font-lock-keywords-vars
+  (list
+   (list
+    #'(lambda (max)
+        (block nil
+          (while (re-search-forward erlang-variable-regexp max 'move-point)
+            ;; no numerical constants
+            (unless (eq ?# (char-before (match-beginning 0)))
+              (return (match-string 0))))))
+    1 'font-lock-variable-name-face nil))
+  "Font lock keyword highlighting Erlang variables.
+Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;; Prerequisites
 (require 'cl)
@@ -32,19 +52,20 @@
 (require 'woman)
 
 ;; EDTS
-(load-library "ferl")
-(load-library "edts")
-(load-library "edts-log")
-(load-library "edts-code")
-(load-library "edts-complete")
-(load-library "edts-debug")
-(load-library "edts-doc")
-(load-library "edts-rest")
-(load-library "edts-face")
-(load-library "edts-man")
-(load-library "edts-project")
-(load-library "edts-navigate")
-(load-library "edts-refactor")
+(load "ferl" nil edts-start-inhibit-load-msgs)
+(load "edts" nil edts-start-inhibit-load-msgs)
+(load "edts-log" nil edts-start-inhibit-load-msgs)
+(load "edts-code" nil edts-start-inhibit-load-msgs)
+(load "edts-complete" nil edts-start-inhibit-load-msgs)
+(load "edts-debug" nil edts-start-inhibit-load-msgs)
+(load "edts-doc" nil edts-start-inhibit-load-msgs)
+(load "edts-rest" nil edts-start-inhibit-load-msgs)
+(load "edts-face" nil edts-start-inhibit-load-msgs)
+(load "edts-man" nil edts-start-inhibit-load-msgs)
+(load "edts-navigate" nil edts-start-inhibit-load-msgs)
+(load "edts-refactor" nil edts-start-inhibit-load-msgs)
+(load "edts-shell" nil edts-start-inhibit-load-msgs)
+(load "edts-project" nil edts-start-inhibit-load-msgs)
 
 ;; External
 (require 'auto-highlight-symbol)
@@ -86,7 +107,7 @@
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
     (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
-    (define-key map "\C-c\C-dt"    'edts-code-eunit-interactive)
+    (define-key map "\C-c\C-dt"    'edts-code-eunit)
     (define-key map "\C-c\C-d\C-d" 'edts-debug-start-debugging)
     (define-key map "\C-c\C-di"    'edts-debug-toggle-interpret-minor-mode)
     (define-key map "\C-c\C-db"    'edts-debug-toggle-breakpoint)
@@ -109,13 +130,10 @@
 
 (defun edts-setup ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (edts-ensure-server-started)
-  (edts-project-init)
-  (ad-activate-regexp "edts-.*")
+  (ad-activate-regexp "edts-face.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
-  (add-hook 'edts-code-after-compilation-hook 'edts-code-eunit t t)
-  (add-hook 'edts-code-after-compilation-hook
-            'edts-code-xref-analyze-all-buffers t t)
 
   ;; Auto-activate erlang mode for some additional extensions.
   (mapcar
@@ -124,6 +142,8 @@
 
   (auto-highlight-symbol-mode t)
   (add-to-list 'ahs-exclude erlang-auto-highlight-exclusions)
+  (make-local-variable 'ahs-case-fold-search)
+  (setq ahs-case-fold-search nil)
 
   ;; Register the range plugin with ahs
   (ahs-regist-range-plugin
@@ -153,6 +173,7 @@
 
 (defun edts-teardown ()
   ;; Start with our own stuff
+  (edts-face-remove-overlays)
   (ad-deactivate-regexp "edts-.*")
   (remove-hook 'after-save-hook 'edts-code-compile-and-display t)
   (auto-highlight-symbol-mode -1)
@@ -177,7 +198,37 @@ They are configured to work together with EDTS but see their respective
 documentation for information on how to configure their behaviour
 further.
 
-\\{edts-mode-map}"
+\\{edts-mode-map}Other useful commands:
+\\[edts-buffer-node-name]                   - Print the project node-name of
+                                              current-buffer.
+\\[edts-code-compile-and-display]           - Compile current buffer and display
+                                              issues.
+\\[edts-code-eunit]                         - Run the eunit tests of current
+                                              buffer and display results.
+\\[edts-code-xref-analyze]                  - Run xref analysis on current
+                                              buffer.
+\\[edts-code-xref-analyze-related]          - Runs xref-checks for all
+                                              live buffers related to
+                                              current buffer either by
+                                              belonging to the same
+                                              project or, if current
+                                              buffer does not belong to
+                                              any project, being in the
+                                              same directory as the
+                                              current buffer's file.
+\\[edts-code-dialyze-related]               - Same as the xref-check
+                                              above, but for dialyzer.
+\\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
+\\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
+                                              if not already running.
+\\[edts-refactor-extract-function]          - Extract code in current region
+                                              into a separate function.
+\\[edts-register-node]                      - Register the project-node of
+                                              current buffer with the central
+                                              EDTS server.
+\\[edts-shell]                              - Start an interactive Erlang shell.
+\\[edts-start-server]                       - Start the central EDTS server."
+
   :lighter " EDTS"
   :keymap edts-mode-map
   :group edts
@@ -192,7 +243,7 @@ further.
     (edts-int-mode (edts-is-node-interpreted
 		    (edts-project-buffer-node-name (current-buffer))))))
 
-(defun edts-make ()
+(defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."
   (interactive)
   (let* ((dirs (directory-files edts-lib-directory t "^[^.]"))
@@ -203,6 +254,7 @@ further.
     (mapc #'byte-compile-file files)
     t))
 
+;; Global setup
 (make-directory edts-data-directory 'parents)
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 

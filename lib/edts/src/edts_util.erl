@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Wrapper for lager.
+%%% @doc utility library for edts.
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -23,44 +23,58 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_log).
+-module(edts_util).
+
+%%%_* Includes =================================================================
+-include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
 
-%% API
--export([debug/2,
-         info/2,
-         notice/2,
-         warning/2,
-         error/2,
-         critical/2,
-         alert/2,
-         emergency/2,
-
-         set_log_level/1]).
-
-%%%_* Includes =================================================================
+-export([shorten_path/1]).
 
 %%%_* Defines ==================================================================
 
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-debug(    Fmt, Args) -> lager:debug(    Fmt, Args).
-info(     Fmt, Args) -> lager:info(     Fmt, Args).
-notice(   Fmt, Args) -> lager:notice(   Fmt, Args).
-warning(  Fmt, Args) -> lager:notice(   Fmt, Args).
-error(    Fmt, Args) -> lager:error(    Fmt, Args).
-critical( Fmt, Args) -> lager:critical( Fmt, Args).
-alert(    Fmt, Args) -> lager:alert(    Fmt, Args).
-emergency(Fmt, Args) -> lager:emergency(Fmt, Args).
 
-set_log_level(Level) -> lager:set_loglevel(lager_console_backend, Level).
+shorten_path("") -> "";
+shorten_path(P)  ->
+  case shorten_path(filename:split(P), []) of
+    [Component] -> Component;
+    Components  -> filename:join(Components)
+  end.
+
+shorten_path([],           [])         -> ["."];
+shorten_path([],           Acc)        -> lists:reverse(Acc);
+shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
+shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
+shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
+shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
+shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
+
+
 
 %%%_* Internal functions =======================================================
+
+
+%%%_* Unit tests ===============================================================
+
+shorten_path_test_() ->
+  [ ?_assertEqual("", shorten_path("")),
+    ?_assertEqual(".", shorten_path(".")),
+    ?_assertEqual("..", shorten_path("..")),
+    ?_assertEqual("../..", shorten_path("../..")),
+    ?_assertEqual("../ebin", shorten_path("../ebin")),
+    ?_assertEqual("..", shorten_path("../ebin/..")),
+    ?_assertEqual("..", shorten_path("../ebin/./.."))
+  ].
+
+%%%_* Test helpers =============================================================
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+

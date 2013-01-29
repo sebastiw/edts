@@ -84,7 +84,7 @@ do_run_tests(Ref, Listener) ->
     {result, Ref, Result} -> {ok, Result};
     {error, Err}          -> {error, Err}
   after
-    5000 -> {error, timeout}
+    20000 -> {error, timeout}
   end.
 
 -spec format_test_result(test(), module()) -> [edts_code:issue()].
@@ -137,7 +137,9 @@ format_reason(Info) ->
               end
           end,
   {Expected, Got} = fmt(Fetch(reason), Fetch),
-  format("(~p) expected: ~s, got: ~s",
+  format("(~p)\n"
+         "expected: ~s\n"
+         "     got: ~s",
          [Fetch(reason), to_str(Expected), to_str(Got)]).
 
 -spec fmt(reason(), fun((atom()) -> term())) -> {term(), term()}.
@@ -216,17 +218,17 @@ format_fail_test_() ->
   , [ ?_assertEqual([], format_fail({m,f,a}, [{reason, foo}]))
     , ?_assertEqual([], format_fail({m,f,a}, [{line, 2}, {module, not_m}]))
     , ?_assertEqual({'failed-test', "m.erl", 2,
-                     "(undefined) expected: undefined, got: undefined"},
+                     "(undefined)\nexpected: undefined\n     got: undefined"},
                     format_fail({m,f,a}, [{line, 2}, {module, m}]))
     ]
   }.
 
 format_reason_test_() ->
-  [ ?_assertEqual("(undefined) expected: undefined, got: undefined",
+  [ ?_assertEqual("(undefined)\nexpected: undefined\n     got: undefined",
                   format_reason([]))
-  , ?_assertEqual("(foo) expected: undefined, got: undefined",
+  , ?_assertEqual("(foo)\nexpected: undefined\n     got: undefined",
                   format_reason([{reason, foo}]))
-  , ?_assertEqual("(assertion_failed) expected: foo, got: bar",
+  , ?_assertEqual("(assertion_failed)\nexpected: foo\n     got: bar",
                   format_reason([ {expected, foo}
                                 , {reason,   assertion_failed}
                                 , {value,    bar}]))

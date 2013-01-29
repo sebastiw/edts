@@ -29,10 +29,10 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ ensure_node_initialized/1
+-export([ wait_for_node/1
         , init_node/3
-        , is_node/1
         , node_available_p/1
+        , node_registered_p/1
         , nodes/0
         , start_link/0]).
 
@@ -76,10 +76,10 @@ start_link() ->
 %% fulfilled).
 %% @end
 %%
--spec ensure_node_initialized(node()) -> ok.
+-spec wait_for_node(node()) -> ok.
 %%------------------------------------------------------------------------------
-ensure_node_initialized(Node) ->
-  gen_server:call(?SERVER, {ensure_node_initialized, Node}, infinity).
+wait_for_node(Node) ->
+  gen_server:call(?SERVER, {wait_for_node, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -94,16 +94,6 @@ init_node(Node, ProjectRoot, LibDirs) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns true iff Node is registered with this edts instance.
-%% @end
-%%
--spec is_node(node()) -> boolean().
-%%------------------------------------------------------------------------------
-is_node(Node) ->
-  gen_server:call(?SERVER, {is_node, Node}, infinity).
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Returns true iff Node is registered with this edts instance and has finished
 %% its initialization.
 %% @end
@@ -112,6 +102,18 @@ is_node(Node) ->
 %%------------------------------------------------------------------------------
 node_available_p(Node) ->
   gen_server:call(?SERVER, {node_available_p, Node}, infinity).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is registered with this edts instance, but has possibly
+%% not finished its initialization.
+%% @end
+%%
+-spec node_registered_p(node()) -> boolean().
+%%------------------------------------------------------------------------------
+node_registered_p(Node) ->
+  gen_server:call(?SERVER, {node_registered_p, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -140,7 +142,7 @@ nodes() ->
 %%------------------------------------------------------------------------------
 init([]) ->
   net_kernel:monitor_nodes(true, [{node_type, all}]),
-  {ok, #state{}}.
+  {ok, #state{nodes = [#node{name = node()}]}}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -156,7 +158,7 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({ensure_node_initialized, Name}, _From, State) ->
+handle_call({wait_for_node, Name}, _From, State) ->
     case node_find(Name, State) of
       false -> {reply, {error, not_found}, State};
       #node{promises = [_|_]} = Node->
@@ -166,31 +168,31 @@ handle_call({ensure_node_initialized, Name}, _From, State) ->
         {reply, ok, State}
     end;
 handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
-  edts_log:info("Registering ~p.", [Name]),
-  case node_find(Name, State) of
-    #node{} ->
-      edts_log:info("~p already initialized.", [Name]),
-      {reply, ok, State};
-    false   ->
-      edts_log:info("~p Initializing.", [Name]),
-      case do_init_node(Name, ProjectRoot, LibDirs) of
-        {ok, Keys} ->
-          {reply, ok, node_store(#node{name = Name, promises = Keys}, State)};
-        {error, _} = Err ->
-          {reply, Err, State}
-      end
+  edts_log:info("Initializing ~p.", [Name]),
+  Node = #node{promises = Keys0} =
+    case node_find(Name, State) of
+      #node{} = Node0 -> Node0;
+      false          -> #node{name = Name}
+    end,
+  case do_init_node(Name, ProjectRoot, LibDirs) of
+    {ok, Keys} ->
+      edts_log:debug("Initialization call done on ~p.", [Name]),
+      {reply, ok, node_store(Node#node{promises = Keys ++ Keys0}, State)};
+    {error, _} = Err ->
+      edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
+      {reply, Err, State}
   end;
-handle_call({is_node, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
-            #node{} -> true;
-            false   -> false
-          end,
-  {reply, Reply, State};
 handle_call({node_available_p, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
+          end,
+  {reply, Reply, State};
+handle_call({node_registered_p, Name}, _From, State) ->
+  Reply = case node_find(Name, State) of
+            #node{} -> true;
+            false   -> false
           end,
   {reply, Reply, State};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
@@ -278,20 +280,23 @@ code_change(_OldVsn, State, _Extra) ->
 %%------------------------------------------------------------------------------
 do_init_node(Node, ProjectRoot, LibDirs) ->
   try
-    ok = edts_dist:load_modules(Node, [ edts_code
-                                      , edts_debug_server
-                                      , edts_eunit
-                                      , edts_eunit_listener
-                                      , edts_xref
-                                      ]),
+    ok = edts_dist:remote_load_modules(Node, [edts_code,
+                                              edts_dialyzer,
+                                              edts_debug_server,
+                                              edts_eunit,
+                                              edts_eunit_listener,
+                                              edts_xref,
+                                              edts_util]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
+    {ok, _Modules} = edts_dist:load_all(Node),
     {ok, ProjectDir} =
       application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    {ok, edts_dist:start_services(Node, [edts_code, edts_debug_server])}
+    {ok, edts_dist:ensure_services_started(Node, [edts_code, edts_debug_server])}
   catch
     C:E ->
-      edts_log:error("~p initialization crashed with ~p:~p", [Node, C, E]),
+      edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
+                     [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
 
@@ -318,20 +323,20 @@ node_store(Node, State) ->
 
 %%%_* Unit tests ===============================================================
 
-ensure_node_initialized_test() ->
+wait_for_node_test() ->
   S1 = #state{},
   ?assertEqual({reply, {error, not_found}, S1},
-               handle_call({ensure_node_initialized, foo}, self(), S1)),
+               handle_call({wait_for_node, foo}, self(), S1)),
   meck:new(rpc, [unstick]),
   meck:expect(rpc, yield, fun(dummy) -> ok end),
   N2 = #node{name = foo, promises = [dummy]},
   S2 = #state{nodes = [N2]},
   ?assertEqual({reply, ok, S2#state{nodes = [N2#node{promises = []}]}},
-               handle_call({ensure_node_initialized, foo}, self(), S2)),
+               handle_call({wait_for_node, foo}, self(), S2)),
   N3 = #node{name = foo, promises = []},
   S3 = #state{nodes = [N3]},
   ?assertEqual({reply, ok, S3},
-               handle_call({ensure_node_initialized, foo}, self(), S3)),
+               handle_call({wait_for_node, foo}, self(), S3)),
   meck:unload().
 
 init_node_test() ->
@@ -343,13 +348,15 @@ init_node_test() ->
   application:set_env(edts, project_dir, "foo_dir"),
 
   meck:new(edts_dist),
-  meck:expect(edts_dist, add_paths,      fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_modules,   fun(foo, _) -> ok end),
-  meck:expect(edts_dist, set_app_env,    fun(foo, _, _, _) -> ok end),
-  meck:expect(edts_dist, start_services, fun(foo, _) -> [dummy] end),
+  meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
+  meck:expect(edts_dist, load_all,                fun(foo)    -> {ok, []} end),
+  meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok end),
+  meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
+  meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
   ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
                handle_call({init_node, N1#node.name, "", []}, self(), S1)),
-  ?assertEqual({reply, ok, S2}, % Node already initialized.
+  %% Node already initialized.
+  ?assertEqual({reply, ok, S2#state{nodes = [N1#node{promises = [dummy]}]}},
                handle_call({init_node, N1#node.name, "", []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
@@ -363,14 +370,14 @@ init_node_test() ->
   end,
   meck:unload().
 
-is_node_test() ->
+node_registered_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({reply, true, S1},
-               handle_call({is_node, N1#node.name}, self(), S1)),
+               handle_call({node_registered_p, N1#node.name}, self(), S1)),
   ?assertEqual({reply, false, S1},
-               handle_call({is_node, N2#node.name}, self(), S1)).
+               handle_call({node_registered_p, N2#node.name}, self(), S1)).
 
 node_available_p_test() ->
   N1 = #node{name = foo, promises = [dummy]},
@@ -483,4 +490,3 @@ node_store_test() ->
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-
