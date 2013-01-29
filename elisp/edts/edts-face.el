@@ -89,6 +89,18 @@ that we can reset our face remappings.")
   "Face used for marking lesser warning lines."
   :group 'edts)
 
+(defface edts-face-breakpoint-enabled-line
+  '((((class color) (background dark)) (:background "purple"))
+    (((class color) (background light)) (:background "purple")))
+  "Face used for marking lines where a breakpoint is enabled."
+  :group 'edts)
+
+(defface edts-face-debug-current-line
+  '((((class color) (background dark)) (:background "DarkGoldenRod4"))
+    (((class color) (background light)) (:background "DarkGoldenRod2")))
+  "Face used for marking the current line during debugging"
+  :group 'edts)
+
 (defadvice next-line (after edts-face-next-line)
   "Moves point to the next line and then prints the help-echo of the highest
 priority any edts overlay at new point if any."
@@ -123,15 +135,17 @@ the highest priority any edts overlay at new point if any."
       overlay1
       overlay2))
 
-(defun edts-face-display-overlay (face line desc type prio)
+(defun edts-face-display-overlay (face line desc type prio &optional fill-line)
   "Displays overlay for ISSUE in current buffer."
   (save-excursion
     (save-restriction
       (widen)
-      (let* ((pos (ferl-position-at-line   line))
-             (beg (ferl-first-char-on-line-at pos))
-             (end (ferl-last-char-on-line-at  pos))
-             (overlay (make-overlay beg end nil t t)))
+      (let* ((pos (ferl-position-at-beginning-of-line line))
+             (blah (goto-char pos))
+             (beg (if fill-line pos (ferl-first-char-on-line-at pos)))
+             (end (if fill-line (ferl-position-at-end-of-line line)
+                    (ferl-last-char-on-line-at  pos)))
+             (overlay (make-overlay beg end nil t (not fill-line))))
         (overlay-put overlay 'edts-face-overlay t)
         (overlay-put overlay 'face face)
         (overlay-put overlay 'help-echo desc)

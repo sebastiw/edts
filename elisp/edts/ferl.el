@@ -25,12 +25,17 @@
   (goto-char (point-min))
   (forward-line (1- line)))
 
-(defun ferl-position-at-line (line)
+(defun ferl-position-at-beginning-of-line (line)
   "Returns the position at the first position of LINE."
   (save-excursion
     (goto-char (point-min))
-    (beginning-of-line line)
-    (point)))
+    (line-beginning-position line)))
+
+(defun ferl-position-at-end-of-line (line)
+  "Returns the position at the end of LINE"
+  (save-excursion
+    (goto-char (point-min))
+    (line-beginning-position (1+ line))))
 
 (defun ferl-first-char-on-line-at (pos)
   "Returns the position of the first character on line at POS in

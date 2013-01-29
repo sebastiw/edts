@@ -37,6 +37,11 @@
 undefined_function_calls, unexported_functions"
   :group 'edts)
 
+(defcustom edts-code-interpret-after-saving t
+  "Set to a non-NIL value if EDTS should automatically interpret a module
+after save-and-compile"
+  :group 'edts)
+
 (defvar edts-code-buffer-issues nil
   "A plist describing the current issues (errors and warnings) in the
 current buffer. It is a plist with one entry for each type (compilation,
@@ -90,7 +95,8 @@ with severity as key and a lists of issues as values"
         (file     (buffer-file-name)))
     (when module
       (edts-compile-and-load-async
-       module file #'edts-code-handle-compilation-result))))
+       module file edts-code-interpret-after-saving
+       #'edts-code-handle-compilation-result))))
 
 (defun edts-code-handle-compilation-result (comp-res)
   (when comp-res
@@ -342,4 +348,3 @@ non-recursive."
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
         (error "EDTS: no more issues found"))))
-

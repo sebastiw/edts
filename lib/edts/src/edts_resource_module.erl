@@ -79,7 +79,7 @@ create_path(ReqData, Ctx) ->
 malformed_request(ReqData, Ctx) ->
   Validate = case wrq:method(ReqData) of
                'GET'  -> [nodename, module, info_level];
-               'POST' -> [nodename, module, file]
+               'POST' -> [nodename, module, file, interpret]
              end,
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
@@ -109,6 +109,12 @@ from_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
   Filename = orddict:fetch(file, Ctx),
   {Result, {Errors0, Warnings0}} = edts:compile_and_load(Nodename, Filename),
+  Module = orddict:fetch(module, Ctx),
+  case orddict:fetch(interpret, Ctx) of
+    true  -> edts:interpret_modules(Nodename, [Module]);
+    false -> edts:uninterpret_modules(Nodename, [Module]);
+    _     -> ok
+  end,
   Errors   = {array, [format_error(Error) || Error <- Errors0]},
   Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
   Data = {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]},

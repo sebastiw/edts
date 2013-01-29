@@ -156,10 +156,12 @@ compile_and_load(File0, Opts) ->
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
+          WasInterpreted = maybe_uninterpret_module(Mod),
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
           update_xref(),
+          maybe_interpret_module(Mod, WasInterpreted),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -170,6 +172,18 @@ compile_and_load(File0, Opts) ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
   end.
 
+maybe_uninterpret_module(Module) ->
+  case edts_debug_server:is_module_interpreted(Module) of
+    true -> edts_debug_server:uninterpret_modules([Module]),
+            true;
+    _    -> false
+  end.
+
+maybe_interpret_module(Module, WasInterpreted) ->
+  case WasInterpreted orelse edts_debug_server:is_code_interpreted() of
+    true -> edts_debug_server:interpret_modules([Module]);
+    _    -> ok
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -897,4 +911,3 @@ test_file_forms(File) ->
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-

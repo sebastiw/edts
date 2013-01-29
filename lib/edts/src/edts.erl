@@ -29,17 +29,29 @@
 
 %% API
 -export([compile_and_load/2,
+         debugger_continue/1,
+         debugger_step/1,
+         debugger_step_out/1,
+         debugger_stop/1,
+         debugger_toggle_breakpoint/3,
+         get_breakpoints/1,
          get_dialyzer_result/4,
          get_function_info/4,
          get_module_eunit_result/2,
          get_module_info/3,
          get_module_xref_analysis/3,
          init_node/3,
+         interpret_modules/2,
+         interpret_node/2,
          is_node/1,
+         is_node_interpreted/1,
          node_available_p/1,
          modules/1,
          node_reachable/1,
          nodes/0,
+         uninterpret_modules/2,
+         uninterpret_node/1,
+         wait_for_debugger/1,
          who_calls/4]).
 
 %%%_* Includes =================================================================
@@ -93,6 +105,23 @@ get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Returns information about all breakpoints on Node.
+%% @end
+%%
+-spec get_breakpoints(Node :: node()) -> [{ { Module  :: module()
+                                            , Line    :: non_neg_integer()
+                                            }
+                                          , Options :: [term()]
+                                          }].
+%%------------------------------------------------------------------------------
+get_breakpoints(Node) ->
+  case edts_dist:call(Node, edts_debug_server, get_breakpoints, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Returns information about Module:Function/Arity on Node.
 %% @end
 %%
@@ -137,6 +166,161 @@ who_calls(Node, Module, Function, Arity) ->
     Info  -> Info
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Interprets all code loaded in Node, if possible, returning the list
+%% of interpreted modules.
+%% @end
+-spec interpret_node( Node :: node(), Exclusions :: [module()] ) ->
+                           [module()] | {error, not_found}.
+%%------------------------------------------------------------------------------
+interpret_node(Node, Exclusions) ->
+  case edts_dist:call(Node, edts_debug_server, interpret_node, [Exclusions]) of
+    {badrpc, _} -> {error, not_found};
+    Interpreted -> {ok, Interpreted}
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Interprets Modules in Node, if possible, returning the list of interpreted
+%% modules.
+%% @end
+-spec interpret_modules( Node :: node()
+                       , Modules :: [module()] ) ->
+                           [module()] | {error, not_found}.
+%%------------------------------------------------------------------------------
+interpret_modules(Node, Modules) ->
+  case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
+    {badrpc, _} -> {error, not_found};
+    Interpreted -> Interpreted
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Uninterprets all code loaded in Node.
+%% modules.
+%% @end
+-spec uninterpret_node( Node :: node() )
+                      -> {ok, uninterpreted} | {error, not_found}.
+%%------------------------------------------------------------------------------
+uninterpret_node(Node) ->
+  case edts_dist:call(Node, edts_debug_server, uninterpret_node, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      ->  Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Uninterpret Modules in Node.
+%% @end
+-spec uninterpret_modules( Node :: node()
+                         , Modules :: [module()] ) ->
+                             ok | {error, not_found}.
+%%------------------------------------------------------------------------------
+uninterpret_modules(Node, Modules) ->
+  case edts_dist:call(Node,
+                      edts_debug_server, uninterpret_modules, [Modules]) of
+    {badrpc, _} -> {error, not_found};
+    ok          -> ok
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Toggles a breakpoint in Module:Line at Node.
+%% @end
+-spec debugger_toggle_breakpoint( Node   :: node()
+                                , Module :: module()
+                                , Line   :: non_neg_integer())
+                                ->
+                                    {ok, set, {Module, Line}}
+                                    | {ok, unset, {Module, Line}}
+                                    | {error, not_found}.
+%%------------------------------------------------------------------------------
+debugger_toggle_breakpoint(Node, Module, Line) ->
+  Args = [Module, Line],
+  case edts_dist:call(Node, edts_debug_server, toggle_breakpoint, Args) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Step through in execution while debugging, in Node.
+%% @end
+-spec debugger_step(Node :: node())
+                   -> {ok, Info :: term()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+debugger_step(Node) ->
+  case edts_dist:call(Node, edts_debug_server, step, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Step out of the current function while debugging, in Node.
+%% @end
+-spec debugger_step_out(Node :: node())
+                       -> {ok, Info :: term()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+debugger_step_out(Node) ->
+  case edts_dist:call(Node, edts_debug_server, step_out, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Continue execution until a breakpoint is hit or execution terminates.
+%% @end
+-spec debugger_continue(Node :: node())
+                       -> {ok, Info :: term()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+debugger_continue(Node) ->
+  case edts_dist:call(Node, edts_debug_server, continue, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Stop debugging
+%% @end
+-spec debugger_stop(Node :: node()) -> {ok, finished} | {error, not_found}.
+%%------------------------------------------------------------------------------
+debugger_stop(Node) ->
+  case edts_dist:call(Node, edts_debug_server, stop_debug, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Wait for debugger to attach.
+%% @end
+-spec wait_for_debugger(Node :: node()) ->
+                           {ok, {module(), non_neg_integer()}}
+                         | {error, not_found}.
+%%------------------------------------------------------------------------------
+wait_for_debugger(Node) ->
+  case edts_dist:call(Node, edts_debug_server, wait_for_debugger, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> Result
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true iff Node is running interpreted code.
+%% @end
+%%
+-spec is_node_interpreted(Node::node()) -> boolean().
+%%------------------------------------------------------------------------------
+is_node_interpreted(Node) ->
+  case edts_dist:call(Node, edts_debug_server, is_node_interpreted, []) of
+    {badrpc, _} -> {error, not_found};
+    Result      -> {ok, Result}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

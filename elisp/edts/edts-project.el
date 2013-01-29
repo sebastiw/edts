@@ -334,6 +334,9 @@ buffers, for which all PREDICATES hold true."
    (buffer-list)
    :initial-value nil))
 
+(defun edts-project-interpretation-exclusions ()
+  (eproject-attribute :int-exclusions))
+
 ;;;;;;;;;;;;;;;;;;;;
 ;; Commands
 
