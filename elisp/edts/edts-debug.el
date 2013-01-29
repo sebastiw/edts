@@ -29,7 +29,11 @@
 
 (defun edts-debug-toggle-interpret-minor-mode ()
   (interactive)
-  (edts-int-mode 'toggle))
+  (mapcar #'(lambda (buffer)
+	      (with-current-buffer buffer
+		(if (and edts-mode (edts-project-file-project (buffer-file-name)))
+		    (edts-int-mode 'toggle))))
+	  (buffer-list)))
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
 ;; of a given function when the line at point is a function clause.
