@@ -46,7 +46,8 @@ Example:
                             (edts-project--plist-keys properties))))
     (when invalid
       (error "Invalid configuration properties:"))
-    (edts-project-set-attributes exp-root properties)
+    (when (eproject-attribute :name root)
+      (edts-project-set-attributes exp-root properties))
     (push (cons exp-root properties) edts-project-overrides)))
 
 (defun edts-project--config-prop-p (prop)
