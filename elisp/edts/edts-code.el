@@ -96,7 +96,7 @@ with severity as key and a lists of issues as values"
     (when module
       (edts-compile-and-load-async
        module file edts-code-interpret-after-saving
-       module file #'edts-code-handle-compilation-result))))
+       #'edts-code-handle-compilation-result))))
 
 (defun edts-code-handle-compilation-result (comp-res)
   (when comp-res

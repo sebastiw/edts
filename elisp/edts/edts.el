@@ -396,7 +396,7 @@ ARGS as the other arguments"
 (defun edts-compile-and-load (module file interpret)
   "Compile MODULE in FILE on the node associated with current buffer.
 MODULE becomes interpreted if INTERPRET evaluates to a non-NIL value."
-  (let ((node-name (edts-project-buffer-node-name (current-buffer))))
+  (let ((node-name (edts-node-name)))
     (edts-log-debug "Compiling %s on %s" module node-name)
     (let* ((resource
             (list "nodes" node-name "modules" module))

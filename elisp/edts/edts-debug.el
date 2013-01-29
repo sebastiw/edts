@@ -31,8 +31,8 @@
   (interactive)
   (mapcar #'(lambda (buffer)
 	      (with-current-buffer buffer
-		(if (and edts-mode (edts-project-file-project (buffer-file-name)))
-		    (edts-int-mode 'toggle))))
+		(when (and edts-mode (eproject-name))
+                  (edts-int-mode 'toggle))))
 	  (buffer-list)))
 
 ;; TODO: extend breakpoint toggling to add a breakpoint in every clause
@@ -41,7 +41,7 @@
   "Enables or disables breakpoint at point"
   (interactive)
   (let* ((line-number (edts-debug--line-number-at-point))
-         (node-name  (or (edts-project-buffer-node-name (current-buffer))
+         (node-name  (or (edts-node-name)
                          (edts-debug-buffer-node-name)))
          (state (edts-toggle-breakpoint node-name
                                         (erlang-get-module)
@@ -165,10 +165,9 @@ be interpreted"
   :lighter " EDTS-interpreted"
   :group edts
   :require edts-mode
-  :after-hook (let* ((node-name (or (edts-project-buffer-node-name (current-buffer))
+  :after-hook (let* ((node-name (or (edts-node-name)
 				    (edts-debug-buffer-node-name)))
-		     (exclusions (edts-project-interpretation-exclusions
-				  (edts-project-buffer-project (current-buffer))))
+		     (exclusions (edts-project-interpretation-exclusions))
 		     (interpretedp (edts-debug--is-node-interpreted node-name)))
 		(if (and (not edts-int-mode) interpretedp)
 		    (edts-set-node-interpretation node-name nil exclusions)
@@ -224,7 +223,7 @@ be interpreted"
 (defun edts-debug-update-breakpoints ()
   "Display breakpoints in the buffer"
   (edts-face-remove-overlays '("edts-debug-breakpoint"))
-  (let ((breaks (edts-get-breakpoints (or (edts-project-buffer-node-name (current-buffer))
+  (let ((breaks (edts-get-breakpoints (or (edts-node-name)
                                           (edts-debug-buffer-node-name)))))
     (dolist (b breaks)
       (let ((module (cdr (assoc 'module b)))
@@ -238,13 +237,13 @@ be interpreted"
 
 
 (defun edts-debug-make-debug-buffer-name (&optional file-name)
-  (let ((project (edts-project-file-project (or file-name (buffer-file-name)))))
-    (format "*EDTS-Debugger <%s>*" (edts-project-node-name project))))
+  (format "*EDTS-Debugger <%s>*" (edts-node-name)))
 
 (defun edts-debug-buffer-node-name ()
   (save-match-data
-    (let ((match (string-match "<\\(\\w+\\)>" (buffer-name))))
-      (match-string 1 (buffer-name)))))
+    (let* ((name (buffer-name))
+           (match (string-match "<\\([^)]+\\)>" name)))
+      (match-string 1 name))))
 
 (defun edts-debug--match-buffers (predicate)
   "Returns a list of buffers for which PREDICATE does not evaluate to T"

@@ -109,7 +109,7 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 term_to_validate(arity)        -> fun arity_validate/2;
 term_to_validate(cmd)          -> fun cmd_validate/2;
-term_to_validate(exlcusions)   -> fun exclusions_validate/2;
+term_to_validate(exclusions)   -> fun exclusions_validate/2;
 term_to_validate(exported)     -> fun exported_validate/2;
 term_to_validate(file)         -> fun file_validate/2;
 term_to_validate(files)        -> fun files_validate/2;

@@ -240,8 +240,8 @@ further.
 (defun edts-erlang-mode-hook ()
   (when (buffer-file-name)
     (edts-mode t)
-    (edts-int-mode (edts-is-node-interpreted
-		    (edts-project-buffer-node-name (current-buffer))))))
+    ;(edts-int-mode (edts-is-node-interpreted (edts-node-name))))
+  ))
 
 (defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."

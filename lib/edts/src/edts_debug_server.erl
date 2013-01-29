@@ -42,6 +42,7 @@
         , is_node_interpreted/0
         , is_module_interpreted/1
         , maybe_attach/1
+        , started_p/0
         , step/0
         , step_out/0
         , stop_debug/0
@@ -235,6 +236,9 @@ stop_debug() ->
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+started_p() -> whereis(?SERVER) =/= undefined.
+
+
 
 %%%_* gen_server callbacks  ====================================================
 %%------------------------------------------------------------------------------
@@ -274,17 +278,18 @@ handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {error, {already_attached, Dbg, Pid}}, State};
 
 handle_call({interpret, Modules}, _From, State) ->
-  Reply = {ok, lists:filter(fun(E) -> E =/= mod_uninterpretable end,
-                            lists:map(fun(Module) ->
-                                          try
-                                            case int:interpretable(Module) of
-                                              true -> int:i(Module);
-                                              _    -> mod_uninterpretable
-                                            end
-                                          catch
-                                            _:_ -> mod_uninterpretable
-                                          end
-                                      end, Modules))},
+  Reply = lists:filter(fun(E) -> E =/= mod_uninterpretable end,
+                       lists:map(fun(Module) ->
+                                     try
+                                       case int:interpretable(Module) of
+                                         true -> {module, Name} = int:i(Module),
+                                                 Name;
+                                         _    -> mod_uninterpretable
+                                       end
+                                     catch
+                                       _:_ -> mod_uninterpretable
+                                     end
+                                 end, Modules)),
   {reply, Reply, State#dbg_state{interpretation = true}};
 
 handle_call({toggle_breakpoint, Module, Line}, _From, State) ->

@@ -159,7 +159,7 @@ the highest priority any edts overlay at new point if any."
   (save-restriction
     (widen)
     (dolist (ol (overlays-in (point-min) (point-max)))
-      (when (edts-face-overlay-p ol types)
+      (when (edts-face-overlay-p ol type)
         (delete-overlay ol)))))
 
 (defun edts-face-next-overlay (pos types)
