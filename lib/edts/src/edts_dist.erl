@@ -33,12 +33,13 @@
          call/4,
          connect/1,
          connect_all/0,
+         ensure_services_started/2,
          load_all/1,
          make_sname/1,
          make_sname/2,
+         refresh_service/2,
          remote_load_modules/2,
-         set_app_env/4,
-         ensure_services_started/2]).
+         set_app_env/4]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -143,6 +144,17 @@ make_sname(Name, Hostname) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Refreshes the state of Service on Node.
+%% @end
+-spec refresh_service(node(), module()) ->
+                         {ok, Promise::rpc:key() | {error, atom()}}.
+%%------------------------------------------------------------------------------
+refresh_service(Node, Service) ->
+  {ok, rpc:async_call(Node, Service, refresh, [])}.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Loads Mods on Node.
 %% @end
 -spec remote_load_modules(Node::node(), Mods::[module()]) -> ok.
@@ -173,28 +185,26 @@ set_app_env(Node, App, Key, Value) ->
 %% @doc
 %% Starts Services on Node by calling Service:start() for each Service.
 %% @end
--spec ensure_services_started(node(), [module()]) -> [Promise::rpc:key()].
+-spec ensure_services_started(node(), [module()]) ->
+                                 [{module(),
+                                   Promise::rpc:key() | {error, atom()}}].
 %%------------------------------------------------------------------------------
 ensure_services_started(Node, Services) ->
-  F = fun(Service, Acc) ->
+  F = fun(Service) ->
           case ensure_service_started(Node, Service) of
-            {ok, Key}                -> [Key|Acc];
-            {error, already_started} -> Acc
+            {ok, Key}        -> {Service, Key};
+            {error, _} = Err -> {Service, Err}
           end
       end,
-  lists:reverse(lists:foldl(F, [], Services)).
+  lists:map(F, Services).
 
 
 %%%_* Internal functions =======================================================
 
 ensure_service_started(Node, Service) ->
   case rpc:call(Node, Service, started_p, []) of
-    true  ->
-      edts_log:info("Service ~p already started on ~p", [Service, Node]),
-      {error, already_started};
-    false ->
-      edts_log:info("Starting service ~p on ~p", [Service, Node]),
-      {ok, rpc:async_call(Node, Service, start, [])}
+    true  -> {error, already_started};
+    false -> {ok, rpc:async_call(Node, Service, start, [])}
   end.
 
 

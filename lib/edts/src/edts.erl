@@ -250,7 +250,7 @@ modules(Node) ->
 -spec node_reachable(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
 node_reachable(Node) ->
-  edts_server:node_registered_p(Node) andalso net_adm:ping(Node) =:= pong.
+  net_adm:ping(Node) =:= pong.
 
 %%------------------------------------------------------------------------------
 %% @doc

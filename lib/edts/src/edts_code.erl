@@ -41,6 +41,7 @@
          load_all/0,
          modules/0,
          parse_expressions/1,
+         refresh/0,
          start/0,
          started_p/0,
          who_calls/3]).
@@ -255,6 +256,17 @@ parse_expressions(String) ->
     {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Refreshes the edts_code service, ensuring that code-path, xref-state etc are
+%% in sync with the file system.
+%% @end
+-spec refresh() -> {node(), ok}.
+%%------------------------------------------------------------------------------
+refresh() ->
+  load_all(),
+  edts_xref:update(),
+  {node(), ok}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -345,6 +357,7 @@ modules_at_path(Path) ->
 -spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
+  load_all(),
   case edts_xref:started_p() of
     true  -> {error, already_started};
     false ->
