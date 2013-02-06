@@ -334,6 +334,14 @@ buffers, for which all PREDICATES hold true."
    (buffer-list)
    :initial-value nil))
 
+(defun edts-project-buffer-map (project-root function)
+  "Return the result of running FUNCTION inside each buffer in PROJECT-ROOT."
+  (let ((res nil))
+    (with-each-buffer-in-project (gen-sym) project-root
+      (push (funcall function) res))
+    (reverse res)))
+
+
 ;;;;;;;;;;;;;;;;;;;;
 ;; Commands
 
