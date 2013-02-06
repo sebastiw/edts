@@ -27,27 +27,29 @@
 
 ;; Nameclash (sort of) with edts-find source. One of the names should be
 ;; changed to indicate the differences in how they work.
-(defun edts-find-function ()
+(defun edts-find-global-function ()
   "Find a module in the current project."
   (interactive)
   (let ((modules (edts-get-modules)))
     (if modules
         (let* ((choice (edts-query "Module: " modules))
-               (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
-               (mark (copy-marker (point-marker))))
+               (file (cdr (assoc 'source (edts-get-basic-module-info choice)))))
           (edts-find-file-existing file)
-          (edts-find-local-function))
+          (edts-find-local-function nil))
         (error "No module found"))))
 
-(defun edts-find-local-function()
+(defun edts-find-local-function(set-mark)
   "Find a function in the current module."
-  (interactive)
+  (interactive '(t))
   (let* ((functions (ferl-local-functions))
          (names     (mapcar #'(lambda (el) (car el)) functions))
-         (choice    (edts-query "Function: " (cons "-Top of Module-" names))))
+         (choice    (edts-query "Function: " (cons "-Top of Module-" names)))
+         (mark      (point-marker)))
     (if (string= "-Top of Module-" choice)
         (goto-char 0)
-        (goto-char (cdr (assoc choice functions))))))
+        (goto-char (cdr (assoc choice functions))))
+    (when (not (eq (point) (marker-position mark)))
+      (ring-insert-at-beginning (edts-window-history-ring) mark))))
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
@@ -224,8 +226,9 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-find-file-existing (file)
   "EDTS wrapper for find-file-existing."
-  (find-file-existing file)  ; Fixme, catch error
-  (ring-insert-at-beginning (edts-window-history-ring) mark))
+  (let ((mark (point-marker)))
+    (find-file-existing file)  ; Fixme, catch error
+    (ring-insert-at-beginning (edts-window-history-ring) mark)))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
