@@ -180,6 +180,11 @@ Should be called with point directly before the opening ( or /."
                                  (setq in-arg t))))
       (with-temp-buffer
         (set-syntax-table erlang-mode-syntax-table)
+
+        ;; Avoid halting at slashes inside Erlang binary bit syntax
+        (modify-syntax-entry ?< "(>")
+        (modify-syntax-entry ?> ")<")
+
         (save-excursion (insert str))
         (skip-chars-forward "[:space:]")
         (while (< (point) (point-max))
@@ -248,7 +253,8 @@ Should be called with point directly before the opening ( or /."
     (should (eq 2 (ferl-paren-arity "fun() -> ok end, fun() -> ok end")))
     (should (eq 1 (ferl-paren-arity "fun() -> begin%a, b\n ok end end")))
     (should (eq 2 (ferl-paren-arity "fun foo/2, Arg")))
-    )
+    (should (eq 2 (ferl-paren-arity "a, <<a/b, c/d>>")))
+    (should (eq 2 (ferl-paren-arity "a, <<a/b,\nc/d>>"))))
 
   (ert-deftest slash-arity-test ()
     (should (eq 2 (ferl-slash-arity "/2")))))
