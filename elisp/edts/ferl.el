@@ -172,6 +172,7 @@ Should be called with point directly before the opening ( or /."
     ;; Avoid halting at slashes inside Erlang binary bit syntax
     (modify-syntax-entry ?< "(>" table)
     (modify-syntax-entry ?> ")<" table)
+    (modify-syntax-entry ?' "\"" table)
     table))
 
 (defun ferl-paren-arity (str)
