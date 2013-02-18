@@ -167,6 +167,13 @@ Should be called with point directly before the opening ( or /."
   "\\<\\(case\\|if\\|begin\\|try\\|fun\\|receive\\)\\>"
   "Regexp to match the start of a new block")
 
+(defconst ferl-syntax-table
+  (let ((table (copy-syntax-table erlang-mode-syntax-table)))
+    ;; Avoid halting at slashes inside Erlang binary bit syntax
+    (modify-syntax-entry ?< "(>" table)
+    (modify-syntax-entry ?> ")<" table)
+    table))
+
 (defun ferl-paren-arity (str)
   "Return the arity of an argument string within a parenthesis."
   (let ((block-depth 0)
@@ -179,11 +186,8 @@ Should be called with point directly before the opening ( or /."
                                  (incf arity)
                                  (setq in-arg t))))
       (with-temp-buffer
-        (set-syntax-table erlang-mode-syntax-table)
+        (set-syntax-table ferl-syntax-table)
 
-        ;; Avoid halting at slashes inside Erlang binary bit syntax
-        (modify-syntax-entry ?< "(>")
-        (modify-syntax-entry ?> ")<")
 
         (save-excursion (insert str))
         (skip-chars-forward "[:space:]")
