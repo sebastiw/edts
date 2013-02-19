@@ -38,7 +38,7 @@
           (edts-find-local-function nil))
         (error "No module found"))))
 
-(defun edts-find-local-function(set-mark)
+(defun edts-find-local-function (set-mark)
   "Find a function in the current module."
   (interactive '(t))
   (let* ((functions (ferl-local-functions))
@@ -48,7 +48,7 @@
     (if (string= "-Top of Module-" choice)
         (goto-char 0)
         (goto-char (cdr (assoc choice functions))))
-    (when (not (eq (point) (marker-position mark)))
+    (when (and set-mark (not (eq (point) (marker-position mark))))
       (ring-insert-at-beginning (edts-window-history-ring) mark))))
 
 ;; Borrowed from distel
