@@ -44,6 +44,7 @@
          refresh/0,
          start/0,
          started_p/0,
+         string_to_mfa/1,
          who_calls/3]).
 
 %% internal exports
@@ -243,6 +244,29 @@ free_vars(Text, StartLine) ->
     {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
   end.
 
+string_to_mfa(String0) ->
+  String =
+    case lists:reverse(String0) of
+      [$.|_] -> String0;
+      _      -> String0 ++ "."
+    end,
+  case parse_expressions(String) of
+    {error, _} = Err -> Err;
+    [Expr]           ->
+      {M, F, A} = form_to_mfa(Expr),
+      {ok, [{module, M}, {function, F}, {arity, A}]}
+  end.
+
+
+form_to_mfa({'fun', _, {function, F, A}})     -> {undefined, F, A};
+form_to_mfa({'fun', _, {function, M, F, A}})  -> {M, F, A};
+form_to_mfa({call,  _, {atom, _, F}, Args})   -> {undefined, F, length(Args)};
+form_to_mfa({call,  _, {remote,
+                        _,
+                        {atom, _, M},
+                        {atom, _, F}}, Args}) -> {M, F, length(Args)}.
+
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -252,8 +276,8 @@ free_vars(Text, StartLine) ->
 %%------------------------------------------------------------------------------
 parse_expressions(String) ->
   case edts_syntax:parse_expressions(String) of
-    {ok, Forms}      -> Forms;
-    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+    {ok, Forms}  -> Forms;
+    {error, Err} -> {error, format_errors(error, [{"Snippet", [Err]}])}
   end.
 
 %%------------------------------------------------------------------------------
@@ -552,10 +576,15 @@ reload_module(M) ->
                    , Errors  ::[{ File::string(), [term()]}]) -> issue().
 %%------------------------------------------------------------------------------
 format_errors(Type, Errors) ->
-   lists:append(
-     [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
-       || {Line, Source, Error} <- Errors0]
-         || {File, Errors0} <- Errors]).
+  LineErrorF =
+    fun(File, {Line, Source, ErrorStr}) ->
+        {Type, File, Line, lists:flatten(Source:format_error(ErrorStr))}
+    end,
+  FileErrorF =
+    fun({File, Errors0}) ->
+        lists:map(fun(Err) -> LineErrorF(File, Err) end, Errors0)
+    end,
+  lists:flatmap(FileErrorF, Errors).
 
 
 %%------------------------------------------------------------------------------
@@ -686,6 +715,35 @@ extract_compile_opt_p({no_auto_import,  _})    -> true;
 extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
+
+string_to_mfa_test_() ->
+  [ ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 0}]},
+                  string_to_mfa("foo()")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+                  string_to_mfa("foo(bar)")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+                  string_to_mfa("foo([]).")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+                   string_to_mfa("foo(\"aa,bb\")")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(\"aa,bb\", cc)")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+                  string_to_mfa("foo(\"aa,bb\")")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(bar, baz).")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 3}]},
+                  string_to_mfa("foo(a,%a,b\nb, cc).")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(a, <<a/b,\nc/d>>).")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("foo:bar(baz).")),
+    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+                  string_to_mfa("fun foo/1.")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("fun foo:bar/1.")),
+    ?_assertEqual({error,[{error,"Snippet",1,"syntax error before: '.'"}]},
+                  string_to_mfa("foo(\"aa,bb\"."))
+  ].
 
 format_errors_test_() ->
   SetupF = fun() ->
