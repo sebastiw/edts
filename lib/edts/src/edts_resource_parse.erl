@@ -61,7 +61,7 @@ content_types_provided(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Data =
-    case edts_code:parse_expressions(binary_to_list(wrq:req_body(ReqData))) of
+    case edts_code:string_to_mfa(binary_to_list(wrq:req_body(ReqData))) of
       {ok, MFA}       -> MFA;
       {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
     end,
