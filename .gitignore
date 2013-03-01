@@ -6,6 +6,7 @@ lib/lager
 lib/mochiweb
 lib/meck
 lib/proper
+lib/tulib
 lib/webmachine
 log
 erl_crash.dump

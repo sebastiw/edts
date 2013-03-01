@@ -13,6 +13,3 @@
 [submodule "elisp/path-util"]
 	path = elisp/path-util
 	url = git://github.com/tjarvstrand/path-util.git
-[submodule "lib/tulib"]
-	path = lib/tulib
-	url = git@github.com:tjarvstrand/tulib.git
