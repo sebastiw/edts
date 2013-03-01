@@ -259,14 +259,21 @@ string_to_mfa(String0) ->
       end
   end.
 
-
-form_to_mfa({'fun', _, {function, F, A}})     -> {F, A};
-form_to_mfa({'fun', _, {function, M, F, A}})  -> {M, F, A};
-form_to_mfa({call,  _, {atom, _, F}, Args})   -> {F, length(Args)};
+%% First two clauses are workarounds for "fun-less" function names, such as
+%% those in a list of exports.
+form_to_mfa({op,    _, '/', {atom, _, F},
+                             {integer, _, A}}) -> {F, A};
+form_to_mfa({op,    _, '/', {remote, _,
+                             {atom, _, M},
+                             {atom, _, F}},
+                             {integer, _, A}}) -> {F, A};
+form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
+form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
+form_to_mfa({call,  _, {atom, _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {remote,
                         _,
                         {atom, _, M},
-                        {atom, _, F}}, Args}) -> {M, F, length(Args)}.
+                        {atom, _, F}}, Args})  -> {M, F, length(Args)}.
 
 
 
