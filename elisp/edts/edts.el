@@ -108,7 +108,6 @@ buffer. The node is either:
                       (ferl-goto-end-of-call-name)
                       (forward-sexp)
                       (point)))
-             (msg    (message "%s" (buffer-substring-no-properties start end)))
              (mfa    (edts-get-mfa (buffer-substring-no-properties start end)))
              (m      (cdr (assoc 'module mfa)))
              (f      (cdr (assoc 'function mfa)))
