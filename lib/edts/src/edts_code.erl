@@ -261,14 +261,16 @@ string_to_mfa(String0) ->
 
 %% First two clauses are workarounds for "fun-less" function names, such as
 %% those in a list of exports.
+form_to_mfa({var,   _, F})                     -> {F, 0};
 form_to_mfa({op,    _, '/', {atom, _, F},
                              {integer, _, A}}) -> {F, A};
 form_to_mfa({op,    _, '/', {remote, _,
                              {atom, _, M},
                              {atom, _, F}},
-                             {integer, _, A}}) -> {F, A};
+                             {integer, _, A}}) -> {M, F, A};
 form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
 form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
+form_to_mfa({call,  _, {var,  _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {atom, _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {remote,
                         _,
@@ -750,6 +752,14 @@ string_to_mfa_test_() ->
                   string_to_mfa("fun foo/1.")),
     ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
                   string_to_mfa("fun foo:bar/1.")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("foo/1.")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("foo:bar/1.")),
+    ?_assertEqual({ok, [{function, 'MATCH'}, {arity, 0}]},
+                  string_to_mfa("MATCH.")),
+    ?_assertEqual({ok, [{function, 'MATCH'}, {arity, 0}]},
+                  string_to_mfa("MATCH().")),
     ?_assertEqual({error,[{error,"Snippet",1,"syntax error before: '.'"}]},
                   string_to_mfa("foo(\"aa,bb\"."))
   ].
