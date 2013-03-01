@@ -42,7 +42,7 @@ node."
   "Regexp describing a macro name")
 
 (defconst edts-find-macro-definition-regexp
-  (format "^-define\\s-*(%s,\\s-*\\(.*\\)).$" edts-find-macro-regexp)
+  (format "^-define\\s-*(%s,\\s-*\\(.*\\))." edts-find-macro-regexp)
   "Regexp describing a macro definition")
 
 (defvar edts-buffer-node-name nil
@@ -83,13 +83,56 @@ buffer. The node is either:
                 (doc   (format "%s -> %s"
                                (match-string-no-properties 1)
                                (match-string-no-properties 6))))
-            (when (match-string-no-properties 6)
-              (goto-char (match-beginning 6))
-              (setq arity (ferl-arity-at-point)))
+            (when (match-string-no-properties 5)
+              (setq arity
+                    (car (last (edts-mfa-at (match-beginning 1))))))
             (setq macro (format "%s/%s" macro arity))
             (push (cons macro doc) macros)
-          (goto-char (match-end 0))))
+            (goto-char (match-end 0))))
         macros))))
+
+(defun edts-mfa-at (&optional point)
+  "Find mfa under POINT. POINT defaults to current point."
+  (goto-char (or point (point)))
+  (save-excursion
+    (save-match-data
+      (let* ((start (save-excursion
+                      (skip-chars-backward "a-zA-Z0-9_:'")
+                      (point)))
+             (end   (save-excursion
+                      (ferl-goto-end-of-call-name)
+                      (forward-sexp)
+                      (point)))
+             (msg    (message "%s" (buffer-substring-no-properties start end)))
+             (mfa    (edts-get-mfa (buffer-substring-no-properties start end)))
+             (m      (cdr (assoc 'module mfa)))
+             (f      (cdr (assoc 'function mfa)))
+             (a      (cdr (assoc 'arity mfa))))
+        (loop named import
+              for (module . imported) in (erlang-get-import)
+              never m do
+              (when (eq a (cdr (assoc f imported)))
+                (return-from import module)))
+        (if m
+            (list m f a)
+          (list (erlang-get-module) f a))))))
+
+(defun edts-search-function (function arity)
+  "Goto the definition of FUNCTION/ARITY in the current buffer."
+  (let ((origin (point))
+        (re (concat "^" function "\s*("))
+        (match nil))
+    (goto-char (point-min))
+    (while (and (null match) (re-search-forward re nil t))
+      (goto-char (match-beginning 0))
+      (ferl-goto-end-of-call-name)
+      (when (eq arity (car (last (edts-mfa-at (point)))))
+        (setq match t)))
+    (if match
+        (beginning-of-line)
+      (goto-char origin)
+      (error "function %s/%s not found" function arity))))
+
 
 (defun edts-query (prompt choices)
   "Query the user for a choice"

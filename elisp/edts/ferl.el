@@ -307,21 +307,4 @@ use DEFAULT-MODULE."
                  (setq res (list mod fk arity)))))
         res))))
 
-(defun ferl-search-function (function arity)
-  "Goto the definition of FUNCTION/ARITY in the current buffer."
-  (let ((origin (point))
-        (re (concat "^" function "\s*("))
-        (match nil))
-    (goto-char (point-min))
-    (while (and (null match) (re-search-forward re nil t))
-      (goto-char (match-beginning 0))
-      (ferl-goto-end-of-call-name)
-      (when (eq arity (ferl-arity-at-point))
-        (setq match t)))
-    (if match
-        (beginning-of-line)
-      (goto-char origin)
-      (error "function %s/%s not found" function arity))))
-
-
 (provide 'ferl)

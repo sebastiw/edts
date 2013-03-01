@@ -42,7 +42,7 @@ source in SOURCE."
 (defun edts-doc-extract-function-information (function arity)
   "Extract information (spec and comments) about FUNCTION/ARITY from
 source in current buffer."
-  (ferl-search-function function arity)
+  (edts-search-function function arity)
   (let* ((end (point))
          (re  (edts-doc-any-function-regexp))
          (start (or (and (re-search-backward re nil t) (match-end 0)) 0)))

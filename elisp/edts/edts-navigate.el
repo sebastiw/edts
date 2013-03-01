@@ -74,7 +74,8 @@ determine which file to look in, with the following algorithm:
    ((edts-behaviour-under-point-p) (edts-find-behaviour-source))
    ;; look for a M:F/A
    ((apply #'edts-find-source
-           (or (ferl-mfa-at-point) (error "No call at point."))))))
+           (or (edts-mfa-at (point)) (error "No call at point."))))))
+
 
 (defun edts-header-under-point-p ()
   "Return non nil if the form under point is an include or include_lib
@@ -206,7 +207,7 @@ When FUNCTION is specified, the point is moved to its start."
         ;; Function is local
         (if function
             (progn
-              (ferl-search-function function arity)
+              (edts-search-function function arity)
               (unless (eq (marker-position mark) (point))
                 (ring-insert-at-beginning (edts-window-history-ring) mark)))
             (error "Function %s:%s/%s not found" module function arity))
@@ -251,7 +252,7 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-who-calls ()
   (interactive)
-  (let ((mfa (ferl-mfa-at-point)))
+  (let ((mfa (edts-mfa-at-point)))
     (if mfa
         (apply #'edts-find-callers  mfa)
       (error "No call at point."))))
