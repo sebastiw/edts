@@ -176,10 +176,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
   ;; Remove custom value for show-paren-priority
   (if (boundp 'show-paren-priority)
-      (kill-local-variable 'show-paren-priority))
-
-  ;; Indentation
-  (remove-hook 'align-load-hook 'edts-align-hook))
+      (kill-local-variable 'show-paren-priority)))
 
 (defvar edts-mode nil
   "The edts mode-variable.")
