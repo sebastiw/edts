@@ -253,14 +253,16 @@ string_to_mfa(String0) ->
   case parse_expressions(String) of
     {error, _} = Err -> Err;
     [Expr]           ->
-      {M, F, A} = form_to_mfa(Expr),
-      {ok, [{module, M}, {function, F}, {arity, A}]}
+      case form_to_mfa(Expr) of
+        {F, A}    -> {ok, [{function, F}, {arity, A}]};
+        {M, F, A} -> {ok, [{module, M}, {function, F}, {arity, A}]}
+      end
   end.
 
 
-form_to_mfa({'fun', _, {function, F, A}})     -> {undefined, F, A};
+form_to_mfa({'fun', _, {function, F, A}})     -> {F, A};
 form_to_mfa({'fun', _, {function, M, F, A}})  -> {M, F, A};
-form_to_mfa({call,  _, {atom, _, F}, Args})   -> {undefined, F, length(Args)};
+form_to_mfa({call,  _, {atom, _, F}, Args})   -> {F, length(Args)};
 form_to_mfa({call,  _, {remote,
                         _,
                         {atom, _, M},
@@ -717,27 +719,27 @@ extract_compile_opt_p(_)                       -> false.
 %%%_* Unit tests ===============================================================
 
 string_to_mfa_test_() ->
-  [ ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 0}]},
+  [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
                   string_to_mfa("foo()")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
                   string_to_mfa("foo(bar)")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
                   string_to_mfa("foo([]).")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
                    string_to_mfa("foo(\"aa,bb\")")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
                   string_to_mfa("foo(\"aa,bb\", cc)")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
                   string_to_mfa("foo(\"aa,bb\")")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
                   string_to_mfa("foo(bar, baz).")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 3}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 3}]},
                   string_to_mfa("foo(a,%a,b\nb, cc).")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 2}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
                   string_to_mfa("foo(a, <<a/b,\nc/d>>).")),
     ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
                   string_to_mfa("foo:bar(baz).")),
-    ?_assertEqual({ok, [{module, undefined}, {function, foo}, {arity, 1}]},
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
                   string_to_mfa("fun foo/1.")),
     ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
                   string_to_mfa("fun foo:bar/1.")),
