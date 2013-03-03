@@ -184,9 +184,11 @@ update() ->
   update([]).
 
 %%%_* INTERNAL functions =======================================================
+get_undefined_function_calls([])      -> [];
 get_undefined_function_calls(Modules) ->
   do_query("(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)", [Modules]).
 
+get_unused_exports([])      -> [];
 get_unused_exports(Modules) ->
   do_query("(Lin) ((X - XU) * (~p : Mod * X))", [Modules]).
 
