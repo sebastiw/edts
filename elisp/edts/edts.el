@@ -69,8 +69,9 @@ buffer. The node is either:
 
 (defun edts-find-module-macros ()
   (let ((includes (edts-get-includes)))
-    (apply #'append (edts-find-macros)
-           (mapcar #'edts-find-file-macros includes))))
+    (mapcar #'edts-find-file-macros includes)))
+    ;; (apply #'append (edts-find-macros)
+    ;;        (mapcar #'edts-find-file-macros includes))))
 
 (defun edts-find-file-macros (file-name)
   (with-temp-buffer
@@ -78,22 +79,25 @@ buffer. The node is either:
     (edts-find-macros)))
 
 (defun edts-find-macros ()
+  (let ((macros (edts--find-macros2)))
+    (when macros
+      (let* ((strings (mapcar #'(lambda (m) (cdr (assoc 'string m))) macros))
+             (parsed  (edts-strings-to-mfas strings)))
+        parsed))))
+
+(defun edts--find-macros2 ()
   (save-excursion
     (save-match-data
       (goto-char (point-min))
       (let ((macros nil))
         (while (re-search-forward edts-find-macro-definition-regexp nil t)
-          (let ((arity 0)
-                (macro (match-string-no-properties 2))
-                (doc   (format "%s -> %s"
-                               (match-string-no-properties 1)
-                               (match-string-no-properties 6))))
-            (when (match-string-no-properties 5)
-              (setq arity
-                    (car (last (edts-mfa-at (match-beginning 1))))))
-            (setq macro (format "%s/%s" macro arity))
-            (push (cons macro doc) macros)
-            (goto-char (match-end 0))))
+            (push
+             `((string . ,(match-string-no-properties 1))
+               (name   . ,(match-string-no-properties 2))
+               (args   . ,(match-string-no-properties 5))
+               (value  . ,(match-string-no-properties 6)))
+             macros)
+            (goto-char (match-end 0)))
         macros))))
 
 (defun edts-mfa-at (&optional point)
@@ -108,18 +112,25 @@ buffer. The node is either:
                       (ferl-goto-end-of-call-name)
                       (forward-sexp)
                       (point)))
-             (mfa    (edts-get-mfa (buffer-substring-no-properties start end)))
-             (m      (cdr (assoc 'module mfa)))
-             (f      (cdr (assoc 'function mfa)))
-             (a      (cdr (assoc 'arity mfa))))
-        (loop named import
-              for (module . imported) in (erlang-get-import)
-              never m do
-              (when (eq a (cdr (assoc f imported)))
-                (return-from import module)))
-        (if m
-            (list m f a)
-          (list (erlang-get-module) f a))))))
+             (str   (buffer-substring-no-properties start end)))
+        (car (edts-strings-to-mfas (list str)))))))
+
+(defun edts-strings-to-mfas (strs)
+  "Return a list with each string in STRS parsed to an mfa."
+  (mapcar #'edts--fix-mod (edts-get-mfas strs)))
+
+(defun edts--fix-mod (mfa)
+  (let ((m      (cdr (assoc 'module mfa)))
+        (f      (cdr (assoc 'function mfa)))
+        (a      (cdr (assoc 'arity mfa))))
+    (unless m
+      (loop named import
+            for (module . imported) in (erlang-get-import) do
+            (when (eq a (cdr (assoc f imported)))
+              (return-from import module))))
+    (if m
+        (list m f a)
+      (list (erlang-get-module) f a))))
 
 (defun edts-search-function (function arity)
   "Goto the definition of FUNCTION/ARITY in the current buffer."
@@ -362,12 +373,12 @@ buffer"
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-mfa (snippet)
-  "Return a snippet parsed as an mfa."
+(defun edts-get-mfas (snippets)
+  "Return a each code snippet in SNIPPETS parsed as an mfa."
   (let* ((resource (list "code" "parsed_expressions" "mfa"))
-         (res      (edts-rest-get resource nil (list snippet))))
+         (res      (edts-rest-get resource nil snippets)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-        (car (cdr (assoc 'body res)))
+        (cdr (assoc 'body res))
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 

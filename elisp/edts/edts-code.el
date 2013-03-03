@@ -29,7 +29,7 @@
 (require 'eproject-extras)
 (require 'path-util)
 
-(defvar edts-code-after-compilation-hook
+(defvar edts-code-after-compilation-hook nil)
   '(edts-code-eunit
     edts-code-xref-analyze-related
     edts-code-dialyze-related-hook-fun)
