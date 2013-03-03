@@ -69,9 +69,8 @@ buffer. The node is either:
 
 (defun edts-find-module-macros ()
   (let ((includes (edts-get-includes)))
-    (mapcar #'edts-find-file-macros includes)))
-    ;; (apply #'append (edts-find-macros)
-    ;;        (mapcar #'edts-find-file-macros includes))))
+    (apply #'append (edts-find-macros)
+           (mapcar #'edts-find-file-macros includes))))
 
 (defun edts-find-file-macros (file-name)
   (with-temp-buffer
