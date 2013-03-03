@@ -137,6 +137,11 @@ do_check_modules(Modules, Files, undefined_function_calls) ->
            end,
   lists:flatmap(FmtFun, Res);
 do_check_modules(Modules, Files, unused_exports) ->
+  %% This will not work properly in most cases since edts does the optimization
+  %% of only keeping explicitly referenced modules in the xref-server state. Ie.
+  %% when working with module foo, only foo and the modules that foo calls will
+  %% be added to the xref server, there is no analysis to find the modules that
+  %% call foo.
   Res = get_unused_exports(Modules),
   ModuleFiles = lists:zip(Modules, Files),
   FmtFun = fun({{M, F, A}, Line}) ->
