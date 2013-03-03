@@ -109,7 +109,7 @@ character before that."
     edts-complete-exported-function-source
     edts-complete-built-in-function-source
     edts-complete-module-source
-    edts-complete-macro-source
+    ;; edts-complete-macro-source
     edts-complete-record-source)
   "Sources that EDTS uses for auto-completion.")
 
