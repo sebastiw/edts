@@ -22,13 +22,16 @@
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--module(test_module2).
+-module(edts_test_module2).
 
--export([bar/1]).
+-export([bar/1,
+         bar_test/0]).
 
 %% @doc hej
 -spec bar(Atom::atom()) -> atom().
-bar(ping) -> test_module:bar(ping).
+bar(ping) -> edts_test_module:bar(ping).
 
 bar() -> foo:pong().
+
+bar_test() -> ok.
 

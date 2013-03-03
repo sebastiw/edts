@@ -47,8 +47,6 @@
          string_to_mfa/1,
          who_calls/3]).
 
-%% internal exports
--export([save_xref_state/0]).
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -161,7 +159,6 @@ compile_and_load(File0, Opts) ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
-          update_xref(),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -393,14 +390,8 @@ modules_at_path(Path) ->
 %%------------------------------------------------------------------------------
 start() ->
   load_all(),
-  case edts_xref:started_p() of
-    true  -> {error, already_started};
-    false ->
-      case init_xref() of
-        {error, _} = Err -> Err;
-        {ok, _Pid}       -> {node(), ok}
-      end
-  end.
+  edts_xref:start(),
+  {node(), ok}.
 
 
 %%------------------------------------------------------------------------------
@@ -456,42 +447,6 @@ try_load(Mod, File) ->
       error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
       false
   end.
-
-
-init_xref() ->
-  File = xref_file(),
-  try
-    case file:read_file(File) of
-      {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> edts_xref:start();
-      {error, _} = Error  ->
-      error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-      edts_xref:start()
-    end
-  catch
-    C:E ->
-      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
-                             "Starting with clean state instead.",
-                             [File, C, E]),
-      edts_xref:start()
-  end.
-
-update_xref() ->
-  edts_xref:update(),
-  spawn(?MODULE, save_xref_state, []).
-
-save_xref_state() ->
-  File = xref_file(),
-  State = edts_xref:get_state(),
-  case file:write_file(File, term_to_binary(State)) of
-    ok -> ok;
-    {error, _} = Error ->
-      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
-  end.
-
-xref_file() ->
-  {ok, XrefDir} = application:get_env(edts, project_dir),
-  filename:join(XrefDir, atom_to_list(node()) ++ ".xref").
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),

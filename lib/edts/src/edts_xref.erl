@@ -29,21 +29,16 @@
 
 %% Extended xref API
 -export([start/0,
-         start/1,
          stop/0
         ]).
 
 %% API
 -export([check_modules/2,
          allowed_checks/0,
-         get_state/0,
          started_p/0,
          update/0,
          who_calls/3
         ]).
-
-%% Internal exports.
--export([do_start/1]).
 
 -export_type([xref_check/0]).
 
@@ -79,29 +74,11 @@ start() ->
     false ->
       {ok, Pid} = xref:start(?SERVER),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-      update(),
       {ok, Pid};
     true ->
       {error, already_started}
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Starts the edts xref-server with State on the local node.
-%% @end
--spec start(State::term()) -> {ok , node()} | {error, already_started}.
-%%------------------------------------------------------------------------------
-start(State) ->
-  case started_p() of
-    false ->
-      proc_lib:start(?MODULE, do_start, [State]),
-      wait_until_started(),
-      ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-      update(),
-      {ok, node()};
-    true ->
-      {error, already_started}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -110,6 +87,7 @@ start(State) ->
 -spec started_p() -> boolean().
 %%------------------------------------------------------------------------------
 started_p() -> whereis(?SERVER) =/= undefined.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -120,26 +98,14 @@ started_p() -> whereis(?SERVER) =/= undefined.
 stop() ->
   case whereis(?SERVER) of
     undefined -> {error, not_started};
-    _Pid      -> xref:stop(?SERVER)
+    _Pid      ->
+      Ref = erlang:monitor(process, ?SERVER),
+      xref:stop(?SERVER),
+      receive {'DOWN', Ref, _, _, _} -> ok
+      after 1000 -> {error, timeout}
+      end
   end.
 
-%% API
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns the internal state of the edts xref-server.
-%% @end
--spec get_state() -> term().
-%%------------------------------------------------------------------------------
-get_state() ->
-  update(),
-  {status, _, _, [_, _, _, _, Misc]} = sys:get_status(?SERVER),
-  proplists:get_value("State", lists:append([D || {data, D} <- Misc])).
-
-update() ->
-  {LibDirs, AppDirs} = lib_and_app_dirs(),
-  update_paths(LibDirs, AppDirs),
-  xref:update(?SERVER).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -152,14 +118,13 @@ update() ->
                                Description::string()}]}.
 %%------------------------------------------------------------------------------
 check_modules(Modules, Checks) ->
+  update(Modules),
   Files = [proplists:get_value(source, M:module_info(compile)) || M <- Modules],
   Fun  = fun(Check) -> do_check_modules(Modules, Files, Check) end,
   lists:append(lists:map(Fun, Checks)).
 
 do_check_modules(Modules, Files, undefined_function_calls) ->
-  QueryFmt = "(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)",
-  QueryStr = lists:flatten(io_lib:format(QueryFmt, [Modules])),
-  {ok, Res} = xref:q(?SERVER, QueryStr),
+  Res = get_undefined_function_calls(Modules),
   ModuleFiles = lists:zip(Modules, Files),
   FmtFun = fun({{{Mod, _, _}, {CM, CF, CA}}, Lines})->
                case lists:keyfind(Mod, 1, ModuleFiles) of
@@ -172,11 +137,8 @@ do_check_modules(Modules, Files, undefined_function_calls) ->
            end,
   lists:flatmap(FmtFun, Res);
 do_check_modules(Modules, Files, unused_exports) ->
-  QueryFmt  = "(Lin) ((X - XU) * (~p : Mod * X))",
-  QueryStr  = lists:flatten(io_lib:format(QueryFmt, [Modules])),
-  %% Ignores   = [{Mod, sets:from_list(get_xref_ignores(Mod))} || Mod <- Modules],
+  Res = get_unused_exports(Modules),
   ModuleFiles = lists:zip(Modules, Files),
-  {ok, Res} = xref:q(?SERVER, QueryStr),
   FmtFun = fun({{M, F, A}, Line}) ->
                case ignored_p(M, F, A) of
                  true -> [];
@@ -193,6 +155,7 @@ ignored_p(M, F, A) ->
   ignored_test_fun_p(M, F, A) orelse
     lists:member({M, F, A}, get_xref_ignores(M)).
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Returns alist with all functions that call M:F/A on the local node.
@@ -206,66 +169,55 @@ who_calls(M, F, A) ->
   [Caller || {Caller, _Callee} <- Calls].
 
 
-%%%_* INTERNAL functions =======================================================
-do_start(State) ->
-  erlang:register(?SERVER, self()),
-  proc_lib:init_ack({ok, self()}),
-  gen_server:enter_loop(xref, [], State).
-
-wait_until_started() ->
-  case started_p() of
-    true  -> ok;
-    false ->
-      timer:sleep(200),
-      wait_until_started()
-  end.
-
 %%------------------------------------------------------------------------------
 %% @doc
-%% Ensure that all new beam-files are added to the xref-server state.
+%% Update the internal state of the xref server.
 %% @end
--spec update_paths([filename:filename()], [filename:filename()]) -> ok.
+-spec update() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
-update_paths(LibDirs, AppDirs) ->
-  ok = xref:set_library_path(?SERVER, LibDirs),
-  ModsToLoad =
-    dict:from_list(
-      lists:flatmap(
-        fun(Dir) ->
-            Beams = filelib:wildcard(filename:join(Dir, "*.beam")),
-            [{list_to_atom(filename:basename(B, ".beam")), B} || B <- Beams]
-        end, AppDirs)),
-  ModsLoaded = dict:from_list(xref:info(?SERVER, modules)),
-  %% Add/update new modules
-  LoadF =
-    fun(Mod, Beam) ->
-        case dict:find(Mod, ModsLoaded) of
-          error -> % New module
-            try_add_module(Mod, Beam);
-          {ok, Info} ->
-            Dir = filename:dirname(Beam),
-            case proplists:get_value(directory, Info) of
-              Dir     -> ok; % Same as old module
-              _OldDir -> xref:replace_module(?SERVER, Mod, Beam) % Mod has moved
-            end
-        end
-    end,
-  dict:map(LoadF, ModsToLoad),
+update() ->
+  update([]).
 
-  %% Remove delete modules
-  UnloadF =
-    fun(Mod, _Info) ->
-        case dict:is_key(Mod, ModsToLoad) of
-          true  -> ok;
-          false -> xref:remove_module(?SERVER, Mod)
-        end
-    end,
-  dict:map(UnloadF, ModsLoaded).
+%%%_* INTERNAL functions =======================================================
+get_undefined_function_calls(Modules) ->
+  do_query("(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)", [Modules]).
+
+get_unused_exports(Modules) ->
+  do_query("(Lin) ((X - XU) * (~p : Mod * X))", [Modules]).
+
+do_query(QueryFmt, Args) ->
+  QueryStr = lists:flatten(io_lib:format(QueryFmt, Args)),
+  {ok, Res} = xref:q(?SERVER, QueryStr),
+  Res.
+
+update(Modules) ->
+  Added  = ordsets:from_list([M || {M, _Props} <- xref:info(?SERVER, modules)]),
+  ToAdd0 = ordsets:to_list(ordsets:subtract(ordsets:from_list(Modules), Added)),
+  ok     = lists:foreach(fun try_add_module/1, ToAdd0),
+
+  Undef     = get_undefined_function_calls(Modules),
+  UndefMods = ordsets:from_list([M || {{{_, _, _}, {M, _, _}}, _} <- Undef]),
+  ToAdd1    = ordsets:subtract(UndefMods, ordsets:union(Added, ToAdd0)),
+  ok        = lists:foreach(fun try_add_module/1, ToAdd1),
+  xref:update(?SERVER).
+
+try_add_module(Mod) ->
+  case find_beam(Mod) of
+    non_existing -> {error, no_beam};
+    Beam         -> try_add_module(Mod, Beam)
+  end.
+
+find_beam(Mod) ->
+  case code:is_loaded(Mod) of
+    {file, Beam} -> Beam;
+    false        -> code:where_is_file(atom_to_list(Mod) ++
+                                         code:objfile_extension())
+  end.
 
 try_add_module(Mod, Beam) ->
   try
     Opts = proplists:get_value(options, Mod:module_info(compile)),
-    case lists:member(debug_info, Opts) of
+    case Opts =/= undefined andalso lists:member(debug_info, Opts) of
       true ->
         case xref:add_module(?SERVER, Beam) of
           {ok, Mod} -> ok;
@@ -298,127 +250,73 @@ get_xref_ignores(Mod) ->
       end,
   lists:foldl(F, [], Mod:module_info(attributes)).
 
-lib_and_app_dirs() ->
-  ErlLibDir = code:lib_dir(),
-  Paths = [D || D <- code:get_path(), filelib:is_dir(D), D =/= "."],
-  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths).
-
 %%%_* Unit tests ===============================================================
 
 start_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
   stop(),
   ?assertEqual(undefined, whereis(?SERVER)),
   {error, not_started} = stop(),
   start(),
   {error, already_started} = start(),
   ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
-  State = get_state(),
   xref:stop(?SERVER),
   ?assertEqual(undefined, whereis(?SERVER)),
-  start(State),
-  {error, already_started} = start(State),
-  State = get_state(),
-  stop(),
-  code:set_path(OrigPath).
+  stop().
 
-update_paths_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  ?assertEqual(undefined, whereis(?SERVER)),
-  xref:start(?SERVER),
-  ?assertEqual(lists:sort([{verbose,  false},
-                           {warnings, true},
-                           {builtins, false},
-                           {recurse,  false}]),
-               lists:sort(xref:get_default(?SERVER))),
-  {ok, Cwd} = file:get_cwd(),
-  update_paths([], []),
-  ?assertEqual({ok, []}, xref:get_library_path(?SERVER)),
-  xref:stop(?SERVER),
-  xref:start(?SERVER),
-  update_paths([Cwd], []),
-  ?assertEqual({ok, [Cwd]}, xref:get_library_path(?SERVER)),
-  ?assertEqual([], xref:info(?SERVER, applications)),
-  xref:set_library_path(?SERVER, []),
-  ModPath = code:where_is_file(atom_to_list(?MODULE) ++ ".beam"),
-  AppPath =
-    filename:join((filename:dirname(filename:dirname(ModPath))), "ebin"),
-  DudPath = filename:dirname(AppPath),
-  update_paths([], [DudPath]),
-  ?assertMatch([], xref:info(?SERVER, applications)),
-  stop(),
-  code:set_path(OrigPath).
 
 who_calls_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
   start(),
-  xref:add_module(?SERVER, test_module),
-  xref:add_module(?SERVER, test_module2),
-  ?assertEqual([], who_calls(test_module2, bar, 1)),
+  compile_and_add_test_modules(),
+  ?assertEqual([], who_calls(edts_test_module2, bar, 1)),
   ?assertEqual(
-    [{test_module, bar, 1}, {test_module, baz, 1}, {test_module2, bar, 1}],
-     who_calls(test_module, bar, 1)),
-  stop(),
-  code:set_path(OrigPath).
+    [{edts_test_module, bar, 1}, {edts_test_module, baz, 1}, {edts_test_module2, bar, 1}],
+     who_calls(edts_test_module, bar, 1)),
+  stop().
 
 check_undefined_functions_calls_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  start(),
-  {ok, Cwd} = file:get_cwd(),
-  {ok, test_module} = xref:add_module(?SERVER, test_module),
-  {ok, test_module2} = xref:add_module(?SERVER, test_module2),
-  File1 = filename:join(Cwd, "test_module.erl"),
-  File2 = filename:join(Cwd, "test_module2.erl"),
-  ?assertEqual([], do_check_modules([test_module],
-                                    [File1],
-                                    undefined_function_calls)),
-  ?assertMatch([{error, File2, 33, Str}] when is_list(Str),
-               do_check_modules([test_module2],
-                               [File2],
-                               undefined_function_calls)),
   stop(),
-  code:set_path(OrigPath).
+  start(),
+  compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([edts_test_module],
+                                    [undefined_function_calls])),
+  ?assertMatch([{error, _File, _Line, Str}] when is_list(Str),
+               check_modules([edts_test_module2],
+                               [undefined_function_calls])),
+  stop().
 
 check_unused_exports_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  start(),
-  {ok, Cwd} = file:get_cwd(),
-  xref:add_module(?SERVER, test_module),
-  xref:add_module(?SERVER, test_module2),
-  File1 = filename:join(Cwd, "test_module.erl"),
-  File2 = filename:join(Cwd, "test_module2.erl"),
-  ?assertEqual([],
-               do_check_modules([test_module], [File1], unused_exports)),
-  ?assertMatch([{error, File2, 31, Str}] when is_list(Str),
-               do_check_modules([test_module2], [File2], unused_exports)),
   stop(),
-  code:set_path(OrigPath).
+  start(),
+  compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([edts_test_module], [unused_exports])),
+  ?assertMatch([{error, _File2, _Line1, Str1},
+                {error, _File2, _Line2, Str2}] when is_list(Str1) andalso
+                                                    is_list(Str2),
+               check_modules([edts_test_module2], [unused_exports])),
+  stop().
 
 check_modules_test() ->
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  start(),
-  xref:add_module(?SERVER, test_module),
-  xref:add_module(?SERVER, test_module2),
-  Checks = [unused_exports, undefined_function_calls],
-  ?assertEqual([],     check_modules([test_module], Checks)),
-  ?assertMatch([_, _], check_modules([test_module2], Checks)),
   stop(),
-  code:set_path(OrigPath).
+  start(),
+  compile_and_add_test_modules(),
+  Checks = [unused_exports, undefined_function_calls],
+  ?assertEqual([],     check_modules([edts_test_module], Checks)),
+  ?assertMatch([_, _, _], check_modules([edts_test_module2], Checks)),
+  stop().
 
 %%%_* Unit test helpers ========================================================
 
-mock_path() ->
-  {LibDirs, AppDirs0} = lib_and_app_dirs(),
-  case lists:filter(fun(P) -> filename:basename(P) =:= ".eunit" end, AppDirs0) of
-    [_] = EunitDir -> EunitDir ++ LibDirs;
-    _              -> AppDirs0 ++ LibDirs
-  end.
+compile_and_add_test_modules() ->
+  TestDir = code:lib_dir(edts, 'test'),
+  EbinDir = code:lib_dir(edts, 'ebin'),
+  true    = code:add_patha(EbinDir),
+  Opts    = [debug_info, {outdir, EbinDir}],
+  File1   = filename:join(TestDir, "edts_test_module.erl"),
+  {ok, _} = c:c(File1, Opts),
+  File2   = filename:join(TestDir, "edts_test_module2.erl"),
+  {ok, _} = c:c(File2, Opts),
+  ok      = try_add_module(edts_test_module),
+  ok      = try_add_module(edts_test_module2).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

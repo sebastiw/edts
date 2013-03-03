@@ -271,9 +271,9 @@ get_module_eunit_result_test_() ->
   [?_assertMatch({ok, [{'passed-test', _Source, Line1, "no asserts failed"},
                        {'passed-test', _Source, Line2, "no asserts failed"}]}
                  when is_integer(Line1) andalso is_integer(Line2),
-                 get_module_eunit_result(node(), test_module)),
+                 get_module_eunit_result(node(), edts_test_module)),
    ?_assertEqual({error, not_found},
-                 get_module_eunit_result(not_a_node, test_module)),
+                 get_module_eunit_result(not_a_node, edts_test_module)),
    ?_assertEqual({ok, []},
                  get_module_eunit_result(node(), not_a_module))].
 

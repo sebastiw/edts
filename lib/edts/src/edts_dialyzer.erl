@@ -328,12 +328,12 @@ update_plt_test_() ->
 non_otp_beam_files_test_() ->
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
-  c:l(test_module),
-  [?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, preloaded}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, OtpDir}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{test_module, "test"}])),
+  c:l(edts_test_module),
+  [?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, preloaded}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, OtpDir}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, "test"}])),
    ?_assertEqual(["test.beam"],
-                 non_otp_beam_files(OtpDir, [{test_module, "test.beam"}]))
+                 non_otp_beam_files(OtpDir, [{edts_test_module, "test.beam"}]))
   ].
 
 filter_warnings_test_() ->
