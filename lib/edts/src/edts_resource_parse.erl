@@ -60,14 +60,18 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Data =
-    case edts_code:string_to_mfa(binary_to_list(wrq:req_body(ReqData))) of
-      {ok, MFA}       -> MFA;
-      {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
-    end,
+  Json = mochijson2:decode(binary_to_list(wrq:req_body(ReqData))),
+  Data = lists:map(fun json_to_mfa/1, Json),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+
+json_to_mfa(Str) ->
+  case edts_code:string_to_mfa(binary_to_list(Str)) of
+    {ok, MFA}       -> MFA;
+    {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
+  end.
+
 format_error({Type, File, Line, Desc}) ->
   [ {type, Type}
   , {file, list_to_binary(File)}
@@ -93,7 +97,11 @@ to_json_test_() ->
    fun() ->
      meck:unload(),
      meck:new(wrq),
-     meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
+     meck:expect(wrq, req_body,
+                 fun(A) ->
+                     Str = lists:flatten(io_lib:format("[\"~p\"]", [A])),
+                     list_to_binary(Str)
+                 end),
      meck:new(edts_code),
      meck:expect(edts_code, string_to_mfa,
                  fun("req_data1") ->
@@ -101,18 +109,20 @@ to_json_test_() ->
                     ("req_data2") ->
                      {error, [{error, "S", 1, "D"}]}
                  end),
-     meck:new(mochijson2),
+     meck:new(mochijson2, [passthrough]),
      meck:expect(mochijson2, encode, fun(A) -> A end)
    end,
    fun(_) ->
        meck:unload()
    end,
-   [?_assertEqual({[{module, foo}, {function, bar}, {arity, 1}], req_data1, []},
+   [?_assertEqual({[[{module, foo}, {function, bar}, {arity, 1}]],
+                   req_data1,
+                   []},
                   to_json(req_data1, [])),
-    ?_assertEqual({[{errors, [[ {type, error}
+    ?_assertEqual({[[{errors, [[ {type, error}
                                 , {file, <<"S">>}
                                 , {line, 1}
-                                , {description, <<"D">>}]]}], req_data2, []},
+                                , {description, <<"D">>}]]}]], req_data2, []},
                   to_json(req_data2, []))
    ]}.
 

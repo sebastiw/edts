@@ -60,11 +60,13 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
+  BinStr = mochijson2:decode(binary_to_list(wrq:req_body(ReqData))),
   Data =
-    case edts_code:free_vars(binary_to_list(wrq:req_body(ReqData))) of
+    case edts_code:free_vars(binary_to_list(BinStr)) of
       {ok, Vars}      -> [{vars, Vars}];
       {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
     end,
+  io:format("data ~p~n", [Data]),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
@@ -86,25 +88,34 @@ content_types_provided_test() ->
   ?assertEqual({[ {"application/json", to_json}], foo, bar},
               content_types_provided(foo, bar)).
 
-to_json_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
-  meck:new(edts_code),
-  meck:expect(edts_code, free_vars,
-              fun("req_data1") -> {ok, ['VarA', 'VarB']};
-                 ("req_data2") -> {error, [{err, "S", 13, "D"}]}
-              end),
-  meck:new(mochijson2),
-  meck:expect(mochijson2, encode, fun(A) -> A end),
-  ?assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
-               to_json(req_data1, [])),
-  ?assertEqual({[{errors, [[ {type, err}
-                          , {file, <<"S">>}
-                          , {line, 13}
-                          , {description, <<"D">>}]]}], req_data2, []},
-               to_json(req_data2, [])),
-  meck:unload().
+to_json_test_() ->
+  {setup,
+   fun() ->
+       meck:unload(),
+       meck:new(wrq),
+       meck:expect(wrq, req_body, fun(A) ->
+                                      list_to_binary(atom_to_list(A))
+                                  end),
+       meck:new(edts_code),
+       meck:expect(edts_code, free_vars,
+                   fun("req_data1") -> {ok, ['VarA', 'VarB']};
+                      ("req_data2") -> {error, [{err, "S", 13, "D"}]}
+                   end),
+       meck:new(mochijson2),
+       meck:expect(mochijson2, encode, fun(A) -> A end),
+       meck:expect(mochijson2, decode, fun(A) -> list_to_binary(A) end)
+   end,
+   fun(_) ->
+       meck:unload()
+   end,
+   [?_assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
+                  to_json(req_data1, [])),
+    ?_assertEqual({[{errors, [[ {type, err}
+                                , {file, <<"S">>}
+                                , {line, 13}
+                                , {description, <<"D">>}]]}], req_data2, []},
+                  to_json(req_data2, []))]
+  }.
 
 
 %%%_* Emacs ====================================================================

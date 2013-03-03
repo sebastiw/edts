@@ -52,7 +52,7 @@
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))
-        (url-request-data          body))
+        (url-request-data          (json-encode body)))
     (make-local-variable 'url-show-status)
     (setq url-show-status nil)
     (edts-log-debug "Sending %s-request to %s" method url)

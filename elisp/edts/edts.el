@@ -358,16 +358,16 @@ buffer"
   (let* ((resource (list "code" "free_vars"))
          (res      (edts-rest-get resource nil snippet)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-        (cdr (assoc 'body res))
+        (car (cdr (assoc 'body res)))
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-mfa (snippet)
   "Return a snippet parsed as an mfa."
   (let* ((resource (list "code" "parsed_expressions" "mfa"))
-         (res      (edts-rest-get resource nil snippet)))
+         (res      (edts-rest-get resource nil (list snippet))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
-        (cdr (assoc 'body res))
+        (car (cdr (assoc 'body res)))
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
