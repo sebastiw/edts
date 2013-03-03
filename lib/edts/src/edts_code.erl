@@ -242,11 +242,7 @@ free_vars(Text, StartLine) ->
   end.
 
 string_to_mfa(String0) ->
-  String =
-    case lists:reverse(String0) of
-      [$.|_] -> String0;
-      _      -> String0 ++ "."
-    end,
+  String = prepare_string(String0),
   case parse_expressions(String) of
     {error, _} = Err -> Err;
     [Expr]           ->
@@ -256,8 +252,16 @@ string_to_mfa(String0) ->
       end
   end.
 
+prepare_string("?" ++ Str) -> prepare_string(Str);
+prepare_string(String) ->
+    case lists:reverse(String) of
+      [$.|_] -> String;
+      _      -> String ++ "."
+    end.
+
 %% First two clauses are workarounds for "fun-less" function names, such as
 %% those in a list of exports.
+form_to_mfa({atom,  _, F})                     -> {F, 0};
 form_to_mfa({var,   _, F})                     -> {F, 0};
 form_to_mfa({op,    _, '/', {atom, _, F},
                              {integer, _, A}}) -> {F, A};
