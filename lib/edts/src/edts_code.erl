@@ -252,12 +252,13 @@ string_to_mfa(String0) ->
       end
   end.
 
-prepare_string("?" ++ Str) -> prepare_string(Str);
-prepare_string(String) ->
-    case lists:reverse(String) of
-      [$.|_] -> String;
-      _      -> String ++ "."
-    end.
+prepare_string(String0) ->
+  %% Ugly hack to get rid of macros.
+  String = re:replace(String0, "\\?", "", [{return, list}, global]),
+  case lists:reverse(String) of
+    [$.|_] -> String;
+    _      -> String ++ "."
+  end.
 
 %% First two clauses are workarounds for "fun-less" function names, such as
 %% those in a list of exports.
