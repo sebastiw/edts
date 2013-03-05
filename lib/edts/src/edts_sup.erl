@@ -48,21 +48,24 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    DispatchFile   = filename:join(code:priv_dir(edts), "dispatch.conf"),
-    {ok, Dispatch} = file:consult(DispatchFile),
+  DispatchFile   = filename:join(code:priv_dir(edts), "dispatch.conf"),
+  {ok, Dispatch} = file:consult(DispatchFile),
 
-    WebmConf = [
-                {port, ?EDTS_PORT},
-                {dispatch, Dispatch}
-               ],
-    Webmachine = {webmachine_mochiweb,
-                  {webmachine_mochiweb, start, [WebmConf]},
-                  permanent, 5000, worker, [webmachine_mochiweb]},
-    Edts = {edts_server,
-            {edts_server, start_link, []},
-            permanent, 5000, worker, [edts_server]},
-    Children = [Edts, Webmachine],
-    {ok, { {one_for_one, 5, 10}, Children} }.
+  WebmConf = [
+              {port, ?EDTS_PORT},
+              {dispatch, Dispatch}
+             ],
+  WemachineRouter = {webmachine_router,
+                     {webmachine_router, start_link, []},
+                     permanent, 5000, worker, [webmachine_router]},
+  Webmachine = {webmachine_mochiweb,
+                {webmachine_mochiweb, start, [WebmConf]},
+                permanent, 5000, worker, [webmachine_mochiweb]},
+  Edts = {edts_server,
+          {edts_server, start_link, []},
+          permanent, 5000, worker, [edts_server]},
+  Children = [Edts, WemachineRouter, Webmachine],
+  {ok, { {one_for_one, 5, 10}, Children} }.
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
