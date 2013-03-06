@@ -142,7 +142,7 @@ PWD and running COMMAND."
       (edts-complete-setup edts-shell-ac-sources)
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
-      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t)))
+      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t t)))
   (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
   (get-buffer buffer-name))
 
