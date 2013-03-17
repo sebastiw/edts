@@ -68,23 +68,40 @@ buffer. The node is either:
   (message "%s" (edts-node-name)))
 
 (defun edts-find-module-macros ()
-  (let ((includes (edts-get-includes)))
-    (apply #'append (edts-find-macros)
-           (mapcar #'edts-find-file-macros includes))))
+  (let* ((files  (cons (buffer-file-name) (edts-get-includes)))
+         (macros   (apply #'append
+                          (mapcar #'edts-get-file-macros files)))
+         (parsed  (edts-parse-macros macros)))
+    parsed))
 
-(defun edts-find-file-macros (file-name)
+
+(defun edts-parse-macros (raw-macros)
+  (when raw-macros
+    (let* (;; Raw macro strings: '("MACRO1" "MACRO2(ARG21,..., ARG2X)")
+           (arity-macros (mapcar #'(lambda (m) (cdr (assoc 'string m)))
+                                 raw-macros))
+           ;; (("MACRO1" 0) ("MACRO2" X))
+           (arity-macro-strings (mapcar #'(lambda (m)
+                                            (cons (cdr (assoc 'function m))
+                                                  (cdr (assoc 'arity    m))))
+                                        (edts-get-mfas arity-macros))))
+      (loop for raw-m in raw-macros collect
+            (let* ((name      (cdr (assoc 'name raw-m)))
+                   (args      (cdr (assoc 'args raw-m)))
+                   (value     (cdr (assoc 'value raw-m)))
+                   (raw-str   (cdr (assoc 'string raw-m)))
+                   (arity     (cdr (assoc-string name arity-macro-strings)))
+                   (arity-str (format "%s/%s" name arity))
+                   (doc       (format "%s -> %s" raw-str value)))
+              (cons arity-str doc))))))
+
+
+(defun edts-get-file-macros (file-name)
   (with-temp-buffer
     (insert-file-contents file-name)
-    (edts-find-macros)))
+    (edts-get-macros)))
 
-(defun edts-find-macros ()
-  (let ((macros (edts--find-macros2)))
-    (when macros
-      (let* ((strings (mapcar #'(lambda (m) (cdr (assoc 'string m))) macros))
-             (parsed  (edts-strings-to-mfas strings)))
-        parsed))))
-
-(defun edts--find-macros2 ()
+(defun edts-get-macros ()
   (save-excursion
     (save-match-data
       (goto-char (point-min))
@@ -116,12 +133,12 @@ buffer. The node is either:
 
 (defun edts-strings-to-mfas (strs)
   "Return a list with each string in STRS parsed to an mfa."
-  (mapcar #'edts--fix-mod (edts-get-mfas strs)))
+  (mapcar #'edts--fix-mfa-mod (edts-get-mfas strs)))
 
-(defun edts--fix-mod (mfa)
-  (let ((m      (cdr (assoc 'module mfa)))
-        (f      (cdr (assoc 'function mfa)))
-        (a      (cdr (assoc 'arity mfa))))
+(defun edts--fix-mfa-mod (mfa)
+  (let ((m (cdr (assoc 'module mfa)))
+        (f (cdr (assoc 'function mfa)))
+        (a (cdr (assoc 'arity mfa))))
     (unless m
       (loop named import
             for (module . imported) in (erlang-get-import) do
