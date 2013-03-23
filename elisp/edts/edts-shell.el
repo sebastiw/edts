@@ -36,6 +36,13 @@
   (let ((buffer (or shell-buffer (current-buffer))))
     (buffer-local-value 'edts-shell-node-name buffer)))
 
+(defvar edts-shell-font-lock-defaults nil
+  "Font-lock defaults for current-buffer")
+(make-variable-buffer-local 'edts-shell-font-lock-defaults)
+
+(defvar edts-shell-font-lock-keywords nil
+  "Font-lock defaults for current-buffer")
+(make-variable-buffer-local 'edts-shell-font-lock-keywords)
 
 (defvar edts-shell-list nil
   "An alist of currently alive edts-shell buffer's. Each entry in the
@@ -113,12 +120,12 @@ PWD and running COMMAND."
       (setq show-trailing-whitespace nil)
 
       ;; comint-variables
-      (add-hook
-       'comint-preoutput-filter-functions 'edts-shell-comint-prefilter t t)
-      (add-hook
-       'comint-output-filter-functions 'edts-shell-comint-filter t t)
-      (add-hook
-       'comint-input-filter-functions 'edts-shell-comint-input-filter t t)
+      (add-hook 'comint-output-filter-functions
+                'edts-shell-comint-output-filter nil t)
+      (add-hook 'comint-preoutput-filter-functions
+                'edts-shell-comint-preoutput-filter nil t)
+      (add-hook 'comint-input-filter-functions
+                'edts-shell-comint-input-filter nil t)
       (make-local-variable 'comint-prompt-read-only)
       (setq comint-input-sender-no-newline t)
       (setq comint-process-echoes t)
@@ -131,11 +138,7 @@ PWD and running COMMAND."
       (define-key comint-mode-map "\t" 'ignore)
 
       ;; erlang-mode syntax highlighting
-      (erlang-syntax-table-init)
-      (erlang-font-lock-init)
-      (setq font-lock-keywords-only nil)
-      (set (make-local-variable 'syntax-propertize-function)
-           'edts-shell-syntax-propertize-function)
+      (edts-shell-font-lock-init)
 
       ;; edts-specifics
       (setq edts-shell-node-name (edts-shell-node-name-from-args args))
@@ -146,58 +149,84 @@ PWD and running COMMAND."
   (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
   (get-buffer buffer-name))
 
-(defun edts-shell-syntax-propertize-function (start end)
-  "Set text properties from START to END; find and set face for process
-output and, if `edts-shell-inhibit-comint-input-highlight' is non-nil,
-disable comint-highligt-input face for input."
-  (edts-shell--set-output-field-face start end)
-  (when edts-shell-inhibit-comint-input-highlight
-    (edts-shell--disable-highlight-input start end)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; New
 
-(defun edts-shell--set-output-field-face (start end)
-  "Find output fields from START to END and set their font-lock-face to
-`edts-shell-output-face."
-  (save-excursion
-    (goto-char start)
-    (flet ((output-p (p) (eq (get-text-property p 'field) 'output)))
-      (let ((output-start nil))
-        (while (<= (point) (min end (1- (point-max))))
-          (cond
-           ;; Found a prompt, let's leave it as it is.
-           ((looking-at edts-shell-prompt-regexp)
-            ;; Set face output before prompt
-            (when output-start
-              (edts-shell--set-output-face output-start (point))
-              (setq output-start nil))
-            ;; subtract one so the forward-char below doesn't become incorrect
-            (goto-char (1- (match-end 0))))
-           ;; Entering output field
-           ((and (output-p (point)) (not output-start))
-            (setq output-start (point)))
-           ;; just went outside of output field
-           ((and (not (output-p (point))) output-start)
-            (edts-shell--set-output-face output-start (point))
-            (setq output-start nil)))
-          ;; ...and hop
-          (forward-char))
-        (when output-start ;; in case last position was inside output
-          (edts-shell--set-output-face output-start (point)))))))
+(defvar edts-shell-prompt-output-p nil
+  "Non nil if the Erlang shell has output its first prompt.")
+(make-variable-buffer-local 'edts-shell-prompt-output-p)
 
-(defun edts-shell--set-output-face (start end)
-  "Set the face to `edts-shell-output-face' from START to END."
-  (put-text-property start end 'font-lock-face 'edts-shell-output-face))
+(defun edts-shell-comint-preoutput-filter (str)
+  "Comint preoutput-filter-function for edts-shell."
+  (unless edts-shell-prompt-output-p
+    (when (string-match edts-shell-prompt-regexp str)
+      (setq edts-shell-prompt-output-p t))
+    (setq str (replace-regexp-in-string "\\^G" "C-q C-g RET" str)))
+  (put-text-property 0
+                     (1- (length str))
+                     'font-lock-face
+                     'edts-shell-output-face str)
+  str)
 
-(defun edts-shell--disable-highlight-input (start end)
-  "Find and disable comint's input highlighting."
-  (let ((input-start nil))
-    (loop for p from start to end do
-          (if (eq (get-text-property p 'font-lock-face) 'comint-highlight-input)
-                (when (not input-start) ;; entering input field
-                  (setq input-start p))
-            (when input-start
-              ;; just went outside of input field
-              (remove-list-of-text-properties input-start p '(font-lock-face))
-              (setq input-start nil))))))
+(defun edts-shell-comint-output-filter (str)
+  "Comint output-filter-function for edts-shell."
+  ;; only the property name is used when removing, the value is ignored.
+  (remove-text-properties
+   comint-last-input-start
+   comint-last-input-end
+   '(font-lock-face nil)))
+
+(defun edts-shell-comint-input-filter (arg)
+  "Comint input-filter-function for edts-shell."
+  (if (string-match (format ".*%s\n$" (char-to-string ?\^G)) arg)
+    ;; Entering the shell job control, switch off auto completion
+      (edts-complete -1)
+    ;; Otherwise switch auto-completion back on if it's off, ie
+    ;; if we were previously in the job control
+    (unless auto-complete-mode
+      (edts-complete 1)))
+  arg)
+
+
+(defun edts-shell-font-lock-init ()
+  "Set up the proper values for font lock variables, but do it in a
+separate temporary buffer and only carry the values of
+`font-lock-defaults' and `font-lock-keywords' over to the buffer-local
+`edts-font-lock-defaults' and `edts-shell-font-lock-keywords'
+respectively so we can use them later when fontifying user input."
+  (let ((defaults nil)
+        (keywords nil))
+    (with-temp-buffer
+      (erlang-syntax-table-init)
+      (erlang-font-lock-init)
+      (setq defaults font-lock-defaults)
+      (setq keywords font-lock-keywords))
+    (setq edts-shell-font-lock-defaults defaults)
+    (setq edts-shell-font-lock-keywords keywords))
+  (set (make-local-variable 'font-lock-fontify-region-function)
+       'edts-shell-font-lock-fontify-region))
+
+(defun edts-shell-font-lock-fontify-region (start end loudly)
+  (while (< start end)
+    (let ((temp-end nil))
+      (case (plist-get (text-properties-at start) 'field)
+        ('output
+         (setq temp-end
+               (or (text-property-not-all start end 'field 'output) end))
+           (font-lock-default-fontify-region start temp-end loudly))
+        (otherwise
+         (let ((font-lock-defaults edts-shell-font-lock-defaults)
+               (font-lock-keywords edts-shell-font-lock-keywords)
+               (output-start (text-property-any start end 'field 'output)))
+           (if output-start
+               (setq temp-end (1- output-start))
+             (setq temp-end end))
+           (with-syntax-table erlang-mode-syntax-table
+             (font-lock-default-fontify-region start temp-end loudly)
+             (save-restriction
+               (narrow-to-region start temp-end)
+               (font-lock-fontify-syntactically-region start temp-end loudly))))))
+      (setq start (1+ temp-end)))))
 
 (defun edts-shell--kill-buffer-hook ()
   "Removes the buffer from `edts-shell-list'."
@@ -210,61 +239,6 @@ disable comint-highligt-input face for input."
       (when (string= (car args) "-sname")
         (return (cadr args)))
       (pop args))))
-
-(defvar edts-shell-prompt-output-p nil
-  "Non nil if the Erlang shell has output its first prompt.")
-(make-variable-buffer-local 'edts-shell-prompt-output-p)
-
-(defun edts-shell-comint-prefilter (arg)
-  "Pre-filtering of comint output. Added to
-`comint-preoutput-filter-functions'."
-  (unless edts-shell-prompt-output-p
-    (when (string-match edts-shell-prompt-regexp arg)
-      (setq edts-shell-prompt-output-p t))
-    (setq arg (replace-regexp-in-string "\\^G" "C-q C-g RET" arg)))
-  (save-excursion
-    (let ((inhibit-field-text-motion t)) (beginning-of-line))
-    (when (looking-at-p edts-shell-prompt-regexp)
-      (setq arg (concat "\^M" arg))))
-  arg)
-
-(defun edts-shell-comint-filter (arg)
-  "Make comint output read-only. Added to `comint-output-filter-functions'."
-  (when (and arg (not (string= arg "")))
-    (setq buffer-undo-list nil)
-    (let* ((limit (+ comint-last-output-start (length arg)))
-           (proc-mark (process-mark (get-buffer-process (current-buffer))))
-           (output-end (save-excursion
-                        (goto-char comint-last-output-start)
-                        (if (re-search-forward edts-shell-prompt-regexp limit t)
-                            (progn
-                              ;; Switch auto-completion back on if it's off, ie
-                              ;; if we were previously in the job control
-                              ;; (unless auto-complete-mode
-                              ;;   (edts-complete 1))
-                              (1- (match-beginning 0)))
-                          proc-mark))))
-      (put-text-property
-       comint-last-input-start comint-last-input-end 'read-only t)
-      (add-text-properties
-       comint-last-output-start output-end
-       '(field output read-only t)))))
-
-(defconst edts-shell-escape-key-regexp
-  (format ".*%s\n$" (char-to-string ?\^G)))
-
-(defun edts-shell-comint-input-filter (arg)
-  "Pre-filtering of comint output. Added to
-`comint-input-filter-functions'."
-  (if (string-match edts-shell-escape-key-regexp arg)
-    ;; Entering the shell job control, switch off auto completion
-      (edts-complete -1)
-    ;; Switch auto-completion back on if it's off, ie
-    ;; if we were previously in the job control
-    (unless auto-complete-mode
-      (edts-complete 1)))
-  arg)
-
 
 (defun edts-shell-find-by-path (path)
   "Return the buffer of the first found shell with PATH as its
