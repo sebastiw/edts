@@ -149,9 +149,6 @@ PWD and running COMMAND."
   (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
   (get-buffer buffer-name))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; New
-
 (defvar edts-shell-prompt-output-p nil
   "Non nil if the Erlang shell has output its first prompt.")
 (make-variable-buffer-local 'edts-shell-prompt-output-p)
@@ -170,14 +167,41 @@ PWD and running COMMAND."
 
 (defun edts-shell-comint-output-filter (str)
   "Comint output-filter-function for edts-shell."
-  ;; only the property name is used when removing, the value is ignored.
-  (remove-text-properties
-   comint-last-input-start
-   comint-last-input-end
-   '(font-lock-face nil)))
+  (edts-shell-maybe-toggle-completion str)
+  ;; Set read-only for all text up until output-start + length of str
+  (edts-shell-set-output-read-only)
+  ;; Set read-only and remove comint's highlighting for input.
+  (edts-shell-set-input-properties))
+
+(defun edts-shell-maybe-toggle-completion (last-output)
+  (save-match-data
+    (if (string-match "\^M\n --> $" last-output)
+        (edts-complete -1)
+      (when (> (length last-output) 0)
+        (edts-complete 1)))))
+
+(defun edts-shell-set-input-properties ()
+  "Update properties of text from `comint-last-input-start' until
+`comint-last-input-start'."
+  (let ((inhibit-read-only t)
+        (start comint-last-input-start)
+        (end comint-last-input-end))
+    ;; Remove the font-lock-face property that comint likes to insert. Only the
+    ;; property name is used when removing, the value is ignored.
+    (remove-text-properties start end '(font-lock-face nil))
+    ;; Make previous input read-only.
+    (put-text-property start end 'read-only t)))
+
+(defun edts-shell-set-output-read-only ()
+  "Makes all text read-only from `comint-output-start' up until `process-mark'."
+  (let* ((start comint-last-output-start)
+         (end  (1- (process-mark (get-buffer-process (current-buffer)))))
+         (inhibit-read-only t))
+    (add-text-properties start end '(field output read-only t))))
 
 (defun edts-shell-comint-input-filter (arg)
   "Comint input-filter-function for edts-shell."
+  (setq buffer-undo-list nil)
   (if (string-match (format ".*%s\n$" (char-to-string ?\^G)) arg)
     ;; Entering the shell job control, switch off auto completion
       (edts-complete -1)
