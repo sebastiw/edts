@@ -111,43 +111,55 @@ PWD and running COMMAND."
     (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)
     (ad-deactivate-regexp "edts-shell-start-process-advice")
     (with-current-buffer buffer-name
-      ;; generic stuff
-      (when (fboundp 'show-paren-mode)
-        (make-local-variable 'show-paren-mode)
-        (show-paren-mode 1))
-      (linum-mode -1)
-      (make-local-variable 'show-trailing-whitepace)
-      (setq show-trailing-whitespace nil)
-
-      ;; comint-variables
-      (add-hook 'comint-output-filter-functions
-                'edts-shell-comint-output-filter nil t)
-      (add-hook 'comint-preoutput-filter-functions
-                'edts-shell-comint-preoutput-filter nil t)
-      (add-hook 'comint-input-filter-functions
-                'edts-shell-comint-input-filter nil t)
-      (make-local-variable 'comint-prompt-read-only)
-      (setq comint-input-sender-no-newline t)
-      (setq comint-process-echoes t)
-      (setq comint-prompt-read-only t)
-      (setq comint-scroll-to-bottom-on-input t)
-      ;; We don't like tabs in our shells. The tab-key should only be used for
-      ;; completion and is set to do just that when auto-complete-mode's
-      ;; keymap is active.
-      (make-local-variable 'comint-mode-map)
-      (define-key comint-mode-map "\t" 'ignore)
-
-      ;; erlang-mode syntax highlighting
-      (edts-shell-font-lock-init)
-
+      (edts-shell-mode 1)
       ;; edts-specifics
       (setq edts-shell-node-name (edts-shell-node-name-from-args args))
-      (edts-complete-setup edts-shell-ac-sources)
       (add-to-list
-       'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))
-      (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t t)))
-  (set-process-query-on-exit-flag (get-buffer-process buffer-name) nil)
+       'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))))
   (get-buffer buffer-name))
+
+(define-minor-mode edts-shell-mode
+  "Minor mode for running and EDTS Erlang shell in an Emacs buffer."
+  :lighter " EDTS-shell"
+  :group edts
+  :require erlang-mode
+  (if edts-shell-mode
+      (edts-shell-mode-setup)
+      (edts-shell-mode-teardown)))
+
+(defun edts-shell-mode-setup ()
+  ;; generic stuff
+  (ignore-errors
+    (make-local-variable 'show-paren-mode)
+    (show-paren-mode 1))
+  (linum-mode -1)
+  (setq show-trailing-whitespace nil)
+  (set-process-query-on-exit-flag (get-buffer-process (current-buffer)) nil)
+  (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t t)
+
+  ;; comint-variables
+  (add-hook 'comint-output-filter-functions
+            'edts-shell-comint-output-filter nil t)
+  (add-hook 'comint-preoutput-filter-functions
+            'edts-shell-comint-preoutput-filter nil t)
+  (add-hook 'comint-input-filter-functions
+            'edts-shell-comint-input-filter nil t)
+  (make-local-variable 'comint-prompt-read-only)
+  (setq comint-input-sender-no-newline t)
+  (setq comint-process-echoes t)
+  (setq comint-prompt-read-only t)
+  (setq comint-scroll-to-bottom-on-input t)
+  ;; We don't like tabs in our shells. The tab-key should only be used for
+  ;; completion and is set to do just that when auto-complete-mode's
+  ;; keymap is active.
+  (make-local-variable 'comint-mode-map)
+  (define-key comint-mode-map "\t" 'ignore)
+
+  ;; erlang-mode syntax highlighting
+  (edts-shell-font-lock-init)
+
+  ;; Auto-completion
+  (edts-complete-setup edts-shell-ac-sources))
 
 (defvar edts-shell-prompt-output-p nil
   "Non nil if the Erlang shell has output its first prompt.")
