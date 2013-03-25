@@ -245,24 +245,39 @@ respectively so we can use them later when fontifying user input."
 (defun edts-shell-font-lock-fontify-region (start end loudly)
   (while (< start end)
     (let ((temp-end nil))
-      (case (plist-get (text-properties-at start) 'field)
+      (case (get-text-property start 'field)
         ('output
-         (setq temp-end
-               (or (text-property-not-all start end 'field 'output) end))
-           (font-lock-default-fontify-region start temp-end loudly))
+         (setq temp-end (edts-shell-output-end start end))
+         (font-lock-default-fontify-region start temp-end loudly))
         (otherwise
-         (let ((font-lock-defaults edts-shell-font-lock-defaults)
-               (font-lock-keywords edts-shell-font-lock-keywords)
-               (output-start (text-property-any start end 'field 'output)))
-           (if output-start
-               (setq temp-end (1- output-start))
-             (setq temp-end end))
-           (with-syntax-table erlang-mode-syntax-table
-             (font-lock-default-fontify-region start temp-end loudly)
-             (save-restriction
-               (narrow-to-region start temp-end)
-               (font-lock-fontify-syntactically-region start temp-end loudly))))))
+         (setq temp-end (edts-shell--non-output-end start end))
+         (edts-shell--fontify-non-output-region start temp-end)))
       (setq start (1+ temp-end)))))
+
+(defun edts-shell-output-end (start bound)
+  "Return the last position of the output field starting at START,
+bounded by BOUND."
+  (or (text-property-not-all start bound 'field 'output) end))
+
+(defun edts-shell--non-output-end (start bound)
+  "Return the last position of the non-output field starting at START,
+bounded by BOUND."
+  (let ((output-start (text-property-any start bound 'field 'output)))
+    (if output-start
+        (1- output-start)
+      bound)))
+
+(defun edts-shell--fontify-non-output-region (start end)
+  (let ((font-lock-defaults edts-shell-font-lock-defaults)
+        (font-lock-keywords edts-shell-font-lock-keywords))
+    (with-syntax-table erlang-mode-syntax-table
+      (font-lock-default-fontify-region start end loudly)
+      ;; Narrow to region so that font-lock doesn't accidentally catch any
+      ;; unmatched quotes from process output and puts font-lock-string-face on
+      ;; the entire buffer.
+      (save-restriction
+        (narrow-to-region start end)
+        (font-lock-fontify-syntactically-region start end loudly)))))
 
 (defun edts-shell--kill-buffer-hook ()
   "Removes the buffer from `edts-shell-list'."
