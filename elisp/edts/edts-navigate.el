@@ -255,7 +255,7 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-who-calls ()
   (interactive)
-  (let ((mfa (edts-mfa-at-point)))
+  (let ((mfa (edts-mfa-at)))
     (if mfa
         (apply #'edts-find-callers  mfa)
       (error "No call at point."))))
