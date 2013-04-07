@@ -487,10 +487,10 @@ ARGS as the other arguments"
       (null (edts-log-error "Unexpected reply: %s"
                             (cdr (assoc 'result res)))))))
 
-(defun edts-get-includes ()
+(defun edts-get-includes (&optional module)
   "Get all includes of module in current-buffer from the node
 associated with that buffer."
-  (let ((info (edts-get-detailed-module-info (ferl-get-module))))
+  (let ((info (edts-get-detailed-module-info (or module (ferl-get-module)))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
 (defun edts-node-name ()

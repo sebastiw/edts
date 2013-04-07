@@ -28,6 +28,11 @@
 
 (require 'ferl)
 
+(defvar edts-navigate-originating-module nil
+  "The module from which we navigated to the current header file. Only
+set for .hrl-files.")
+(make-variable-buffer-local 'edts-navigate-originating-module)
+
 ;; Nameclash (sort of) with edts-find source. One of the names should be
 ;; changed to indicate the differences in how they work.
 (defun edts-find-global-function ()
@@ -128,15 +133,17 @@ directive."
   "Open the source for the header file under point."
   (let* ((headerfile (edts-header-at-point))
          (mark (copy-marker (point-marker))) ;; Add us to the history list
-         (includes (edts-get-includes))
+         (includes (edts-navigate-get-includes))
+         (module (or (ferl-get-module) edts-navigate-originating-module))
          (file (find-if #'(lambda(x) (string=
                                       (file-name-nondirectory headerfile)
                                       (file-name-nondirectory x)))
                         includes)))
-    (if file
-        (progn (edts-find-file-existing file)
-               (goto-char (point-min)))
-        (null (error "No header filename at point")))))
+    (if (not file)
+        (null (error "No header filename at point"))
+      (edts-find-file-existing file)
+      (setq edts-navigate-originating-module module)
+      (goto-char (point-min)))))
 
 (defun edts-has-suffix (suffix string)
   "returns string if string has suffix"
@@ -184,7 +191,8 @@ and make an entry in edts-window-history-ring."
 Move point there and make an entry in edts-window-history-ring."
   (let ((mark        (copy-marker (point-marker)))
         (group-index (or group-index 0))
-        (includes    (edts-get-includes))
+        (includes    (edts-navigate-get-includes))
+        (module      (or (ferl-get-module) edts-navigate-originating-module))
         (found       nil))
     (with-temp-buffer
       (save-excursion
@@ -195,10 +203,16 @@ Move point there and make an entry in edts-window-history-ring."
           (pop includes))))
     (when found
       (edts-find-file-existing found)
+      (setq edts-navigate-originating-module module)
       (goto-char (point-min))
       (re-search-forward re nil t)
       (beginning-of-line))
     found))
+
+(defun edts-navigate-get-includes ()
+  (if (string= (file-name-extension (buffer-file-name)) "hrl")
+      (edts-get-includes edts-navigate-originating-module)
+    (edts-get-includes)))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
