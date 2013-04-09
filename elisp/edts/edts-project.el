@@ -106,8 +106,13 @@ Example:
 (defun edts-project-otp-selector (file)
   "Try to figure out if FILE should be part of an otp-project."
   (let ((path (look-for "bin/erl")))
-    (when (and path (string-match "\\(.*\\)/lib/erlang[/]?$" path))
-      (match-string 1 path))))
+    (when (and path (not (or (string= path "/bin")
+                             (string= path "/usr/bin"))))
+      (if (string-match "\\(.*\\)/lib/erlang[/]?$" path)
+          ;; Match out lib/erlang part if we're in an install directory.
+          (match-string 1 path)
+        ;; Do nothing if we're in an otp-repository.
+        path))))
 
 (define-project-type edts-temp (edts)
   (edts-project-temp-selector file)
