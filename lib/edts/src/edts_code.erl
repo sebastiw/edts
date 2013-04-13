@@ -277,6 +277,7 @@ form_to_mfa({op,    _, '/', {remote, _,
                              {atom, _, F}},
                              {integer, _, A}}) -> {M, F, A};
 form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
+form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
 form_to_mfa({'fun', _, {function,
                         {atom, _, M},
                         {atom, _, F},
