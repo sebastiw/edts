@@ -26,6 +26,8 @@
 -module(edts_code).
 
 %%%_* Includes =================================================================
+-include_lib("kernel/include/file.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
@@ -275,7 +277,10 @@ form_to_mfa({op,    _, '/', {remote, _,
                              {atom, _, F}},
                              {integer, _, A}}) -> {M, F, A};
 form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
-form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
+form_to_mfa({'fun', _, {function,
+                        {atom, _, M},
+                        {atom, _, F},
+                        {integer, _, A}}})     -> {M, F, A};
 form_to_mfa({call,  _, {var,  _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {atom, _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {remote,
@@ -476,32 +481,47 @@ load_all_in_dir(Dir) ->
   [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
 
 ensure_loaded(File) ->
-  LoadFileName = filename:rootname(File),
-  Mod = list_to_atom(filename:basename(LoadFileName)),
-  case code:is_sticky(Mod) of
-    true  -> {false, Mod};
-    false ->
+  LoadFileName = filename:rootname(File), %% Remove extension
+  Mod = list_to_atom(filename:basename(LoadFileName)), %% Remove dir-part
+  case not code:is_sticky(Mod) andalso module_modified_p(Mod, File) of
+    false -> {false, Mod};
+    true  ->
       Loaded =
         case code:is_loaded(Mod) of
           {file, File} -> false;
-          {file, _}    -> try_load(Mod, LoadFileName);
-          false        -> try_load(Mod, LoadFileName)
+          {file, _}    -> try_load_mod(Mod, LoadFileName);
+          false        -> try_load_mod(Mod, LoadFileName)
         end,
       {Loaded, Mod}
   end.
 
 
-try_load(Mod, File) ->
-  try
-    code:purge(Mod),
-    case code:load_abs(File) of
-      {module, Mod} -> true;
-      {error, Rsn}  -> error(Rsn)
-    end
+try_load_mod(Mod, File) ->
+  try load_mod(Mod, File)
   catch
     C:E ->
       error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
       false
+  end.
+
+load_mod(Mod, File) ->
+  code:purge(Mod),
+  case code:load_abs(File) of
+    {module, Mod} -> true;
+    {error, Rsn}  -> error(Rsn)
+  end.
+
+module_modified_p(Mod, File) ->
+  case file:read_file_info(File) of
+    {error, _} -> false;
+    {ok, #file_info{mtime = MTime}} ->
+      case lists:keyfind(time, 1, Mod:module_info(compile)) of
+        false -> true;
+        {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} ->
+          CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
+          calendar:datetime_to_gregorian_seconds(MTime) >
+            calendar:datetime_to_gregorian_seconds(CompileTime)
+      end
   end.
 
 get_compile_outdir(File) ->
@@ -738,6 +758,28 @@ extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
 
+module_modified_p_test_() ->
+  ?debugHere,
+  AppDir = code:lib_dir(edts),
+  TmpDir = filename:join(AppDir, "tmp"),
+  Src    = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
+  {file, OldBeam} = code:is_loaded(?MODULE),
+  NewBeam   = filename:join(TmpDir, atom_to_list(?MODULE) ++ ".beam"),
+  {setup,
+    fun() ->
+        ?debugHere,
+        file:make_dir(TmpDir),
+        {ok, ?MODULE} = compile:file(Src, [{outdir, TmpDir}]),
+        ?debugHere
+    end,
+    fun(_) ->
+        ok = file:delete(NewBeam),
+        ok = file:del_dir(TmpDir)
+    end,
+    [ ?_assertNot(module_modified_p(?MODULE, OldBeam))
+      %% ?_assert(module_modified_p(?MODULE, NewBeam))
+    ]}.
+
 string_to_mfa_test_() ->
   [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
                   string_to_mfa("foo()")),
@@ -851,17 +893,17 @@ get_file_and_line_non_parametrised_new_test_() ->
   ].
 
 get_module_source_test_() ->
-  ErlangAbsName = filename:join([code:lib_dir(erts, src), "erlang.erl"]),
+  ErlangAbsName = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
   [?_assertEqual({error, not_found},
                  get_module_source_from_info(erlang:module_info())),
    ?_assertEqual({ok, ErlangAbsName},
-                 get_module_source_from_beam(erlang)),
+                 get_module_source_from_beam(?MODULE)),
    ?_assertEqual({error, not_found},
                  get_module_source_from_info([])),
    ?_assertEqual({error, not_found},
                  get_module_source_from_beam(erlang_foo)),
    ?_assertEqual({ok, ErlangAbsName},
-                get_module_source(erlang, erlang:module_info())),
+                get_module_source(?MODULE, ?MODULE:module_info())),
    ?_assertEqual({error, not_found},
                 get_module_source(erlang_foo, []))
   ].
@@ -986,6 +1028,13 @@ get_compile_outdir_test_() ->
    }].
 
 %%%_* Test helpers =============================================================
+
+edts_src() ->
+  {ok, Cwd} = file:get_cwd(),
+  case filename:basename(Cwd) of
+    ".eunit" -> Cwd;
+    _        -> code:lib_dir(edts, src)
+  end.
 
 test_file_forms(File) ->
   Path = filename:join([code:priv_dir(edts), "test/modules", File]),
