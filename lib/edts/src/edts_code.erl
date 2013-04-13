@@ -759,7 +759,6 @@ extract_compile_opt_p(_)                       -> false.
 %%%_* Unit tests ===============================================================
 
 module_modified_p_test_() ->
-  ?debugHere,
   AppDir = code:lib_dir(edts),
   TmpDir = filename:join(AppDir, "tmp"),
   Src    = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
@@ -767,17 +766,15 @@ module_modified_p_test_() ->
   NewBeam   = filename:join(TmpDir, atom_to_list(?MODULE) ++ ".beam"),
   {setup,
     fun() ->
-        ?debugHere,
         file:make_dir(TmpDir),
-        {ok, ?MODULE} = compile:file(Src, [{outdir, TmpDir}]),
-        ?debugHere
+        {ok, ?MODULE} = compile:file(Src, [{outdir, TmpDir}])
     end,
     fun(_) ->
         ok = file:delete(NewBeam),
         ok = file:del_dir(TmpDir)
     end,
-    [ ?_assertNot(module_modified_p(?MODULE, OldBeam))
-      %% ?_assert(module_modified_p(?MODULE, NewBeam))
+    [ ?_assertNot(module_modified_p(?MODULE, OldBeam)),
+      ?_assert(module_modified_p(?MODULE, NewBeam))
     ]}.
 
 string_to_mfa_test_() ->
