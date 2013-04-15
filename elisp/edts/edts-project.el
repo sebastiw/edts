@@ -27,7 +27,7 @@
 (require 'eproject-extras)
 (require 'path-util)
 
-(setq eproject-prefer-subproject nil)
+(setq eproject-prefer-subproject t)
 (add-to-list 'auto-mode-alist '("\\.edts\\'" . dot-eproject-mode))
 
 (defcustom edts-project-inhibit-conversion nil
