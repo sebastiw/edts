@@ -277,11 +277,12 @@ form_to_mfa({op,    _, '/', {remote, _,
                              {atom, _, F}},
                              {integer, _, A}}) -> {M, F, A};
 form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
-form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
 form_to_mfa({'fun', _, {function,
                         {atom, _, M},
                         {atom, _, F},
                         {integer, _, A}}})     -> {M, F, A};
+form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
+
 form_to_mfa({call,  _, {var,  _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {atom, _, F}, Args})    -> {F, length(Args)};
 form_to_mfa({call,  _, {remote,
@@ -519,7 +520,7 @@ module_modified_p(Mod, File) ->
       case lists:keyfind(time, 1, Mod:module_info(compile)) of
         false -> true;
         {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} ->
-          UniversalMTime = calendar:local_time_to_universal_time(MTime),
+          UniversalMTime = calendar:local_time_to_universal_time_dst(MTime),
           CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
           calendar:datetime_to_gregorian_seconds(UniversalMTime) >
             calendar:datetime_to_gregorian_seconds(CompileTime)
