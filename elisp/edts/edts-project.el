@@ -105,14 +105,19 @@ Example:
 
 (defun edts-project-otp-selector (file)
   "Try to figure out if FILE should be part of an otp-project."
-  (let ((path (look-for "bin/erl")))
-    (when (and path (not (or (string= path "/bin")
-                             (string= path "/usr/bin"))))
-      (if (string-match "\\(.*\\)/lib/erlang[/]?$" path)
-          ;; Match out lib/erlang part if we're in an install directory.
-          (match-string 1 path)
-        ;; Do nothing if we're in an otp-repository.
-        path))))
+  (when (not (edts-project-selector file))
+    (edts-project-otp-selector-path file)))
+
+(defun edts-project-otp-selector-path (file)
+    (let ((path (look-for "bin/erl")))
+      (when (and path (not (or (string= (directory-file-name path) "/bin") ;; ?
+                               (string= (directory-file-name path) "/")
+                               (string= (directory-file-name path) "/usr"))))
+        (if (string-match "\\(.*\\)/lib/erlang[/]?$" path)
+            ;; Match out lib/erlang part if we're in an install directory.
+            (match-string 1 path)
+          ;; Do nothing if we're in an otp-repository.
+          path))))
 
 (define-project-type edts-temp (edts)
   (edts-project-temp-selector file)
@@ -121,8 +126,14 @@ Example:
 
 (defun edts-project-temp-selector (file)
   "Try to figure out if FILE should be part of a temp-project."
-  (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
+  (when (and
+         ;; otp-selector also checks that the normal project selector returns
+         ;; nil
+         (not (edts-project-selector file))
+         (not (edts-project-otp-selector file))
+         (string-match "\\.[eh]rl$" file))
     (edts-project--temp-root file)))
+
 
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
