@@ -520,7 +520,7 @@ module_modified_p(Mod, File) ->
       case lists:keyfind(time, 1, Mod:module_info(compile)) of
         false -> true;
         {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} ->
-          UniversalMTime = calendar:local_time_to_universal_time_dst(MTime),
+          [UniversalMTime] = calendar:local_time_to_universal_time_dst(MTime),
           CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
           calendar:datetime_to_gregorian_seconds(UniversalMTime) >
             calendar:datetime_to_gregorian_seconds(CompileTime)
