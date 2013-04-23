@@ -895,17 +895,23 @@ get_file_and_line_non_parametrised_new_test_() ->
 get_module_source_test_() ->
   ErlangAbsName = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
   [?_assertEqual({error, not_found},
-                 get_module_source_from_info(erlang:module_info())),
+                 module_source_test_ret(
+                   get_module_source_from_info(erlang:module_info()))),
    ?_assertEqual({ok, ErlangAbsName},
-                 get_module_source_from_beam(?MODULE)),
+                 module_source_test_ret(
+                   get_module_source_from_beam(?MODULE))),
    ?_assertEqual({error, not_found},
-                 get_module_source_from_info([])),
+                 module_source_test_ret(
+                   get_module_source_from_info([]))),
    ?_assertEqual({error, not_found},
-                 get_module_source_from_beam(erlang_foo)),
+                 module_source_test_ret(
+                   get_module_source_from_beam(erlang_foo))),
    ?_assertEqual({ok, ErlangAbsName},
-                get_module_source(?MODULE, ?MODULE:module_info())),
+                module_source_test_ret(
+                 get_module_source(?MODULE, ?MODULE:module_info()))),
    ?_assertEqual({error, not_found},
-                get_module_source(erlang_foo, []))
+                module_source_test_ret(
+                 get_module_source(erlang_foo, [])))
   ].
 
 path_flatten_test_() ->
@@ -1028,6 +1034,9 @@ get_compile_outdir_test_() ->
    }].
 
 %%%_* Test helpers =============================================================
+
+module_source_test_ret({ok, Path}) -> edts_util:shorten_path(Path);
+module_source_test_ret(Ret)        -> Ret.
 
 edts_src() ->
   {ok, Cwd} = file:get_cwd(),
