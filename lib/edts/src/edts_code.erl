@@ -897,7 +897,7 @@ get_module_source_test_() ->
   [?_assertEqual({error, not_found},
                  module_source_test_ret(
                    get_module_source_from_info(erlang:module_info()))),
-   ?_assertEqual({ok, ErlangAbsName},
+   ?_assertEqual(ErlangAbsName,
                  module_source_test_ret(
                    get_module_source_from_beam(?MODULE))),
    ?_assertEqual({error, not_found},
@@ -906,7 +906,7 @@ get_module_source_test_() ->
    ?_assertEqual({error, not_found},
                  module_source_test_ret(
                    get_module_source_from_beam(erlang_foo))),
-   ?_assertEqual({ok, ErlangAbsName},
+   ?_assertEqual(ErlangAbsName,
                 module_source_test_ret(
                  get_module_source(?MODULE, ?MODULE:module_info()))),
    ?_assertEqual({error, not_found},
