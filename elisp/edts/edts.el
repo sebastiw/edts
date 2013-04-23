@@ -165,9 +165,12 @@ buffer. The node is either:
       (error "function %s/%s not found" function arity))))
 
 
-(defun edts-query (prompt choices)
+(defun edts-query (prompt choices &optional err-msg)
   "Query the user for a choice"
-  (ido-completing-read prompt choices))
+  (let ((choice  (ido-completing-read prompt choices))
+        (err-msg (or err-msg "No such alternative")))
+    (unless (member choice choices)
+      (error err-msg))))
 
 (defun edts-find-doc ()
   "Find and show the man-page documentation for a function."

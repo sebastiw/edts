@@ -39,19 +39,21 @@ set for .hrl-files.")
   "Find a module in the current project."
   (interactive)
   (let ((modules (edts-get-modules)))
-    (if modules
-        (let* ((choice (edts-query "Module: " modules))
-               (file (cdr (assoc 'source (edts-get-basic-module-info choice)))))
-          (edts-find-file-existing file)
-          (edts-find-local-function nil))
-        (error "No module found"))))
+    (unless modules
+      (error "No modules found"))
+    (let* ((choice (edts-query "Module: " modules "No such module"))
+           (file (cdr (assoc 'source (edts-get-basic-module-info choice)))))
+      (edts-find-file-existing file)
+      (edts-find-local-function nil))))
 
 (defun edts-find-local-function (set-mark)
   "Find a function in the current module."
   (interactive '(t))
   (let* ((functions (ferl-local-functions))
          (names     (mapcar #'(lambda (el) (car el)) functions))
-         (choice    (edts-query "Function: " (cons "-Top of Module-" names)))
+         (choice    (edts-query
+                     "Function: " (cons "-Top of Module-" names)
+                     "No such function"))
          (mark      (point-marker)))
     (if (string= "-Top of Module-" choice)
         (goto-char 0)
