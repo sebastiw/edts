@@ -170,7 +170,8 @@ buffer. The node is either:
   (let ((choice  (ido-completing-read prompt choices))
         (err-msg (or err-msg "No such alternative")))
     (unless (member choice choices)
-      (error err-msg))))
+      (error err-msg))
+    choice))
 
 (defun edts-find-doc ()
   "Find and show the man-page documentation for a function."
