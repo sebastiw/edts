@@ -13,7 +13,7 @@ clean:
 
 .PHONY: ert
 ert:
-	emacs -Q --batch -l edts-start.el -f ert-run-tests-batch-and-exit
+	emacs -q --no-splash --batch -l edts-start.el -f ert-run-tests-batch-and-exit
 
 .PHONY: eunit
 eunit:
