@@ -57,7 +57,7 @@ the node, version 1.2 (or perhaps later.)"
               (point)))
   (let* ((body       (buffer-substring-no-properties start end))
          (text       (edts-refactor-strip-macros body))
-         (free-vars  (cdr (assoc 'vars (edts-get-free-vars text))))
+         (free-vars  (edts-get-free-vars text))
          (arglist    (concat "(" (mapconcat #'identity free-vars ", ") ")"))
          (indent-lvl erlang-indent-level))
     ;; rewrite the original as a call
