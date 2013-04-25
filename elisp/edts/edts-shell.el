@@ -113,7 +113,8 @@ PWD and running COMMAND."
     (with-current-buffer buffer-name
       (edts-shell-mode 1)
       ;; edts-specifics
-      (setq edts-shell-node-name (edts-shell-node-name-from-args args))
+      (setq edts-shell-node-name (or (edts-shell-node-name-from-args args)
+                                     node-name))
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))))
   (get-buffer buffer-name))
