@@ -21,9 +21,6 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
-;;
-;; Rudimentary project support for edts so that we can relate buffers to
-;; projects and communicate with the correct nodes.
 
 (defcustom edts-erl-command (executable-find "erl")
   "Location of the erl-executable to use when launching the main EDTS-
