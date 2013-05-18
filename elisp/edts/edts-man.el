@@ -25,7 +25,7 @@
 
 (defcustom edts-man-root
   (concat (file-name-as-directory edts-erl-root) "man/")
-  "Location of the Erlang documentation in html-format."
+  "Location of the Erlang documentation in man-format."
   :type  'directory
   :group 'edts)
 
