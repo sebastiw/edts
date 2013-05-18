@@ -353,17 +353,19 @@ current buffer."
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-module-exports (module)
+(defun edts-get-module-exports (module &optional no-error)
   "Fetches all exported functions of MODULE on the node associated with
 current buffer. Does not fetch detailed information about the individual
-functions."
+functions. If NO-ERROR is non-nil, don't report an error if the request
+fails."
   (let* ((resource (list "nodes" (edts-node-name)
                          "modules" module))
          (res      (edts-rest-get resource '(("info_level" . "basic")))))
     (if (equal (assoc 'result res) '(result "200" "OK"))
           (cdr (assoc 'exports (cdr (assoc 'body res))))
+      (unless no-error
         (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))))
 
 (defun edts-function-to-string (function-struct)
   "Convert FUNCTION-STRUCT to a string of <function>/<arity>."

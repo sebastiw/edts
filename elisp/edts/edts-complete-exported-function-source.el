@@ -56,7 +56,7 @@
         (otherwise
          (edts-log-debug "Initializing exported function completions")
          (let* ((module  (symbol-at (- point 1)))
-                (exports (edts-get-module-exports module)))
+                (exports (edts-get-module-exports module t)))
            (setq edts-complete-exported-function-candidates
                  (mapcar #'edts-function-to-string exports))))))))
 
