@@ -168,8 +168,9 @@ remote_load_module(Node, Mod) ->
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
   {File, _Opts}  = filename:find_src(Mod),
-  {ok, Mod, Bin} = call(Node, compile, file, [File, [debug_info, binary]]),
-  {module, Mod}  = call(Node, code, load_binary, [Mod, File, Bin]).
+  {ok, Mod, Bin} = remote_compile_module(Node, File),
+  {module, Mod}  = remote_load_module(Node, Mod, File, Bin).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -200,6 +201,19 @@ ensure_services_started(Node, Services) ->
 
 
 %%%_* Internal functions =======================================================
+remote_load_module(Node, Mod, File, Bin) ->
+  case call(Node, code, load_binary, [Mod, File, Bin]) of
+    {module, Mod} = Res -> Res;
+    {error, Rsn}        -> erlang:error(Rsn)
+  end.
+
+
+remote_compile_module(Node, File) ->
+  case call(Node, compile, file, [File, [debug_info, binary, report]]) of
+    {ok, _, _} = Res -> Res;
+    {error, Rsn}     -> erlang:error(Rsn)
+  end.
+
 
 ensure_service_started(Node, Service) ->
   case rpc:call(Node, Service, started_p, []) of
