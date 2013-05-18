@@ -298,7 +298,9 @@ wait_until_started() ->
 
 get_undefined_function_calls([])      -> [];
 get_undefined_function_calls(Modules) ->
-  do_query("(XLin) ((XC - UC) || (XU - X - B) * XC | ~p : Mod)", [Modules]).
+  %% This query means: external calls (XC) from Modules to unknown function (U)
+  %% and local functions (L).
+  do_query("(XLin) ((XC | ~p : Mod) || (U + L))", [Modules]).
 
 get_unused_exports([])      -> [];
 get_unused_exports(Modules) ->
