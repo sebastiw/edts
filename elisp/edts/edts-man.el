@@ -25,7 +25,8 @@
 
 (defcustom edts-man-root
   (concat (file-name-as-directory edts-erl-root) "man/")
-  "Location of the Erlang documentation in man-format."
+  "Location of the Erlang documentation in man-format. Do not set this
+variable directly, use `edts-man-set-root' instead."
   :type  'directory
   :group 'edts)
 
@@ -59,15 +60,18 @@
 
 (defun edts-man-module-function-entries (module)
   "Return a list of all functions documented in the man-page of MODULE."
-  (let ((funs nil)
-        (re   (concat "^[[:space:]]*"(edts-any-function-regexp))))
+  (let (funs
+        (re (concat "^[[:space:]]*"(edts-any-function-regexp))))
     (with-temp-buffer
       (insert-file-contents (edts-man-locate-file edts-man-root module 3))
       (goto-char 0)
       (while (re-search-forward re nil t)
-        (push (format "%s/%s" (match-string 1)
-                      (ferl-paren-arity (match-string 2))) funs)))
-    (reverse funs)))
+        (push (match-string 1) funs))
+      ;; each mfa is '(mod fun arity), but we don't want the module part
+      (sort
+       (mapcar #'(lambda (mfa) (format "%s/%s"  (cadr mfa) (caddr mfa)))
+               (edts-strings-to-mfas funs))
+       #'string-lessp))))
 
 (defun edts-man-extract-function-entry (module function)
   "Extract and display the man-page entry for MODULE:FUNCTION in
@@ -101,9 +105,18 @@
   "Find and display the man-page entry for MODULE:FUNCTION in
 `edts-man-root'."
   (edts-man-find-module module)
-  (re-search-forward (concat "^[[:space:]]*"
-                             (edts-function-regexp function arity)))
-  (beginning-of-line))
+  (let (foundp
+        (re (format "^[[:space:]]*\\(%s\\)" function)))
+    (while (and (not foundp) (re-search-forward re))
+      (save-excursion
+        (goto-char (match-beginning 1))
+        (let ((matchp (equal (list function arity)
+                             (cdr (edts-mfa-at (point)))))
+              ;; Check that the face is bold just in case the function occurs
+              ;; in some example earlier in the file.
+              (boldp (eq (face-at-point) 'woman-bold)))
+          (setq foundp (and matchp boldp)))))
+    (goto-char (match-beginning 1))))
 
 (defun edts-man-find-module (module)
   "Find and show the man-page documentation for MODULE under
@@ -114,8 +127,11 @@
 
 (defun edts-man-locate-file (root file page)
   "Locate man entry for FILE on PAGE under ROOT."
-  (let ((dir (edts-man-locate-dir root page)))
-    (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
+  (let* ((dir (edts-man-locate-dir root page))
+         (file-name (locate-file file (list dir) '(".3" ".3.gz" ".3erl.gz"))))
+    (unless file-name
+      (error (format "Could not locate man-file for %s" file)))
+    file-name))
 
 (defun edts-man-locate-dir (root man-page)
   "Get the directory of MAN-PAGE under ROOT."

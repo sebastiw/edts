@@ -201,7 +201,8 @@ negative number for ARITY will give a regexp matching any arity."
 
 (defun edts-any-function-regexp ()
   "Construct a regexp matching any function."
-  (format "%s[[:space:]\n]*(\\(.*\\))[[:space:]]*->" erlang-atom-regexp))
+  ;; Kind of broken for strings, comments and single quoted atoms
+  (format "\\(%s[[:space:]\n]*(.*)\\)[[:space:]]*->" erlang-atom-regexp))
 
 (defun edts-argument-regexp (arity)
   "Contstruct a regexp matching ARITY arguments. A negative number
