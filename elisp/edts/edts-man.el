@@ -22,9 +22,10 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(defconst edts-man-download-url "http://www.erlang.org/download"
+  "Where to download the erlang documentation from.")
 
-(defcustom edts-man-root
-  (concat (file-name-as-directory edts-erl-root) "man/")
+(defcustom edts-man-root nil
   "Location of the Erlang documentation in man-format. Do not set this
 variable directly, use `edts-man-set-root' instead."
   :type  'directory
@@ -37,22 +38,86 @@ variable directly, use `edts-man-set-root' instead."
 (defvar edts-man-module-cache nil
   "A cached list of available module man-pages.")
 
+(defun edts-man-setup ()
+  (interactive)
+  (when (yes-or-no-p "This will update your .emacs, continue?")
+    ;; This is to capture accidental enter key hits for people that have
+    ;; exchanged yes-or-no-p for y-or-n-p. This would otherwise cause them
+    ;; accidentally choose the first otp-version in the list.
+    (read-event nil nil 0.2)
+    (edts-log-info "Fetching available OTP versions...")
+    (let* ((vsn-urls   (edts-man--fetch-vsns))
+           (vsns       (reverse (sort (mapcar #'car vsn-urls) #'string-lessp)))
+           (vsn        (edts-man--choose-vsn vsns))
+           (vsn-url    (concat edts-man-download-url
+                               "/"
+                               (cdr (assoc vsn vsn-urls))))
+           (dir        (edts-man--choose-dir vsn)))
+      (edts-log-info "Fetching %s..." vsn-url)
+      (edts-man--fetch-and-extract vsn-url dir)
+      (customize-save-variable 'edts-man-root dir)
+      ;; Update the cache
+      (edts-man-modules)
+      (edts-log-info "OTP man-pages stored under %s" dir))))
+
+(defun edts-man--fetch-and-extract (url dir)
+  "Fetch man-pages (tar.gz) from URL and extract the archive into DIR."
+  (with-temp-buffer
+    (let ((cmd (format "wget -O - %s | tar -xz --directory %s" url dir)))
+      (shell-command cmd (current-buffer)))))
+
+(defun edts-man--choose-dir (vsn)
+  "Query the user for where to store documentation."
+  (let* ((default (path-util-join edts-data-directory "doc"))
+         (query "Where do you want to store the documentation? ")
+         (dir   (path-util-join (read-file-name query default default) vsn)))
+    (edts-man--ensure-dir dir)
+    dir))
+
+(defun edts-man--ensure-dir (dir)
+  (if (file-exists-p dir)
+      (unless (file-directory-p dir)
+        (error "File exists and is not a directory"))
+    (if (yes-or-no-p (format "Do you want to create directory %s?" dir))
+        (make-directory dir t)
+      (error "Need somewhere to store documentation"))))
+
+(defun edts-man--fetch-vsns ()
+  (with-current-buffer (url-retrieve-synchronously edts-man-download-url)
+    (goto-char (point-min))
+    (let ((case-fold-search t)
+          (re "<a href=\".*/\\(otp_doc_man_\\(r[0-9]+[a-z]-?[0-9]*\\)\\..*\\)\">")
+          vsn-urls)
+      (while (< (point) (point-max))
+        (re-search-forward re nil 'move-point)
+        (push (cons (match-string 2) (match-string 1)) vsn-urls))
+      (kill-buffer)
+      vsn-urls)))
+
+(defun edts-man--choose-vsn (vsns)
+  "Query the user to choose between available versions of man-pages."
+  (edts-query "Please choose an OTP release:" vsns "No such version available"))
+
 (defun edts-man-set-root (root)
   "Sets `edts-man-root' to ROOT and updates `edts-man-module-cache'."
+  (unless (file-directory-p root)
+    (error "No such directory: %s" root))
   (setq edts-man-root root)
-  (setq edts-man-module-cache (edts-man-modules))
+  (edts-man-modules)
   t)
 
 (defun edts-man-modules ()
   "Return a list of all modules for which there are man-pages under
 `edts-man-root'."
   (or edts-man-module-cache
-      (let* ((dir     (edts-man-locate-dir edts-man-root 3))
-             (modules (directory-files dir nil edts-man-file-ext-regexp)))
-        (setq edts-man-module-cache
-              (mapcar #'edts-man-file-base-name modules)))))
+      (setq edts-man-module-cache (edts-man--update-module-cache))))
 
-(defun edts-man-file-base-name (file-name)
+(defun edts-man--update-module-cache ()
+  (let* ((dir     (edts-man-locate-dir edts-man-root 3))
+         (modules (directory-files dir nil edts-man-file-ext-regexp)))
+    (mapcar #'edts-man--file-base-name modules)))
+
+(defun edts-man--file-base-name (file-name)
   "Return file-name without its extension(s)."
   (while (string-match "\\." file-name)
     (setq file-name (file-name-sans-extension file-name)))
@@ -67,8 +132,8 @@ variable directly, use `edts-man-set-root' instead."
       (goto-char 0)
       (while (re-search-forward re nil t)
         (push (match-string 1) funs))
-      ;; each mfa is '(mod fun arity), but we don't want the module part
       (sort
+       ;; each mfa is '(mod fun arity), but we don't want the module part
        (mapcar #'(lambda (mfa) (format "%s/%s"  (cadr mfa) (caddr mfa)))
                (edts-strings-to-mfas funs))
        #'string-lessp))))
@@ -135,8 +200,9 @@ variable directly, use `edts-man-set-root' instead."
 
 (defun edts-man-locate-dir (root man-page)
   "Get the directory of MAN-PAGE under ROOT."
-  (concat
-   (file-name-as-directory edts-man-root) "man" (int-to-string man-page)))
+  (unless edts-man-root
+    (error "edts-man not configured, please run `edts-man-setup'"))
+  (path-util-join edts-man-root "man" (concat "man" (int-to-string man-page))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
