@@ -183,10 +183,35 @@ buffer. The node is either:
                (fun-arity (string-to-number (cadr split))))
           (edts-man-find-function-entry module fun-name fun-arity)))))
 
+(defun edts-show-doc-under-point ()
+  "Find and display the man-page documentation for function under point
+in a tooltip."
+  (interactive)
+  (let* ((mfa      (edts-mfa-at (point)))
+         (module   (car mfa))
+         (function (cadr mfa))
+         (arity    (caddr mfa)))
+    (edts-show-tooltip
+     (condition-case ex
+        (edts-man-extract-function-entry module function)
+        ('error
+         (edts-extract-doc-from-source module function arity))))))
+
+(defun edts-show-tooltip (text)
+  "Show a tooltip using either popup.el or pos-tip.el"
+  (condition-case ex
+      (pos-tip-show text)
+    ('error
+     (popup-tip text))))
+
 (defun edts-extract-doc-from-source (module function arity)
   "Find documentation for MODULE:FUNCTION/ARITY"
   (let ((source (cdr (assoc 'source (edts-get-basic-module-info module)))))
-    (edts-doc-extract-function-information-from-source source function arity)))
+    (if source
+        (edts-doc-extract-function-information-from-source source
+                                                           function
+                                                           arity)
+      (null (edts-log-error "No such module: %s" module)))))
 
 (defun edts-function-head-regexp (function &optional arity)
   "Construct a regexp matching FUNCTION(arg1, ..., argARITY). A negative number
