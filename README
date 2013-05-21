@@ -117,14 +117,14 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                                             :node-sname "my-project-dev")
                                             :lib-dirs '("lib" "test" "hacks"))
 
-That should be all it takes. If it's not, please report any issues on github.
-
 - Get the Erlang documentation (optional).
   - This is now a guided procedure. Just hit M-x edts-man-setup RET and follow
     the instructions.
 
     NB. Requires an internet connection and the process will make a small change
     to you .emacs-file.
+
+That should be all it takes. If it's not, please report any issues on github.
 
 ## Backward compatibility note ##
 
