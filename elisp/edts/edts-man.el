@@ -139,7 +139,7 @@ interactively to set up your man-pages instead")
 (defun edts-man-module-function-entries (module)
   "Return a list of all functions documented in the man-page of MODULE."
   (let (funs
-        (re (concat "^[[:space:]]*"(edts-any-function-regexp))))
+        (re (concat "^\\.B\n"(edts-any-function-regexp))))
     (with-temp-buffer
       (insert-file-contents (edts-man-locate-file edts-man-root module 3))
       (goto-char 0)
