@@ -41,26 +41,35 @@ Location of the OTP documentation man-pages."
   "A cached list of available module man-pages.")
 
 (defun edts-man-setup ()
+  "Download and install OTP man-pages."
   (interactive)
   (when (yes-or-no-p "This will update your .emacs, continue?")
-    ;; This is to capture accidental enter key hits for people that have
-    ;; exchanged yes-or-no-p for y-or-n-p. This would otherwise cause them
-    ;; accidentally choose the first otp-version in the list.
-    (read-event nil nil 0.2)
-    (edts-log-info "Fetching available OTP versions...")
-    (let* ((vsn-urls   (edts-man--fetch-vsns))
-           (vsns       (reverse (sort (mapcar #'car vsn-urls) #'string-lessp)))
-           (vsn        (edts-man--choose-vsn vsns))
-           (vsn-url    (concat edts-man-download-url
-                               "/"
-                               (cdr (assoc vsn vsn-urls))))
-           (dir        (edts-man--choose-dir vsn)))
-      (edts-log-info "Fetching %s..." vsn-url)
-      (edts-man--fetch-and-extract vsn-url dir)
-      (customize-save-variable 'edts-man-root dir)
-      ;; Update the cache
-      (edts-man-modules)
-      (edts-log-info "OTP man-pages stored under %s" dir))))
+    (if (not edts-man-root)
+        (edts-man-do-setup)
+      (when (yes-or-no-p (concat "edts-man has already been setup. Do you "
+                                 "want to fetch man-pages again?"))
+        (edts-man-do-setup)))))
+
+(defun edts-man-do-setup ()
+  "Download and install OTP man-pages without queries."
+  ;; This is to capture accidental enter key hits for people that have
+  ;; exchanged yes-or-no-p for y-or-n-p. This would otherwise cause them
+  ;; accidentally choose the first otp-version in the list.
+  (read-event nil nil 0.2)
+  (edts-log-info "Fetching available releases from %s..." edts-man-download-url)
+  (let* ((vsn-urls   (edts-man--fetch-vsns))
+         (vsns       (reverse (sort (mapcar #'car vsn-urls) #'string-lessp)))
+         (vsn        (edts-man--choose-vsn vsns))
+         (vsn-url    (concat edts-man-download-url
+                             "/"
+                             (cdr (assoc vsn vsn-urls))))
+         (dir        (edts-man--choose-dir vsn)))
+    (edts-log-info "Fetching %s..." vsn-url)
+    (edts-man--fetch-and-extract vsn-url dir)
+    (customize-save-variable 'edts-man-root dir)
+    ;; Update the cache
+    (edts-man-modules)
+    (edts-log-info "OTP man-pages stored in %s. Hit C-c C-d H to access" dir)))
 
 (defun edts-man--fetch-and-extract (url dir)
   "Fetch man-pages (tar.gz) from URL and extract the archive into DIR."
