@@ -26,7 +26,7 @@
 ;; projects and communicate with the correct nodes.
 
 
-(defcustom edts-log-level 'warning
+(defcustom edts-log-level 'info
   "The current EDTS log-level."
   :group 'edts)
 
