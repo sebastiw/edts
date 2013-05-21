@@ -21,7 +21,8 @@
           "eproject"
           "ert"
           "path-util"
-          "popup-el"))
+          "popup-el"
+          "pos-tip"))
 
 (when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
