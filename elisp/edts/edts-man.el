@@ -26,8 +26,10 @@
   "Where to download the erlang documentation from.")
 
 (defcustom edts-man-root nil
-  "Location of the Erlang documentation in man-format. Do not set this
-variable directly, use `edts-man-set-root' instead."
+  "Do not set this variable directly, use `edts-man-setup' to install
+documentation instead.
+
+Location of the OTP documentation man-pages."
   :type  'directory
   :group 'edts)
 
@@ -100,6 +102,8 @@ variable directly, use `edts-man-set-root' instead."
 
 (defun edts-man-set-root (root)
   "Sets `edts-man-root' to ROOT and updates `edts-man-module-cache'."
+  (warn "`edts-man-set-root' is deprecated, please call `edts-man-setup'
+interactively to set up your man-pages instead")
   (unless (file-directory-p root)
     (error "No such directory: %s" root))
   (setq edts-man-root root)
