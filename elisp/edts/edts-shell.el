@@ -305,7 +305,7 @@ default directory if it exists, otherwise nil."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
-(when (member 'ert features)
+(when (featurep 'ert)
   (ert-deftest edts-shell-make-comint-buffer-test ()
     (let ((buffer (edts-shell-make-comint-buffer
                    "edts-test"

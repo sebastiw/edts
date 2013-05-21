@@ -164,7 +164,7 @@ CALLBACK-ARGS."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
-(when (member 'ert features)
+(when (featurep 'ert)
 
   (ert-deftest edts-rest-encode-arg-test ()
     (should (equal "foo=bar"
