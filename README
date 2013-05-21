@@ -51,22 +51,6 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
     here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
   - Make sure your code is compiled with the debug_info option set.
 
-- Get the Erlang documentation (optional).
-
-  The Erlang man-pages are assumed to be located in the man-directory of your
-  erlang installation's root-directory. If you don't know where this is, you can
-  find out by entering something like "readlink -f `which erl`" in a terminal.
-  You'll see something like "/usr/lib/erlang/bin/erl" in which case
-  "/usr/lib/erlang" would be your erlang root-dir. This is the usual place to
-  install documentation when using tools like eg. aptitude.
-
-  Alternatively, you can download your distribution's man-pages from:
-  http://www.erlang.org/download.html
-
-  Unpack and point edts' doc-root to the man-directory inside by adapting the
-  following example and putting it in your .emacs:
-  (edts-man-set-root "/home/my-user/doc/otp_doc_man_R15B02")
-
 - Get EDTS:
 
   $git clone git://github.com/tjarvstrand/edts.git
@@ -134,6 +118,13 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
                                             :lib-dirs '("lib" "test" "hacks"))
 
 That should be all it takes. If it's not, please report any issues on github.
+
+- Get the Erlang documentation (optional).
+  - This is now a guided procedure. Just hit M-x edts-man-setup RET and follow
+    the instructions.
+
+    NB. Requires an internet connection and the process will make a small change
+    to you .emacs-file.
 
 ## Backward compatibility note ##
 
