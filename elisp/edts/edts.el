@@ -200,7 +200,7 @@ in a tooltip."
 (defun edts-show-tooltip (text)
   "Show a tooltip using either popup.el or pos-tip.el"
   (condition-case ex
-      (pos-tip-show text)
+      (pos-tip-show text nil nil nil -1)
     ('error
      (popup-tip text))))
 
