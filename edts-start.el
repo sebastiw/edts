@@ -9,10 +9,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(defvar edts-lib-directory
-  (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "elisp/")
+(defconst edts-root-directory (or (locate-library "edts-start") load-file-name)
+  "EDTS root directory.")
+
+(defconst edts-lib-directory
+  (path-util-join (file-name-directory edts-root-directory) "elisp")
   "Directory where edts libraries are located.")
+
+(defconst edts-test-directory
+  (path-util-join (file-name-directory edts-root-directory) "test")
+  "Directory where edts test data are located.")
 
 (mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
         '("auto-complete"
