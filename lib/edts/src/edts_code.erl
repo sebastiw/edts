@@ -764,12 +764,12 @@ extract_compile_opt_p(_)                       -> false.
 module_modified_p_test_() ->
   AppDir = code:lib_dir(edts),
   TmpDir = filename:join(AppDir, "tmp"),
-  Src    = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
   {file, OldBeam} = code:is_loaded(?MODULE),
   NewBeam   = filename:join(TmpDir, atom_to_list(?MODULE) ++ ".beam"),
   {setup,
     fun() ->
         file:make_dir(TmpDir),
+        {ok, Src} = get_module_source_from_beam(?MODULE),
         {ok, ?MODULE} = compile:file(Src, [{outdir, TmpDir}])
     end,
     fun(_) ->
@@ -893,22 +893,27 @@ get_file_and_line_non_parametrised_new_test_() ->
   ].
 
 get_module_source_test_() ->
-  ErlangAbsName = filename:join(edts_src(), atom_to_list(?MODULE) ++ ".erl"),
+  BaseName = atom_to_list(?MODULE) ++ ".erl",
+  ErlangAbsNames =
+    [filename:join(edts_util:shorten_path(code:lib_dir(edts, src)),
+                   BaseName),
+     filename:join(edts_util:shorten_path(code:lib_dir(edts, '.eunit')),
+                   BaseName)],
   [?_assertEqual({error, not_found},
                  module_source_test_ret(
                    get_module_source_from_info(erlang:module_info()))),
-   ?_assertEqual(ErlangAbsName,
-                 module_source_test_ret(
-                   get_module_source_from_beam(?MODULE))),
+   ?_assert(lists:member(module_source_test_ret(
+                           get_module_source_from_beam(?MODULE)),
+                         ErlangAbsNames)),
    ?_assertEqual({error, not_found},
                  module_source_test_ret(
                    get_module_source_from_info([]))),
    ?_assertEqual({error, not_found},
                  module_source_test_ret(
                    get_module_source_from_beam(erlang_foo))),
-   ?_assertEqual(ErlangAbsName,
-                module_source_test_ret(
-                 get_module_source(?MODULE, ?MODULE:module_info()))),
+   ?_assert(lists:member(module_source_test_ret(
+                           get_module_source(?MODULE, ?MODULE:module_info())),
+                         ErlangAbsNames)),
    ?_assertEqual({error, not_found},
                 module_source_test_ret(
                  get_module_source(erlang_foo, [])))
@@ -1037,13 +1042,6 @@ get_compile_outdir_test_() ->
 
 module_source_test_ret({ok, Path}) -> edts_util:shorten_path(Path);
 module_source_test_ret(Ret)        -> Ret.
-
-edts_src() ->
-  {ok, Cwd} = file:get_cwd(),
-  case filename:basename(Cwd) of
-    ".eunit" -> Cwd;
-    _        -> code:lib_dir(edts, src)
-  end.
 
 test_file_forms(File) ->
   Path = filename:join([code:priv_dir(edts), "test/modules", File]),
