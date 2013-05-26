@@ -4,13 +4,24 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Prerequisites
+(require 'cl)
+(require 'erlang)
+(require 'ert nil 'noerror)
+(require 'woman)
+
+
 (defvar edts-start-inhibit-load-msgs t
   "If non-nil, don't print messages when loading edts-packages.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(defconst edts-root-directory (or (locate-library "edts-start") load-file-name)
+(defconst edts-root-directory
+  (file-name-directory (or (locate-library "edts-start") load-file-name))
   "EDTS root directory.")
+
+(add-to-list 'load-path (concat edts-root-directory "elisp/path-util"))
+(require 'path-util)
 
 (defconst edts-lib-directory
   (path-util-join (file-name-directory edts-root-directory) "elisp")
@@ -20,13 +31,13 @@
   (path-util-join (file-name-directory edts-root-directory) "test")
   "Directory where edts test data are located.")
 
-(mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
+(mapcar #'(lambda (p)
+            (add-to-list 'load-path (path-util-join  edts-lib-directory p)))
         '("auto-complete"
           "auto-highlight-symbol-mode"
           "edts"
           "eproject"
           "ert"
-          "path-util"
           "popup-el"
           "pos-tip"))
 
@@ -51,12 +62,6 @@
     1 'font-lock-variable-name-face nil))
   "Font lock keyword highlighting Erlang variables.
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
-
-;; Prerequisites
-(require 'cl)
-(require 'erlang)
-(require 'ert nil 'noerror)
-(require 'woman)
 
 ;; EDTS
 (load "ferl" nil edts-start-inhibit-load-msgs)
