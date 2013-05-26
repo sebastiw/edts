@@ -300,7 +300,7 @@ localhost."
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
   (let ((retries (or retries 5)))
-    (edts-log-debug "Waiting to register node, (retries %s)" retries)
+    (edts-log-debug "Waiting to register node %s, (retries %s)" node-name retries)
     (run-with-timer
      0.5
      nil
@@ -314,6 +314,7 @@ node, optionally retrying RETRIES times."
     (edts-log-error "Could not register node '%s'" node-name)
     nil))
 
+
 (defun edts-register-node (node-name root libs retries)
   "Register NODE-NAME with the edts node.
 
@@ -323,13 +324,15 @@ current-buffer."
                      (eproject-attribute :root)
                      (eproject-attribute :lib-dirs)
                      0))
+  (edts-log-debug "Registering node %s" node-name)
   (let* ((resource (list "nodes" node-name))
          (args     (list (cons "project_root" root)
                          (cons "lib_dirs"     libs)))
-         (rest-callback #'edts-handle-registration-result)
-         (callback-args (list node-name root libs retries)))
-    (edts-log-debug "Registering node %s" node-name)
-    (edts-rest-post-async resource args rest-callback callback-args)))
+         (res      (edts-rest-post resource args)))
+    (if (equal (cdr (assoc 'result res)) '("201" "Created"))
+        res
+      (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))
+      (edts-register-node-when-ready node-name root libs (1- retries)))))
 
 (defun edts-handle-registration-result (result node-name root libs retries)
   "Handles the result when trying to register a node with edts."
