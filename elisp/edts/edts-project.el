@@ -62,7 +62,8 @@ Example:
                  :lib-dirs
                  :start-command
                  :otp-path
-                 :dialyzer-plt)))
+                 :dialyzer-plt
+                 :app-include-dirs)))
     (member prop valid)))
 
 (defun edts-project--plist-keys (plist)
@@ -224,10 +225,7 @@ FILE."
 (defun edts-project-ensure-node-started ()
   "Start current-buffer's project's node if it is not already started."
   (if (edts-node-started-p (eproject-attribute :node-sname))
-      (edts-register-node-when-ready
-       (eproject-attribute :node-sname)
-       (eproject-root)
-       (eproject-attribute :lib-dirs))
+      (edts-project--register-project-node)
     (edts-project-start-node)))
 
 (defun edts-project-start-node ()
@@ -239,11 +237,16 @@ FILE."
          (node (eproject-attribute :node-sname)))
     (edts-ensure-node-not-started node)
     (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
-    (edts-register-node-when-ready
-     (eproject-attribute :node-sname)
-     (eproject-root)
-     (eproject-attribute :lib-dirs))
+    (edts-project--register-project-node)
     (get-buffer buffer-name)))
+
+(defun edts-project--register-project-node ()
+  "Register the node of current buffer's project."
+  (edts-register-node-when-ready
+   (eproject-attribute :node-sname)
+   (eproject-root)
+   (eproject-attribute :lib-dirs)
+   (eproject-attribute :app-include-dirs)))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."

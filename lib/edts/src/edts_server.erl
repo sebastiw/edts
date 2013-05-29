@@ -30,7 +30,7 @@
 
 %% API
 -export([ wait_for_node/1
-        , init_node/3
+        , init_node/4
         , node_available_p/1
         , node_registered_p/1
         , nodes/0
@@ -87,10 +87,14 @@ wait_for_node(Node) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(node(), file:filename(), [string()]) -> ok.
+-spec init_node(Node           :: node(),
+                ProjectRoot    :: filename:filename(),
+                LibDirs        :: [filename:filename()],
+                AppIncludeDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs) ->
-  gen_server:call(?SERVER, {init_node, Node, ProjectRoot, LibDirs}, infinity).
+init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs) ->
+  Call = {init_node, Node, ProjectRoot, LibDirs, AppIncludeDirs},
+  gen_server:call(?SERVER, Call, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -167,14 +171,16 @@ handle_call({wait_for_node, Name}, _From, State) ->
       #node{} ->
         {reply, ok, State}
     end;
-handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
+handle_call({init_node, Name, ProjectRoot, LibDirs, AppIncludeDirs},
+            _From,
+            State) ->
   edts_log:info("Initializing ~p.", [Name]),
   Node = #node{promises = Keys0} =
     case node_find(Name, State) of
       #node{} = Node0 -> Node0;
       false          -> #node{name = Name}
     end,
-  case do_init_node(Name, ProjectRoot, LibDirs) of
+  case do_init_node(Name, ProjectRoot, LibDirs, AppIncludeDirs) of
     {ok, Keys} ->
       edts_log:debug("Initialization call done on ~p.", [Name]),
       {reply, ok, node_store(Node#node{promises = Keys ++ Keys0}, State)};
@@ -276,9 +282,12 @@ code_change(_OldVsn, State, _Extra) ->
 %% to promises that are to be fulfilled by the remote node. These keys can later
 %% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
 %% @end
--spec do_init_node(node(), file:filename(), [string()]) -> [rpc:key()].
+-spec do_init_node(Node           :: node(),
+                   ProjectRoot    :: filename:filename(),
+                   LibDirs        :: [filename:filename()],
+                   AppIncludeDirs :: [filename:filename()]) -> [rpc:key()].
 %%------------------------------------------------------------------------------
-do_init_node(Node, ProjectRoot, LibDirs) ->
+do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs) ->
   try
     ok = edts_dist:remote_load_modules(Node, [edts_code,
                                               edts_dialyzer,
@@ -289,6 +298,7 @@ do_init_node(Node, ProjectRoot, LibDirs) ->
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} = application:get_env(edts, project_dir),
     ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
+    ok = edts_dist:set_app_env(Node, edts, app_include_dirs, AppIncludeDirs),
     F = fun({ S, {error, already_started}}) ->
             edts_log:info("Service ~p already started on ~p, refreshing",
                           [S, Node]),
@@ -379,19 +389,19 @@ init_node_test() ->
 
   ?assertEqual(
      {reply, ok, S1#state{nodes = [N1#node{promises = [Promise0]}]}},
-     handle_call({init_node, N1#node.name, "", []}, self(), S1)),
+     handle_call({init_node, N1#node.name, "", [], []}, self(), S1)),
   %% Node already initialized.
   ?assertEqual(
-     handle_call({init_node, N2#node.name, "", []}, self(), S3),
+     handle_call({init_node, N2#node.name, "", [], []}, self(), S3),
      {reply, ok, S3#state{nodes = [N2#node{promises = [Promise1]}]}}),
   ?assertEqual(
      {reply, ok, S2#state{nodes = [N1#node{promises = [Promise0]}]}},
-     handle_call({init_node, N1#node.name, "", []}, self(), S2)),
+     handle_call({init_node, N1#node.name, "", [], []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
               fun(foo, _) -> error({error, some_error}) end),
   ?assertEqual({reply, {error, some_error}, S1},
-               handle_call({init_node, N1#node.name, "", []}, self(), S1)),
+               handle_call({init_node, N1#node.name, "", [], []}, self(), S1)),
 
   case PrevEnv of
     undefined -> ok;

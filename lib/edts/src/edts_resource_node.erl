@@ -68,7 +68,10 @@ create_path(ReqData, Ctx) ->
   {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, project_root, lib_dirs]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename,
+                                            project_root,
+                                            lib_dirs,
+                                            app_include_dirs]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -77,7 +80,8 @@ post_is_create(ReqData, Ctx) ->
 from_json(ReqData, Ctx) ->
   ok = edts:init_node(orddict:fetch(nodename, Ctx),
                       orddict:fetch(project_root, Ctx),
-                      orddict:fetch(lib_dirs, Ctx)),
+                      orddict:fetch(lib_dirs, Ctx),
+                      orddict:fetch(app_include_dirs, Ctx)),
   {true, ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
@@ -105,7 +109,9 @@ malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, project_root, lib_dirs]) ->
+              fun(req_data,
+                  [],
+                  [nodename, project_root, lib_dirs, app_include_dirs]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
@@ -120,15 +126,19 @@ post_is_create_test() ->
 from_json_test() ->
   meck:unload(),
   meck:new(edts),
-  meck:expect(edts, init_node, fun(true, r, []) -> ok;
-                                  (_, _, _)    -> error
+  meck:expect(edts, init_node, fun(true, r, [], []) -> ok;
+                                  (_, _, _, _)      -> error
                                end),
-  Dict1 =
-    orddict:from_list([{nodename, true}, {project_root, r}, {lib_dirs, []}]),
+  Dict1 = orddict:from_list([{nodename, true},
+                             {project_root, r},
+                             {lib_dirs, []},
+                             {app_include_dirs, []}]),
   ?assertEqual({true, req_data,  Dict1},
                from_json(req_data, Dict1)),
-  Dict2 =
-    orddict:from_list([{nodename, false}, {project_root, r}, {lib_dirs, []}]),
+  Dict2 = orddict:from_list([{nodename, false},
+                             {project_root, r},
+                             {lib_dirs, []},
+                             {app_include_dirs, []}]),
   ?assertError({badmatch, error}, from_json(req_data, Dict2)),
   meck:unload().
 

@@ -1,6 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc code-analysis library for edts.
+%%% @doc
+%%% code-analysis library for edts. This module is loaded on the project
+%%% node.
 %%% @end
+%%%
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
 %%% Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
@@ -147,11 +150,15 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
+  OldOpts = extract_compile_opts(File),
+
+  AdditionalIncludes = get_additional_includes(filename:dirname(File)),
+  io:format("incs ~p~n", [AdditionalIncludes]),
   CompileOpts = [{cwd, Cwd},
                  {outdir, OutDir},
                  binary,
                  debug_info,
-                 return|Opts] ++ extract_compile_opts(File),
+                 return|Opts] ++ OldOpts ++ AdditionalIncludes,
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
@@ -736,6 +743,16 @@ path_flatten([_Dir|Rest], [_|Back], Acc) ->
 path_flatten([Dir|Rest], Back, Acc) ->
   path_flatten(Rest, Back, [Dir|Acc]).
 
+
+get_additional_includes(FileLoc) ->
+  {ok, AppIncDirs} = application:get_env(edts, app_include_dirs),
+  ParentDir = filename:dirname(FileLoc),
+  case filename:basename(FileLoc) =:= "src" andalso
+       filelib:is_dir(filename:join(ParentDir, "ebin")) of
+    true  -> [{i, filename:join(ParentDir, D)} || D <- AppIncDirs];
+    false -> []
+  end.
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Extracts compile options from module, if it exists
@@ -760,6 +777,34 @@ extract_compile_opt_p({no_auto_import,  _})    -> true;
 extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
+
+
+get_additional_includes_test_() ->
+  AppIncDirs = ["foo"],
+  {source, F} = lists:keyfind(source, 1, ?MODULE:module_info(compile)),
+  SrcDir = filename:dirname(F),
+  AppDir = filename:dirname(SrcDir),
+
+  {setup,
+   fun() ->
+       Prev = application:get_env(edts, app_include_dirs),
+       application:set_env(edts, app_include_dirs, AppIncDirs),
+       [{prev_app_include_dirs, Prev}]
+   end,
+   fun([{prev_app_include_dirs, Prev}]) ->
+       case Prev of
+         undefined  -> application:unset_env(edts, app_include_dirs);
+         {ok, Prev} -> application:set_env(edts, app_include_dirs, Prev)
+       end
+   end,
+   [ ?_assertEqual([], ""),
+     ?_assertEqual([],
+                   get_additional_includes(filename:join(AppDir, "not_src"))),
+     ?_assertEqual([], get_additional_includes(AppDir)),
+     ?_assertEqual([{i, filename:join(AppDir, "foo")}],
+                   get_additional_includes(SrcDir))
+   ]}.
+
 
 module_modified_p_test_() ->
   AppDir = code:lib_dir(edts),
