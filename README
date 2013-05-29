@@ -64,13 +64,14 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
 - Configure your projects. EDTS projects configured by creating a file called
   .edts in your project's root. The configuration file is a number of lines,
-  where each line is on the form:
+  where each line is in the format:
   :<property> <value>
 
-  Values that are lists must be quoted, eg. '("lib"). See example below.
+  Values that are lists must be prefixed with a single-quote, eg. '("lib"). See
+  example below.
 
-  The properties should all be strings, except lib-dirs which is a list of
-  strings. Valid properties are:
+  The properties should all be strings, except lib-dirs and app-include-dirs
+  which are lists of strings. Valid properties are:
 
   name
   The name of the project. Defaults to the last component of the project
@@ -110,8 +111,9 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
   A list of directories to search for include files inside each application. Eg.
   if 'include' is added, files in any application's include directory can be
   included with -include("file.hrl") instead of -include("../file.hrl"). This is
-  useful if you have a make-script that sets up your paths for you. Nil or
-  '("include") are usually the only two reasonable values for this property.
+  useful if you have a make-script that sets up your paths for you during your
+  normal build process. If set, '("include") is usually the only reasonable
+  value for this property.
 
   Example configuration:
   :name "awesome_stuff"
