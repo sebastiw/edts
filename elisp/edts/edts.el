@@ -301,11 +301,14 @@ localhost."
                                       libs
                                       &optional
                                       app-include-dirs
+                                      project-include-dirs
                                       retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times."
   (let ((retries (or retries 5)))
-    (edts-log-debug "Waiting to register node %s, (retries %s)" node-name retries)
+    (edts-log-debug "Waiting to register node %s, (retries %s)"
+                    node-name
+                    retries)
     (run-with-timer
      0.5
      nil
@@ -314,26 +317,39 @@ node, optionally retrying RETRIES times."
      root
      libs
      app-include-dirs
+     project-include-dirs
      retries)))
 
 (defun edts-register-node-when-ready-function (node-name
                                                root
                                                libs
                                                app-include-dirs
+                                               project-include-dirs
                                                retries)
   (if (> retries 0)
       (if (edts-node-started-p node-name)
-          (edts-register-node node-name root libs app-include-dirs retries)
+          (edts-register-node node-name
+                              root
+                              libs
+                              app-include-dirs
+                              project-include-dirs
+                              retries)
         (edts-register-node-when-ready node-name
                                        root
                                        libs
                                        app-include-dirs
+                                       project-include-dirs
                                        (1- retries)))
     (edts-log-error "Could not register node '%s'" node-name)
     nil))
 
 
-(defun edts-register-node (node-name root libs app-include-dirs retries)
+(defun edts-register-node (node-name
+                           root
+                           libs
+                           app-include-dirs
+                           project-include-dirs
+                           retries)
   "Register NODE-NAME with the edts node.
 
 If called interactively, fetch arguments from project of
@@ -342,12 +358,14 @@ current-buffer."
                      (eproject-attribute :root)
                      (eproject-attribute :lib-dirs)
                      (eproject-attribute :app-include-dirs)
+                     (eproject-attribute :project-include-dirs)
                      0))
   (edts-log-debug "Registering node %s" node-name)
   (let* ((resource (list "nodes" node-name))
-         (args     (list (cons "project_root"     root)
-                         (cons "lib_dirs"         libs)
-                         (cons "app_include_dirs" app-include-dirs)))
+         (args     (list (cons "project_root"         root)
+                         (cons "project_lib_dirs"     libs)
+                         (cons "app_include_dirs"     app-include-dirs)
+                         (cons "project_include_dirs" project-include-dirs)))
          (res      (edts-rest-post resource args)))
     (if (equal (cdr (assoc 'result res)) '("201" "Created"))
         res
@@ -356,6 +374,7 @@ current-buffer."
                                      root
                                      libs
                                      app-include-dirs
+                                     project-include-dirs
                                      (1- retries)))))
 
 (defun edts-handle-registration-result (result
@@ -363,6 +382,7 @@ current-buffer."
                                         root
                                         libs
                                         app-include-dirs
+                                        project-include-dirs
                                         retries)
   "Handles the result when trying to register a node with edts."
   (unless (equal (assoc 'result result)
@@ -372,6 +392,7 @@ current-buffer."
                                    root
                                    libs
                                    app-include-dirs
+                                   project-include-dirs
                                    (1- retries))))
 
 (defun edts-get-who-calls (module function arity)

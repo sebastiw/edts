@@ -34,7 +34,7 @@
          get_module_eunit_result/2,
          get_module_info/3,
          get_module_xref_analysis/3,
-         init_node/4,
+         init_node/5,
          is_node/1,
          node_available_p/1,
          modules/1,
@@ -207,10 +207,15 @@ get_module_xref_analysis(Node, Modules, Checks) ->
 -spec init_node(Node           :: node(),
                 ProjectRoot    :: filename:filename(),
                 LibDirs        :: [filename:filename()],
-                AppIncludeDirs :: [filename:filename()]) -> ok.
+                AppIncludeDirs :: [filename:filename()],
+                SysIncludeDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs) ->
-  edts_server:init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs).
+init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, SysIncludeDirs) ->
+  edts_server:init_node(Node,
+                        ProjectRoot,
+                        LibDirs,
+                        AppIncludeDirs,
+                        SysIncludeDirs).
 
 %%------------------------------------------------------------------------------
 %% @doc

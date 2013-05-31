@@ -63,7 +63,8 @@ Example:
                  :start-command
                  :otp-path
                  :dialyzer-plt
-                 :app-include-dirs)))
+                 :app-include-dirs
+                 :project-include-dirs)))
     (member prop valid)))
 
 (defun edts-project--plist-keys (plist)
@@ -246,7 +247,8 @@ FILE."
    (eproject-attribute :node-sname)
    (eproject-root)
    (eproject-attribute :lib-dirs)
-   (eproject-attribute :app-include-dirs)))
+   (eproject-attribute :app-include-dirs)
+   (eproject-attribute :project-include-dirs)))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."

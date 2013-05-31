@@ -12,6 +12,7 @@
 
 ## License ##
 Copyright (C) 2012 by Thomas Järvstrand, Håkan Nilsson
+              2013 by Thomas Järvstrand
 
 EDTS is licensed under the Lesser Gnu General Public License. See COPYING.LESSER
 for details.
@@ -109,17 +110,25 @@ For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
   app-include-dirs
   A list of directories to search for include files inside each application. Eg.
-  if 'include' is added, files in any application's include directory can be
+  if set to '("include"), files in any application's include directory can be
   included with -include("file.hrl") instead of -include("../file.hrl"). This is
-  useful if you have a make-script that sets up your paths for you during your
-  normal build process. If set, '("include") is usually the only reasonable
-  value for this property.
+  useful if you have a build configuration that sets up your paths for you
+  during your normal build process. If set, '("include") is usually the only
+  reasonable value for this property.
+
+  project-include-dirs
+  A list of directories to search for include files inside at the project-level.
+  Eg. if set to '("test/include"), files in any module can include files from
+  <project-root>/test/include with just a -include("file.hrl"). This is useful
+  if you have a build configuration that sets up your paths for you during your
+  normal build process.
 
   Example configuration:
   :name "awesome_stuff"
   :node-sname "awesome"
   :lib-dirs '("lib" "test")
   :app-include-dirs '("include")
+  :project-include-dirs '("test/shared/include")
 
   Local modifications to project configurations can be done to project
   configurations in two ways:

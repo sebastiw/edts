@@ -152,8 +152,7 @@ compile_and_load(File0, Opts) ->
   OutDir  = get_compile_outdir(File0),
   OldOpts = extract_compile_opts(File),
 
-  AdditionalIncludes = get_additional_includes(filename:dirname(File)),
-  io:format("incs ~p~n", [AdditionalIncludes]),
+  AdditionalIncludes = get_additional_includes(filename:dirname(File), OldOpts),
   CompileOpts = [{cwd, Cwd},
                  {outdir, OutDir},
                  binary,
@@ -480,9 +479,8 @@ save_xref_state() ->
   end.
 
 xref_file() ->
-  {ok, XrefDir} = application:get_env(edts, project_dir),
+  {ok, XrefDir} = application:get_env(edts, project_data_dir),
   filename:join(XrefDir, atom_to_list(node()) ++ ".xref").
-
 
 
 load_all_in_dir(Dir) ->
@@ -744,8 +742,18 @@ path_flatten([Dir|Rest], Back, Acc) ->
   path_flatten(Rest, Back, [Dir|Acc]).
 
 
-get_additional_includes(FileLoc) ->
-  {ok, AppIncDirs} = application:get_env(edts, app_include_dirs),
+get_additional_includes(FileLoc, PrevOpts) ->
+  PrevDirs = [Include || {i, _} = Include <- PrevOpts],
+  Dirs = lists:usort(get_project_includes() ++ get_app_includes(FileLoc)),
+  Dirs -- PrevDirs.
+
+get_project_includes() ->
+  {ok, RootDir}        = application:get_env(edts, project_root_dir),
+  {ok, ProjectIncDirs} = application:get_env(edts, project_include_dirs),
+  [{i, filename:join(RootDir, IncDir)} || IncDir <- ProjectIncDirs].
+
+get_app_includes(FileLoc) ->
+  {ok, AppIncDirs}     = application:get_env(edts, app_include_dirs),
   ParentDir = filename:dirname(FileLoc),
   case filename:basename(FileLoc) =:= "src" andalso
        filelib:is_dir(filename:join(ParentDir, "ebin")) of
@@ -781,28 +789,49 @@ extract_compile_opt_p(_)                       -> false.
 
 get_additional_includes_test_() ->
   AppIncDirs = ["foo"],
+  ProjIncs = ["test/include"],
   {source, F} = lists:keyfind(source, 1, ?MODULE:module_info(compile)),
+  {ok, Cwd} = file:get_cwd(),
   SrcDir = filename:dirname(F),
   AppDir = filename:dirname(SrcDir),
+  AbsProjectInc = filename:join(Cwd, "test/include"),
 
   {setup,
    fun() ->
-       Prev = application:get_env(edts, app_include_dirs),
+       PrevAppIncs = application:get_env(edts, app_include_dirs),
        application:set_env(edts, app_include_dirs, AppIncDirs),
-       [{prev_app_include_dirs, Prev}]
+       PrevProjIncs = application:get_env(edts, project_include_dirs),
+       application:set_env(edts, project_include_dirs, ProjIncs),
+       PrevRootDir = application:get_env(edts, project_root_dir),
+       application:set_env(edts, project_root_dir, Cwd),
+       [{prev_app_include_dirs, PrevAppIncs},
+        {prev_project_include_dirs, PrevProjIncs},
+        {prev_project_root_dir, PrevRootDir}]
    end,
-   fun([{prev_app_include_dirs, Prev}]) ->
-       case Prev of
+   fun(Cfg) ->
+       case tulib_lists:assoc(prev_app_include_dirs, Cfg, undefined) of
          undefined  -> application:unset_env(edts, app_include_dirs);
-         {ok, Prev} -> application:set_env(edts, app_include_dirs, Prev)
+         Prev0 -> application:set_env(edts, app_include_dirs, Prev0)
+       end,
+       case tulib_lists:assoc(prev_project_include_dirs, Cfg, undefined) of
+         undefined  -> application:unset_env(edts, project_include_dirs);
+         Prev1 -> application:set_env(edts, project_include_dirs, Prev1)
+       end,
+       case tulib_lists:assoc(prev_project_root_dir, Cfg, undefined) of
+         undefined  -> application:unset_env(edts, prev_project_root_dir);
+         Prev2 -> application:set_env(edts, prev_project_root_dir, Prev2)
        end
    end,
    [ ?_assertEqual([], ""),
-     ?_assertEqual([],
-                   get_additional_includes(filename:join(AppDir, "not_src"))),
-     ?_assertEqual([], get_additional_includes(AppDir)),
-     ?_assertEqual([{i, filename:join(AppDir, "foo")}],
-                   get_additional_includes(SrcDir))
+     ?_assertEqual([{i, AbsProjectInc}],
+                   get_additional_includes(filename:join(AppDir, "not_src"),
+                                           [])),
+     ?_assertEqual([{i, AbsProjectInc}], get_additional_includes(AppDir, [])),
+     ?_assertEqual([{i, AbsProjectInc}],
+                   get_additional_includes(SrcDir, [])),
+     ?_assertEqual([{i, AbsProjectInc}],
+                   get_additional_includes(SrcDir,
+                                          [{i, filename:join(AppDir, "foo")}]))
    ]}.
 
 

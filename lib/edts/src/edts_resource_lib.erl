@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Convenience library for resources
+%%% @doc Utility library for webmachine resources
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -33,6 +33,8 @@
         , validate/3]).
 
 %%%_* Includes =================================================================
+-include_lib("tulib/include/prelude.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
@@ -106,35 +108,26 @@ atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2;
 atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
-term_to_validate(app_include_dirs) -> fun app_include_dirs_validate/2;
-term_to_validate(arity)            -> fun arity_validate/2;
-term_to_validate(exported)         -> fun exported_validate/2;
-term_to_validate(file)             -> fun file_validate/2;
-term_to_validate(files)            -> fun files_validate/2;
-term_to_validate(function)         -> fun function_validate/2;
-term_to_validate(info_level)       -> fun info_level_validate/2;
-term_to_validate(lib_dirs)         -> fun sys_dirs_validate/2;
-term_to_validate(module)           -> fun module_validate/2;
-term_to_validate(modules)          -> fun modules_validate/2;
-term_to_validate(nodename)         -> fun nodename_validate/2;
-term_to_validate(project_root)     -> fun project_root_validate/2;
-term_to_validate(xref_checks)      -> fun xref_checks_validate/2;
-term_to_validate({file, Key})      ->
-  fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, atom_to_list(Key)) end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate and convert a list of directory names to be searched for include
-%% files inside each application
-%% @end
--spec app_include_dirs_validate(wrq:req_data(), orddict:orddict()) ->
-                           {ok, file:filename()}.
-%%------------------------------------------------------------------------------
-app_include_dirs_validate(ReqData, _Ctx) ->
-  case wrq:get_qs_value("app_include_dirs", ReqData) of
-    undefined -> {ok, []};
-    Str       -> {ok, string:tokens(Str, ",")}
-  end.
+term_to_validate(app_include_dirs) ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
+term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate(exported)             -> fun exported_validate/2;
+term_to_validate(file)                 -> fun file_validate/2;
+term_to_validate({file, Key})          ->
+  fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, ?a2l(Key)) end;
+term_to_validate(files)                -> fun files_validate/2;
+term_to_validate(function)             -> fun function_validate/2;
+term_to_validate(info_level)           -> fun info_level_validate/2;
+term_to_validate(project_lib_dirs)     ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
+term_to_validate(module)               -> fun module_validate/2;
+term_to_validate(modules)              -> fun modules_validate/2;
+term_to_validate(nodename)             -> fun nodename_validate/2;
+term_to_validate(project_root)         -> fun project_root_validate/2;
+term_to_validate(project_include_dirs) ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "projectn_include_dirs") end;
+term_to_validate(xref_checks)          -> fun xref_checks_validate/2.
 
 
 %%------------------------------------------------------------------------------
@@ -153,6 +146,18 @@ arity_validate(ReqData, _Ctx) ->
   catch error:badarg -> error
   end.
 
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate and convert a list of directory names.
+%% @end
+-spec dirs_validate(wrq:req_data(), string()) -> {ok, file:filename()}.
+%%------------------------------------------------------------------------------
+dirs_validate(ReqData, QsKey) ->
+  case wrq:get_qs_value(QsKey, ReqData) of
+    undefined -> {ok, []};
+    Str       -> {ok, string:tokens(Str, ",")}
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -245,23 +250,6 @@ info_level_validate(ReqData, _Ctx) ->
     V          -> {error, {illegal, V}}
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate a list of paths to directories underneath a project root already
-%% specified in Ctx.
-%% @end
--spec sys_dirs_validate(wrq:req_data(), orddict:orddict()) ->
-                           {ok, file:filename()}.
-%%------------------------------------------------------------------------------
-sys_dirs_validate(ReqData, Ctx) ->
-  Root       = orddict:fetch(project_root, Ctx),
-  LibDirsStr = case wrq:get_qs_value("lib_dirs", ReqData) of
-                 undefined -> "";
-                 Str       -> Str
-               end,
-  LibDirs    = lists:map(fun(Dir) -> filename:join(Root, Dir) end,
-                         string:tokens(LibDirsStr, ",")),
-  {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -454,19 +442,16 @@ info_level_validate_test() ->
   ?assertEqual({error, {illegal, true}}, info_level_validate(foo, bar)),
   meck:unload().
 
-lib_dirs_validate_validate_test() ->
+dirs_validate_validate_test() ->
   meck:unload(),
   meck:new(wrq),
   {ok, Cwd} = file:get_cwd(),
-  Root = filename:dirname(Cwd),
   LibDir = filename:basename(Cwd),
-  Dict = orddict:from_list([{project_root, Root}]),
   meck:expect(wrq, get_qs_value,
-              fun("lib_dirs", _) -> LibDir ++ "," ++ LibDir end),
-  ?assertEqual({ok, [Cwd, Cwd]}, sys_dirs_validate(foo, Dict)),
-  meck:expect(wrq, get_qs_value,
-              fun("lib_dirs", _) -> filename:join(Root, "asotehu") end),
-  ?assertEqual({ok, []}, sys_dirs_validate(foo, Dict)),
+              fun("project_lib_dirs", _) -> LibDir ++ "," ++ LibDir end),
+  ?assertEqual({ok, [LibDir, LibDir]}, dirs_validate(foo, "project_lib_dirs")),
+  meck:expect(wrq, get_qs_value, fun("project_lib_dirs", _) -> undefined end),
+  ?assertEqual({ok, []}, dirs_validate(foo, "project_lib_dirs")),
   meck:unload().
 
 module_validate_test() ->
