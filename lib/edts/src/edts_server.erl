@@ -230,16 +230,13 @@ handle_cast(_Msg, State) ->
 %%------------------------------------------------------------------------------
 handle_info({Pid, {promise_reply, {Nodename, R} = Reply}}, State) ->
   Nodes =
-    case lists:keyfind(Nodename, #node.name, State#state.nodes) of
+    case lists:keytake(Nodename, #node.name, State#state.nodes) of
       false ->
         edts_log:info("Unexpected reply from ~p: ~p", [Pid, Reply]),
         State#state.nodes;
-    #node{promises = Promises} = Node ->
+    {value, #node{promises = Promises} = Node, OtherNodes} ->
         edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
-        lists:keyreplace(Nodename,
-                         #node.name,
-                         State#state.nodes,
-                         Node#node{promises = lists:delete(Pid, Promises)})
+        [Node#node{promises = lists:delete(Pid, Promises)}|OtherNodes]
     end,
   {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
@@ -289,7 +286,7 @@ code_change(_OldVsn, State, _Extra) ->
                    AppIncludeDirs :: [filename:filename()],
                    SysIncludeDirs :: [filename:filename()]) -> [rpc:key()].
 %%------------------------------------------------------------------------------
-do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, SysIncludeDirs) ->
+do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
   try
     ok = edts_dist:remote_load_modules(Node, [edts_code,
                                               edts_dialyzer,
@@ -298,23 +295,14 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, SysIncludeDirs) ->
                                               edts_xref,
                                               edts_util]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
+
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
-    ok = edts_dist:set_app_env(Node, edts, project_data_dir, ProjectDir),
-    ok = edts_dist:set_app_env(Node, edts, project_root_dir, ProjectRoot),
-    ok = edts_dist:set_app_env(Node, edts, app_include_dirs, AppIncludeDirs),
-    ok = edts_dist:set_app_env(Node, edts, project_include_dirs, SysIncludeDirs),
-    F = fun({ S, {error, already_started}}) ->
-            edts_log:info("Service ~p already started on ~p, refreshing",
-                          [S, Node]),
-            {ok, Promise} = edts_dist:refresh_service(Node, S),
-            Promise;
-           ({S, Promise}) when is_pid(Promise) ->
-            edts_log:info("Starting service ~p on ~p", [S, Node]),
-            Promise;
-           ({_S, {error, _}} = Err) ->
-            throw(Err)
-        end,
-    {ok, lists:map(F, edts_dist:ensure_services_started(Node, [edts_code]))}
+    AppEnv = [{project_data_dir,     ProjectDir},
+               {project_root_dir,     ProjectRoot},
+               {app_include_dirs,     AppIncludeDirs},
+               {project_include_dirs, ProjectIncludeDirs}],
+    init_node_env(Node, AppEnv),
+    {ok, ensure_services_started(Node, [edts_code])}
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
@@ -322,7 +310,24 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, SysIncludeDirs) ->
       E
   end.
 
+init_node_env(Node, AppEnv) ->
+  [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
 
+ensure_services_started(Node, Services) ->
+  F = fun(Service, Acc) -> ensure_service_started(Node, Service, Acc) end,
+  lists:foldl(F, [], Services).
+
+ensure_service_started(Node, Service, Promises) ->
+  case edts_dist:ensure_service_started(Node, Service) of
+    {error, already_started} ->
+      edts_log:info("Service ~p already started on ~p, refreshing",
+                    [Service, Node]),
+      {ok, Promise} = edts_dist:refresh_service(Node, Service),
+      [Promise|Promises];
+    ({ok, Promise}) when is_pid(Promise) ->
+      edts_log:info("Starting service ~p on ~p", [Service, Node]),
+      [Promise|Promises]
+  end.
 
 expand_code_paths("", _LibDirs) -> [];
 expand_code_paths(ProjectRoot, LibDirs) ->
@@ -382,12 +387,12 @@ init_node_test() ->
   meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok;
                                                      (bar, _) -> ok
                                                   end),
-  meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok;
-                                                     (bar, _, _, _) -> ok
+  meck:expect(edts_dist, set_app_envs,             fun(foo, _, _) -> [ok];
+                                                      (bar, _, _) -> [ok]
                                                   end),
-  meck:expect(edts_dist, ensure_services_started,
-              fun(foo, [Srv]) -> [{Srv, Promise0}];
-                 (bar, [Srv]) -> [{Srv, {error, already_started}}]
+  meck:expect(edts_dist, ensure_service_started,
+              fun(foo, _Srv) -> {ok, Promise0};
+                 (bar, _Srv) -> {error, already_started}
               end),
   meck:expect(edts_dist, refresh_service, fun(bar, _Srv) -> {ok, Promise1} end),
 

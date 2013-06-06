@@ -7,7 +7,6 @@
 ;; Prerequisites
 (require 'cl)
 (require 'erlang)
-(require 'ert nil 'noerror)
 (require 'woman)
 
 
@@ -48,6 +47,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
+(require 'ert nil 'noerror)
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars

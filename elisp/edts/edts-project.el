@@ -236,17 +236,17 @@ FILE."
          (node (eproject-attribute :node-sname)))
     (edts-ensure-node-not-started node)
     (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
-    (edts-project--register-project-node)
     (get-buffer buffer-name)))
 
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
-  (edts-register-node-when-ready
-   (eproject-attribute :node-sname)
-   (eproject-root)
-   (eproject-attribute :lib-dirs)
-   (eproject-attribute :app-include-dirs)
-   (eproject-attribute :project-include-dirs)))
+  (with-temp-message (format "Initializing project node for %s" (eproject-root))
+    (edts-register-node-when-ready
+     (eproject-attribute :node-sname)
+     (eproject-root)
+     (eproject-attribute :lib-dirs)
+     (eproject-attribute :app-include-dirs)
+     (eproject-attribute :project-include-dirs))))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."

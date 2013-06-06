@@ -34,7 +34,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
-
 -export([add_paths/1,
          check_modules/2,
          compile_and_load/1,
@@ -410,6 +409,7 @@ modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
   [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Starts the edts xref-server on the local node.
@@ -418,13 +418,9 @@ modules_at_path(Path) ->
 %%------------------------------------------------------------------------------
 start() ->
   load_all(),
-  case edts_xref:started_p() of
-    true  -> {error, already_started};
-    false ->
-      case init_xref() of
-        {error, _} = Err -> Err;
-        {ok, _Pid}       -> {node(), ok}
-      end
+  case init_xref() of
+    {error, _} = Err -> Err;
+    ok               -> {node(), ok}
   end.
 
 
@@ -797,8 +793,12 @@ get_additional_includes_test_() ->
   AppIncDirs = ["foo"],
   ProjIncs = ["test/include"],
   {source, F} = lists:keyfind(source, 1, ?MODULE:module_info(compile)),
+  Dir = filename:dirname(F),
   {ok, Cwd} = file:get_cwd(),
-  SrcDir = filename:dirname(F),
+  SrcDir = case filename:basename(Dir) of
+             ".eunit" -> filename:join(filename:dirname(Dir), "src");
+             "src"    -> Dir
+           end,
   AppDir = filename:dirname(SrcDir),
   AbsProjectInc = filename:join(Cwd, "test/include"),
 
@@ -833,8 +833,12 @@ get_additional_includes_test_() ->
                    get_additional_includes(filename:join(AppDir, "not_src"),
                                            [])),
      ?_assertEqual([{i, AbsProjectInc}], get_additional_includes(AppDir, [])),
-     ?_assertEqual([{i, AbsProjectInc}],
-                   get_additional_includes(SrcDir, [])),
+
+     %% Additional include is added from app_include_dirs
+     ?_assertEqual(
+        lists:sort([{i, AbsProjectInc}, {i, filename:join(AppDir, "foo")}]),
+        lists:sort(get_additional_includes(SrcDir, []))),
+     %% The include from app_include_dirs is already present in the options
      ?_assertEqual([{i, AbsProjectInc}],
                    get_additional_includes(SrcDir,
                                           [{i, filename:join(AppDir, "foo")}]))
@@ -974,8 +978,14 @@ get_file_and_line_non_parametrised_new_test_() ->
 
 get_module_source_test_() ->
   BaseName = atom_to_list(?MODULE) ++ ".erl",
+  {ok, Cwd} = file:get_cwd(),
   ErlangAbsNames =
-    [filename:join(edts_util:shorten_path(code:lib_dir(edts, src)),
+    %% Check for path based on both Cwd and application lib-dir to try
+    %% to get around weird things when EDTS is located beneath a symbolic
+    %% link in the file tree.
+    [filename:join([Cwd, "lib", "edts", "src", BaseName]),
+     filename:join([Cwd, "lib", "edts", ".eunit", BaseName]),
+     filename:join(edts_util:shorten_path(code:lib_dir(edts, src)),
                    BaseName),
      filename:join(edts_util:shorten_path(code:lib_dir(edts, '.eunit')),
                    BaseName)],
@@ -998,6 +1008,7 @@ get_module_source_test_() ->
                 module_source_test_ret(
                  get_module_source(erlang_foo, [])))
   ].
+
 
 path_flatten_test_() ->
   [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl")),
@@ -1097,7 +1108,7 @@ parse_abstract_record_test_() ->
 parse_abstract_other_test_() ->
   [?_assertEqual(bar, parse_abstract(foo, bar))].
 
-modules_test() ->
+modules_test_() ->
   [?_assertMatch({ok, [_|_]}, modules())].
 
 get_compile_outdir_test_() ->

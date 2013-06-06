@@ -33,13 +33,13 @@
          call/4,
          connect/1,
          connect_all/0,
-         ensure_services_started/2,
+         ensure_service_started/2,
          load_all/1,
          make_sname/1,
          make_sname/2,
          refresh_service/2,
          remote_load_modules/2,
-         set_app_env/4]).
+         set_app_envs/3]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -174,9 +174,26 @@ remote_load_module(Node, Mod) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Sets each of the Key/Value pairs in KVs in App's application environment on
+%% Node.
+%% @end
+-spec set_app_envs(Node ::node(),
+                   App  ::atom(),
+                   KVs  :: [{Key::atom(), Value::term()}]) ->
+                      [ok | {badrpc, Reason::term()}].
+%%------------------------------------------------------------------------------
+set_app_envs(Node, App, KVs) ->
+  lists:map(fun({Key, Value}) -> set_app_env(Node, App, Key, Value) end, KVs).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Sets the environment variable Key for App on Node to Value.
 %% @end
--spec set_app_env(node(), App::atom(), Key::atom(), Value::term()) ->
+-spec set_app_env(Node :: node(),
+                  App::atom(),
+                  Key::atom(),
+                  Value::term()) ->
                      ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
 set_app_env(Node, App, Key, Value) ->
@@ -186,18 +203,15 @@ set_app_env(Node, App, Key, Value) ->
 %% @doc
 %% Starts Services on Node by calling Service:start() for each Service.
 %% @end
--spec ensure_services_started(node(), [module()]) ->
-                                 [{module(),
-                                   Promise::rpc:key() | {error, atom()}}].
+-spec ensure_service_started(node(), module()) ->
+                                [{module(),
+                                  Promise::rpc:key() | {error, atom()}}].
 %%------------------------------------------------------------------------------
-ensure_services_started(Node, Services) ->
-  F = fun(Service) ->
-          case ensure_service_started(Node, Service) of
-            {ok, Key}        -> {Service, Key};
-            {error, _} = Err -> {Service, Err}
-          end
-      end,
-  lists:map(F, Services).
+ensure_service_started(Node, Service) ->
+  case rpc:call(Node, Service, started_p, []) of
+    true  -> {error, already_started};
+    false -> {ok, rpc:async_call(Node, Service, start, [])}
+  end.
 
 
 %%%_* Internal functions =======================================================
@@ -212,13 +226,6 @@ remote_compile_module(Node, File) ->
   case call(Node, compile, file, [File, [debug_info, binary, report]]) of
     {ok, _, _} = Res -> Res;
     {error, Rsn}     -> erlang:error(Rsn)
-  end.
-
-
-ensure_service_started(Node, Service) ->
-  case rpc:call(Node, Service, started_p, []) of
-    true  -> {error, already_started};
-    false -> {ok, rpc:async_call(Node, Service, start, [])}
   end.
 
 

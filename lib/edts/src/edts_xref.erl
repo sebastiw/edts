@@ -91,7 +91,7 @@ start() ->
 %% @doc
 %% Starts the edts xref-server with State on the local node.
 %% @end
--spec start(State::term()) -> {ok , node()} | {error, already_started}.
+-spec start(State::term()) -> ok | {error, already_started}.
 %%------------------------------------------------------------------------------
 start(State) ->
   case started_p() of
@@ -99,8 +99,8 @@ start(State) ->
       proc_lib:start(?MODULE, do_start_from_state, [State]),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
       wait_until_started(),
-      update(),
-      {ok, node()};
+      {ok, _} = update(),
+      ok;
     true ->
       {error, already_started}
   end.
