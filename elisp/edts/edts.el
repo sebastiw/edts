@@ -22,7 +22,11 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(defcustom edts-erl-command (executable-find "erl")
+(defcustom edts-erl-command
+  (or (executable-find "erl")
+      (null
+        (warn
+         "No erl on exec-path. Most of EDTS' functionality will be broken.")))
   "Location of the erl-executable to use when launching the main EDTS-
 node."
   :group 'edts)
