@@ -165,7 +165,11 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      (edts-project-ensure-node-started))))
+      ;; Ensure project node is started
+      (unless (edts-node-started-p (eproject-attribute :node-sname))
+        (edts-project-start-node))
+      ;; Register it with the EDTS node
+      (edts-project--register-project-node))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
 (defun edts-project-init-temp ()
@@ -222,12 +226,6 @@ FILE."
 (defun edts-project--make-node-name (src)
   "Construct a default node-sname for current buffer's project node."
   (replace-regexp-in-string "[^A-Za-z0-9_-]" "" src))
-
-(defun edts-project-ensure-node-started ()
-  "Start current-buffer's project's node if it is not already started."
-  (if (edts-node-started-p (eproject-attribute :node-sname))
-      (edts-project--register-project-node)
-    (edts-project-start-node)))
 
 (defun edts-project-start-node ()
   "Starts a new erlang node for PROJECT."
