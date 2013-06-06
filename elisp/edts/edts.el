@@ -28,9 +28,10 @@ node."
   :group 'edts)
 
 (defconst edts-erl-root
-  (file-name-directory
-   (directory-file-name
-    (file-name-directory (file-truename edts-erl-command))))
+  (and edts-erl-command
+       (file-name-directory
+        (directory-file-name
+         (file-name-directory (file-truename edts-erl-command)))))
   "Location of the Erlang root directory")
 
 (defcustom edts-data-directory
