@@ -174,20 +174,20 @@ handle_call({wait_for_node, Name}, _From, State) ->
     end;
 handle_call({init_node, Name, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs},
             _From,
-            State) ->
+            State0) ->
   edts_log:info("Initializing ~p.", [Name]),
-  Node = #node{promises = Keys0} =
-    case node_find(Name, State) of
-      #node{} = Node0 -> Node0;
-      false          -> #node{name = Name}
-    end,
   case do_init_node(Name, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) of
-    {ok, Keys} ->
+    ok ->
       edts_log:debug("Initialization call done on ~p.", [Name]),
-      {reply, ok, node_store(Node#node{promises = Keys ++ Keys0}, State)};
+      State =
+        case node_find(Name, State0) of
+          #node{} -> State0;
+          false   -> node_store(#node{name = Name}, State0)
+        end,
+      {reply, ok, State};
     {error, _} = Err ->
       edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
-      {reply, Err, State}
+      {reply, Err, State0}
   end;
 handle_call({node_available_p, Name}, _From, State) ->
   Reply = case node_find(Name, State) of
@@ -228,17 +228,6 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, {Nodename, R} = Reply}}, State) ->
-  Nodes =
-    case lists:keytake(Nodename, #node.name, State#state.nodes) of
-      false ->
-        edts_log:info("Unexpected reply from ~p: ~p", [Pid, Reply]),
-        State#state.nodes;
-    {value, #node{promises = Promises} = Node, OtherNodes} ->
-        edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
-        [Node#node{promises = lists:delete(Pid, Promises)}|OtherNodes]
-    end,
-  {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
   edts_log:info("Node down: ~p", [Node]),
   case node_find(Node, State) of
@@ -302,7 +291,7 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
                {app_include_dirs,     AppIncludeDirs},
                {project_include_dirs, ProjectIncludeDirs}],
     init_node_env(Node, AppEnv),
-    {ok, ensure_services_started(Node, [edts_code])}
+    start_services(Node, [edts_code])
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
@@ -313,21 +302,40 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
 
-ensure_services_started(Node, Services) ->
-  F = fun(Service, Acc) -> ensure_service_started(Node, Service, Acc) end,
-  lists:foldl(F, [], Services).
-
-ensure_service_started(Node, Service, Promises) ->
-  case edts_dist:ensure_service_started(Node, Service) of
-    {error, already_started} ->
-      edts_log:info("Service ~p already started on ~p, refreshing",
-                    [Service, Node]),
-      {ok, Promise} = edts_dist:refresh_service(Node, Service),
-      [Promise|Promises];
-    ({ok, Promise}) when is_pid(Promise) ->
-      edts_log:info("Starting service ~p on ~p", [Service, Node]),
-      [Promise|Promises]
+start_services(_Node, []) -> ok;
+start_services(Node, [Service|Rest]) ->
+  case start_service(Node, Service) of
+    ok               -> start_services(Node, Rest);
+    {error, _} = Err -> Err
   end.
+
+start_service(Node, Service) ->
+  edts_log:info("Starting service ~p on ~p", [Service, Node]),
+  case edts_dist:start_service(Node, Service) of
+    ok ->
+      edts_log:info("Service ~p started on ~p", [Service, Node]),
+      ok;
+    {error, already_started} ->
+      edts_log:info("Service ~p already started on ~p", [Service, Node]),
+      refresh_service(Node, Service);
+    {error, _}  = Err ->
+      edts_log:error("Starting service ~p on ~p failed with ~p",
+                     [Service, Node, Err]),
+      Err
+  end.
+
+refresh_service(Node, Service) ->
+  edts_log:info("Refreshing service ~p on ~p", [Service, Node]),
+  case edts_dist:refresh_service(Node, Service) of
+    ok ->
+      edts_log:info("Service ~p refreshed on ~p", [Service, Node]),
+      ok;
+    {error, _} = Err ->
+      edts_log:error("Refreshing service ~p on ~p failed with ~p",
+                     [Service, Node, Err]),
+      Err
+  end.
+
 
 expand_code_paths("", _LibDirs) -> [];
 expand_code_paths(ProjectRoot, LibDirs) ->
@@ -378,8 +386,6 @@ init_node_test() ->
   PrevEnv = application:get_env(edts, project_data_dir),
   application:set_env(edts, project_data_dir, "foo_dir"),
 
-  Promise0 = c:pid(0,1,0),
-  Promise1 = c:pid(0,2,0),
   meck:new(edts_dist),
   meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok;
                                                      (bar, _) -> ok
@@ -390,21 +396,21 @@ init_node_test() ->
   meck:expect(edts_dist, set_app_envs,             fun(foo, _, _) -> [ok];
                                                       (bar, _, _) -> [ok]
                                                   end),
-  meck:expect(edts_dist, ensure_service_started,
-              fun(foo, _Srv) -> {ok, Promise0};
+  meck:expect(edts_dist, start_service,
+              fun(foo, _Srv) -> ok;
                  (bar, _Srv) -> {error, already_started}
               end),
-  meck:expect(edts_dist, refresh_service, fun(bar, _Srv) -> {ok, Promise1} end),
+  meck:expect(edts_dist, refresh_service, fun(bar, _Srv) -> ok end),
 
   ?assertEqual(
-     {reply, ok, S1#state{nodes = [N1#node{promises = [Promise0]}]}},
+     {reply, ok, S1#state{nodes = [N1]}},
      handle_call({init_node, N1#node.name, "", [], [], []}, self(), S1)),
   %% Node already initialized.
   ?assertEqual(
      handle_call({init_node, N2#node.name, "", [], [], []}, self(), S3),
-     {reply, ok, S3#state{nodes = [N2#node{promises = [Promise1]}]}}),
+     {reply, ok, S3#state{nodes = [N2]}}),
   ?assertEqual(
-     {reply, ok, S2#state{nodes = [N1#node{promises = [Promise0]}]}},
+     {reply, ok, S2#state{nodes = [N1]}},
      handle_call({init_node, N1#node.name, "", [], [], []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
@@ -467,15 +473,6 @@ nodedown_test() ->
   ?assertEqual({noreply, #state{}},
                handle_info({nodedown, N1#node.name, dummy}, S1)).
 
-promise_reply_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
-  N2 = #node{name = bar},
-  Pid = dummy,
-  S1 = #state{nodes = [N1]},
-  ?assertEqual({noreply, S1},
-               handle_info({Pid, {promise_reply, {N2#node.name, ok}}}, S1)),
-  ?assertEqual({noreply, #state{nodes = [N1#node{promises = []}]}},
-               handle_info({Pid, {promise_reply, {N1#node.name, ok}}}, S1)).
 
 unhandled_message_test() ->
   ?assertEqual({noreply, bar}, handle_info(foo, bar)),

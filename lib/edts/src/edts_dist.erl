@@ -33,7 +33,7 @@
          call/4,
          connect/1,
          connect_all/0,
-         ensure_service_started/2,
+         start_service/2,
          load_all/1,
          make_sname/1,
          make_sname/2,
@@ -146,11 +146,10 @@ make_sname(Name, Hostname) ->
 %% @doc
 %% Refreshes the state of Service on Node.
 %% @end
--spec refresh_service(node(), module()) ->
-                         {ok, Promise::rpc:key() | {error, atom()}}.
+-spec refresh_service(node(), module()) -> ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
 refresh_service(Node, Service) ->
-  {ok, rpc:async_call(Node, Service, refresh, [])}.
+  call(Node, Service, refresh, []).
 
 
 %%------------------------------------------------------------------------------
@@ -201,17 +200,12 @@ set_app_env(Node, App, Key, Value) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Starts Services on Node by calling Service:start() for each Service.
+%% Starts Service on Node.
 %% @end
--spec ensure_service_started(node(), module()) ->
-                                [{module(),
-                                  Promise::rpc:key() | {error, atom()}}].
+-spec start_service(node(), module()) -> ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
-ensure_service_started(Node, Service) ->
-  case rpc:call(Node, Service, started_p, []) of
-    true  -> {error, already_started};
-    false -> {ok, rpc:async_call(Node, Service, start, [])}
-  end.
+start_service(Node, Service) ->
+  call(Node, Service, start).
 
 
 %%%_* Internal functions =======================================================

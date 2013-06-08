@@ -309,45 +309,22 @@ localhost."
                                       project-include-dirs
                                       retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
-node, optionally retrying RETRIES times."
+node, optionally retrying RETRIES times. RETRIES defaults to 5."
   (let ((retries (or retries 5)))
     (edts-log-debug "Waiting to register node %s, (retries %s)"
                     node-name
                     retries)
-    (run-with-timer
-     0.5
-     nil
-     #'edts-register-node-when-ready-function
-     node-name
-     root
-     libs
-     app-include-dirs
-     project-include-dirs
-     retries)))
-
-(defun edts-register-node-when-ready-function (node-name
-                                               root
-                                               libs
-                                               app-include-dirs
-                                               project-include-dirs
-                                               retries)
-  (if (> retries 0)
-      (if (edts-node-started-p node-name)
-          (edts-register-node node-name
-                              root
-                              libs
-                              app-include-dirs
-                              project-include-dirs
-                              retries)
-        (edts-register-node-when-ready node-name
-                                       root
-                                       libs
-                                       app-include-dirs
-                                       project-include-dirs
-                                       (1- retries)))
-    (edts-log-error "Could not register node '%s'" node-name)
-    nil))
-
+    (while (and (> retries 0) (not (edts-node-started-p node-name)))
+        (sleep-for 0.5)
+        (setq retries (1- retries)))
+    (if (not (edts-node-started-p node-name))
+      (edts-log-error "Could not register node '%s'" node-name)
+      (edts-register-node node-name
+                          root
+                          libs
+                          app-include-dirs
+                          project-include-dirs
+                          retries))))
 
 (defun edts-register-node (node-name
                            root

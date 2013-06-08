@@ -79,7 +79,7 @@ allowed_checks() -> [undefined_function_calls, unused_exports].
 start() ->
   case started_p() of
     false ->
-      {ok, Pid} = do_start_from_scratch(),
+      {ok, _Pid} = do_start_from_scratch(),
       update(),
       ok;
     true ->

@@ -325,7 +325,7 @@ parse_expressions(String) ->
 refresh() ->
   load_all(),
   update_xref(),
-  {node(), ok}.
+  ok.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -417,10 +417,10 @@ modules_at_path(Path) ->
 -spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  load_all(),
-  case init_xref() of
-    {error, _} = Err -> Err;
-    ok               -> {node(), ok}
+  timer:sleep(10000),
+  case started_p() of
+    true  -> {error, already_started};
+    false -> do_start()
   end.
 
 
@@ -444,6 +444,10 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 
 %%%_* Internal functions =======================================================
+do_start() ->
+  load_all(),
+  init_xref().
+
 
 init_xref() ->
   File = xref_file(),

@@ -165,12 +165,31 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      ;; Ensure project node is started
-      (unless (edts-node-started-p (eproject-attribute :node-sname))
-        (edts-project-start-node))
+      (with-output-to-temp-buffer "EDTS Project"
+        (edts-project--init-output-buffer)
+        ;; Ensure project node is started
+        (unless (edts-node-started-p (eproject-attribute :node-sname))
+          (edts-project--display "Starting project node for %s" (eproject-root))
+          (sit-for 0)
+          (edts-project-start-node))
       ;; Register it with the EDTS node
-      (edts-project--register-project-node))))
+        (edts-project--display
+         "Initializing project node for %s. Please wait..."
+         (eproject-root))
+        (sit-for 0)
+        (edts-project--register-project-node)
+        (edts-project--display "Done.")))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+
+(defun edts-project--init-output-buffer ()
+  (with-current-buffer "EDTS Project"
+    (erase-buffer))
+  (display-buffer "EDTS Project")
+  (redisplay))
+
+(defun edts-project--display (fmt &rest args)
+  (princ (format fmt args))
+  (redisplay))
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
@@ -240,13 +259,12 @@ FILE."
 
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
-  (with-temp-message (format "Initializing project node for %s" (eproject-root))
-    (edts-register-node-when-ready
-     (eproject-attribute :node-sname)
-     (eproject-root)
-     (eproject-attribute :lib-dirs)
-     (eproject-attribute :app-include-dirs)
-     (eproject-attribute :project-include-dirs))))
+  (edts-register-node-when-ready
+   (eproject-attribute :node-sname)
+   (eproject-root)
+   (eproject-attribute :lib-dirs)
+   (eproject-attribute :app-include-dirs)
+   (eproject-attribute :project-include-dirs)))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."
