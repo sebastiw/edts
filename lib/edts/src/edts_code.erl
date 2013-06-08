@@ -453,18 +453,22 @@ init_xref() ->
   try
     case file:read_file(File) of
       {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> edts_xref:start();
+      {error, enoent}     -> start_xref();
       {error, _} = Error  ->
         error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-        edts_xref:start()
+        start_xref()
     end
   catch
     C:E ->
       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
                              "Starting with clean state instead.",
                              [File, C, E]),
-      edts_xref:start()
+      start_xref()
   end.
+
+start_xref() ->
+  edts_xref:start(),
+  spawn(?MODULE, save_xref_state, []).
 
 update_xref() ->
   edts_xref:update(),
