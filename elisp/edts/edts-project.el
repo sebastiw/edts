@@ -169,16 +169,12 @@ Example:
         (edts-project--init-output-buffer)
         ;; Ensure project node is started
         (unless (edts-node-started-p (eproject-attribute :node-sname))
-          (edts-project--display "Starting project node for %s" (eproject-root))
-          (sit-for 0)
+          (edts-project--display "Starting project node for %s\n" (eproject-root))
           (edts-project-start-node))
-      ;; Register it with the EDTS node
-        (edts-project--display
-         "Initializing project node for %s. Please wait..."
-         (eproject-root))
-        (sit-for 0)
+        ;; Register it with the EDTS node
         (edts-project--register-project-node)
-        (edts-project--display "Done.")))))
+        (sleep-for 2)
+        (edts-project--kill-output-buffer)))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
 (defun edts-project--init-output-buffer ()
@@ -186,6 +182,9 @@ Example:
     (erase-buffer))
   (display-buffer "EDTS Project")
   (redisplay))
+
+(defun edts-project--kill-output-buffer ()
+  (kill-buffer "EDTS Project"))
 
 (defun edts-project--display (fmt &rest args)
   (princ (format fmt args))
@@ -259,12 +258,18 @@ FILE."
 
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
+  (if (edts-node-registeredp (eproject-attribute :node-sname))
+      (edts-project--display "Re-initializing project node for %s. Please wait..."
+                             (eproject-root))
+    (edts-project--display "Initializing project node for %s. Please wait..."
+                           (eproject-root)))
   (edts-register-node-when-ready
    (eproject-attribute :node-sname)
    (eproject-root)
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)
-   (eproject-attribute :project-include-dirs)))
+   (eproject-attribute :project-include-dirs))
+  (edts-project--display "Done."))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."

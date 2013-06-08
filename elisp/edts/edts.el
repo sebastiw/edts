@@ -556,6 +556,26 @@ associated with that buffer."
   (let ((info (edts-get-detailed-module-info (or module (ferl-get-module)))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
+(defun edts-node-registeredp (node)
+  "Return non-nil if NODE is registered with the EDTS server."
+  (let* ((res   (edts-get-nodes))
+         (nodes (cdr res)))
+    (when nodes
+      (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))
+            nodes))))
+
+(defun edts-get-nodes ()
+  "Return all nodes registered with the EDTS server."
+  (let (nodes
+        (res (edts-rest-get '("nodes") nil)))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'nodes (cdr (assoc 'body res))))
+      (null (edts-log-error "Unexpected reply: %s"
+                            (cdr (assoc 'result res)))))))
+
+(defun edts--node-memberp (node nodes)
+  (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
+
 (defun edts-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex

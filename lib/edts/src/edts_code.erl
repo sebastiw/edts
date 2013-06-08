@@ -417,7 +417,6 @@ modules_at_path(Path) ->
 -spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  timer:sleep(10000),
   case started_p() of
     true  -> {error, already_started};
     false -> do_start()
@@ -456,8 +455,8 @@ init_xref() ->
       {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
       {error, enoent}     -> edts_xref:start();
       {error, _} = Error  ->
-      error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-      edts_xref:start()
+        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+        edts_xref:start()
     end
   catch
     C:E ->
