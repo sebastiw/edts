@@ -81,7 +81,7 @@ start() ->
     false ->
       {ok, Pid} = do_start_from_scratch(),
       update(),
-      {ok, Pid};
+      ok;
     true ->
       {error, already_started}
   end.
