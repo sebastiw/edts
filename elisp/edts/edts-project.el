@@ -140,6 +140,7 @@ Example:
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
   (edts-log-debug "Initializing project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let ((root (eproject-root)))
 
     (when (boundp 'edts-projects)
@@ -169,7 +170,8 @@ Example:
         (edts-project--init-output-buffer)
         ;; Ensure project node is started
         (unless (edts-node-started-p (eproject-attribute :node-sname))
-          (edts-project--display "Starting project node for %s\n" (eproject-root))
+          (edts-project--display "Starting project node for %s\n"
+                                 (eproject-root))
           (edts-project-start-node))
         ;; Register it with the EDTS node
         (edts-project--register-project-node)
@@ -193,6 +195,7 @@ Example:
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
   (edts-log-debug "Initializing temporary project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let* ((file (buffer-file-name))
          (root-dir (edts-project--temp-root file))
          (node-name (path-util-base-name root-dir)))
@@ -209,6 +212,7 @@ Example:
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
   (edts-log-debug "Initializing otp project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let* ((file (buffer-file-name))
          (root-dir (eproject-root))
          (node-name (format "otp-%s" (eproject-name)))

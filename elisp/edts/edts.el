@@ -327,8 +327,7 @@ node, optionally retrying RETRIES times. RETRIES defaults to 5."
                         root
                         libs
                         app-include-dirs
-                        project-include-dirs
-                        nil)
+                        project-include-dirs)
         (setq retries (1- retries)))
       (unless (edts-node-registeredp node-name)
         (edts-log-error "Could not register node '%s'" node-name)))))
