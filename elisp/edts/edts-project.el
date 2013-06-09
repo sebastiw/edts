@@ -175,8 +175,8 @@ Example:
           (edts-project-start-node))
         ;; Register it with the EDTS node
         (edts-project--register-project-node)
-        (sleep-for 1)
-        (edts-project--kill-output-buffer)))))
+        (sleep-for 1))
+      (edts-project--kill-output-buffer))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
 (defun edts-project--init-output-buffer ()
