@@ -218,7 +218,7 @@ who_calls(M, F, A) ->
 -spec update() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
 update() ->
-  {ErlLibDirs, AppDirs} = lib_and_app_dirs(),
+  {ErlLibDirs, AppDirs} = edts_util:lib_and_app_dirs(),
   update_paths(ErlLibDirs, AppDirs),
   xref:update(?SERVER).
 
@@ -246,11 +246,6 @@ do_start_from_state(State) ->
   proc_lib:init_ack({ok, self()}),
   gen_server:enter_loop(xref, [], State).
 
-
-lib_and_app_dirs() ->
-  ErlLibDir = code:lib_dir(),
-  Paths = [D || D <- code:get_path(), filelib:is_dir(D), D =/= "."],
-  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths).
 
 update_paths(LibDirs, AppDirs) ->
   ok = xref:set_library_path(?SERVER, LibDirs),
@@ -463,7 +458,7 @@ check_modules_test() ->
 %%%_* Unit test helpers ========================================================
 
 mock_path() ->
-  {LibDirs, AppDirs0} = lib_and_app_dirs(),
+  {LibDirs, AppDirs0} = edts_util:lib_and_app_dirs(),
   case lists:filter(fun(P) -> filename:basename(P) =:= ".eunit" end, AppDirs0) of
     [_] = EunitDir -> EunitDir ++ LibDirs;
     _              -> AppDirs0 ++ LibDirs
