@@ -452,8 +452,13 @@ init_xref() ->
   File = xref_file(),
   try
     case file:read_file(File) of
-      {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> start_xref();
+      {ok, BinState}      ->
+        error_logger:info_msg("Found previous state to start from in ~p.",
+                              [File]),
+        edts_xref:start(binary_to_term(BinState));
+      {error, enoent}     ->
+        error_logger:info_msg("Found no previous state to start from."),
+        start_xref();
       {error, _} = Error  ->
         error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
         start_xref()
@@ -468,15 +473,18 @@ init_xref() ->
 
 start_xref() ->
   edts_xref:start(),
-  spawn(?MODULE, save_xref_state, []).
+  spawn(?MODULE, save_xref_state, []),
+  ok.
 
 update_xref() ->
   edts_xref:update(),
-  spawn(?MODULE, save_xref_state, []).
+  spawn(?MODULE, save_xref_state, []),
+  ok.
 
 update_xref(Modules) ->
   edts_xref:update_modules(Modules),
-  spawn(?MODULE, save_xref_state, []).
+  spawn(?MODULE, save_xref_state, []),
+  ok.
 
 save_xref_state() ->
   File = xref_file(),
