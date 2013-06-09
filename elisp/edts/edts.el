@@ -301,13 +301,13 @@ localhost."
          (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
-(defun edts-register-node-when-ready (node-name
-                                      root
-                                      libs
-                                      &optional
-                                      app-include-dirs
-                                      project-include-dirs
-                                      retries)
+(defun edts-init-node-when-ready (node-name
+                                  root
+                                  libs
+                                  &optional
+                                  app-include-dirs
+                                  project-include-dirs
+                                  retries)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times. RETRIES defaults to 5."
   (let ((retries (or retries 5)))
@@ -315,29 +315,30 @@ node, optionally retrying RETRIES times. RETRIES defaults to 5."
                     node-name
                     retries)
     (while (and (> retries 0) (not (edts-node-started-p node-name)))
-        (sleep-for 0.5)
-        (setq retries (1- retries)))
+      (sleep-for 0.5)
+      (setq retries (1- retries)))
     (if (not (edts-node-started-p node-name))
         (edts-log-error "Could not register node '%s'" node-name)
       (while (and (> retries 0) (not (edts-node-registeredp node-name)))
         (edts-log-debug "Registering node %s, (retries %s)"
-                    node-name
-                    retries)
-        (edts-register-node node-name
-                            root
-                            libs
-                            app-include-dirs
-                            project-include-dirs)
+                        node-name
+                        retries)
+        (edts-init-node node-name
+                        root
+                        libs
+                        app-include-dirs
+                        project-include-dirs
+                        nil)
         (setq retries (1- retries)))
       (unless (edts-node-registeredp node-name)
         (edts-log-error "Could not register node '%s'" node-name)))))
 
-(defun edts-register-node (node-name
-                           root
-                           libs
-                           app-include-dirs
-                           project-include-dirs)
-  "Register NODE-NAME with the edts node.
+(defun edts-init-node (node-name
+                       root
+                       libs
+                       app-include-dirs
+                       project-include-dirs)
+  "Initialize NODE-NAME with the edts node.
 
 If called interactively, fetch arguments from project of
 current-buffer."
@@ -356,23 +357,6 @@ current-buffer."
         res
       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))
 
-(defun edts-handle-registration-result (result
-                                        node-name
-                                        root
-                                        libs
-                                        app-include-dirs
-                                        project-include-dirs
-                                        retries)
-  "Handles the result when trying to register a node with edts."
-  (unless (equal (assoc 'result result)
-                 '(result "201" "Created"))
-    (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result result)))
-    (edts-register-node-when-ready node-name
-                                   root
-                                   libs
-                                   app-include-dirs
-                                   project-include-dirs
-                                   (1- retries))))
 
 (defun edts-get-who-calls (module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on

@@ -42,7 +42,6 @@
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
-         load_all/0,
          modules/0,
          parse_expressions/1,
          refresh/0,
@@ -67,15 +66,6 @@
                  , Description :: string()}.
 
 %%%_* API ======================================================================
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Load all beam-files present in the current code-path.
-%% @end
--spec load_all() -> {ok, [module()]}.
-%%------------------------------------------------------------------------------
-load_all() ->
-  {ok, lists:flatmap(fun load_all_in_dir/1, code:get_path())}.
 
 
 %%------------------------------------------------------------------------------
@@ -323,9 +313,8 @@ parse_expressions(String) ->
 -spec refresh() -> {node(), ok}.
 %%------------------------------------------------------------------------------
 refresh() ->
-  load_all(),
-  update_xref(),
-  ok.
+  ok = update_xref(),
+  ok = edts_module_server:update().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -417,10 +406,9 @@ modules_at_path(Path) ->
 -spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  case started_p() of
-    true  -> {error, already_started};
-    false -> do_start()
-  end.
+  ok = init_xref(),
+  {ok, _} = edts_module_server:start(),
+  ok.
 
 
 %%------------------------------------------------------------------------------
@@ -429,7 +417,9 @@ start() ->
 %% @end
 -spec started_p() -> boolean().
 %%------------------------------------------------------------------------------
-started_p() -> edts_xref:started_p().
+started_p() ->
+  edts_xref:started_p() andalso
+    edts_module_server:started_p().
 
 
 %%------------------------------------------------------------------------------
@@ -443,12 +433,15 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 
 %%%_* Internal functions =======================================================
-do_start() ->
-  load_all(),
-  init_xref().
-
 
 init_xref() ->
+  case edts_xref:started_p() of
+    true  -> ok;
+    false -> do_init_xref()
+  end.
+
+
+do_init_xref() ->
   File = xref_file(),
   try
     case file:read_file(File) of
@@ -500,25 +493,49 @@ xref_file() ->
   filename:join(XrefDir, atom_to_list(node()) ++ ".xref").
 
 
-load_all_in_dir(Dir) ->
-  Files = filelib:wildcard(filename:join(filename:absname(Dir), "*.beam")),
-  [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
+%%------------------------------------------------------------------------------
+%% @doc Reloads a module unless it is sticky.
+-spec reload_module(M::module()) -> ok.
+%%------------------------------------------------------------------------------
+reload_module(Mod) ->
+  File = code:where_is_file(atom_to_list(Mod) ++ ".beam"),
+  ensure_module_loaded(Mod, File, true),
+  ok.
 
-ensure_loaded(File) ->
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load module if:
+%% - The module is not sticky
+%% - The module is loaded from a file other than File OR
+%%   the module is currently not loaded.
+%%
+%% If Reload =:= true, reload the module if its beam-file has been changed.
+%%
+%% Returns true if the module was (re)loaded, false otherwise.
+%% @end
+-spec ensure_module_loaded(Mod    :: module(),
+                           File   :: filename:filename(),
+                           Reload :: boolean()) -> boolean().
+%%------------------------------------------------------------------------------
+ensure_module_loaded(Mod, File, Reload) ->
   LoadFileName = filename:rootname(File), %% Remove extension
-  Mod = list_to_atom(filename:basename(LoadFileName)), %% Remove dir-part
-  case not code:is_sticky(Mod) andalso module_modified_p(Mod, File) of
-    false -> {false, Mod};
-    true  ->
-      Loaded =
-        case code:is_loaded(Mod) of
-          {file, File} -> false;
-          {file, _}    -> try_load_mod(Mod, LoadFileName);
-          false        -> try_load_mod(Mod, LoadFileName)
-        end,
-      {Loaded, Mod}
+  case code:is_sticky(Mod) of
+    true  -> false;
+    false ->
+      case code:is_loaded(Mod) of
+        {file, File} when Reload -> maybe_reload(Mod, LoadFileName);
+        {file, File}             -> false;
+        {file, _}                -> try_load_mod(Mod, LoadFileName);
+        false                    -> try_load_mod(Mod, LoadFileName)
+      end
   end.
 
+maybe_reload(Mod, File) ->
+  case module_modified_p(Mod, File) of
+    true  -> try_load_mod(Mod, File);
+    false -> false
+  end.
 
 try_load_mod(Mod, File) ->
   try load_mod(Mod, File)
@@ -619,23 +636,6 @@ get_module_source_from_beam(M) ->
     error:_ -> {error, not_found}
   end.
 
-
-%%------------------------------------------------------------------------------
-%% @doc Reloads a module unless it is sticky.
--spec reload_module(M::module()) -> ok.
-%%------------------------------------------------------------------------------
-reload_module(M) ->
-  case code:is_sticky(M) of
-    true  -> ok;
-    false ->
-      case c:l(M) of
-        {module, M}     -> ok;
-        {error, _} = E ->
-          error_logger:error_msg("~p error loading module ~p: ~p",
-                                 [node(), M, E]),
-          E
-      end
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.

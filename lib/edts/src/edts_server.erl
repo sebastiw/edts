@@ -281,15 +281,16 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
                                               edts_dialyzer,
                                               edts_eunit,
                                               edts_eunit_listener,
+                                              edts_module_server,
                                               edts_xref,
                                               edts_util]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
 
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
     AppEnv = [{project_data_dir,     ProjectDir},
-               {project_root_dir,     ProjectRoot},
-               {app_include_dirs,     AppIncludeDirs},
-               {project_include_dirs, ProjectIncludeDirs}],
+              {project_root_dir,     ProjectRoot},
+              {app_include_dirs,     AppIncludeDirs},
+              {project_include_dirs, ProjectIncludeDirs}],
     init_node_env(Node, AppEnv),
     start_services(Node, [edts_code])
   catch

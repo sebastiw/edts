@@ -173,7 +173,7 @@ Example:
           (edts-project-start-node))
         ;; Register it with the EDTS node
         (edts-project--register-project-node)
-        (sleep-for 2)
+        (sleep-for 1)
         (edts-project--kill-output-buffer)))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
@@ -202,7 +202,7 @@ Example:
        node-name ; node-name
        root-dir ; pwd
        (list "erl" "-sname" node-name))) ; command
-    (edts-register-node-when-ready node-name root-dir nil)
+    (edts-init-node-when-ready node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
@@ -219,7 +219,7 @@ Example:
        node-name ; node-name
        root-dir ; pwd
        (list erl "-sname" node-name))) ; command
-    (edts-register-node-when-ready node-name root-dir nil)
+    (edts-init-node-when-ready node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
@@ -263,7 +263,7 @@ FILE."
                              (eproject-root))
     (edts-project--display "Initializing project node for %s. Please wait..."
                            (eproject-root)))
-  (edts-register-node-when-ready
+  (edts-init-node-when-ready
    (eproject-attribute :node-sname)
    (eproject-root)
    (eproject-attribute :lib-dirs)

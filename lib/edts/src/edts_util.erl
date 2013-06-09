@@ -41,8 +41,8 @@
 
 lib_and_app_dirs() ->
   ErlLibDir = code:lib_dir(),
-  Paths = [D || D <- code:get_path(), D =/= "."],
-  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end, Paths).
+  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end,
+                  code:get_path()).
 
 
 shorten_path("") -> "";

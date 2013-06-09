@@ -196,7 +196,7 @@ set_app_envs(Node, App, KVs) ->
                      ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
 set_app_env(Node, App, Key, Value) ->
-  rpc:call(Node, application, set_env, [App, Key, Value]).
+  call(Node, application, set_env, [App, Key, Value]).
 
 %%------------------------------------------------------------------------------
 %% @doc
