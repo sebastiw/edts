@@ -520,15 +520,14 @@ ensure_module_loaded(Reload, Mod) ->
                            Reload :: boolean()) -> boolean().
 %%------------------------------------------------------------------------------
 ensure_module_loaded(Mod, File, Reload) ->
-  LoadFileName = filename:rootname(File), %% Remove extension
   case code:is_sticky(Mod) of
     true  -> false;
     false ->
       case code:is_loaded(Mod) of
-        {file, File} when Reload -> maybe_reload(Mod, LoadFileName);
+        {file, File} when Reload -> maybe_reload(Mod, File);
         {file, File}             -> false;
-        {file, _}                -> try_load_mod(Mod, LoadFileName);
-        false                    -> try_load_mod(Mod, LoadFileName)
+        {file, _}                -> try_load_mod(Mod, File);
+        false                    -> try_load_mod(Mod, File)
       end
   end.
 
@@ -539,7 +538,8 @@ maybe_reload(Mod, File) ->
   end.
 
 try_load_mod(Mod, File) ->
-  try load_mod(Mod, File)
+  LoadFileName = filename:rootname(File), %% Remove extension
+  try load_mod(Mod, LoadFileName)
   catch
     C:E ->
       error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
@@ -554,18 +554,17 @@ load_mod(Mod, File) ->
   end.
 
 module_modified_p(Mod, File) ->
-  case file:read_file_info(File) of
-    {error, _} -> false;
-    {ok, #file_info{mtime = MTime}} ->
-      case lists:keyfind(time, 1, Mod:module_info(compile)) of
-        false -> true;
-        {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} ->
-          [UniversalMTime] = calendar:local_time_to_universal_time_dst(MTime),
-          CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
-          calendar:datetime_to_gregorian_seconds(UniversalMTime) >
-            calendar:datetime_to_gregorian_seconds(CompileTime)
-      end
-  end.
+  do_module_modified_p(lists:keyfind(time, 1, Mod:module_info(compile)),
+                       file:read_file_info(File)).
+
+do_module_modified_p(false, _MTime)                         -> true;
+do_module_modified_p(_CTime, {error, _})                    -> true;
+do_module_modified_p(CTime, {ok, #file_info{mtime = MTime}}) ->
+  {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} = CTime,
+  [UniversalMTime] = calendar:local_time_to_universal_time_dst(MTime),
+  CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
+  calendar:datetime_to_gregorian_seconds(UniversalMTime) >
+    calendar:datetime_to_gregorian_seconds(CompileTime).
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
@@ -860,25 +859,39 @@ get_additional_includes_test_() ->
                                           [{i, filename:join(AppDir, "foo")}]))
    ]}.
 
+do_module_modified_p_test_() ->
+  Now = calendar:local_time(),
+  {{Year, Month, Day}, {Hour, Minute, Second} = Time} = Now,
 
-module_modified_p_test_() ->
-  AppDir = code:lib_dir(edts),
-  TmpDir = filename:join(AppDir, "tmp"),
-  {file, OldBeam} = code:is_loaded(?MODULE),
-  NewBeam   = filename:join(TmpDir, atom_to_list(?MODULE) ++ ".beam"),
-  {setup,
-    fun() ->
-        file:make_dir(TmpDir),
-        {ok, Src} = get_module_source_from_beam(?MODULE),
-        {ok, ?MODULE} = compile:file(Src, [{outdir, TmpDir}])
-    end,
-    fun(_) ->
-        ok = file:delete(NewBeam),
-        ok = file:del_dir(TmpDir)
-    end,
-    [ ?_assertNot(module_modified_p(?MODULE, OldBeam)),
-      ?_assert(module_modified_p(?MODULE, NewBeam))
-    ]}.
+  NowMTime = #file_info{mtime = Now},
+  NowCTime = {time, {Year, Month, Day, Hour, Minute, Second}},
+
+  FutureMTime = #file_info{mtime = {{Year + 1, Month, Day}, Time}},
+  FutureCTime = {time, {Year + 1, Month, Day, Hour, Minute, Second}},
+
+  PastMTime = #file_info{mtime = {{Year - 1, Month, Day}, Time}},
+  PastCTime = {time, {Year - 1, Month, Day, Hour, Minute, Second}},
+
+  [ ?_assert(do_module_modified_p(false, {ok, PastMTime})),
+    ?_assert(do_module_modified_p(false, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(false, {ok, FutureMTime})),
+
+    ?_assert(do_module_modified_p(PastCTime, {error, foo})),
+    ?_assert(do_module_modified_p(NowCTime, {error, foo})),
+    ?_assert(do_module_modified_p(FutureCTime, {error, foo})),
+
+    ?_assertNot(do_module_modified_p(PastCTime, {ok, PastMTime})),
+    ?_assert(do_module_modified_p(PastCTime, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(PastCTime, {ok, FutureMTime})),
+
+    ?_assertNot(do_module_modified_p(NowCTime, {ok, PastMTime})),
+    ?_assertNot(do_module_modified_p(NowCTime, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(NowCTime, {ok, FutureMTime})),
+
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, PastMTime})),
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, NowMTime})),
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, FutureMTime}))
+  ].
 
 string_to_mfa_test_() ->
   [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
