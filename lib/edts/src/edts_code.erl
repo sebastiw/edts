@@ -106,15 +106,21 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 -spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
                        {ok, [issue()]}.
 %%------------------------------------------------------------------------------
-check_modules(Modules, Checks) ->
+check_modules(Modules0, Checks) ->
   MaybeReloadFun =
     fun(Module) ->
         case code:is_loaded(Module) of
-          false      -> reload_module(Module);
-          {file, _F} -> ok
+          false      ->
+            %% Only try to do xref-checks for modules that where successfully
+            %% loaded.
+            case reload_module(Module) of
+              ok         -> true;
+              {error, _} -> false
+            end;
+          {file, _F} -> true
         end
     end,
-  ok = lists:foreach(MaybeReloadFun, Modules),
+  Modules = lists:filter(MaybeReloadFun, Modules0),
   edts_xref:check_modules(Modules, Checks).
 
 
