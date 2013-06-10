@@ -354,7 +354,8 @@ current-buffer."
          (res      (edts-rest-post resource args)))
     (if (equal (cdr (assoc 'result res)) '("201" "Created"))
         res
-      (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))
+      (null (edts-log-error "Unexpected reply: %s"
+                            (cdr (assoc 'result res)))))))
 
 
 (defun edts-get-who-calls (module function arity)
