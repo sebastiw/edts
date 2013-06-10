@@ -98,15 +98,11 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 check_modules(Modules0, Checks) ->
   MaybeReloadFun =
     fun(Module) ->
-        case code:is_loaded(Module) of
-          false      ->
-            %% Only try to do xref-checks for modules that where successfully
-            %% loaded.
-            case reload_module(Module) of
-              ok         -> true;
-              {error, _} -> false
-            end;
-          {file, _F} -> true
+        %% We can only do xref checks on compiled, successfully loaded modules
+        %% atm (We don't have the location of the source-file at this point).
+        case ensure_module_loaded(false, Module) of
+          Res when is_boolean(Res) -> true;
+          {error, _}               -> false
         end
     end,
   Modules = lists:filter(MaybeReloadFun, Modules0),
@@ -185,7 +181,7 @@ compile_and_load(File0, Opts) ->
                            [{atom(), term()}].
 %%------------------------------------------------------------------------------
 get_function_info(M, F, A) ->
-  reload_module(M),
+  ensure_module_loaded(true, M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
@@ -332,7 +328,7 @@ get_module_info(M) ->
 -spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
 get_module_info(M, Level) ->
-  reload_module(M),
+  ensure_module_loaded(true, M),
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
@@ -494,13 +490,18 @@ xref_file() ->
 
 
 %%------------------------------------------------------------------------------
-%% @doc Reloads a module unless it is sticky.
--spec reload_module(M::module()) -> ok.
+%% @equiv ensure_module_loaded(Mod,
+%%                             code:where_is_file(atom_to_list(Mod) ++ ".beam"),
+%%                             Reload).
+%% @end
+-spec ensure_module_loaded(Reload :: boolean(),
+                           Mod    :: module()) -> boolean().
 %%------------------------------------------------------------------------------
-reload_module(Mod) ->
-  File = code:where_is_file(atom_to_list(Mod) ++ ".beam"),
-  ensure_module_loaded(Mod, File, true),
-  ok.
+ensure_module_loaded(Reload, Mod) ->
+  case code:where_is_file(atom_to_list(Mod) ++ ".beam") of
+    non_existing -> {error, nofile};
+    File         -> ensure_module_loaded(Mod, File, Reload)
+  end.
 
 
 %%------------------------------------------------------------------------------
