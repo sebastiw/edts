@@ -166,10 +166,10 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      (edts-project-start-node))))
+      (edts-project-node-init))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
-(defun edts-project-start-node ()
+(defun edts-project-node-init ()
   (interactive)
   (with-output-to-temp-buffer "EDTS Project"
         (edts-project--init-output-buffer)
