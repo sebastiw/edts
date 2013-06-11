@@ -272,7 +272,8 @@ for ARITY will give a regexp matching any arity."
                 (or
                  (not (edts-node-started-p "edts"))
                  (not (edts-get-nodes))))
-      (sit-for 0.2))))
+      (sit-for 0.2)
+      (decf retries))))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -313,15 +314,14 @@ localhost."
                                   &optional
                                   app-include-dirs
                                   project-include-dirs)
-  "Once NODE-NAME is registered with epmd, register it with the edts
-node, optionally retrying RETRIES times. RETRIES defaults to 5."
+  "Once NODE-NAME is registered with epmd, register it with the edts"
   (let ((retries 5))
     (edts-log-debug "Waiting for node %s to start, (retries %s)"
                     node-name
                     retries)
     (while (and (> retries 0) (not (edts-node-started-p node-name)))
       (sleep-for 0.5)
-      (setq retries (1- retries)))
+      (decf retries))
     (if (not (edts-node-started-p node-name))
         (edts-log-error "Node %s failed to start." node-name)
       (edts-init-node node-name
@@ -355,7 +355,7 @@ current-buffer."
       (edts-log-error "Failed to register node %s, Retrying (%s attempts left)"
                       node-name
                       retries)
-      (setq retries (1- retries)))
+      (decf retries))
     (unless (edts-node-registeredp node-name)
       (edts-log-error "Failed to register node '%s'" node-name))))
 
