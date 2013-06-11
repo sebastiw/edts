@@ -316,23 +316,8 @@ start_service(Node, Service) ->
     ok ->
       edts_log:info("Service ~p started on ~p", [Service, Node]),
       ok;
-    {error, already_started} ->
-      edts_log:info("Service ~p already started on ~p", [Service, Node]),
-      refresh_service(Node, Service);
     {error, _}  = Err ->
       edts_log:error("Starting service ~p on ~p failed with ~p",
-                     [Service, Node, Err]),
-      Err
-  end.
-
-refresh_service(Node, Service) ->
-  edts_log:info("Refreshing service ~p on ~p", [Service, Node]),
-  case edts_dist:refresh_service(Node, Service) of
-    ok ->
-      edts_log:info("Service ~p refreshed on ~p", [Service, Node]),
-      ok;
-    {error, _} = Err ->
-      edts_log:error("Refreshing service ~p on ~p failed with ~p",
                      [Service, Node, Err]),
       Err
   end.
@@ -379,10 +364,8 @@ wait_for_node_test() ->
 
 init_node_test() ->
   N1 = #node{name = foo},
-  N2 = #node{name = bar},
   S1 = #state{},
   S2 = #state{nodes = [N1]},
-  S3 = #state{nodes = [N2]},
 
   PrevEnv = application:get_env(edts, project_data_dir),
   application:set_env(edts, project_data_dir, "foo_dir"),
@@ -406,10 +389,6 @@ init_node_test() ->
   ?assertEqual(
      {reply, ok, S1#state{nodes = [N1]}},
      handle_call({init_node, N1#node.name, "", [], [], []}, self(), S1)),
-  %% Node already initialized.
-  ?assertEqual(
-     handle_call({init_node, N2#node.name, "", [], [], []}, self(), S3),
-     {reply, ok, S3#state{nodes = [N2]}}),
   ?assertEqual(
      {reply, ok, S2#state{nodes = [N1]}},
      handle_call({init_node, N1#node.name, "", [], [], []}, self(), S2)),

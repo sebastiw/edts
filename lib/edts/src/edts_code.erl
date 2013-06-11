@@ -44,7 +44,6 @@
          get_module_info/2,
          modules/0,
          parse_expressions/1,
-         refresh/0,
          start/0,
          started_p/0,
          string_to_mfa/1,
@@ -301,16 +300,6 @@ parse_expressions(String) ->
     {error, Err} -> {error, format_errors(error, [{"Snippet", [Err]}])}
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Refreshes the edts_code service, ensuring that code-path, xref-state etc are
-%% in sync with the file system.
-%% @end
--spec refresh() -> {node(), ok}.
-%%------------------------------------------------------------------------------
-refresh() ->
-  ok = update_xref(),
-  ok = edts_module_server:update().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -402,8 +391,14 @@ modules_at_path(Path) ->
 -spec start() -> {node(), ok} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  ok = init_xref(),
-  {ok, _} = edts_module_server:start(),
+  case edts_xref:started_p() of
+    true  -> update_xref();
+    false -> do_init_xref()
+  end,
+  case edts_module_server:started_p() of
+    true  -> edts_module_server:update();
+    false -> {ok, _} = edts_module_server:start()
+  end,
   ok.
 
 
@@ -429,13 +424,6 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 
 %%%_* Internal functions =======================================================
-
-init_xref() ->
-  case edts_xref:started_p() of
-    true  -> ok;
-    false -> do_init_xref()
-  end.
-
 
 do_init_xref() ->
   File = xref_file(),
@@ -772,8 +760,7 @@ get_project_includes() ->
 get_app_includes(FileLoc) ->
   {ok, AppIncDirs}     = application:get_env(edts, app_include_dirs),
   ParentDir = filename:dirname(FileLoc),
-  case filename:basename(FileLoc) =:= "src" andalso
-       filelib:is_dir(filename:join(ParentDir, "ebin")) of
+  case filename:basename(FileLoc) =:= "src" of
     true  -> [{i, filename:join(ParentDir, D)} || D <- AppIncDirs];
     false -> []
   end.
@@ -807,15 +794,10 @@ extract_compile_opt_p(_)                       -> false.
 get_additional_includes_test_() ->
   AppIncDirs = ["foo"],
   ProjIncs = ["test/include"],
-  {source, F} = lists:keyfind(source, 1, ?MODULE:module_info(compile)),
-  Dir = filename:dirname(F),
-  {ok, Cwd} = file:get_cwd(),
-  SrcDir = case filename:basename(Dir) of
-             ".eunit" -> filename:join(filename:dirname(Dir), "src");
-             "src"    -> Dir
-           end,
-  AppDir = filename:dirname(SrcDir),
-  AbsProjectInc = filename:join(Cwd, "test/include"),
+  Root = "root",
+  AppDir = filename:join([Root, "lib", "app_dir"]),
+  SrcDir = filename:join(AppDir, "src"),
+  AbsProjectInc = filename:join(Root, "test/include"),
 
   {setup,
    fun() ->
@@ -824,7 +806,7 @@ get_additional_includes_test_() ->
        PrevProjIncs = application:get_env(edts, project_include_dirs),
        application:set_env(edts, project_include_dirs, ProjIncs),
        PrevRootDir = application:get_env(edts, project_root_dir),
-       application:set_env(edts, project_root_dir, Cwd),
+       application:set_env(edts, project_root_dir, Root),
        [{prev_app_include_dirs, PrevAppIncs},
         {prev_project_include_dirs, PrevProjIncs},
         {prev_project_root_dir, PrevRootDir}]
