@@ -284,6 +284,15 @@ bounded by BOUND."
   "Removes the buffer from `edts-shell-list'."
   (setq edts-shell-list (assq-delete-all (buffer-name) edts-shell-list)))
 
+(defun edts-shell-kill-all ()
+  "Kill all edts-shell buffers (including the edts-server)."
+  (interactive)
+  (mapc #'(lambda (shell-entry)
+            (kill-buffer (car shell-entry))
+            (edts-log-info "Killed %s" (car shell-entry)))
+        edts-shell-list)
+  (setq edts-shell-list nil))
+
 (defun edts-shell-node-name-from-args (args)
   "Return node sname based on args"
   (block nil
