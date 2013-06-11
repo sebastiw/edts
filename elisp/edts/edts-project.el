@@ -166,7 +166,12 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      (with-output-to-temp-buffer "EDTS Project"
+      (edts-project-start-node))))
+  (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+
+(defun edts-project-start-node ()
+  (interactive)
+  (with-output-to-temp-buffer "EDTS Project"
         (edts-project--init-output-buffer)
         ;; Ensure project node is started
         (unless (edts-node-started-p (eproject-attribute :node-sname))
@@ -176,8 +181,7 @@ Example:
         ;; Register it with the EDTS node
         (edts-project--register-project-node)
         (sleep-for 1))
-      (edts-project--kill-output-buffer))))
-  (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+  (edts-project--kill-output-buffer))
 
 (defun edts-project--init-output-buffer ()
   (with-current-buffer "EDTS Project"
