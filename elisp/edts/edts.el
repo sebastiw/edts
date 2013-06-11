@@ -312,11 +312,10 @@ localhost."
                                   libs
                                   &optional
                                   app-include-dirs
-                                  project-include-dirs
-                                  retries)
+                                  project-include-dirs)
   "Once NODE-NAME is registered with epmd, register it with the edts
 node, optionally retrying RETRIES times. RETRIES defaults to 5."
-  (let ((retries (or retries 5)))
+  (let ((retries 5))
     (edts-log-debug "Waiting for node %s to start, (retries %s)"
                     node-name
                     retries)
@@ -324,26 +323,20 @@ node, optionally retrying RETRIES times. RETRIES defaults to 5."
       (sleep-for 0.5)
       (setq retries (1- retries)))
     (if (not (edts-node-started-p node-name))
-        (edts-log-error "Could not register node '%s'" node-name)
-      (while (and (> retries 0) (not (edts-node-registeredp node-name)))
-        (edts-log-debug "Registering node %s, (retries %s)"
-                        node-name
-                        retries)
-        (edts-init-node node-name
-                        root
-                        libs
-                        app-include-dirs
-                        project-include-dirs)
-        (setq retries (1- retries)))
-      (unless (edts-node-registeredp node-name)
-        (edts-log-error "Could not register node '%s'" node-name)))))
+        (edts-log-error "Node %s failed to start." node-name)
+      (edts-init-node node-name
+                      root
+                      libs
+                      app-include-dirs
+                      project-include-dirs))))
+
 
 (defun edts-init-node (node-name
                        root
                        libs
                        app-include-dirs
                        project-include-dirs)
-  "Initialize NODE-NAME with the edts node.
+  "Register NODE-NAME with the EDTS server.
 
 If called interactively, fetch arguments from project of
 current-buffer."
@@ -352,6 +345,27 @@ current-buffer."
                      (eproject-attribute :lib-dirs)
                      (eproject-attribute :app-include-dirs)
                      (eproject-attribute :project-include-dirs)))
+  (let ((retries 5))
+    (while (and (> retries 0)
+                (not (edts-try-init-node node-name
+                                         root
+                                         libs
+                                         app-include-dirs
+                                         project-include-dirs)))
+      (edts-log-error "Failed to register node %s, Retrying (%s attempts left)"
+                      node-name
+                      retries)
+      (setq retries (1- retries)))
+    (unless (edts-node-registeredp node-name)
+      (edts-log-error "Failed to register node '%s'" node-name))))
+
+(defun edts-try-init-node (node-name
+                           root
+                           libs
+                           app-include-dirs
+                           project-include-dirs)
+  "Initialize NODE-NAME with the edts node."
+  (edts-log-debug "Registering node %s, (retries %s)" node-name retries)
   (let* ((resource (list "nodes" node-name))
          (args     (list (cons "project_root"         root)
                          (cons "project_lib_dirs"     libs)
