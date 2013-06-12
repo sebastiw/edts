@@ -271,7 +271,7 @@ for ARITY will give a regexp matching any arity."
     (while (and (> retries 0)
                 (or
                  (not (edts-node-started-p "edts"))
-                 (not (edts-get-nodes))))
+                 (not (edts-get-nodes t))))
       (sit-for 0.2)
       (decf retries))))
 
@@ -356,7 +356,7 @@ current-buffer."
                       node-name
                       retries)
       (decf retries))
-    (unless (edts-node-registeredp node-name)
+    (unless (edts-node-registeredp node-name t)
       (edts-log-error "Failed to register node '%s'" node-name))))
 
 (defun edts-try-init-node (node-name
@@ -557,22 +557,24 @@ associated with that buffer."
   (let ((info (edts-get-detailed-module-info (or module (ferl-get-module)))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
-(defun edts-node-registeredp (node)
+(defun edts-node-registeredp (node &optional no-error)
   "Return non-nil if NODE is registered with the EDTS server."
-  (let* ((res   (edts-get-nodes))
+  (let* ((res   (edts-get-nodes no-error))
          (nodes (cdr res)))
     (when nodes
       (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))
             nodes))))
 
-(defun edts-get-nodes ()
-  "Return all nodes registered with the EDTS server."
+(defun edts-get-nodes (&optional no-error)
+  "Return all nodes registered with the EDTS server. If NO-ERROR is
+non-nil, don't report an error if the request fails."
   (let (nodes
         (res (edts-rest-get '("nodes") nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'nodes (cdr (assoc 'body res))))
-      (null (edts-log-error "Unexpected reply: %s"
-                            (cdr (assoc 'result res)))))))
+      (unless no-error
+        (null (edts-log-error "Unexpected reply: %s"
+                              (cdr (assoc 'result res))))))))
 
 (defun edts--node-memberp (node nodes)
   (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
