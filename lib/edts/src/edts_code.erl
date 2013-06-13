@@ -42,6 +42,7 @@
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
+         get_module_source/1,
          modules/0,
          parse_expressions/1,
          start/0,
@@ -578,6 +579,14 @@ filename_to_outdir(File) ->
     true  -> EbinDir;
     false -> DirName
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @equiv get_module_source(M, M:module_info()).
+-spec get_module_source(M::module()) -> {ok, string()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+get_module_source(M) ->
+  get_module_source(M, M:module_info()).
 
 %%------------------------------------------------------------------------------
 %% @doc Try to find the source of M using (in order):
