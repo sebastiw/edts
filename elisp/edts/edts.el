@@ -265,14 +265,15 @@ for ARITY will give a regexp matching any arity."
     (error "EDTS: Server already running"))
   (let* ((pwd (path-util-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory edts-erl-command))
-         (retries 5))
+         (retries 10))
     (with-current-buffer
         (edts-shell-make-comint-buffer "*edts*" "edts" pwd command))
+    (sit-for 0.5)
     (while (and (> retries 0)
                 (or
                  (not (edts-node-started-p "edts"))
                  (not (edts-get-nodes t))))
-      (sit-for 0.2)
+      (sit-for 0.3)
       (decf retries))))
 
 (defun edts-ensure-node-not-started (node-name)
