@@ -124,6 +124,7 @@ debug(_FmtStr, _Args) -> ok.
 %%%_* Unit tests ===============================================================
 
 init_test() ->
+  flush_mailbox(),
   self() ! {start, ref},
   ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
 
@@ -158,6 +159,11 @@ handle_cancel_test_() ->
    ?_assertEqual(#state{},
                  handle_cancel(group, data, #state{}))
   ].
+
+flush_mailbox() ->
+  receive _ -> flush_mailbox()
+  after   0 -> ok
+  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
