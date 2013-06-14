@@ -13,7 +13,10 @@ clean:
 
 .PHONY: ert
 ert:
-	emacs -q --no-splash --batch -l edts-start.el -f ert-run-tests-batch-and-exit
+	emacs -q --no-splash --batch \
+	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
+	-l edts-start.el \
+	-f ert-run-tests-batch-and-exit
 
 .PHONY: eunit
 eunit:
