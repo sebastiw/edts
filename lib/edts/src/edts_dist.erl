@@ -80,7 +80,28 @@ call(Node, Mod, Fun) ->
               term() | {badrpc, term()}.
 %%------------------------------------------------------------------------------
 call(Node, Mod, Fun, Args) ->
-  rpc:call(Node, Mod, Fun, Args).
+  Self = self(),
+  Pid = spawn(fun() -> do_call(Self, Node, Mod, Fun, Args) end),
+  receive
+    {Pid, Res} -> Res
+  end.
+
+
+do_call(Parent, Node, Mod, Fun, Args) ->
+  try_set_remote_group_leader(Node),
+  try Parent ! {self(), rpc:call(Node, Mod, Fun, Args)}
+  catch C:E -> Parent ! {self(), {C, E}}
+  end.
+
+%% @doc Set the group leader to get all tty output on the remote nade.
+try_set_remote_group_leader(Node) ->
+  case rpc:call(Node, erlang, whereis, [user]) of
+    undefined            -> ok;
+    Pid when is_pid(Pid) ->
+      Info = rpc:call(Node, erlang, process_info, [Pid]),
+      RemoteGroupLeader = proplists:get_value(group_leader, Info),
+      group_leader(RemoteGroupLeader, self())
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
