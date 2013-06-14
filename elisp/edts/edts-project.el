@@ -280,7 +280,7 @@ FILE."
        (eproject-attribute :app-include-dirs)
        (eproject-attribute :project-include-dirs))
       (edts-project--display "Done.")
-    (edts-project--display "Error."))
+    (edts-project--display "Error.")))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."
