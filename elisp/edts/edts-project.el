@@ -171,17 +171,18 @@ Example:
 
 (defun edts-project-node-init ()
   (interactive)
-  (with-output-to-temp-buffer "EDTS Project"
-        (edts-project--init-output-buffer)
-        ;; Ensure project node is started
-        (unless (edts-node-started-p (eproject-attribute :node-sname))
-          (edts-project--display "Starting project node for %s\n"
-                                 (eproject-root))
-          (edts-project-start-node))
-        ;; Register it with the EDTS node
-        (edts-project--register-project-node)
-        (sleep-for 1))
-  (edts-project--kill-output-buffer))
+  (save-window-excursion
+    (with-output-to-temp-buffer "EDTS Project"
+      (edts-project--init-output-buffer)
+      ;; Ensure project node is started
+      (unless (edts-node-started-p (eproject-attribute :node-sname))
+        (edts-project--display "Starting project node for %s\n"
+                               (eproject-root))
+        (edts-project-start-node))
+      ;; Register it with the EDTS node
+      (edts-project--register-project-node)
+      (sleep-for 1))
+    (edts-project--kill-output-buffer)))
 
 (defun edts-project--init-output-buffer ()
   (with-current-buffer "EDTS Project"
@@ -271,14 +272,15 @@ FILE."
                              (eproject-root))
     (edts-project--display "Initializing project node for %s. Please wait..."
                            (eproject-root)))
-  (edts-init-node-when-ready
-   (eproject-attribute :name)
-   (eproject-attribute :node-sname)
-   (eproject-root)
-   (eproject-attribute :lib-dirs)
-   (eproject-attribute :app-include-dirs)
-   (eproject-attribute :project-include-dirs))
-  (edts-project--display "Done."))
+  (if (edts-init-node-when-ready
+       (eproject-attribute :name)
+       (eproject-attribute :node-sname)
+       (eproject-root)
+       (eproject-attribute :lib-dirs)
+       (eproject-attribute :app-include-dirs)
+       (eproject-attribute :project-include-dirs))
+      (edts-project--display "Done.")
+    (edts-project--display "Error."))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."
