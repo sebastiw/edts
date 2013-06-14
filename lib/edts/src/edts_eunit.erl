@@ -152,7 +152,7 @@ reason_to_props(Reason) ->
 -spec to_str(term()) -> string().
 to_str(Term) ->
   %% Remave line breaks
-  [C || C <- io_lib:format("~p", [Term]), C =/= $\n].
+  [C || C <- lists:flatten(io_lib:format("~p", [Term])), C =/= $\n].
 
 debug(Str) -> debug(Str, []).
 
