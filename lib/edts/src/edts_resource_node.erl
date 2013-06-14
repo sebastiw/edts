@@ -68,7 +68,8 @@ create_path(ReqData, Ctx) ->
   {atom_to_list(orddict:fetch(nodename, Ctx)), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename,
+  edts_resource_lib:validate(ReqData, Ctx, [project_name,
+                                            nodename,
                                             project_root,
                                             project_lib_dirs,
                                             app_include_dirs,
@@ -79,7 +80,8 @@ post_is_create(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  ok = edts:init_node(orddict:fetch(nodename, Ctx),
+  ok = edts:init_node(orddict:fetch(project_name, Ctx),
+                      orddict:fetch(nodename, Ctx),
                       orddict:fetch(project_root, Ctx),
                       orddict:fetch(project_lib_dirs, Ctx),
                       orddict:fetch(app_include_dirs, Ctx),

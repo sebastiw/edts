@@ -86,7 +86,7 @@ the erlang process."
                    node-name
                    root
                    command)))
-      (edts-init-node-when-ready node-name root nil)
+      (edts-init-node-when-ready node-name node-name root nil)
       (when switch-to (switch-to-buffer buffer))
       buffer)))
 

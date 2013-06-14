@@ -34,7 +34,7 @@
          get_module_eunit_result/2,
          get_module_info/3,
          get_module_xref_analysis/3,
-         init_node/5,
+         init_node/6,
          is_node/1,
          node_available_p/1,
          modules/1,
@@ -204,14 +204,21 @@ get_module_xref_analysis(Node, Modules, Checks) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(Node           :: node(),
+-spec init_node(ProjectName    :: string(),
+                Node           :: node(),
                 ProjectRoot    :: filename:filename(),
                 LibDirs        :: [filename:filename()],
                 AppIncludeDirs :: [filename:filename()],
                 SysIncludeDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, SysIncludeDirs) ->
-  edts_server:init_node(Node,
+init_node(ProjectName,
+          Node,
+          ProjectRoot,
+          LibDirs,
+          AppIncludeDirs,
+          SysIncludeDirs) ->
+  edts_server:init_node(ProjectName,
+                        Node,
                         ProjectRoot,
                         LibDirs,
                         AppIncludeDirs,

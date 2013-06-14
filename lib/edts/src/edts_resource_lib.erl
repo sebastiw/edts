@@ -119,14 +119,16 @@ term_to_validate({file, Key})          ->
 term_to_validate(files)                -> fun files_validate/2;
 term_to_validate(function)             -> fun function_validate/2;
 term_to_validate(info_level)           -> fun info_level_validate/2;
-term_to_validate(project_lib_dirs)     ->
-  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
 term_to_validate(module)               -> fun module_validate/2;
 term_to_validate(modules)              -> fun modules_validate/2;
 term_to_validate(nodename)             -> fun nodename_validate/2;
+term_to_validate(project_name)         ->
+  fun(RD, _Ctx) -> string_validate(RD, "project_name") end;
 term_to_validate(project_root)         -> fun project_root_validate/2;
 term_to_validate(project_include_dirs) ->
-  fun(RD, _Ctx) -> dirs_validate(RD, "projectn_include_dirs") end;
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
+term_to_validate(project_lib_dirs)     ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
 term_to_validate(xref_checks)          -> fun xref_checks_validate/2.
 
 
@@ -340,6 +342,19 @@ project_root_validate(ReqData, _Ctx) ->
         true  -> {ok, Root};
         false -> {error, {not_dir, Root}}
       end
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a string
+%% @end
+-spec string_validate(wrq:req_data(), orddict:orddict()) -> {ok, string()}.
+%%------------------------------------------------------------------------------
+string_validate(ReqData, Key) ->
+  case wrq:get_qs_value(Key, ReqData) of
+    undefined -> {ok, ""};
+    String    -> {ok, String}
   end.
 
 

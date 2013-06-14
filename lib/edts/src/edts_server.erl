@@ -30,7 +30,7 @@
 
 %% API
 -export([ wait_for_node/1
-        , init_node/5
+        , init_node/6
         , node_available_p/1
         , node_registered_p/1
         , nodes/0
@@ -87,14 +87,21 @@ wait_for_node(Node) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(Node        :: node(),
+-spec init_node(ProjectName    :: string(),
+                Node        :: node(),
                 ProjectRoot :: filename:filename(),
                 LibDirs     :: [filename:filename()],
                 AppInclDirs :: [filename:filename()],
                 SysInclDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) ->
-  Call = {init_node, Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs},
+init_node(ProjectName, Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) ->
+  Call = {init_node,
+          ProjectName,
+          Node,
+          ProjectRoot,
+          LibDirs,
+          AppInclDirs,
+          SysInclDirs},
   gen_server:call(?SERVER, Call, infinity).
 
 %%------------------------------------------------------------------------------
@@ -163,8 +170,8 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({wait_for_node, Name}, _From, State) ->
-    case node_find(Name, State) of
+handle_call({wait_for_node, NodeName}, _From, State) ->
+    case node_find(NodeName, State) of
       false -> {reply, {error, not_found}, State};
       #node{promises = [_|_]} = Node->
         lists:foreach(fun rpc:yield/1, Node#node.promises),
@@ -172,32 +179,43 @@ handle_call({wait_for_node, Name}, _From, State) ->
       #node{} ->
         {reply, ok, State}
     end;
-handle_call({init_node, Name, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs},
+handle_call({init_node,
+             ProjectName,
+             NodeName,
+             ProjectRoot,
+             LibDirs,
+             AppInclDirs,
+             SysInclDirs},
             _From,
             State0) ->
-  edts_log:info("Initializing ~p.", [Name]),
-  case do_init_node(Name, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) of
+  edts_log:info("Initializing ~p.", [NodeName]),
+  case do_init_node(ProjectName,
+                    NodeName,
+                    ProjectRoot,
+                    LibDirs,
+                    AppInclDirs,
+                    SysInclDirs) of
     ok ->
-      edts_log:debug("Initialization call done on ~p.", [Name]),
+      edts_log:debug("Initialization call done on ~p.", [NodeName]),
       State =
-        case node_find(Name, State0) of
+        case node_find(NodeName, State0) of
           #node{} -> State0;
-          false   -> node_store(#node{name = Name}, State0)
+          false   -> node_store(#node{name = NodeName}, State0)
         end,
       {reply, ok, State};
     {error, _} = Err ->
-      edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
+      edts_log:error("Initializing node ~p failed with ~p.", [NodeName, Err]),
       {reply, Err, State0}
   end;
-handle_call({node_available_p, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
+handle_call({node_available_p, NodeName}, _From, State) ->
+  Reply = case node_find(NodeName, State) of
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
           end,
   {reply, Reply, State};
-handle_call({node_registered_p, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
+handle_call({node_registered_p, NodeName}, _From, State) ->
+  Reply = case node_find(NodeName, State) of
             #node{} -> true;
             false   -> false
           end,
@@ -269,13 +287,19 @@ code_change(_OldVsn, State, _Extra) ->
 %% to promises that are to be fulfilled by the remote node. These keys can later
 %% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
 %% @end
--spec do_init_node(Node           :: node(),
+-spec do_init_node(ProjectName    :: string(),
+                   Node           :: node(),
                    ProjectRoot    :: filename:filename(),
                    LibDirs        :: [filename:filename()],
                    AppIncludeDirs :: [filename:filename()],
                    SysIncludeDirs :: [filename:filename()]) -> [rpc:key()].
 %%------------------------------------------------------------------------------
-do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
+do_init_node(ProjectName,
+             Node,
+             ProjectRoot,
+             LibDirs,
+             AppIncludeDirs,
+             ProjectIncludeDirs) ->
   try
     ok = edts_dist:remote_load_modules(Node, [edts_code,
                                               edts_dialyzer,
@@ -287,7 +311,8 @@ do_init_node(Node, ProjectRoot, LibDirs, AppIncludeDirs, ProjectIncludeDirs) ->
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
 
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
-    AppEnv = [{project_data_dir,     ProjectDir},
+    AppEnv = [{project_name,         ProjectName},
+              {project_data_dir,     ProjectDir},
               {project_root_dir,     ProjectRoot},
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],

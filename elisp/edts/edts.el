@@ -309,7 +309,8 @@ localhost."
          (len-lsb (logand len 255)))
     (concat (string len-msb len-lsb) msg)))
 
-(defun edts-init-node-when-ready (node-name
+(defun edts-init-node-when-ready (project-name
+                                  node-name
                                   root
                                   libs
                                   &optional
@@ -325,14 +326,16 @@ localhost."
       (decf retries))
     (if (not (edts-node-started-p node-name))
         (edts-log-error "Node %s failed to start." node-name)
-      (edts-init-node node-name
+      (edts-init-node project-name
+                      node-name
                       root
                       libs
                       app-include-dirs
                       project-include-dirs))))
 
 
-(defun edts-init-node (node-name
+(defun edts-init-node (project-name
+                       node-name
                        root
                        libs
                        app-include-dirs
@@ -341,14 +344,16 @@ localhost."
 
 If called interactively, fetch arguments from project of
 current-buffer."
-  (interactive (list (edts-node-name)
+  (interactive (list (eproject-attribute :name)
+                     (edts-node-name)
                      (eproject-attribute :root)
                      (eproject-attribute :lib-dirs)
                      (eproject-attribute :app-include-dirs)
                      (eproject-attribute :project-include-dirs)))
   (let ((retries 5))
     (while (and (> retries 0)
-                (not (edts-try-init-node node-name
+                (not (edts-try-init-node project-name
+                                         node-name
                                          root
                                          libs
                                          app-include-dirs
@@ -360,7 +365,8 @@ current-buffer."
     (unless (edts-node-registeredp node-name t)
       (edts-log-error "Failed to register node '%s'" node-name))))
 
-(defun edts-try-init-node (node-name
+(defun edts-try-init-node (project-name
+                           node-name
                            root
                            libs
                            app-include-dirs
@@ -368,7 +374,8 @@ current-buffer."
   "Initialize NODE-NAME with the edts node."
   (edts-log-debug "Registering node %s, (retries %s)" node-name retries)
   (let* ((resource (list "nodes" node-name))
-         (args     (list (cons "project_root"         root)
+         (args     (list (cons "project_name"         project-name)
+                         (cons "project_root"         root)
                          (cons "project_lib_dirs"     libs)
                          (cons "app_include_dirs"     app-include-dirs)
                          (cons "project_include_dirs" project-include-dirs)))

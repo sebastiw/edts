@@ -476,7 +476,8 @@ save_xref_state() ->
 xref_file() ->
   {ok, XrefDir} = application:get_env(edts, project_data_dir),
   {ok, RootDir} = application:get_env(edts, project_root_dir),
-  Filename = io_lib:format("~p_~p.xref", [erlang:phash2(RootDir), node()]),
+  {ok, ProjectName} = application:get_env(edts, project_name),
+  Filename = io_lib:format("~p_~s.xref", [erlang:phash2(RootDir), ProjectName]),
   filename:join(XrefDir, Filename).
 
 
