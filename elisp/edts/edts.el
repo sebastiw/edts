@@ -273,7 +273,7 @@ for ARITY will give a regexp matching any arity."
                                   (not available)))
       (setq started (edts-node-started-p "edts"))
       (setq available (edts-get-nodes t))
-      (sit-for 0.3)
+      (sit-for 0.5)
       (decf retries))
     available))
 
@@ -326,7 +326,7 @@ localhost."
       (sleep-for 0.5)
       (decf retries))
     (if (not (edts-node-started-p node-name))
-        (edts-log-error "Node %s failed to start." node-name)
+        (null (edts-log-error "Node %s failed to start." node-name))
       (edts-init-node project-name
                       node-name
                       root
@@ -363,8 +363,9 @@ current-buffer."
                       node-name
                       retries)
       (decf retries))
-    (unless (edts-node-registeredp node-name t)
-      (edts-log-error "Failed to register node '%s'" node-name))))
+    (if (edts-node-registeredp node-name t)
+        t
+      (null (edts-log-error "Failed to register node '%s'" node-name)))))
 
 (defun edts-try-init-node (project-name
                            node-name
