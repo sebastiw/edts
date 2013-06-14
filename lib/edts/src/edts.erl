@@ -282,7 +282,7 @@ get_module_eunit_result_test_() ->
                  get_module_eunit_result(node(), edts_test_module)),
    ?_assertEqual({error, not_found},
                  get_module_eunit_result(not_a_node, edts_test_module)),
-   ?_assertEqual({ok, []},
+   ?_assertEqual({error, not_found},
                  get_module_eunit_result(node(), not_a_module))].
 
 get_dialyzer_result_test_() ->
