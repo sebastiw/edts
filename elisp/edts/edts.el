@@ -255,8 +255,8 @@ for ARITY will give a regexp matching any arity."
 
 (defun edts-ensure-server-started ()
   "Starts an edts server-node in a comint-buffer unless it is already running."
-  (unless (edts-node-started-p "edts")
-    (edts-start-server)))
+  (unless (or (edts-node-started-p "edts") (edts-start-server))
+    (error "EDTS: Could not start main server")))
 
 (defun edts-start-server ()
   "Starts an edts server-node in a comint-buffer"
@@ -265,16 +265,17 @@ for ARITY will give a regexp matching any arity."
     (error "EDTS: Server already running"))
   (let* ((pwd (path-util-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory edts-erl-command))
-         (retries 10))
-    (with-current-buffer
-        (edts-shell-make-comint-buffer "*edts*" "edts" pwd command))
-    (sit-for 0.5)
-    (while (and (> retries 0)
-                (or
-                 (not (edts-node-started-p "edts"))
-                 (not (edts-get-nodes t))))
+         (retries 10)
+         started
+         available)
+    (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
+    (while (and (> retries 0) (or (not started)
+                                  (not available)))
+      (setq started (edts-node-started-p "edts"))
+      (setq available (edts-get-nodes t))
       (sit-for 0.3)
-      (decf retries))))
+      (decf retries))
+    available))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
