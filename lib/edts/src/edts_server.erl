@@ -413,15 +413,15 @@ init_node_test() ->
 
   ?assertEqual(
      {reply, ok, S1#state{nodes = [N1]}},
-     handle_call({init_node, N1#node.name, "", [], [], []}, self(), S1)),
+     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
   ?assertEqual(
      {reply, ok, S2#state{nodes = [N1]}},
-     handle_call({init_node, N1#node.name, "", [], [], []}, self(), S2)),
+     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
               fun(foo, _) -> error({error, some_error}) end),
   ?assertEqual({reply, {error, some_error}, S1},
-               handle_call({init_node, N1#node.name, "", [], [], []}, self(), S1)),
+               handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
 
   case PrevEnv of
     undefined -> ok;

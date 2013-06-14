@@ -100,7 +100,8 @@ try_set_remote_group_leader(Node) ->
     Pid when is_pid(Pid) ->
       Info = rpc:call(Node, erlang, process_info, [Pid]),
       RemoteGroupLeader = proplists:get_value(group_leader, Info),
-      group_leader(RemoteGroupLeader, self())
+      group_leader(RemoteGroupLeader, self());
+    {badrpc, Err} -> Err
   end.
 
 %%------------------------------------------------------------------------------

@@ -112,7 +112,8 @@ create_path_test() ->
 malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
-  Args = [nodename,
+  Args = [project_name,
+          nodename,
           project_root,
           project_lib_dirs,
           app_include_dirs,
@@ -133,17 +134,19 @@ post_is_create_test() ->
 from_json_test() ->
   meck:unload(),
   meck:new(edts),
-  meck:expect(edts, init_node, fun(true, r, [], [], []) -> ok;
-                                  (_, _, _, _, _)       -> error
+  meck:expect(edts, init_node, fun(name, true, r, [], [], []) -> ok;
+                                  (name, _,    _, _,  _,  _)  -> error
                                end),
-  Dict1 = orddict:from_list([{nodename, true},
+  Dict1 = orddict:from_list([{project_name, name},
+                             {nodename, true},
                              {project_root, r},
                              {project_lib_dirs, []},
                              {app_include_dirs, []},
                              {project_include_dirs, []}]),
   ?assertEqual({true, req_data,  Dict1},
                from_json(req_data, Dict1)),
-  Dict2 = orddict:from_list([{nodename, false},
+  Dict2 = orddict:from_list([{project_name, name},
+                             {nodename, false},
                              {project_root, r},
                              {project_lib_dirs, []},
                              {app_include_dirs, []},
