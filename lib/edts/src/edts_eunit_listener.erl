@@ -5,6 +5,7 @@
 %%% @author Håkan Nilsson <haakan@gmail.com>
 %%% @copyright
 %%% Copyright 2012 Håkan Nilsson <haakan@gmail.com>
+%%%           2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -43,15 +44,17 @@
         ]).
 
 %%%_* Defines ==================================================================
-%-define(DEBUG, true).
 
 %%%_* Records ==================================================================
--record(state, { parent     :: pid()
-               , ref        :: reference()
-               , tests = [] :: [edts_eunit:test()]
+-record(state, {parent          :: pid(),
+                ref             :: reference(),
+                successful = [] :: [event()],
+                failed     = [] :: [event()],
+                cancelled  = [] :: [event()]
                }).
 
 %%%_* Types ====================================================================
+-type event() :: proplists:proplist().
 
 %%%_* API ======================================================================
 
@@ -66,19 +69,11 @@ init(Options) ->
   debug("init, waiting for start..."),
   receive
     {start, Reference} ->
-      #state{ ref    = Reference
-            , parent = proplists:get_value(parent, Options)
-            }
+      #state{ref    = Reference,
+             parent = proplists:get_value(parent, Options)}
   end.
 
 -spec handle_begin(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_begin(test, Data, #state{tests=Tests} = State) ->
-  debug("handle_begin test: ~p", [Data]),
-  Source = proplists:get_value(source, Data),
-  case orddict:is_key(Source, Tests) of
-    true  -> State;
-    false -> State#state{tests = orddict:store(Source, [], Tests)}
-  end;
 handle_begin(L, Data, State) ->
   debug("handle_begin ~p: ~p", [L, Data]),
   State.
@@ -87,39 +82,33 @@ handle_begin(L, Data, State) ->
 handle_end(test, Data, State) ->
   debug("handle_end test: ~p", [Data]),
   case proplists:get_value(status, Data, ok) of
-    {error, Err} -> add_fail(Err, Data, State);
-    ok           -> State;
-    _Other       -> State
+    {error, _Err} -> State#state{failed     = [Data|State#state.failed]};
+    ok            -> State#state{successful = [Data|State#state.successful]}
   end;
 handle_end(L, Data, State) ->
   debug("handle_end ~p: ~p", [L, Data]),
   State.
 
--spec add_fail(tuple(), proplists:proplist(), #state{}) -> #state{}.
-add_fail({_What, How, _St}, Data, #state{tests=Tests} = State) ->
-  Source = proplists:get_value(source, Data),
-  Fail   = mk_fail(How),
-  Fails  = orddict:fetch(Source, Tests),
-  State#state{tests = orddict:store(Source, [Fail|Fails], Tests)}.
-
--spec mk_fail({edts_eunit:reason(), proplists:proplist()}
-              | edts_eunit:reason()) -> edts_eunit:info().
-mk_fail({Reason, Info}) when is_list(Info) ->
-  orddict:from_list([{reason, Reason}|Info]);
-mk_fail(Reason) ->
-  orddict:from_list([{reason, Reason}]).
-
 -spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
-handle_cancel(L, Data, State) ->
+handle_cancel(group = L, Data, State) ->
   debug("handle_cancel ~p: ~p", [L, Data]),
-  State.
+  %% Can't handle this atm because there's not always MFA info in the error
+  State;
+handle_cancel(test = L, Data, State) ->
+  debug("handle_cancel ~p: ~p", [L, Data]),
+  State#state{cancelled = [Data|State#state.cancelled]}.
+
 
 -spec terminate({ok, proplists:proplist()}, #state{}) ->
               {result, reference(), {edts_eunit:summary(),
                                      [edts_eunit:test()]}}.
-terminate({ok, Summary}, #state{ref=Ref, parent=Parent, tests=Tests}) ->
+terminate({ok, Summary}, #state{ref=Ref, parent=Parent} = State) ->
+  Result =
+    orddict:from_list([{successful, State#state.successful},
+                       {failed,     State#state.failed},
+                       {cancelled,  State#state.cancelled}]),
   debug("terminate: ~p", [Summary]),
-  Parent ! {result, Ref, {orddict:from_list(Summary), Tests}};
+  Parent ! {result, Ref, {orddict:from_list(Summary), Result}};
 terminate(Other, #state{parent=Parent}) ->
   debug("terminate: ~p", [Other]),
   Parent ! {error, Other}.
@@ -139,56 +128,36 @@ init_test() ->
   ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
 
 handle_begin_test_() ->
-  [ ?_assertEqual(#state{tests=[{a, []}]},
-                  handle_begin(test, [{source, a}], #state{tests=[]}))
-  , ?_assertEqual(#state{tests=[{a, [1]}]},
-                  handle_begin(test, [{source, a}], #state{tests=[{a, [1]}]}))
-  , ?_assertEqual(#state{tests=[{a, [1]}, {b, []}]},
-                  handle_begin(test, [{source, b}], #state{tests=[{a, [1]}]}))
-  , ?_assertEqual(#state{}, handle_begin(foo, [], #state{}))
+  [ ?_assertEqual(#state{},
+                  handle_end(group, [{status, ok}], #state{}))
   ].
 
 handle_end_test_() ->
-  [ ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(test, [], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(foo, [], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, []}]},
-                  handle_end(test, [{status, asdf}], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{reason, bar}]]}]},
-                  handle_end(test, [ {status, {error, {error, bar, st}}}
-                                   , {source, foo}
-                                   ], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}]]}]},
-                  handle_end(test,
-                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
-                             , {source, foo}
-                             ], #state{tests=[{foo, []}]}))
-  , ?_assertEqual(#state{tests=[{foo, [[{a, 1}, {reason, bar}], baz]}]},
-                  handle_end(test,
-                             [ {status, {error, {error, {bar, [{a,1}]}, st}}}
-                             , {source, foo}
-                             ], #state{tests=[{foo, [baz]}]}))
+  [ ?_assertEqual(#state{successful = [[{status, ok}]]},
+                  handle_end(test, [{status, ok}], #state{})),
+    ?_assertEqual(#state{failed = [[{status, {error, an_error}}]]},
+                  handle_end(test, [{status, {error, an_error}}], #state{})),
+    ?_assertEqual(#state{},
+                  handle_end(group, [{status, ok}], #state{}))
   ].
 
 terminate_test() ->
   Ref   = make_ref(),
-  State = #state{ref=Ref, parent=self(), tests=[foo, bar]},
-  Exp   = {result, Ref, {[{a, 1}, {b, 2}], [foo, bar]}},
+  State = #state{ref=Ref, parent=self()},
+  Results = [{cancelled,[]},{failed,[]},{successful,[]}],
+  Summary = [{a, 1}, {b, 2}],
+  Exp   = {result, Ref, {Summary, Results}},
   ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
   ?assertEqual(Exp, receive Exp -> Exp end),
   ?assertEqual({error, foo}, terminate(foo, State)),
   ?assertEqual({error, foo}, receive {error, _} = ExpErr -> ExpErr end).
 
-mk_fail_test_() ->
-  [ ?_assertEqual([{reason, foo}],             mk_fail(foo))
-  , ?_assertEqual([{reason, foo}],             mk_fail({foo, []}))
-  , ?_assertEqual([{aaa, bar}, {reason, foo}], mk_fail({foo, [{aaa, bar}]}))
+handle_cancel_test_() ->
+  [?_assertEqual(#state{cancelled = [data]},
+                 handle_cancel(test, data, #state{})),
+   ?_assertEqual(#state{},
+                 handle_cancel(group, data, #state{}))
   ].
-
-handle_cancel_test() ->
-  State = #state{ref=foo, parent=bar, tests=baz},
-  ?assertEqual(State, handle_cancel(l, data, State)).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
