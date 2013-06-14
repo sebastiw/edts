@@ -364,9 +364,13 @@ start_test() ->
   end,
   OrigPath = code:get_path(),
   code:set_path(mock_path()),
+  MonitorRef = erlang:monitor(process, ?SERVER),
   stop(),
-  ?assertEqual(undefined, whereis(?SERVER)),
-  {error, not_started} = stop(),
+  receive
+    {'DOWN', MonitorRef, _Type, _Object, _Info} ->
+      ?assertEqual(undefined, whereis(?SERVER)),
+      {error, not_started} = stop()
+  end,
   start(),
   {error, already_started} = start(),
   ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
