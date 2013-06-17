@@ -62,6 +62,7 @@
           (let* ((reply  (edts-rest-parse-http-response))
                  (status (cdr (assoc 'result reply))))
             (edts-log-debug "Reply %s received for request to %s" status url)
+            (kill-buffer (current-buffer))
             reply))))))
 
 (defun edts-rest-get-async (resource args callback callback-args)
