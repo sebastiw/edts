@@ -110,26 +110,61 @@ format_results(Source, Results) ->
 
 
 format_successful(Source, Result) ->
-  Line = proplists:get_value(line, Result),
-  {'passed-test', Source, Line, "no asserts failed"}.
+  {'passed-test', Source, get_line(Result), "no asserts failed"}.
 
 format_failed(Source, Result) ->
-  Line = proplists:get_value(line, Result),
   {error, Err} = proplists:get_value(status, Result),
-  {'failed-test', Source, Line, format_error(Err)}.
+  {'failed-test', Source, get_line(Result), format_error(Err)}.
 
 format_cancelled(Source, Result) ->
-  Line = proplists:get_value(line, Result),
-  {'cancelled-test', Source, Line, to_str(proplists:get_value(reason, Result))}.
+  Reason = to_str(proplists:get_value(reason, Result)),
+  {'cancelled-test', Source, get_line(Result), Reason}.
 
-format_error({error, {Reason, Info}, _Stack}) ->
-  {ExpectProp, ValueProp} = reason_to_props(Reason),
-  Expected = proplists:get_value(ExpectProp, Info),
-  Value = proplists:get_value(ValueProp, Info),
-  io_lib:format("~p\n"
-                "expected: ~s\n"
-                "value:    ~s",
-         [Reason, to_str(Expected), to_str(Value)]).
+format_error({error, {Reason, Info} = Err, _Stack}) ->
+  case reason_to_props(Reason) of
+    {ok, {ExpectProp, ValueProp}} ->
+      Expected = proplists:get_value(ExpectProp, Info),
+      Value = proplists:get_value(ValueProp, Info),
+      io_lib:format("~p\n"
+                    "expected: ~s\n"
+                    "value:    ~s",
+                    [Reason, to_str(Expected), to_str(Value)]);
+    {error, not_found} ->
+      io_lib:format("~p", [Err])
+  end.
+
+get_line(Result) ->
+  case proplists:get_value(line, Result) of
+    Line when is_integer(Line) andalso
+              Line > 0 ->
+      Line;
+    _ ->
+      try get_error_line(Result)
+      catch
+        _:_ ->
+          case proplists:get_value(source, Result) of
+            {M, F, A} ->
+              proplists:get_value(line, edts_code:get_function_info(M, F, A));
+            _         ->
+              1
+          end
+      end
+  end.
+
+get_error_line(Result) ->
+  {error, {error, Error, Loc}} = proplists:get_value(status, Result),
+  case Error of
+    {Reason, [{_, _}|_] = Details} when is_atom(Reason) ->
+      proplists:get_value(line, Details);
+    _ -> get_error_line_from_loc(Loc)
+  end.
+
+%% No clause for unexpected arguments because we wouldn't know what to do with
+%% them anyway. Crash and let get_line/1 deal with it.
+get_error_line_from_loc([{_M, _F, _A, Src}]) ->
+  Line = proplists:get_value(line, Src),
+  true = is_integer(Line),
+  Line.
 
 reason_to_props(Reason) ->
   Mapping =
@@ -144,8 +179,8 @@ reason_to_props(Reason) ->
      {assertion_failed, {expected, value}},
      {command_failed, {expected_status, status}}],
   case lists:keyfind(Reason, 1, Mapping) of
-    {Reason, Props} -> Props;
-    false           -> {undefined, undefined}
+    {Reason, Props} -> {ok, Props};
+    false           -> {error, not_found}
   end.
 
 
@@ -201,8 +236,8 @@ to_str_test_() ->
   ].
 
 reason_to_props_test_() ->
-  [?_assertEqual({expected, value}, reason_to_props(assertion_failed)),
-   ?_assertEqual({undefined, undefined}, reason_to_props(foooo))
+  [?_assertEqual({ok, {expected, value}}, reason_to_props(assertion_failed)),
+   ?_assertEqual({error, not_found}, reason_to_props(foooo))
   ].
 
 %%%_* Test helpers -------------------------------------------------------------
