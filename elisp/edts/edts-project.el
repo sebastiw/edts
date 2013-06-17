@@ -166,7 +166,9 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      (edts-project-node-init))))
+      (if (edts-node-registeredp (eproject-attribute :node-sname))
+          (edts-project-node-refresh)
+      (edts-project-node-init)))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
 
 (defun edts-project-node-init ()
@@ -183,6 +185,17 @@ Example:
       (edts-project--register-project-node)
       (sleep-for 1))
     (edts-project--kill-output-buffer)))
+
+(defun edts-project-node-refresh ()
+  "Asynchronously refresh the state of current buffer's project node"
+  (interactive)
+  (edts-init-node-async
+   (eproject-attribute :name)
+   (eproject-attribute :node-sname)
+   (eproject-root)
+   (eproject-attribute :lib-dirs)
+   (eproject-attribute :app-include-dirs)
+   (eproject-attribute :project-include-dirs)))
 
 (defun edts-project--init-output-buffer ()
   (with-current-buffer "EDTS Project"

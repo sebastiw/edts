@@ -334,6 +334,48 @@ localhost."
                       app-include-dirs
                       project-include-dirs))))
 
+(defun edts-init-node-async (project-name
+                             node-name
+                             root
+                             libs
+                             app-include-dirs
+                             project-include-dirs)
+  "Register NODE-NAME with the EDTS server asynchronously."
+  (interactive (list (eproject-attribute :name)
+                     (edts-node-name)
+                     (eproject-attribute :root)
+                     (eproject-attribute :lib-dirs)
+                     (eproject-attribute :app-include-dirs)
+                     (eproject-attribute :project-include-dirs)))
+  (let* ((resource (list "nodes" node-name))
+         (args     (list (cons "project_name"         project-name)
+                         (cons "project_root"         root)
+                         (cons "project_lib_dirs"     libs)
+                         (cons "app_include_dirs"     app-include-dirs)
+                         (cons "project_include_dirs" project-include-dirs)))
+         (cb-args  (list node-name)))
+    (edts-rest-post-async resource
+                          args
+                          #'edts-init-node-async-callback
+                          cb-args)))
+
+(defun edts-init-node-async-callback (reply node-name &rest rest)
+  "Handle the result of an asynchronous node registration."
+  (let ((result (cadr (assoc 'result reply))))
+    (if (and result (eq (string-to-number result) 201))
+        (edts-log-info "Successfuly intialized node %s" node-name)
+      (null
+       (edts-log-error "Failed to initialize node %s" node-name)))))
+
+
+(edts-log-error "Failed to register node %s, Retrying (%s attempts left)"
+                node-name
+                retries)
+(decf retries))
+(if (edts-node-registeredp node-name t)
+    t
+  (null (edts-log-error "Failed to register node '%s'" node-name)))))
+
 
 (defun edts-init-node (project-name
                        node-name
@@ -545,7 +587,8 @@ CALLBACK with the http-body part of REPLY as the first argument and
 ARGS as the other arguments"
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) expected))
-        (apply callback (cdr (assoc 'body reply)) args)
+        (when callback
+          (apply callback (cdr (assoc 'body reply)) args))
       (null
        (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply)))))))
 
