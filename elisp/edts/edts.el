@@ -367,16 +367,6 @@ localhost."
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
 
-
-(edts-log-error "Failed to register node %s, Retrying (%s attempts left)"
-                node-name
-                retries)
-(decf retries))
-(if (edts-node-registeredp node-name t)
-    t
-  (null (edts-log-error "Failed to register node '%s'" node-name)))))
-
-
 (defun edts-init-node (project-name
                        node-name
                        root
