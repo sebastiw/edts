@@ -363,7 +363,7 @@ localhost."
   "Handle the result of an asynchronous node registration."
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
-        (edts-log-info "Successfuly intialized node %s" node-name)
+        (edts-log-debug "Successfuly intialized node %s" node-name)
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
 
