@@ -64,6 +64,11 @@
                            | {error, term()}.
 %%------------------------------------------------------------------------------
 run_tests(Module) ->
+  try try_run_tests(Module)
+  catch _:E -> error(E)
+  end.
+
+try_run_tests(Module) ->
   case do_run_tests(Module) of
     {ok, {Summary, Results}} ->
       debug("run tests returned ok: ~p", [Summary]),
@@ -74,16 +79,30 @@ run_tests(Module) ->
       Error
   end.
 
+
 %%%_* Internal functions =======================================================
 
 -spec do_run_tests(module()) -> result().
 do_run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
   Listener = edts_eunit_listener:start([{parent, self()}]),
-  case eunit_server:start_test(eunit_server, Listener, Module, []) of
+  Tests = filter_module_tests(Module, eunit_data:get_module_tests(Module)),
+  case eunit_server:start_test(eunit_server, Listener, Tests, []) of
     {ok, Ref}    -> do_run_tests(Ref, Listener, 20000);
     {error, Err} -> {error, Err}
   end.
+
+filter_module_tests(Module, Tests) ->
+  Fun = fun({_Type, TestModule, _Fun} = Test, Acc) when TestModule =:= Module ->
+            [Test|Acc];
+           ({WeirdModuleString, ModuleTests}, Acc) ->
+            case filter_module_tests(Module, ModuleTests) of
+              [] -> Acc;
+              Tests -> [{WeirdModuleString, Tests}|Acc]
+            end;
+           (_, Acc) -> Acc
+        end,
+  lists:reverse(lists:foldl(Fun, [], Tests)).
 
 -spec do_run_tests(reference(), pid(), non_neg_integer()) -> result().
 do_run_tests(Ref, Listener, Timeout) ->
