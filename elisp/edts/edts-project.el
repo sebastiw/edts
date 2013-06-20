@@ -368,7 +368,7 @@ projects and there is no previous .edts-file."
       (when (and project
                  (not (file-exists-p (edts-project--config-file project))))
         (edts-project--create project)
-        (edts-log-info "Created .edts configuration file for project: ~p"
+        (edts-log-info "Created .edts configuration file for project: %s"
                        (cdr (assoc 'name project)))))))
 
 (defun edts-project--file-old-project (file)
