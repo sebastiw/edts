@@ -95,6 +95,8 @@ do_run_tests(Module) ->
 filter_module_tests(Module, Tests) ->
   Fun = fun({_Type, TestModule, _Fun} = Test, Acc) when TestModule =:= Module ->
             [Test|Acc];
+           ({WeirdModuleString, ModuleTest}, Acc) when is_atom(ModuleTest) ->
+            [{WeirdModuleString, ModuleTest}|Acc];
            ({WeirdModuleString, ModuleTests}, Acc) ->
             case filter_module_tests(Module, ModuleTests) of
               [] -> Acc;
