@@ -162,7 +162,7 @@ compile_and_load(File0, Opts) ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
-          update_xref(),
+          update_xref([Mod]),
           maybe_interpret_module(Mod, WasInterpreted),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
