@@ -77,7 +77,7 @@ create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, cmd, exclusions]).
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, cmd]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
