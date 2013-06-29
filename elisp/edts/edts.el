@@ -690,7 +690,6 @@ non-nil, don't report an error if the request fails."
 
 (defun edts--node-memberp (node nodes)
   (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
->>>>>>> master
 
 (defun edts-node-name ()
   "Return the sname of current buffer's project node."
