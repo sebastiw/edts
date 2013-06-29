@@ -40,17 +40,14 @@
          get_module_eunit_result/2,
          get_module_info/3,
          get_module_xref_analysis/3,
-         init_node/3,
+         init_node/6,
          interpret_modules/2,
-         interpret_node/2,
          is_node/1,
-         is_node_interpreted/1,
          node_available_p/1,
          modules/1,
          node_reachable/1,
          nodes/0,
          uninterpret_modules/2,
-         uninterpret_node/1,
          wait_for_debugger/1,
          who_calls/4]).
 
@@ -166,19 +163,6 @@ who_calls(Node, Module, Function, Arity) ->
     Info  -> Info
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Interprets all code loaded in Node, if possible, returning the list
-%% of interpreted modules.
-%% @end
--spec interpret_node( Node :: node(), Exclusions :: [module()] ) ->
-                           [module()] | {error, not_found}.
-%%------------------------------------------------------------------------------
-interpret_node(Node, Exclusions) ->
-  case edts_dist:call(Node, edts_debug_server, interpret_node, [Exclusions]) of
-    {badrpc, _} -> {error, not_found};
-    Interpreted -> {ok, Interpreted}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -195,19 +179,6 @@ interpret_modules(Node, Modules) ->
     Interpreted -> Interpreted
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Uninterprets all code loaded in Node.
-%% modules.
-%% @end
--spec uninterpret_node( Node :: node() )
-                      -> {ok, uninterpreted} | {error, not_found}.
-%%------------------------------------------------------------------------------
-uninterpret_node(Node) ->
-  case edts_dist:call(Node, edts_debug_server, uninterpret_node, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      ->  Result
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -309,18 +280,6 @@ wait_for_debugger(Node) ->
     Result      -> Result
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true iff Node is running interpreted code.
-%% @end
-%%
--spec is_node_interpreted(Node::node()) -> boolean().
-%%------------------------------------------------------------------------------
-is_node_interpreted(Node) ->
-  case edts_dist:call(Node, edts_debug_server, is_node_interpreted, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> {ok, Result}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -388,10 +347,25 @@ get_module_xref_analysis(Node, Modules, Checks) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(Node::node(), filename:filename(), [string()]) -> ok.
+-spec init_node(ProjectName    :: string(),
+                Node           :: node(),
+                ProjectRoot    :: filename:filename(),
+                LibDirs        :: [filename:filename()],
+                AppIncludeDirs :: [filename:filename()],
+                SysIncludeDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs) ->
-  edts_server:init_node(Node, ProjectRoot, LibDirs).
+init_node(ProjectName,
+          Node,
+          ProjectRoot,
+          LibDirs,
+          AppIncludeDirs,
+          SysIncludeDirs) ->
+  edts_server:init_node(ProjectName,
+                        Node,
+                        ProjectRoot,
+                        LibDirs,
+                        AppIncludeDirs,
+                        SysIncludeDirs).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -434,7 +408,7 @@ modules(Node) ->
 -spec node_reachable(Node::node()) -> boolean().
 %%------------------------------------------------------------------------------
 node_reachable(Node) ->
-  edts_server:node_registered_p(Node) andalso net_adm:ping(Node) =:= pong.
+  net_adm:ping(Node) =:= pong.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -455,10 +429,10 @@ get_module_eunit_result_test_() ->
   [?_assertMatch({ok, [{'passed-test', _Source, Line1, "no asserts failed"},
                        {'passed-test', _Source, Line2, "no asserts failed"}]}
                  when is_integer(Line1) andalso is_integer(Line2),
-                 get_module_eunit_result(node(), test_module)),
+                 get_module_eunit_result(node(), edts_test_module)),
    ?_assertEqual({error, not_found},
-                 get_module_eunit_result(not_a_node, test_module)),
-   ?_assertEqual({ok, []},
+                 get_module_eunit_result(not_a_node, edts_test_module)),
+   ?_assertEqual({error, not_found},
                  get_module_eunit_result(node(), not_a_module))].
 
 get_dialyzer_result_test_() ->

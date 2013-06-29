@@ -4,6 +4,7 @@
 %%% @author Håkan Nilsson <haakan@gmail.com>
 %%% @copyright
 %%% Copyright 2012 Håkan Nilsson <haakan@gmail.com>
+%%%           2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -39,11 +40,21 @@
 
 %%%_* Types ====================================================================
 -type info()    :: orddict:orddict().
--type result()  :: {ok, {summary(), [test()]}}
-                 | {error, term()}.
+-type result()  :: ok() | error().
+-type ok()      :: {ok, {summary(), [test()]}}.
+-type error()   :: {error, term()}.
 -type summary() :: orddict:orddict().
 -type test()    :: {mfa(), [info()]}.
 -type reason()  :: atom().
+
+-export_type([info/0,
+              result/0,
+              ok/0,
+              error/0,
+              summary/0,
+              test/0,
+              reason/0
+             ]).
 
 %%%_* API ======================================================================
 
@@ -53,14 +64,21 @@
                            | {error, term()}.
 %%------------------------------------------------------------------------------
 run_tests(Module) ->
+  try try_run_tests(Module)
+  catch _:E -> error(E)
+  end.
+
+try_run_tests(Module) ->
   case do_run_tests(Module) of
-    {ok, {Summary, Tests}} ->
+    {ok, {Summary, Results}} ->
       debug("run tests returned ok: ~p", [Summary]),
-      {ok, lists:flatten([format_test_result(Test, Module) || Test <- Tests])};
+      {ok, Source} = edts_code:get_module_source(Module),
+      {ok, format_results(Source, Results)};
     {error, Reason} = Error ->
       debug("Error in eunit test result in ~p: ~p", [Module, Reason]),
       Error
   end.
+
 
 %%%_* Internal functions =======================================================
 
@@ -68,109 +86,129 @@ run_tests(Module) ->
 do_run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
   Listener = edts_eunit_listener:start([{parent, self()}]),
-  case eunit_server:start_test(eunit_server, Listener, Module, []) of
-    {ok, Ref}    -> do_run_tests(Ref, Listener);
+  Tests = filter_module_tests(Module, eunit_data:get_module_tests(Module)),
+  case eunit_server:start_test(eunit_server, Listener, Tests, []) of
+    {ok, Ref}    -> do_run_tests(Ref, Listener, 20000);
     {error, Err} -> {error, Err}
   end.
 
--spec do_run_tests(reference(), pid()) -> result().
-do_run_tests(Ref, Listener) ->
+filter_module_tests(Module, Tests) ->
+  Fun = fun({_Type, TestModule, _Fun} = Test, Acc) when TestModule =:= Module ->
+            [Test|Acc];
+           ({WeirdModuleString, ModuleTest}, Acc) when is_atom(ModuleTest) ->
+            [{WeirdModuleString, ModuleTest}|Acc];
+           ({WeirdModuleString, ModuleTests}, Acc) ->
+            case filter_module_tests(Module, ModuleTests) of
+              [] -> Acc;
+              Tests -> [{WeirdModuleString, Tests}|Acc]
+            end;
+           (_, Acc) -> Acc
+        end,
+  lists:reverse(lists:foldl(Fun, [], Tests)).
+
+-spec do_run_tests(reference(), pid(), non_neg_integer()) -> result().
+do_run_tests(Ref, Listener, Timeout) ->
   debug("waiting for start..."),
   receive
-    {start, Ref} -> Listener ! {start, Ref}
+    {start, Ref} ->
+      Listener ! {start, Ref}
   end,
   debug("waiting for result..."),
   receive
     {result, Ref, Result} -> {ok, Result};
     {error, Err}          -> {error, Err}
   after
-    20000 -> {error, timeout}
+    Timeout -> {error, timeout}
   end.
 
--spec format_test_result(test(), module()) -> [edts_code:issue()].
-format_test_result({{M,_,_}, _}, Module) when Module =/= M ->
-  debug("format_test_result: module not matching ~p =/= ~p", [Module, M]),
-  [];
-format_test_result({Mfa, []}, _Module) ->
-  debug("passed test: ~w", [Mfa]),
-  {Source, Line} = get_source_and_line(Mfa),
-  [{'passed-test', Source, Line, "no asserts failed"}];
-format_test_result({Mfa, Fails}, _Module) ->
-  debug("failed test: ~w", [Mfa]),
-  Formatted      = lists:flatten([format_fail(Mfa, Fail) || Fail <- Fails]),
-  {Source, Line} = get_source_and_line(Mfa),
-  [ {'failed-test', Source, Line, failed_test_str(Formatted)}
-  | Formatted].
+format_results(Source, Results) ->
+  lists:map(fun(Result) -> format_successful(Source, Result) end,
+            orddict:fetch(successful, Results)) ++
+    lists:map(fun(Result) -> format_failed(Source, Result) end,
+              orddict:fetch(failed, Results)) ++
+    lists:map(fun(Result) -> format_cancelled(Source, Result) end,
+              orddict:fetch(cancelled, Results)).
 
--spec failed_test_str([edts_code:issue()]) -> string().
-failed_test_str([])             -> "test aborted";
-failed_test_str([{_,_,Line,_}]) -> format("failed assert on line ~w", [Line]);
-failed_test_str(Formatted)      ->
-  Lines    = lists:sort([integer_to_list(Line) || {_,_,Line,_} <- Formatted]),
-  LinesStr = string:join(Lines, ", "),
-  format("~p failed asserts on lines ~s", [length(Lines), LinesStr]).
 
--spec get_source_and_line(mfa()) -> {string(), non_neg_integer()}.
-get_source_and_line({Module, Function, Arity}) ->
-  Info             = edts_code:get_function_info(Module, Function, Arity),
-  {line, Line}     = lists:keyfind(line,   1, Info),
-  {source, Source} = lists:keyfind(source, 1, Info),
-  {Source, Line}.
+format_successful(Source, Result) ->
+  {'passed-test', Source, get_line(Result), "no asserts failed"}.
 
--spec format_fail(mfa(), info()) -> edts_code:issue() | [].
-format_fail(_Mfa, [{reason, _Reason}]) -> [];
-format_fail({M,_F,_A} = Mfa, Info)     ->
-  Module      = orddict:fetch(module, Info),
-  Line        = orddict:fetch(line,   Info),
-  {Source, _} = get_source_and_line(Mfa),
-  case Module =:= M of
-    true  -> {'failed-test', Source, Line, format_reason(Info)};
-    false -> []
+format_failed(Source, Result) ->
+  {error, Err} = proplists:get_value(status, Result),
+  {'failed-test', Source, get_line(Result), format_error(Err)}.
+
+format_cancelled(Source, Result) ->
+  Reason = to_str(proplists:get_value(reason, Result)),
+  {'cancelled-test', Source, get_line(Result), Reason}.
+
+format_error({error, {Reason, Info} = Err, _Stack}) ->
+  case reason_to_props(Reason) of
+    {ok, {ExpectProp, ValueProp}} ->
+      Expected = proplists:get_value(ExpectProp, Info),
+      Value = proplists:get_value(ValueProp, Info),
+      io_lib:format("~p\n"
+                    "expected: ~s\n"
+                    "value:    ~s",
+                    [Reason, to_str(Expected), to_str(Value)]);
+    {error, not_found} ->
+      io_lib:format("~p", [Err])
   end.
 
--spec format_reason(info()) -> string().
-format_reason(Info) ->
-  Fetch = fun(Key) ->
-              case orddict:find(Key, Info) of
-                {ok, Val} -> Val;
-                error     -> undefined
-              end
-          end,
-  {Expected, Got} = fmt(Fetch(reason), Fetch),
-  format("(~p)\n"
-         "expected: ~s\n"
-         "     got: ~s",
-         [Fetch(reason), to_str(Expected), to_str(Got)]).
+get_line(Result) ->
+  case proplists:get_value(line, Result) of
+    Line when is_integer(Line) andalso
+              Line > 0 ->
+      Line;
+    _ ->
+      try get_error_line(Result)
+      catch
+        _:_ ->
+          case proplists:get_value(source, Result) of
+            {M, F, A} ->
+              proplists:get_value(line, edts_code:get_function_info(M, F, A));
+            _         ->
+              1
+          end
+      end
+  end.
 
--spec fmt(reason(), fun((atom()) -> term())) -> {term(), term()}.
-fmt(assertException_failed,    F) -> format_args_assert_exception(F);
-fmt(assertNotException_failed, F) -> format_args_assert_exception(F);
-fmt(assertCmdOutput_failed,    F) -> {F(expected_output), F(output)};
-fmt(assertCmd_failed,          F) -> {F(expected_status), F(status)};
-fmt(assertEqual_failed,        F) -> {F(expected),        F(value)};
-fmt(assertMatch_failed,        F) -> {F(pattern),         F(value)};
-fmt(assertNotEqual_failed,     F) -> {F(expected),        F(expected)};
-fmt(assertNotMatch_failed,     F) -> {F(pattern),         F(value)};
-fmt(assertion_failed,          F) -> {F(expected),        F(value)};
-fmt(command_failed,            F) -> {F(expected_status), F(status)};
-fmt(_Reason, _F)                  -> {undefined,          undefined}.
+get_error_line(Result) ->
+  {error, {error, Error, Loc}} = proplists:get_value(status, Result),
+  case Error of
+    {Reason, [{_, _}|_] = Details} when is_atom(Reason) ->
+      proplists:get_value(line, Details);
+    _ -> get_error_line_from_loc(Loc)
+  end.
+
+%% No clause for unexpected arguments because we wouldn't know what to do with
+%% them anyway. Crash and let get_line/1 deal with it.
+get_error_line_from_loc([{_M, _F, _A, Src}]) ->
+  Line = proplists:get_value(line, Src),
+  true = is_integer(Line),
+  Line.
+
+reason_to_props(Reason) ->
+  Mapping =
+    [{assertException_failed, {pattern, unexpected_success}},
+     {assertNotException_failed, {pattern, unexpected_exception}},
+     {assertCmdOutput_failed, {expected_output, output}},
+     {assertCmd_failed, {expected_status, status}},
+     {assertEqual_failed, {expected, value}},
+     {assertMatch_failed, {pattern, value}},
+     {assertNotEqual_failed, {expected, expected}},
+     {assertNotMatch_failed, {pattern, value}},
+     {assertion_failed, {expected, value}},
+     {command_failed, {expected_status, status}}],
+  case lists:keyfind(Reason, 1, Mapping) of
+    {Reason, Props} -> {ok, Props};
+    false           -> {error, not_found}
+  end.
+
 
 -spec to_str(term()) -> string().
 to_str(Term) ->
-  %% We want to format with ~p, except that we don't want it to add line breaks
-  lists:filter(fun (C) -> C =/= $\n end, format("~p", [Term])).
-
--spec format_args_assert_exception(fun((atom()) -> term())) -> {term(), term()}.
-format_args_assert_exception(Fetch) ->
-  case Fetch(unexpected_exception) of
-    undefined             -> {Fetch(pattern), Fetch(unexpected_success)};
-    {ExType, Ex, [{M,F,A}|_]} ->
-      {Fetch(pattern), format("~w:~w in ~w:~w/~w", [ExType, Ex, M, F, A])}
-  end.
-
--spec format(string(), [term()]) -> string().
-format(FormatStr, Args) ->
-  lists:flatten(io_lib:format(FormatStr, Args)).
+  %% Remave line breaks
+  [C || C <- lists:flatten(io_lib:format("~p", [Term])), C =/= $\n].
 
 debug(Str) -> debug(Str, []).
 
@@ -192,104 +230,43 @@ do_run_tests_error_test() ->
   Pid ! {error, foobar},
   assert_receive({error, foobar}).
 
-format_test_result_test_() ->
-  { setup
-  , mock_get_function_info()
-  , fun meck:unload/1
-  , [ ?_assertEqual([], format_test_result({{m,f,a}, []}, not_m))
-    , ?_assertEqual([{'passed-test', "m.erl", 1, "no asserts failed"}],
-                    format_test_result({{m,f,a}, []}, m))
-    , ?_assertEqual([{'failed-test', "m.erl", 1, "test aborted"}],
-                    format_test_result({{m,f,a}, [[{reason, foo}]]}, m))
-    ]
-  }.
+do_run_tests_timeout_test() ->
+  Ref = make_ref(),
+  self() ! {start, Ref},
+  ?assertEqual({error, timeout}, do_run_tests(Ref, self(), 0)).
 
-failed_test_str_test_() ->
-  [ ?_assertEqual("test aborted",            failed_test_str([]))
-  , ?_assertEqual("failed assert on line 1", failed_test_str([{a, b, 1, c}]))
-  , ?_assertEqual("2 failed asserts on lines 1, 2",
-                  failed_test_str([{a, b, 1, c}, {a, b, 2, c}]))
-  ].
-
-format_fail_test_() ->
-  { setup
-  , mock_get_function_info()
-  , fun meck:unload/1
-  , [ ?_assertEqual([], format_fail({m,f,a}, [{reason, foo}]))
-    , ?_assertEqual([], format_fail({m,f,a}, [{line, 2}, {module, not_m}]))
-    , ?_assertEqual({'failed-test', "m.erl", 2,
-                     "(undefined)\nexpected: undefined\n     got: undefined"},
-                    format_fail({m,f,a}, [{line, 2}, {module, m}]))
-    ]
-  }.
-
-format_reason_test_() ->
-  [ ?_assertEqual("(undefined)\nexpected: undefined\n     got: undefined",
-                  format_reason([]))
-  , ?_assertEqual("(foo)\nexpected: undefined\n     got: undefined",
-                  format_reason([{reason, foo}]))
-  , ?_assertEqual("(assertion_failed)\nexpected: foo\n     got: bar",
-                  format_reason([ {expected, foo}
-                                , {reason,   assertion_failed}
-                                , {value,    bar}]))
-  ].
-
-fmt_test_() ->
-  F  = fun(expected_output)    -> a;
-          (expected_status)    -> a;
-          (expected)           -> a;
-          (pattern)            -> a;
-          (output)             -> b;
-          (status)             -> b;
-          (value)              -> b;
-          (unexpected_success) -> b;
-          (_)                  -> undefined
-       end,
-  [ ?_assertEqual({a, b}, fmt(assertException_failed,     F))
-  , ?_assertEqual({a, b}, fmt(assertNotException_failed,  F))
-  , ?_assertEqual({a, b}, fmt(assertCmdOutput_failed,     F))
-  , ?_assertEqual({a, b}, fmt(assertCmd_failed,           F))
-  , ?_assertEqual({a, b}, fmt(assertEqual_failed,         F))
-  , ?_assertEqual({a, b}, fmt(assertMatch_failed,         F))
-  , ?_assertEqual({a, a}, fmt(assertNotEqual_failed,      F))
-  , ?_assertEqual({a, b}, fmt(assertNotMatch_failed,      F))
-  , ?_assertEqual({a, b}, fmt(assertion_failed,           F))
-  , ?_assertEqual({a, b}, fmt(command_failed,             F))
-  , ?_assertEqual({undefined, undefined}, fmt(foo,        F))
+format_results_test_() ->
+  ErrorInfo = [{expected, foo},
+               {value, bar}],
+  PropList =
+    [{successful, [ [{line, 1}]]},
+     {failed,
+      [[{line, 1},
+        {status, {error, {error, {assertion_failed, ErrorInfo}, []}}}]]},
+     {cancelled,  [ [{line, 1}] ]}],
+  [ ?_assertMatch([{'passed-test', source, 1,  _},
+                   {'failed-test', source, 1, _},
+                   {'cancelled-test', source, 1, _}],
+                  format_results(source, orddict:from_list(PropList)))
   ].
 
 to_str_test_() ->
-  [ ?_assertEqual("foo",         to_str(foo))
-  , ?_assertEqual("\"foo\"",     to_str("foo"))
-  , ?_assertEqual("[{foo,123}]", to_str([{foo,123}]))
+  [?_assertEqual("foo",         lists:flatten(to_str(foo))),
+   ?_assertEqual("\"foo\"",     lists:flatten(to_str("foo"))),
+   ?_assertEqual("[{foo,123}]", lists:flatten(to_str([{foo,123}])))
   ].
 
-format_args_assert_exception_test_() ->
-  Def   = fun(unexpected_exception) -> {a, b, [{x, y, 0}]};
-             (pattern)              -> a
-          end,
-  Undef = fun(unexpected_exception) -> undefined;
-             (pattern)              -> a;
-             (unexpected_success)   -> b
-          end,
-  [ ?_assertEqual({a, "a:b in x:y/0"}, format_args_assert_exception(Def))
-  , ?_assertEqual({a, b},              format_args_assert_exception(Undef))
+reason_to_props_test_() ->
+  [?_assertEqual({ok, {expected, value}}, reason_to_props(assertion_failed)),
+   ?_assertEqual({error, not_found}, reason_to_props(foooo))
   ].
 
 %%%_* Test helpers -------------------------------------------------------------
 
-mock_get_function_info() ->
- fun() ->
-     F = fun(_, _, _) -> [{line, 1}, {source, "m.erl"}] end,
-     meck:new(edts_code, [passthrough]),
-     meck:expect(edts_code, get_function_info, F),
-     edts_code
- end.
-
 run_tests_common() ->
   Ref      = make_ref(),
   Listener = self(),
-  Pid      = spawn(fun() -> Listener ! do_run_tests(Ref, Listener) end),
+  Pid      = spawn(fun() -> Listener ! do_run_tests(Ref, Listener, 1) end),
   Pid ! {start, Ref},
   assert_receive({start, Ref}),
   {Ref, Pid}.

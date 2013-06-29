@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-doc.el --- Find and read in-source erlang documentation.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -14,9 +21,6 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
-;;
-;; Functionality for finding and displaying documentation and specifications
-;; in Erlang source files.
 
 (defun edts-doc-spec-regexp (function arity)
   (format
@@ -42,7 +46,7 @@ source in SOURCE."
 (defun edts-doc-extract-function-information (function arity)
   "Extract information (spec and comments) about FUNCTION/ARITY from
 source in current buffer."
-  (ferl-search-function function arity)
+  (edts-search-function function arity)
   (let* ((end (point))
          (re  (edts-doc-any-function-regexp))
          (start (or (and (re-search-backward re nil t) (match-end 0)) 0)))

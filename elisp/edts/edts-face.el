@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-face.el --- Display utilities.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -17,8 +24,6 @@
 ;;
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
-;;
-;; Utilities for displaying things
 
 (require 'face-remap)
 ;; Faces for highlighting

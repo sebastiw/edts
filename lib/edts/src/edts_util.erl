@@ -30,13 +30,20 @@
 
 %%%_* Exports ==================================================================
 
--export([shorten_path/1]).
+-export([lib_and_app_dirs/0,
+         shorten_path/1]).
 
 %%%_* Defines ==================================================================
 
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+lib_and_app_dirs() ->
+  ErlLibDir = code:lib_dir(),
+  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end,
+                  code:get_path()).
+
 
 shorten_path("") -> "";
 shorten_path(P)  ->

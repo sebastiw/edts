@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Convenience library for resources
+%%% @doc Utility library for webmachine resources
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -34,6 +34,8 @@
         , validate/3]).
 
 %%%_* Includes =================================================================
+-include_lib("tulib/include/prelude.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
@@ -107,25 +109,34 @@ atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
 atom_to_exists_p(module)   -> fun module_exists_p/2;
 atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
-term_to_validate(arity)        -> fun arity_validate/2;
-term_to_validate(cmd)          -> fun cmd_validate/2;
-term_to_validate(exclusions)   -> fun exclusions_validate/2;
-term_to_validate(exported)     -> fun exported_validate/2;
-term_to_validate(file)         -> fun file_validate/2;
-term_to_validate(files)        -> fun files_validate/2;
-term_to_validate(function)     -> fun function_validate/2;
-term_to_validate(info_level)   -> fun info_level_validate/2;
-term_to_validate(interpret)    -> fun interpret_validate/2;
-term_to_validate(lib_dirs)     -> fun lib_dirs_validate/2;
-term_to_validate(line)         -> fun line_validate/2;
-term_to_validate(module)       -> fun module_validate/2;
-term_to_validate(modules)      -> fun modules_validate/2;
-term_to_validate(nodename)     -> fun nodename_validate/2;
-term_to_validate(project_root) -> fun project_root_validate/2;
-term_to_validate(xref_checks)  -> fun xref_checks_validate/2;
 
-term_to_validate({file, Key})  ->
-  fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, atom_to_list(Key)) end.
+term_to_validate(app_include_dirs) ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
+term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate(cmd)                  -> fun cmd_validate/2;
+term_to_validate(exported)             -> fun exported_validate/2;
+term_to_validate(file)                 -> fun file_validate/2;
+term_to_validate({file, Key})          ->
+  fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, ?a2l(Key)) end;
+term_to_validate(files)                -> fun files_validate/2;
+term_to_validate(function)             -> fun function_validate/2;
+term_to_validate(info_level)           -> fun info_level_validate/2;
+term_to_validate(interpret)            ->
+  fun(RD, _Ctx) -> boolean_validate(RD, "interpret") end;
+term_to_validate(line) ->
+  fun(RD, _Ctx) -> non_neg_integer_validate(RD, "line") end;
+term_to_validate(module)               -> fun module_validate/2;
+term_to_validate(modules)              -> fun modules_validate/2;
+term_to_validate(nodename)             -> fun nodename_validate/2;
+term_to_validate(project_name)         ->
+  fun(RD, _Ctx) -> string_validate(RD, "project_name") end;
+term_to_validate(project_root)         -> fun project_root_validate/2;
+term_to_validate(project_include_dirs) ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
+term_to_validate(project_lib_dirs)     ->
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
+term_to_validate(xref_checks)          -> fun xref_checks_validate/2.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -135,13 +146,58 @@ term_to_validate({file, Key})  ->
                {ok, non_neg_integer()} | error.
 %%------------------------------------------------------------------------------
 arity_validate(ReqData, _Ctx) ->
+  Str = wrq:path_info(arity, ReqData),
   try
-    case list_to_integer(wrq:path_info(arity, ReqData)) of
+    case list_to_integer(Str) of
       Arity when Arity >= 0 -> {ok, Arity};
       _ -> error
     end
-  catch error:badarg -> error
+  catch error:badarg -> {error, {badarg, Str}}
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate integer
+%% @end
+-spec integer_validate(wrq:req_data(), string()) ->
+               {ok, integer()} | error.
+%%------------------------------------------------------------------------------n
+integer_validate(ReqData, Key) ->
+  Str = wrq:get_qs_value(Key, ReqData),
+  try {ok, list_to_integer(Str)}
+  catch error:badarg -> {error, {badarg, Str}}
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a non-negative integer
+%% @end
+-spec non_neg_integer_validate(wrq:req_data(), string()) ->
+               {ok, integer()} | error.
+%%------------------------------------------------------------------------------n
+non_neg_integer_validate(ReqData, Key) ->
+  case integer_validate(ReqData, Key) of
+    {ok, Int} when Int =< 0 -> {ok, Int};
+    {ok, Int}               -> {error, {illegal, integer_to_list(Int)}};
+    Err                     -> Err
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a boolean parameter
+%% @end
+-spec boolean_validate(wrq:req_data(), string()) ->
+                    {ok,  boolean()} | {error, {illegal, string()}}.
+%%------------------------------------------------------------------------------
+boolean_validate(ReqData, Key) ->
+  case wrq:get_qs_value(Key, ReqData) of
+    undefined -> {ok, false};
+    "false"   -> {ok, false};
+    "true"    -> {ok, true};
+    V         -> {error, {illegal, V}}
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -158,19 +214,15 @@ cmd_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate application exclusion list for interpretation
+%% Validate and convert a list of directory names.
 %% @end
--spec exclusions_validate(wrq:req_data(), orddict:orddict()) ->
-                            {ok, [atom()]} | error.
+-spec dirs_validate(wrq:req_data(), string()) -> {ok, file:filename()}.
 %%------------------------------------------------------------------------------
-exclusions_validate(ReqData, _Ctx) ->
-  ExclusionsStr = case wrq:get_qs_value("exclusions", ReqData) of
-                    undefined -> "";
-                    Str       -> Str
-                  end,
-  Exclusions = lists:map(fun(AppName) -> list_to_atom(AppName) end,
-                         string:tokens(ExclusionsStr, ",")),
-  {ok, Exclusions}.
+dirs_validate(ReqData, QsKey) ->
+  case wrq:get_qs_value(QsKey, ReqData) of
+    undefined -> {ok, []};
+    Str       -> {ok, string:tokens(Str, ",")}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -249,7 +301,7 @@ function_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate arity
+%% Validate info-level
 %% @end
 -spec info_level_validate(wrq:req_data(), orddict:orddict()) ->
                     {ok, basic | detailed} | {error, {illegal, string()}}.
@@ -262,48 +314,6 @@ info_level_validate(ReqData, _Ctx) ->
     V          -> {error, {illegal, V}}
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate a list of paths to lib directories underneath a project root already
-%% specified in Ctx.
-%% @end
--spec lib_dirs_validate(wrq:req_data(), orddict:orddict()) ->
-                           {ok, file:filename()}.
-%%------------------------------------------------------------------------------
-lib_dirs_validate(ReqData, Ctx) ->
-  Root       = orddict:fetch(project_root, Ctx),
-  LibDirsStr = case wrq:get_qs_value("lib_dirs", ReqData) of
-                 undefined -> "";
-                 Str       -> Str
-               end,
-  LibDirs    = lists:map(fun(Dir) -> filename:join(Root, Dir) end,
-                         string:tokens(LibDirsStr, ",")),
-  {ok, lists:filter(fun filelib:is_dir/1, LibDirs)}.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate interpret
-%% @end
--spec interpret_validate(wrq:req_data(), orddict:orddict()) ->
-                            {ok, true | false} | error.
-%%------------------------------------------------------------------------------
-interpret_validate(ReqData, _Ctx) ->
-  case wrq:get_qs_value("interpret", ReqData) of
-    undefined -> {ok, false};
-    "false"   -> {ok, false};
-    "true"    -> {ok, true};
-    _         -> error
-  end.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate line
-%% @end
--spec line_validate(wrq:req_data(), orddict:orddict()) ->
-                       {ok, non_neg_integer()} | error.
-%%------------------------------------------------------------------------------
-line_validate(ReqData, _Ctx) ->
-  {ok, list_to_integer(wrq:path_info(line, ReqData))}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -399,6 +409,19 @@ project_root_validate(ReqData, _Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Validate a string
+%% @end
+-spec string_validate(wrq:req_data(), string()) -> {ok, string()}.
+%%------------------------------------------------------------------------------
+string_validate(ReqData, Key) ->
+  case wrq:get_qs_value(Key, ReqData) of
+    undefined -> {ok, ""};
+    String    -> {ok, String}
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Validate xref_checks
 %% @end
 -spec xref_checks_validate(wrq:req_data(), orddict:orddict()) ->
@@ -467,17 +490,6 @@ cmd_validate_test() ->
   ?assertEqual({ok, foo}, cmd_validate(foo, bar)),
   meck:unload().
 
-exclusions_validate_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> undefined end),
-  ?assertEqual({ok, []}, exclusions_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> "foo" end),
-  ?assertEqual({ok, [foo]}, exclusions_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("exclusions", _) -> "foo,bar" end),
-  ?assertEqual({ok, [foo, bar]}, exclusions_validate(foo, bar)),
-  meck:unload().
-
 exported_validate_test() ->
   meck:unload(),
   meck:new(wrq),
@@ -541,30 +553,16 @@ info_level_validate_test() ->
   ?assertEqual({error, {illegal, true}}, info_level_validate(foo, bar)),
   meck:unload().
 
-interpret_validate_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "not_a_bool" end),
-  ?assertEqual(error, interpret_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "false" end),
-  ?assertEqual({ok, false}, interpret_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("interpret", _) -> "true" end),
-  ?assertEqual({ok, true}, interpret_validate(foo, bar)),
-  meck:unload().
-
-lib_dirs_validate_validate_test() ->
+dirs_validate_validate_test() ->
   meck:unload(),
   meck:new(wrq),
   {ok, Cwd} = file:get_cwd(),
-  Root = filename:dirname(Cwd),
   LibDir = filename:basename(Cwd),
-  Dict = orddict:from_list([{project_root, Root}]),
   meck:expect(wrq, get_qs_value,
-              fun("lib_dirs", _) -> LibDir ++ "," ++ LibDir end),
-  ?assertEqual({ok, [Cwd, Cwd]}, lib_dirs_validate(foo, Dict)),
-  meck:expect(wrq, get_qs_value,
-              fun("lib_dirs", _) -> filename:join(Root, "asotehu") end),
-  ?assertEqual({ok, []}, lib_dirs_validate(foo, Dict)),
+              fun("project_lib_dirs", _) -> LibDir ++ "," ++ LibDir end),
+  ?assertEqual({ok, [LibDir, LibDir]}, dirs_validate(foo, "project_lib_dirs")),
+  meck:expect(wrq, get_qs_value, fun("project_lib_dirs", _) -> undefined end),
+  ?assertEqual({ok, []}, dirs_validate(foo, "project_lib_dirs")),
   meck:unload().
 
 module_validate_test() ->

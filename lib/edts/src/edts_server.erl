@@ -30,7 +30,7 @@
 
 %% API
 -export([ wait_for_node/1
-        , init_node/3
+        , init_node/6
         , node_available_p/1
         , node_registered_p/1
         , nodes/0
@@ -87,10 +87,22 @@ wait_for_node(Node) ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(node(), file:filename(), [string()]) -> ok.
+-spec init_node(ProjectName    :: string(),
+                Node        :: node(),
+                ProjectRoot :: filename:filename(),
+                LibDirs     :: [filename:filename()],
+                AppInclDirs :: [filename:filename()],
+                SysInclDirs :: [filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
-init_node(Node, ProjectRoot, LibDirs) ->
-  gen_server:call(?SERVER, {init_node, Node, ProjectRoot, LibDirs}, infinity).
+init_node(ProjectName, Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) ->
+  Call = {init_node,
+          ProjectName,
+          Node,
+          ProjectRoot,
+          LibDirs,
+          AppInclDirs,
+          SysInclDirs},
+  gen_server:call(?SERVER, Call, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -158,8 +170,8 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({wait_for_node, Name}, _From, State) ->
-    case node_find(Name, State) of
+handle_call({wait_for_node, NodeName}, _From, State) ->
+    case node_find(NodeName, State) of
       false -> {reply, {error, not_found}, State};
       #node{promises = [_|_]} = Node->
         lists:foreach(fun rpc:yield/1, Node#node.promises),
@@ -167,30 +179,43 @@ handle_call({wait_for_node, Name}, _From, State) ->
       #node{} ->
         {reply, ok, State}
     end;
-handle_call({init_node, Name, ProjectRoot, LibDirs}, _From, State) ->
-  edts_log:info("Initializing ~p.", [Name]),
-  Node = #node{promises = Keys0} =
-    case node_find(Name, State) of
-      #node{} = Node0 -> Node0;
-      false          -> #node{name = Name}
-    end,
-  case do_init_node(Name, ProjectRoot, LibDirs) of
-    {ok, Keys} ->
-      edts_log:debug("Initialization call done on ~p.", [Name]),
-      {reply, ok, node_store(Node#node{promises = Keys ++ Keys0}, State)};
+handle_call({init_node,
+             ProjectName,
+             NodeName,
+             ProjectRoot,
+             LibDirs,
+             AppInclDirs,
+             SysInclDirs},
+            _From,
+            State0) ->
+  edts_log:info("Initializing ~p.", [NodeName]),
+  case do_init_node(ProjectName,
+                    NodeName,
+                    ProjectRoot,
+                    LibDirs,
+                    AppInclDirs,
+                    SysInclDirs) of
+    ok ->
+      edts_log:debug("Initialization call done on ~p.", [NodeName]),
+      State =
+        case node_find(NodeName, State0) of
+          #node{} -> State0;
+          false   -> node_store(#node{name = NodeName}, State0)
+        end,
+      {reply, ok, State};
     {error, _} = Err ->
-      edts_log:error("Initializing node ~p failed with ~p.", [Name, Err]),
-      {reply, Err, State}
+      edts_log:error("Initializing node ~p failed with ~p.", [NodeName, Err]),
+      {reply, Err, State0}
   end;
-handle_call({node_available_p, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
+handle_call({node_available_p, NodeName}, _From, State) ->
+  Reply = case node_find(NodeName, State) of
             #node{promises = []} -> true;
             #node{}              -> false;
             false                -> false
           end,
   {reply, Reply, State};
-handle_call({node_registered_p, Name}, _From, State) ->
-  Reply = case node_find(Name, State) of
+handle_call({node_registered_p, NodeName}, _From, State) ->
+  Reply = case node_find(NodeName, State) of
             #node{} -> true;
             false   -> false
           end,
@@ -221,20 +246,6 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({Pid, {promise_reply, {Nodename, R} = Reply}}, State) ->
-  Nodes =
-    case lists:keyfind(Nodename, #node.name, State#state.nodes) of
-      false ->
-        edts_log:info("Unexpected reply from ~p: ~p", [Pid, Reply]),
-        State#state.nodes;
-    #node{promises = Promises} = Node ->
-        edts_log:info("Promise reply from ~p: ~p", [Nodename, R]),
-        lists:keyreplace(Nodename,
-                         #node.name,
-                         State#state.nodes,
-                         Node#node{promises = lists:delete(Pid, Promises)})
-    end,
-  {noreply, State#state{nodes = Nodes}};
 handle_info({nodedown, Node, _Info}, State) ->
   edts_log:info("Node down: ~p", [Node]),
   case node_find(Node, State) of
@@ -276,29 +287,66 @@ code_change(_OldVsn, State, _Extra) ->
 %% to promises that are to be fulfilled by the remote node. These keys can later
 %% be used in calls to rpc:yield/1, rpc:nbyield/1 and rpc:nbyield/2.
 %% @end
--spec do_init_node(node(), file:filename(), [string()]) -> [rpc:key()].
+-spec do_init_node(ProjectName    :: string(),
+                   Node           :: node(),
+                   ProjectRoot    :: filename:filename(),
+                   LibDirs        :: [filename:filename()],
+                   AppIncludeDirs :: [filename:filename()],
+                   SysIncludeDirs :: [filename:filename()]) -> [rpc:key()].
 %%------------------------------------------------------------------------------
-do_init_node(Node, ProjectRoot, LibDirs) ->
+do_init_node(ProjectName,
+             Node,
+             ProjectRoot,
+             LibDirs,
+             AppIncludeDirs,
+             ProjectIncludeDirs) ->
   try
     ok = edts_dist:remote_load_modules(Node, [edts_code,
                                               edts_dialyzer,
                                               edts_debug_server,
                                               edts_eunit,
                                               edts_eunit_listener,
+                                              edts_module_server,
                                               edts_xref,
                                               edts_util]),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
-    {ok, _Modules} = edts_dist:load_all(Node),
-    {ok, ProjectDir} =
-      application:get_env(edts, project_dir),
-    ok = edts_dist:set_app_env(Node, edts, project_dir, ProjectDir),
-    {ok, edts_dist:ensure_services_started(Node, [edts_code, edts_debug_server])}
+    {ok, ProjectDir} = application:get_env(edts, project_data_dir),
+    AppEnv = [{project_name,         ProjectName},
+              {project_data_dir,     ProjectDir},
+              {project_root_dir,     ProjectRoot},
+              {app_include_dirs,     AppIncludeDirs},
+              {project_include_dirs, ProjectIncludeDirs}],
+    init_node_env(Node, AppEnv),
+    start_services(Node, [edts_code])
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
                      [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
+
+init_node_env(Node, AppEnv) ->
+  [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
+
+start_services(_Node, []) -> ok;
+start_services(Node, [Service|Rest]) ->
+  case start_service(Node, Service) of
+    ok               -> start_services(Node, Rest);
+    {error, _} = Err -> Err
+  end.
+
+start_service(Node, Service) ->
+  edts_log:info("Starting service ~p on ~p", [Service, Node]),
+  case edts_dist:start_service(Node, Service) of
+    ok ->
+      edts_log:info("Service ~p started on ~p", [Service, Node]),
+      ok;
+    {error, _}  = Err ->
+      edts_log:error("Starting service ~p on ~p failed with ~p",
+                     [Service, Node, Err]),
+      Err
+  end.
+
 
 expand_code_paths("", _LibDirs) -> [];
 expand_code_paths(ProjectRoot, LibDirs) ->
@@ -344,29 +392,40 @@ init_node_test() ->
   S1 = #state{},
   S2 = #state{nodes = [N1]},
 
-  PrevEnv = application:get_env(edts, project_dir),
-  application:set_env(edts, project_dir, "foo_dir"),
+  PrevEnv = application:get_env(edts, project_data_dir),
+  application:set_env(edts, project_data_dir, "foo_dir"),
 
   meck:new(edts_dist),
-  meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok end),
-  meck:expect(edts_dist, load_all,                fun(foo)    -> {ok, []} end),
-  meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok end),
-  meck:expect(edts_dist, set_app_env,             fun(foo, _, _, _) -> ok end),
-  meck:expect(edts_dist, ensure_services_started, fun(foo, _) -> [dummy] end),
-  ?assertEqual({reply, ok, S1#state{nodes = [N1#node{promises = [dummy]}]}},
-               handle_call({init_node, N1#node.name, "", []}, self(), S1)),
-  %% Node already initialized.
-  ?assertEqual({reply, ok, S2#state{nodes = [N1#node{promises = [dummy]}]}},
-               handle_call({init_node, N1#node.name, "", []}, self(), S2)),
+  meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok;
+                                                     (bar, _) -> ok
+                                                  end),
+  meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok;
+                                                     (bar, _) -> ok
+                                                  end),
+  meck:expect(edts_dist, set_app_envs,             fun(foo, _, _) -> [ok];
+                                                      (bar, _, _) -> [ok]
+                                                  end),
+  meck:expect(edts_dist, start_service,
+              fun(foo, _Srv) -> ok;
+                 (bar, _Srv) -> {error, already_started}
+              end),
+  meck:expect(edts_dist, refresh_service, fun(bar, _Srv) -> ok end),
+
+  ?assertEqual(
+     {reply, ok, S1#state{nodes = [N1]}},
+     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
+  ?assertEqual(
+     {reply, ok, S2#state{nodes = [N1]}},
+     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
               fun(foo, _) -> error({error, some_error}) end),
   ?assertEqual({reply, {error, some_error}, S1},
-               handle_call({init_node, N1#node.name, "", []}, self(), S1)),
+               handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
 
   case PrevEnv of
     undefined -> ok;
-    {ok, Env} -> application:set_env(edts, project_dir, Env)
+    {ok, Env} -> application:set_env(edts, project_data_dir, Env)
   end,
   meck:unload().
 
@@ -419,15 +478,6 @@ nodedown_test() ->
   ?assertEqual({noreply, #state{}},
                handle_info({nodedown, N1#node.name, dummy}, S1)).
 
-promise_reply_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
-  N2 = #node{name = bar},
-  Pid = dummy,
-  S1 = #state{nodes = [N1]},
-  ?assertEqual({noreply, S1},
-               handle_info({Pid, {promise_reply, {N2#node.name, ok}}}, S1)),
-  ?assertEqual({noreply, #state{nodes = [N1#node{promises = []}]}},
-               handle_info({Pid, {promise_reply, {N1#node.name, ok}}}, S1)).
 
 unhandled_message_test() ->
   ?assertEqual({noreply, bar}, handle_info(foo, bar)),

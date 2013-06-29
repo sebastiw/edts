@@ -1,6 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc code-analysis library for edts.
+%%% @doc
+%%% code-analysis library for edts. This module is loaded on the project
+%%% node.
 %%% @end
+%%%
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
 %%% Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
@@ -26,10 +29,11 @@
 -module(edts_code).
 
 %%%_* Includes =================================================================
+-include_lib("kernel/include/file.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
-
 -export([add_paths/1,
          check_modules/2,
          compile_and_load/1,
@@ -38,15 +42,17 @@
          get_function_info/3,
          get_module_info/1,
          get_module_info/2,
-         load_all/0,
+         get_module_source/1,
          modules/0,
          parse_expressions/1,
          start/0,
          started_p/0,
+         string_to_mfa/1,
          who_calls/3]).
 
-%% internal exports
+%% Internal exports.
 -export([save_xref_state/0]).
+
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -60,15 +66,6 @@
                  , Description :: string()}.
 
 %%%_* API ======================================================================
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Load all beam-files present in the current code-path.
-%% @end
--spec load_all() -> {ok, [module()]}.
-%%------------------------------------------------------------------------------
-load_all() ->
-  {ok, lists:flatmap(fun load_all_in_dir/1, code:get_path())}.
 
 
 %%------------------------------------------------------------------------------
@@ -98,15 +95,17 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 -spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
                        {ok, [issue()]}.
 %%------------------------------------------------------------------------------
-check_modules(Modules, Checks) ->
+check_modules(Modules0, Checks) ->
   MaybeReloadFun =
     fun(Module) ->
-        case code:is_loaded(Module) of
-          false      -> reload_module(Module);
-          {file, _F} -> ok
+        %% We can only do xref checks on compiled, successfully loaded modules
+        %% atm (We don't have the location of the source-file at this point).
+        case ensure_module_loaded(false, Module) of
+          Res when is_boolean(Res) -> true;
+          {error, _}               -> false
         end
     end,
-  ok = lists:foreach(MaybeReloadFun, Modules),
+  Modules = lists:filter(MaybeReloadFun, Modules0),
   edts_xref:check_modules(Modules, Checks).
 
 
@@ -142,11 +141,14 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
+  OldOpts = extract_compile_opts(File),
+
+  AdditionalIncludes = get_additional_includes(filename:dirname(File), OldOpts),
   CompileOpts = [{cwd, Cwd},
                  {outdir, OutDir},
                  binary,
                  debug_info,
-                 return|Opts] ++ extract_compile_opts(File),
+                 return|Opts] ++ OldOpts ++ AdditionalIncludes,
   %% Only compile to a binary to begin with since compile-options resulting in
   %% an output-file will cause the compile module to remove the existing beam-
   %% file even if compilation fails, in which case we end up with no module
@@ -193,7 +195,7 @@ maybe_interpret_module(Module, WasInterpreted) ->
                            [{atom(), term()}].
 %%------------------------------------------------------------------------------
 get_function_info(M, F, A) ->
-  reload_module(M),
+  ensure_module_loaded(true, M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
   {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
@@ -256,6 +258,50 @@ free_vars(Text, StartLine) ->
     {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
   end.
 
+string_to_mfa(String0) ->
+  String = prepare_string(String0),
+  case parse_expressions(String) of
+    {error, _} = Err -> Err;
+    [Expr]           ->
+      case form_to_mfa(Expr) of
+        {F, A}    -> {ok, [{function, F}, {arity, A}]};
+        {M, F, A} -> {ok, [{module, M}, {function, F}, {arity, A}]}
+      end
+  end.
+
+prepare_string(String0) ->
+  %% Ugly hack to get rid of macros.
+  String = re:replace(String0, "\\?", "", [{return, list}, global]),
+  case lists:reverse(String) of
+    [$.|_] -> String;
+    _      -> String ++ "."
+  end.
+
+%% First two clauses are workarounds for "fun-less" function names, such as
+%% those in a list of exports.
+form_to_mfa({atom,  _, F})                     -> {F, 0};
+form_to_mfa({var,   _, F})                     -> {F, 0};
+form_to_mfa({op,    _, '/', {atom, _, F},
+                             {integer, _, A}}) -> {F, A};
+form_to_mfa({op,    _, '/', {remote, _,
+                             {atom, _, M},
+                             {atom, _, F}},
+                             {integer, _, A}}) -> {M, F, A};
+form_to_mfa({'fun', _, {function, F, A}})      -> {F, A};
+form_to_mfa({'fun', _, {function,
+                        {atom, _, M},
+                        {atom, _, F},
+                        {integer, _, A}}})     -> {M, F, A};
+form_to_mfa({'fun', _, {function, M, F, A}})   -> {M, F, A};
+
+form_to_mfa({call,  _, {var,  _, F}, Args})    -> {F, length(Args)};
+form_to_mfa({call,  _, {atom, _, F}, Args})    -> {F, length(Args)};
+form_to_mfa({call,  _, {remote,
+                        _,
+                        {atom, _, M},
+                        {atom, _, F}}, Args})  -> {M, F, length(Args)}.
+
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -265,8 +311,8 @@ free_vars(Text, StartLine) ->
 %%------------------------------------------------------------------------------
 parse_expressions(String) ->
   case edts_syntax:parse_expressions(String) of
-    {ok, Forms}      -> Forms;
-    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+    {ok, Forms}  -> Forms;
+    {error, Err} -> {error, format_errors(error, [{"Snippet", [Err]}])}
   end.
 
 
@@ -286,7 +332,7 @@ get_module_info(M) ->
 -spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
 %%------------------------------------------------------------------------------
 get_module_info(M, Level) ->
-  reload_module(M),
+  ensure_module_loaded(true, M),
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
@@ -352,6 +398,7 @@ modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
   [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Starts the edts xref-server on the local node.
@@ -360,13 +407,14 @@ modules_at_path(Path) ->
 %%------------------------------------------------------------------------------
 start() ->
   case edts_xref:started_p() of
-    true  -> {error, already_started};
-    false ->
-      case init_xref() of
-        {error, _} = Err -> Err;
-        {ok, _Pid}       -> {node(), ok}
-      end
-  end.
+    true  -> update_xref();
+    false -> do_init_xref()
+  end,
+  case edts_module_server:started_p() of
+    true  -> edts_module_server:update();
+    false -> {ok, _} = edts_module_server:start()
+  end,
+  ok.
 
 
 %%------------------------------------------------------------------------------
@@ -375,7 +423,9 @@ start() ->
 %% @end
 -spec started_p() -> boolean().
 %%------------------------------------------------------------------------------
-started_p() -> edts_xref:started_p().
+started_p() ->
+  edts_xref:started_p() andalso
+    edts_module_server:started_p().
 
 
 %%------------------------------------------------------------------------------
@@ -390,61 +440,43 @@ who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
 
 %%%_* Internal functions =======================================================
 
-load_all_in_dir(Dir) ->
-  Files = filelib:wildcard(filename:join(filename:absname(Dir), "*.beam")),
-  [M || {Loaded, M} <- lists:map(fun ensure_loaded/1, Files), Loaded =/= false].
-
-ensure_loaded(File) ->
-  LoadFileName = filename:rootname(File),
-  Mod = list_to_atom(filename:basename(LoadFileName)),
-  case code:is_sticky(Mod) of
-    true  -> {false, Mod};
-    false ->
-      Loaded =
-        case code:is_loaded(Mod) of
-          {file, File} -> false;
-          {file, _}    -> try_load(Mod, LoadFileName);
-          false        -> try_load(Mod, LoadFileName)
-        end,
-      {Loaded, Mod}
-  end.
-
-
-try_load(Mod, File) ->
-  try
-    code:purge(Mod),
-    case code:load_abs(File) of
-      {module, Mod} -> true;
-      {error, Rsn}  -> error(Rsn)
-    end
-  catch
-    C:E ->
-      error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
-      false
-  end.
-
-
-init_xref() ->
+do_init_xref() ->
   File = xref_file(),
   try
     case file:read_file(File) of
-      {ok, BinState}      -> edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     -> edts_xref:start();
+      {ok, BinState}      ->
+        error_logger:info_msg("Found previous state to start from in ~p.",
+                              [File]),
+        edts_xref:start(binary_to_term(BinState));
+      {error, enoent}     ->
+        error_logger:info_msg("Found no previous state to start from."),
+        start_xref();
       {error, _} = Error  ->
-      error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-      edts_xref:start()
+        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+        start_xref()
     end
   catch
     C:E ->
       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
                              "Starting with clean state instead.",
                              [File, C, E]),
-      edts_xref:start()
+      start_xref()
   end.
+
+start_xref() ->
+  edts_xref:start(),
+  spawn(?MODULE, save_xref_state, []),
+  ok.
 
 update_xref() ->
   edts_xref:update(),
-  spawn(?MODULE, save_xref_state, []).
+  spawn(?MODULE, save_xref_state, []),
+  ok.
+
+update_xref(Modules) ->
+  edts_xref:update_modules(Modules),
+  spawn(?MODULE, save_xref_state, []),
+  ok.
 
 save_xref_state() ->
   File = xref_file(),
@@ -456,8 +488,89 @@ save_xref_state() ->
   end.
 
 xref_file() ->
-  {ok, XrefDir} = application:get_env(edts, project_dir),
-  filename:join(XrefDir, atom_to_list(node()) ++ ".xref").
+  {ok, XrefDir} = application:get_env(edts, project_data_dir),
+  {ok, RootDir} = application:get_env(edts, project_root_dir),
+  {ok, ProjectName} = application:get_env(edts, project_name),
+  Filename = io_lib:format("~p_~s.xref", [erlang:phash2(RootDir), ProjectName]),
+  filename:join(XrefDir, Filename).
+
+
+%%------------------------------------------------------------------------------
+%% @equiv ensure_module_loaded(Mod,
+%%                             code:where_is_file(atom_to_list(Mod) ++ ".beam"),
+%%                             Reload).
+%% @end
+-spec ensure_module_loaded(Reload :: boolean(),
+                           Mod    :: module()) -> boolean().
+%%------------------------------------------------------------------------------
+ensure_module_loaded(Reload, Mod) ->
+  case code:where_is_file(atom_to_list(Mod) ++ ".beam") of
+    non_existing -> {error, nofile};
+    File         -> ensure_module_loaded(Mod, File, Reload)
+  end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load module if:
+%% - The module is not sticky
+%% - The module is loaded from a file other than File OR
+%%   the module is currently not loaded.
+%%
+%% If Reload =:= true, reload the module if its beam-file has been changed.
+%%
+%% Returns true if the module was (re)loaded, false otherwise.
+%% @end
+-spec ensure_module_loaded(Mod    :: module(),
+                           File   :: filename:filename(),
+                           Reload :: boolean()) -> boolean().
+%%------------------------------------------------------------------------------
+ensure_module_loaded(Mod, File, Reload) ->
+  case code:is_sticky(Mod) of
+    true  -> false;
+    false ->
+      case code:is_loaded(Mod) of
+        {file, File} when Reload -> maybe_reload(Mod, File);
+        {file, File}             -> false;
+        {file, _}                -> try_load_mod(Mod, File);
+        false                    -> try_load_mod(Mod, File)
+      end
+  end.
+
+maybe_reload(Mod, File) ->
+  case module_modified_p(Mod, File) of
+    true  -> try_load_mod(Mod, File);
+    false -> false
+  end.
+
+try_load_mod(Mod, File) ->
+  LoadFileName = filename:rootname(File), %% Remove extension
+  try load_mod(Mod, LoadFileName)
+  catch
+    C:E ->
+      error_logger:error_msg("Loading ~p failed with ~p:~p", [Mod, C, E]),
+      false
+  end.
+
+load_mod(Mod, File) ->
+  code:purge(Mod),
+  case code:load_abs(File) of
+    {module, Mod} -> true;
+    {error, Rsn}  -> error(Rsn)
+  end.
+
+module_modified_p(Mod, File) ->
+  do_module_modified_p(lists:keyfind(time, 1, Mod:module_info(compile)),
+                       file:read_file_info(File)).
+
+do_module_modified_p(false, _MTime)                         -> true;
+do_module_modified_p(_CTime, {error, _})                    -> true;
+do_module_modified_p(CTime, {ok, #file_info{mtime = MTime}}) ->
+  {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} = CTime,
+  [UniversalMTime] = calendar:local_time_to_universal_time_dst(MTime),
+  CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
+  calendar:datetime_to_gregorian_seconds(UniversalMTime) >
+    calendar:datetime_to_gregorian_seconds(CompileTime).
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
@@ -483,6 +596,14 @@ filename_to_outdir(File) ->
     true  -> EbinDir;
     false -> DirName
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @equiv get_module_source(M, M:module_info()).
+-spec get_module_source(M::module()) -> {ok, string()} | {error, not_found}.
+%%------------------------------------------------------------------------------
+get_module_source(M) ->
+  get_module_source(M, M:module_info()).
 
 %%------------------------------------------------------------------------------
 %% @doc Try to find the source of M using (in order):
@@ -531,32 +652,20 @@ get_module_source_from_beam(M) ->
 
 
 %%------------------------------------------------------------------------------
-%% @doc Reloads a module unless it is sticky.
--spec reload_module(M::module()) -> ok.
-%%------------------------------------------------------------------------------
-reload_module(M) ->
-  case code:is_sticky(M) of
-    true  -> ok;
-    false ->
-      case c:l(M) of
-        {module, M}     -> ok;
-        {error, _} = E ->
-          error_logger:error_msg("~p error loading module ~p: ~p",
-                                 [node(), M, E]),
-          E
-      end
-  end.
-
-%%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
 -spec format_errors( ErrType ::warning | error
                    , Errors  ::[{ File::string(), [term()]}]) -> issue().
 %%------------------------------------------------------------------------------
 format_errors(Type, Errors) ->
-   lists:append(
-     [[{Type, File, Line, lists:flatten(Source:format_error(Error))}
-       || {Line, Source, Error} <- Errors0]
-         || {File, Errors0} <- Errors]).
+  LineErrorF =
+    fun(File, {Line, Source, ErrorStr}) ->
+        {Type, File, Line, lists:flatten(Source:format_error(ErrorStr))}
+    end,
+  FileErrorF =
+    fun({File, Errors0}) ->
+        lists:map(fun(Err) -> LineErrorF(File, Err) end, Errors0)
+    end,
+  lists:flatmap(FileErrorF, Errors).
 
 
 %%------------------------------------------------------------------------------
@@ -663,6 +772,25 @@ path_flatten([_Dir|Rest], [_|Back], Acc) ->
 path_flatten([Dir|Rest], Back, Acc) ->
   path_flatten(Rest, Back, [Dir|Acc]).
 
+
+get_additional_includes(FileLoc, PrevOpts) ->
+  PrevDirs = [Include || {i, _} = Include <- PrevOpts],
+  Dirs = lists:usort(get_project_includes() ++ get_app_includes(FileLoc)),
+  Dirs -- PrevDirs.
+
+get_project_includes() ->
+  {ok, RootDir}        = application:get_env(edts, project_root_dir),
+  {ok, ProjectIncDirs} = application:get_env(edts, project_include_dirs),
+  [{i, filename:join(RootDir, IncDir)} || IncDir <- ProjectIncDirs].
+
+get_app_includes(FileLoc) ->
+  {ok, AppIncDirs}     = application:get_env(edts, app_include_dirs),
+  ParentDir = filename:dirname(FileLoc),
+  case filename:basename(FileLoc) =:= "src" of
+    true  -> [{i, filename:join(ParentDir, D)} || D <- AppIncDirs];
+    false -> []
+  end.
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Extracts compile options from module, if it exists
@@ -687,6 +815,128 @@ extract_compile_opt_p({no_auto_import,  _})    -> true;
 extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
+
+
+get_additional_includes_test_() ->
+  AppIncDirs = ["foo"],
+  ProjIncs = ["test/include"],
+  Root = "root",
+  AppDir = filename:join([Root, "lib", "app_dir"]),
+  SrcDir = filename:join(AppDir, "src"),
+  AbsProjectInc = filename:join(Root, "test/include"),
+
+  {setup,
+   fun() ->
+       PrevAppIncs = application:get_env(edts, app_include_dirs),
+       application:set_env(edts, app_include_dirs, AppIncDirs),
+       PrevProjIncs = application:get_env(edts, project_include_dirs),
+       application:set_env(edts, project_include_dirs, ProjIncs),
+       PrevRootDir = application:get_env(edts, project_root_dir),
+       application:set_env(edts, project_root_dir, Root),
+       [{prev_app_include_dirs, PrevAppIncs},
+        {prev_project_include_dirs, PrevProjIncs},
+        {prev_project_root_dir, PrevRootDir}]
+   end,
+   fun(Cfg) ->
+       case tulib_lists:assoc(prev_app_include_dirs, Cfg, undefined) of
+         undefined  -> application:unset_env(edts, app_include_dirs);
+         Prev0 -> application:set_env(edts, app_include_dirs, Prev0)
+       end,
+       case tulib_lists:assoc(prev_project_include_dirs, Cfg, undefined) of
+         undefined  -> application:unset_env(edts, project_include_dirs);
+         Prev1 -> application:set_env(edts, project_include_dirs, Prev1)
+       end,
+       case tulib_lists:assoc(prev_project_root_dir, Cfg, undefined) of
+         undefined  -> application:unset_env(edts, prev_project_root_dir);
+         Prev2 -> application:set_env(edts, prev_project_root_dir, Prev2)
+       end
+   end,
+   [ ?_assertEqual([], ""),
+     ?_assertEqual([{i, AbsProjectInc}],
+                   get_additional_includes(filename:join(AppDir, "not_src"),
+                                           [])),
+     ?_assertEqual([{i, AbsProjectInc}], get_additional_includes(AppDir, [])),
+
+     %% Additional include is added from app_include_dirs
+     ?_assertEqual(
+        lists:sort([{i, AbsProjectInc}, {i, filename:join(AppDir, "foo")}]),
+        lists:sort(get_additional_includes(SrcDir, []))),
+     %% The include from app_include_dirs is already present in the options
+     ?_assertEqual([{i, AbsProjectInc}],
+                   get_additional_includes(SrcDir,
+                                          [{i, filename:join(AppDir, "foo")}]))
+   ]}.
+
+do_module_modified_p_test_() ->
+  Now = calendar:local_time(),
+  {{Year, Month, Day}, {Hour, Minute, Second} = Time} = Now,
+
+  NowMTime = #file_info{mtime = Now},
+  NowCTime = {time, {Year, Month, Day, Hour, Minute, Second}},
+
+  FutureMTime = #file_info{mtime = {{Year + 1, Month, Day}, Time}},
+  FutureCTime = {time, {Year + 1, Month, Day, Hour, Minute, Second}},
+
+  PastMTime = #file_info{mtime = {{Year - 1, Month, Day}, Time}},
+  PastCTime = {time, {Year - 1, Month, Day, Hour, Minute, Second}},
+
+  [ ?_assert(do_module_modified_p(false, {ok, PastMTime})),
+    ?_assert(do_module_modified_p(false, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(false, {ok, FutureMTime})),
+
+    ?_assert(do_module_modified_p(PastCTime, {error, foo})),
+    ?_assert(do_module_modified_p(NowCTime, {error, foo})),
+    ?_assert(do_module_modified_p(FutureCTime, {error, foo})),
+
+    ?_assertNot(do_module_modified_p(PastCTime, {ok, PastMTime})),
+    ?_assert(do_module_modified_p(PastCTime, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(PastCTime, {ok, FutureMTime})),
+
+    ?_assertNot(do_module_modified_p(NowCTime, {ok, PastMTime})),
+    ?_assertNot(do_module_modified_p(NowCTime, {ok, NowMTime})),
+    ?_assert(do_module_modified_p(NowCTime, {ok, FutureMTime})),
+
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, PastMTime})),
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, NowMTime})),
+    ?_assertNot(do_module_modified_p(FutureCTime, {ok, FutureMTime}))
+  ].
+
+string_to_mfa_test_() ->
+  [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
+                  string_to_mfa("foo()")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("foo(bar)")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("foo([]).")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                   string_to_mfa("foo(\"aa,bb\")")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(\"aa,bb\", cc)")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("foo(\"aa,bb\")")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(bar, baz).")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 3}]},
+                  string_to_mfa("foo(a,%a,b\nb, cc).")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 2}]},
+                  string_to_mfa("foo(a, <<a/b,\nc/d>>).")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("foo:bar(baz).")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("fun foo/1.")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("fun foo:bar/1.")),
+    ?_assertEqual({ok, [{function, foo}, {arity, 1}]},
+                  string_to_mfa("foo/1.")),
+    ?_assertEqual({ok, [{module, foo}, {function, bar}, {arity, 1}]},
+                  string_to_mfa("foo:bar/1.")),
+    ?_assertEqual({ok, [{function, 'MATCH'}, {arity, 0}]},
+                  string_to_mfa("MATCH.")),
+    ?_assertEqual({ok, [{function, 'MATCH'}, {arity, 0}]},
+                  string_to_mfa("MATCH().")),
+    ?_assertEqual({error,[{error,"Snippet",1,"syntax error before: '.'"}]},
+                  string_to_mfa("foo(\"aa,bb\"."))
+  ].
 
 format_errors_test_() ->
   SetupF = fun() ->
@@ -764,20 +1014,38 @@ get_file_and_line_non_parametrised_new_test_() ->
   ].
 
 get_module_source_test_() ->
-  ErlangAbsName = filename:join([code:lib_dir(erts, src), "erlang.erl"]),
+  BaseName = atom_to_list(?MODULE) ++ ".erl",
+  {ok, Cwd} = file:get_cwd(),
+  ErlangAbsNames =
+    %% Check for path based on both Cwd and application lib-dir to try
+    %% to get around weird things when EDTS is located beneath a symbolic
+    %% link in the file tree.
+    [filename:join([Cwd, "lib", "edts", "src", BaseName]),
+     filename:join([Cwd, "lib", "edts", ".eunit", BaseName]),
+     filename:join(edts_util:shorten_path(code:lib_dir(edts, src)),
+                   BaseName),
+     filename:join(edts_util:shorten_path(code:lib_dir(edts, '.eunit')),
+                   BaseName)],
   [?_assertEqual({error, not_found},
-                 get_module_source_from_info(erlang:module_info())),
-   ?_assertEqual({ok, ErlangAbsName},
-                 get_module_source_from_beam(erlang)),
+                 module_source_test_ret(
+                   get_module_source_from_info(erlang:module_info()))),
+   ?_assert(lists:member(module_source_test_ret(
+                           get_module_source_from_beam(?MODULE)),
+                         ErlangAbsNames)),
    ?_assertEqual({error, not_found},
-                 get_module_source_from_info([])),
+                 module_source_test_ret(
+                   get_module_source_from_info([]))),
    ?_assertEqual({error, not_found},
-                 get_module_source_from_beam(erlang_foo)),
-   ?_assertEqual({ok, ErlangAbsName},
-                get_module_source(erlang, erlang:module_info())),
+                 module_source_test_ret(
+                   get_module_source_from_beam(erlang_foo))),
+   ?_assert(lists:member(module_source_test_ret(
+                           get_module_source(?MODULE, ?MODULE:module_info())),
+                         ErlangAbsNames)),
    ?_assertEqual({error, not_found},
-                get_module_source(erlang_foo, []))
+                module_source_test_ret(
+                 get_module_source(erlang_foo, [])))
   ].
+
 
 path_flatten_test_() ->
   [ ?_assertEqual("./bar.erl",     path_flatten("bar.erl")),
@@ -877,7 +1145,7 @@ parse_abstract_record_test_() ->
 parse_abstract_other_test_() ->
   [?_assertEqual(bar, parse_abstract(foo, bar))].
 
-modules_test() ->
+modules_test_() ->
   [?_assertMatch({ok, [_|_]}, modules())].
 
 get_compile_outdir_test_() ->
@@ -899,6 +1167,9 @@ get_compile_outdir_test_() ->
    }].
 
 %%%_* Test helpers =============================================================
+
+module_source_test_ret({ok, Path}) -> edts_util:shorten_path(Path);
+module_source_test_ret(Ret)        -> Ret.
 
 test_file_forms(File) ->
   Path = filename:join([code:priv_dir(edts), "test/modules", File]),

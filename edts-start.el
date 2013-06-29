@@ -4,24 +4,41 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Prerequisites
+(require 'cl)
+(require 'erlang)
+(require 'woman)
+
+
 (defvar edts-start-inhibit-load-msgs t
   "If non-nil, don't print messages when loading edts-packages.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(defvar edts-lib-directory
-  (concat (file-name-directory
-            (or (locate-library "edts-start") load-file-name)) "elisp/")
+(defconst edts-root-directory
+  (file-name-directory (or (locate-library "edts-start") load-file-name))
+  "EDTS root directory.")
+
+(add-to-list 'load-path (concat edts-root-directory "elisp/path-util"))
+(require 'path-util)
+
+(defconst edts-lib-directory
+  (path-util-join (file-name-directory edts-root-directory) "elisp")
   "Directory where edts libraries are located.")
 
-(mapcar #'(lambda (p) (add-to-list 'load-path (concat edts-lib-directory p)))
+(defconst edts-test-directory
+  (path-util-join (file-name-directory edts-root-directory) "test")
+  "Directory where edts test data are located.")
+
+(mapcar #'(lambda (p)
+            (add-to-list 'load-path (path-util-join  edts-lib-directory p)))
         '("auto-complete"
           "auto-highlight-symbol-mode"
           "edts"
           "eproject"
           "ert"
-          "path-util"
-          "popup-el"))
+          "popup-el"
+          "pos-tip"))
 
 (when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
@@ -30,6 +47,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
+(require 'ert nil 'noerror)
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
@@ -44,12 +62,6 @@
     1 'font-lock-variable-name-face nil))
   "Font lock keyword highlighting Erlang variables.
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
-
-;; Prerequisites
-(require 'cl)
-(require 'erlang)
-(require 'ert nil 'noerror)
-(require 'woman)
 
 ;; EDTS
 (load "ferl" nil edts-start-inhibit-load-msgs)
@@ -99,8 +111,9 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     (define-key map "\C-c\C-n"     'edts-code-next-issue)
     (define-key map "\C-c\C-p"     'edts-code-previous-issue)
     (define-key map "\C-c\C-df"    'edts-find-local-function)
-    (define-key map "\C-c\C-d\S-f" 'edts-find-function)
+    (define-key map "\C-c\C-d\S-f" 'edts-find-global-function)
     (define-key map "\C-c\C-dH"    'edts-find-doc)
+    (define-key map "\C-c\C-dh"    'edts-show-doc-under-point)
     (define-key map "\C-c\C-dw"    'edts-who-calls)
     (define-key map "\C-c\C-dW"    'edts-last-who-calls)
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
@@ -180,10 +193,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
   ;; Remove custom value for show-paren-priority
   (if (boundp 'show-paren-priority)
-      (kill-local-variable 'show-paren-priority))
-
-  ;; Indentation
-  (remove-hook 'align-load-hook 'edts-align-hook))
+      (kill-local-variable 'show-paren-priority)))
 
 (defvar edts-mode nil
   "The edts mode-variable.")
@@ -199,35 +209,34 @@ documentation for information on how to configure their behaviour
 further.
 
 \\{edts-mode-map}Other useful commands:
-\\[edts-buffer-node-name]                   - Print the project node-name of
-                                              current-buffer.
-\\[edts-code-compile-and-display]           - Compile current buffer and display
-                                              issues.
-\\[edts-code-eunit]                         - Run the eunit tests of current
-                                              buffer and display results.
-\\[edts-code-xref-analyze]                  - Run xref analysis on current
-                                              buffer.
-\\[edts-code-xref-analyze-related]          - Runs xref-checks for all
-                                              live buffers related to
-                                              current buffer either by
-                                              belonging to the same
-                                              project or, if current
-                                              buffer does not belong to
-                                              any project, being in the
-                                              same directory as the
-                                              current buffer's file.
-\\[edts-code-dialyze-related]               - Same as the xref-check
-                                              above, but for dialyzer.
-\\[edts-byte-compile]                       - Byte compile all EDTS elisp files.
-\\[edts-project-ensure-buffer-node-started] - Start current buffers project-node
-                                              if not already running.
-\\[edts-refactor-extract-function]          - Extract code in current region
-                                              into a separate function.
-\\[edts-register-node]                      - Register the project-node of
-                                              current buffer with the central
-                                              EDTS server.
-\\[edts-shell]                              - Start an interactive Erlang shell.
-\\[edts-start-server]                       - Start the central EDTS server."
+\\[edts-buffer-node-name]           - Display the project node-name of
+                                      current-buffer.
+\\[edts-code-compile-and-display]   - Compile current buffer and display
+                                      issues.
+\\[edts-code-xref-analyze]          - Run xref analysis on current
+                                      buffer.
+\\[edts-code-xref-analyze-related]  - Runs xref-checks for all
+                                      live buffers related to
+                                      current buffer either by
+                                      belonging to the same
+                                      project or, if current
+                                      buffer does not belong to
+                                      any project, being in the
+                                      same directory as the
+                                      current buffer's file.
+\\[edts-code-dialyze-related]       - Same as the xref-check
+                                      above, but for dialyzer.
+\\[edts-byte-compile]               - Byte compile all EDTS elisp files.
+\\[edts-project-start-node]         - Start current buffers project-node
+                                      if not already running.
+\\[edts-refactor-extract-function]  - Extract code in current region
+                                      into a separate function.
+\\[edts-init-node]                  - Register the project-node of
+                                      current buffer with the central
+                                      EDTS server.
+\\[edts-shell]                      - Start an interactive Erlang shell.
+\\[edts-start-server]               - Start the central EDTS server.
+\\[edts-man-setup]                  - Install the OTP documentation"
 
   :lighter " EDTS"
   :keymap edts-mode-map

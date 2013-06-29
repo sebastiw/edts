@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-rest.el --- Rest communication utilities.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -18,7 +25,6 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 ;;
-;; edts' library for communicating with it's erlang node.
 
 (require 'cl)
 (require 'url)
@@ -46,7 +52,7 @@
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))
-        (url-request-data          body))
+        (url-request-data          (json-encode body)))
     (make-local-variable 'url-show-status)
     (setq url-show-status nil)
     (edts-log-debug "Sending %s-request to %s" method url)
@@ -56,6 +62,7 @@
           (let* ((reply  (edts-rest-parse-http-response))
                  (status (cdr (assoc 'result reply))))
             (edts-log-debug "Reply %s received for request to %s" status url)
+            (kill-buffer (current-buffer))
             reply))))))
 
 (defun edts-rest-get-async (resource args callback callback-args)
@@ -158,7 +165,7 @@ CALLBACK-ARGS."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
 
-(when (member 'ert features)
+(when (featurep 'ert)
 
   (ert-deftest edts-rest-encode-arg-test ()
     (should (equal "foo=bar"

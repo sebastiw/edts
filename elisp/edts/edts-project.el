@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-project.el ---  Integration with Jonathan Rockway's eproject package.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -14,8 +21,6 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
-;;
-;; Integration with Jonathan Rockway's (jon@jrock.us) eproject.
 
 (require 'cl)
 (require 'eproject)
@@ -57,7 +62,9 @@ Example:
                  :lib-dirs
                  :start-command
                  :otp-path
-                 :dialyzer-plt)))
+                 :dialyzer-plt
+                 :app-include-dirs
+                 :project-include-dirs)))
     (member prop valid)))
 
 (defun edts-project--plist-keys (plist)
@@ -100,9 +107,19 @@ Example:
 
 (defun edts-project-otp-selector (file)
   "Try to figure out if FILE should be part of an otp-project."
-  (let ((path (look-for "bin/erl")))
-    (when (and path (string-match "\\(.*\\)/lib/erlang[/]?$" path))
-      (match-string 1 path))))
+  (when (not (edts-project-selector file))
+    (edts-project-otp-selector-path file)))
+
+(defun edts-project-otp-selector-path (file)
+    (let ((path (look-for "bin/erl")))
+      (when (and path (not (or (string= (directory-file-name path) "/bin") ;; ?
+                               (string= (directory-file-name path) "/")
+                               (string= (directory-file-name path) "/usr"))))
+        (if (string-match "\\(.*\\)/lib/erlang[/]?$" path)
+            ;; Match out lib/erlang part if we're in an install directory.
+            (match-string 1 path)
+          ;; Do nothing if we're in an otp-repository.
+          path))))
 
 (define-project-type edts-temp (edts)
   (edts-project-temp-selector file)
@@ -111,12 +128,19 @@ Example:
 
 (defun edts-project-temp-selector (file)
   "Try to figure out if FILE should be part of a temp-project."
-  (when (and (not (look-for ".edts")) (string-match "\\.[eh]rl$" file))
+  (when (and
+         ;; otp-selector also checks that the normal project selector returns
+         ;; nil
+         (not (edts-project-selector file))
+         (not (edts-project-otp-selector file))
+         (string-match "\\.[eh]rl$" file))
     (edts-project--temp-root file)))
+
 
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
   (edts-log-debug "Initializing project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let ((root (eproject-root)))
 
     (when (boundp 'edts-projects)
@@ -142,12 +166,54 @@ Example:
 
     ;; Make necessary initializations if opened file is relevant to its project.
     (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
-      (edts-project-ensure-node-started))))
+      (if (edts-node-registeredp (eproject-attribute :node-sname))
+          (edts-project-node-refresh)
+      (edts-project-node-init)))))
   (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
+
+(defun edts-project-node-init ()
+  (interactive)
+  (save-window-excursion
+    (with-output-to-temp-buffer "EDTS Project"
+      (edts-project--init-output-buffer)
+      ;; Ensure project node is started
+      (unless (edts-node-started-p (eproject-attribute :node-sname))
+        (edts-project--display "Starting project node for %s\n"
+                               (eproject-root))
+        (edts-project-start-node))
+      ;; Register it with the EDTS node
+      (edts-project--register-project-node)
+      (sleep-for 1))
+    (edts-project--kill-output-buffer)))
+
+(defun edts-project-node-refresh ()
+  "Asynchronously refresh the state of current buffer's project node"
+  (interactive)
+  (edts-init-node-async
+   (eproject-attribute :name)
+   (eproject-attribute :node-sname)
+   (eproject-root)
+   (eproject-attribute :lib-dirs)
+   (eproject-attribute :app-include-dirs)
+   (eproject-attribute :project-include-dirs)))
+
+(defun edts-project--init-output-buffer ()
+  (with-current-buffer "EDTS Project"
+    (erase-buffer))
+  (display-buffer "EDTS Project")
+  (redisplay))
+
+(defun edts-project--kill-output-buffer ()
+  (kill-buffer "EDTS Project"))
+
+(defun edts-project--display (fmt &rest args)
+  (princ (format fmt args))
+  (redisplay))
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
   (edts-log-debug "Initializing temporary project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let* ((file (buffer-file-name))
          (root-dir (edts-project--temp-root file))
          (node-name (path-util-base-name root-dir)))
@@ -157,13 +223,14 @@ Example:
        node-name ; node-name
        root-dir ; pwd
        (list "erl" "-sname" node-name))) ; command
-    (edts-register-node-when-ready node-name root-dir nil)
+    (edts-init-node-when-ready node-name node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
   (edts-log-debug "Initializing otp project for %s" (current-buffer))
+  (edts-ensure-server-started)
   (let* ((file (buffer-file-name))
          (root-dir (eproject-root))
          (node-name (format "otp-%s" (eproject-name)))
@@ -174,7 +241,7 @@ Example:
        node-name ; node-name
        root-dir ; pwd
        (list erl "-sname" node-name))) ; command
-    (edts-register-node-when-ready node-name root-dir nil)
+    (edts-init-node-when-ready node-name node-name root-dir nil)
     (edts-project-set-attribute root-dir :node-sname node-name)))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
@@ -200,15 +267,6 @@ FILE."
   "Construct a default node-sname for current buffer's project node."
   (replace-regexp-in-string "[^A-Za-z0-9_-]" "" src))
 
-(defun edts-project-ensure-node-started ()
-  "Start current-buffer's project's node if it is not already started."
-  (if (edts-node-started-p (eproject-attribute :node-sname))
-      (edts-register-node-when-ready
-       (eproject-attribute :node-sname)
-       (eproject-root)
-       (eproject-attribute :lib-dirs))
-    (edts-project-start-node)))
-
 (defun edts-project-start-node ()
   "Starts a new erlang node for PROJECT."
   (let* ((buffer-name (concat "*" (eproject-name) "*"))
@@ -218,11 +276,24 @@ FILE."
          (node (eproject-attribute :node-sname)))
     (edts-ensure-node-not-started node)
     (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
-    (edts-register-node-when-ready
-     (eproject-attribute :node-sname)
-     (eproject-root)
-     (eproject-attribute :lib-dirs))
     (get-buffer buffer-name)))
+
+(defun edts-project--register-project-node ()
+  "Register the node of current buffer's project."
+  (if (edts-node-registeredp (eproject-attribute :node-sname))
+      (edts-project--display "Re-initializing project node for %s. Please wait..."
+                             (eproject-root))
+    (edts-project--display "Initializing project node for %s. Please wait..."
+                           (eproject-root)))
+  (if (edts-init-node-when-ready
+       (eproject-attribute :name)
+       (eproject-attribute :node-sname)
+       (eproject-root)
+       (eproject-attribute :lib-dirs)
+       (eproject-attribute :app-include-dirs)
+       (eproject-attribute :project-include-dirs))
+      (edts-project--display "Done.")
+    (edts-project--display "Error.")))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."
@@ -297,7 +368,7 @@ projects and there is no previous .edts-file."
       (when (and project
                  (not (file-exists-p (edts-project--config-file project))))
         (edts-project--create project)
-        (edts-log-info "Created .edts configuration file for project: ~p"
+        (edts-log-info "Created .edts configuration file for project: %s"
                        (cdr (assoc 'name project)))))))
 
 (defun edts-project--file-old-project (file)
@@ -334,8 +405,13 @@ buffers, for which all PREDICATES hold true."
    (buffer-list)
    :initial-value nil))
 
-(defun edts-project-interpretation-exclusions ()
-  (eproject-attribute :int-exclusions))
+
+(defun edts-project-buffer-map (project-root function)
+  "Return the result of running FUNCTION inside each buffer in PROJECT-ROOT."
+  (let ((res nil))
+    (with-each-buffer-in-project (gen-sym) project-root
+      (push (funcall function) res))
+    (reverse res)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;; Commands

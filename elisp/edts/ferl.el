@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; ferl.el --- Utilities for locating things and moving around in erlang code.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -17,8 +24,6 @@
 ;;
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
-;;
-;; Utilities for locating things and moving around in erlang source code.
 
 (defun ferl-goto-line (line)
   "Non-interactive version of goto-line."
@@ -147,175 +152,5 @@ of (function-name . starting-point)."
   ;; class '_'). FIXME.
   (when (eq (char-after) ?:)
     (forward-sexp)))
-
-(defun ferl-arity-at-point ()
-  "Get the number of arguments in a function reference.
-Should be called with point directly before the opening ( or /."
-  (save-excursion
-    (save-match-data
-      (skip-chars-forward "[:space:]")
-      (cond
-       ((looking-at "/")
-        (re-search-forward "/\s*[0-9]+" nil t)
-        (ferl-slash-arity (match-string 0)))
-       ((looking-at "(")
-        (let ((start (+ (point) 1))
-              (end   (- (progn (forward-sexp) (point)) 1)))
-          (ferl-paren-arity (buffer-substring start end))))
-       ('otherwise 0)))))
-
-(defun ferl-slash-arity (str)
-  "Return the arity of an argument-string after a slash."
-  (string-to-number (substring str 1)))
-
-(defconst ferl-block-start-regexp
-  "\\<\\(case\\|if\\|begin\\|try\\|fun\\|receive\\)\\>"
-  "Regexp to match the start of a new block")
-
-(defun ferl-paren-arity (str)
-  "Return the arity of an argument string within a parenthesis."
-  (let ((block-depth 0)
-        (arity 0)
-        (in-arg nil)
-        (case-fold-search nil)
-        (slashfun-re (format "\\<fun\s%s\s*/\s*[0-9]*\\>" erlang-atom-regexp)))
-    ;; increase arity if we're not inside an argument
-    (flet ((maybe-inc-arity () (unless (or in-arg (> block-depth 0))
-                                 (incf arity)
-                                 (setq in-arg t))))
-      (with-temp-buffer
-        (set-syntax-table erlang-mode-syntax-table)
-        (save-excursion (insert str))
-        (skip-chars-forward "[:space:]")
-        (while (< (point) (point-max))
-          (cond
-           ;; Skip over "fun some_fun/<x>" expression
-           ((looking-at slashfun-re)
-            (maybe-inc-arity)
-            (goto-char (match-end 0)))
-           ;; start of block
-           ((looking-at ferl-block-start-regexp)
-            (maybe-inc-arity)
-            (incf block-depth)
-            (forward-word))
-           ;; end of block
-           ((looking-at "\\<end\\>")
-            (when (eq (decf block-depth) 0)
-              (setq in-arg nil))
-            (forward-word))
-           ;; start of paired delimiter
-           ((looking-at "[\\\"'<\\[{(]")
-            (maybe-inc-arity)
-            (forward-sexp))
-           ;; comment
-           ((eq (char-syntax (char-after (point))) ?<)
-            (forward-comment 1))
-           ;; end of argument
-           ((looking-at ",")
-            (setq in-arg nil)
-            (forward-char))
-           ;; any other character
-           (t
-            (maybe-inc-arity)
-            (forward-char)))
-          (skip-chars-forward "[:space:]")))
-      arity)))
-
-
-(when (member 'ert features)
-
-  (ert-deftest ferl-paren-arity-test ()
-    (should (eq 0 (ferl-paren-arity "")))
-    (should (eq 1 (ferl-paren-arity "a")))
-    (should (eq 1 (ferl-paren-arity "[]")))
-    (should (eq 1 (ferl-paren-arity "a,")))
-    (should (eq 2 (ferl-paren-arity "a,a")))
-    (should (eq 1 (ferl-paren-arity ",a")))
-    (should (eq 3 (ferl-paren-arity "aa,bb,cc")))
-    ;; Make sure case is not ignored, a Variable named the same as a block
-    ;; opener should not open a block.
-    (should (eq 3 (ferl-paren-arity "Fun,bb,cc")))
-
-    (should (eq 1 (ferl-paren-arity "\"aa,bb\"")))
-    (should (eq 2 (ferl-paren-arity "\"aa,bb\", cc")))
-    (should (eq 2 (ferl-paren-arity "\"a'a,b'b\", cc")))
-    (should (eq 1 (ferl-paren-arity "'aa,bb'")))
-    (should (eq 2 (ferl-paren-arity "'aa,bb', cc")))
-    (should (eq 2 (ferl-paren-arity "'a\"a,b\"b', cc")))
-    (should (eq 3 (ferl-paren-arity "a,%a,b\nb, cc")))
-    (should (eq 2 (ferl-paren-arity "\"a\\\"a,bb\", cc")))
-    (should (eq 2 (ferl-paren-arity "a[a,b]b,cc")))
-    (should (eq 2 (ferl-paren-arity "a\"a,b\"b,cc")))
-    (should (eq 2 (ferl-paren-arity "[[a],{c,d}], ee")))
-    (should (eq 2 (ferl-paren-arity "#a{a,b}, cc")))
-
-    (should (eq 1 (ferl-paren-arity "fun() -> ok end")))
-    (should (eq 2 (ferl-paren-arity "fun() -> ok end, fun() -> ok end")))
-    (should (eq 1 (ferl-paren-arity "fun() -> begin%a, b\n ok end end")))
-    (should (eq 2 (ferl-paren-arity "fun foo/2, Arg")))
-    )
-
-  (ert-deftest slash-arity-test ()
-    (should (eq 2 (ferl-slash-arity "/2")))))
-
-;; Based on code from distel and erlang-mode
-(defun ferl-mfa-at-point (&optional default-module)
-  "Return the module and function under the point, or nil.
-
-Should no explicit module name be present at the point, the
-list of imported functions is searched. If there is still no result
-use DEFAULT-MODULE."
-  (when (null default-module) (setq default-module (ferl-get-module)))
-  (save-excursion
-    (save-match-data
-      (ferl-goto-end-of-call-name)
-      (let ((arity (ferl-arity-at-point))
-            (res nil))
-        (if (eq (char-syntax (following-char)) ? )
-            (skip-chars-backward " \t"))
-        (skip-chars-backward "a-zA-Z0-9_:'")
-        (cond ((looking-at
-                (eval-when-compile
-                  (concat erlang-atom-regexp ":" erlang-atom-regexp)))
-               (setq res (list
-                          (erlang-remove-quotes
-                           (erlang-buffer-substring
-                            (match-beginning 1) (match-end 1)))
-                          (erlang-remove-quotes
-                           (erlang-buffer-substring
-                            (match-beginning (1+ erlang-atom-regexp-matches))
-                            (match-end (1+ erlang-atom-regexp-matches))))
-                          arity)))
-              ((looking-at erlang-atom-regexp)
-               (let ((fk (erlang-remove-quotes
-                          (erlang-buffer-substring
-                           (match-beginning 0) (match-end 0))))
-                     (mod nil)
-                     (imports (erlang-get-import)))
-                 (while (and imports (null mod))
-                   (if (eq arity (cdr (assoc fk (cdr (car imports)))))
-                       (setq mod (car (car imports)))
-                     (setq imports (cdr imports))))
-                 (when (null mod)
-                   (setq mod default-module))
-                 (setq res (list mod fk arity)))))
-        res))))
-
-(defun ferl-search-function (function arity)
-  "Goto the definition of FUNCTION/ARITY in the current buffer."
-  (let ((origin (point))
-        (re (concat "^" function "\s*("))
-        (match nil))
-    (goto-char (point-min))
-    (while (and (null match) (re-search-forward re nil t))
-      (goto-char (match-beginning 0))
-      (ferl-goto-end-of-call-name)
-      (when (eq arity (ferl-arity-at-point))
-        (setq match t)))
-    (if match
-        (beginning-of-line)
-      (goto-char origin)
-      (error "function %s/%s not found" function arity))))
-
 
 (provide 'ferl)

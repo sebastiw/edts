@@ -33,12 +33,13 @@
          call/4,
          connect/1,
          connect_all/0,
+         start_service/2,
          load_all/1,
          make_sname/1,
          make_sname/2,
+         refresh_service/2,
          remote_load_modules/2,
-         set_app_env/4,
-         ensure_services_started/2]).
+         set_app_envs/3]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -79,7 +80,29 @@ call(Node, Mod, Fun) ->
               term() | {badrpc, term()}.
 %%------------------------------------------------------------------------------
 call(Node, Mod, Fun, Args) ->
-  rpc:call(Node, Mod, Fun, Args).
+  Self = self(),
+  Pid = spawn(fun() -> do_call(Self, Node, Mod, Fun, Args) end),
+  receive
+    {Pid, Res} -> Res
+  end.
+
+
+do_call(Parent, Node, Mod, Fun, Args) ->
+  try_set_remote_group_leader(Node),
+  try Parent ! {self(), rpc:call(Node, Mod, Fun, Args)}
+  catch C:E -> Parent ! {self(), {C, E}}
+  end.
+
+%% @doc Set the group leader to get all tty output on the remote nade.
+try_set_remote_group_leader(Node) ->
+  case rpc:call(Node, erlang, whereis, [user]) of
+    undefined            -> ok;
+    Pid when is_pid(Pid) ->
+      Info = rpc:call(Node, erlang, process_info, [Pid]),
+      RemoteGroupLeader = proplists:get_value(group_leader, Info),
+      group_leader(RemoteGroupLeader, self());
+    {badrpc, Err} -> Err
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -143,6 +166,16 @@ make_sname(Name, Hostname) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Refreshes the state of Service on Node.
+%% @end
+-spec refresh_service(node(), module()) -> ok | {badrpc, Reason::term()}.
+%%------------------------------------------------------------------------------
+refresh_service(Node, Service) ->
+  call(Node, Service, refresh, []).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Loads Mods on Node.
 %% @end
 -spec remote_load_modules(Node::node(), Mods::[module()]) -> ok.
@@ -156,45 +189,59 @@ remote_load_module(Node, Mod) ->
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
   {File, _Opts}  = filename:find_src(Mod),
-  {ok, Mod, Bin} = call(Node, compile, file, [File, [debug_info, binary]]),
-  {module, Mod}  = call(Node, code, load_binary, [Mod, File, Bin]).
+  {ok, Mod, Bin} = remote_compile_module(Node, File),
+  {module, Mod}  = remote_load_module(Node, Mod, File, Bin).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Sets each of the Key/Value pairs in KVs in App's application environment on
+%% Node.
+%% @end
+-spec set_app_envs(Node ::node(),
+                   App  ::atom(),
+                   KVs  :: [{Key::atom(), Value::term()}]) ->
+                      [ok | {badrpc, Reason::term()}].
+%%------------------------------------------------------------------------------
+set_app_envs(Node, App, KVs) ->
+  lists:map(fun({Key, Value}) -> set_app_env(Node, App, Key, Value) end, KVs).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Sets the environment variable Key for App on Node to Value.
 %% @end
--spec set_app_env(node(), App::atom(), Key::atom(), Value::term()) ->
+-spec set_app_env(Node :: node(),
+                  App::atom(),
+                  Key::atom(),
+                  Value::term()) ->
                      ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
 set_app_env(Node, App, Key, Value) ->
-  rpc:call(Node, application, set_env, [App, Key, Value]).
+  call(Node, application, set_env, [App, Key, Value]).
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Starts Services on Node by calling Service:start() for each Service.
+%% Starts Service on Node.
 %% @end
--spec ensure_services_started(node(), [module()]) -> [Promise::rpc:key()].
+-spec start_service(node(), module()) -> ok | {badrpc, Reason::term()}.
 %%------------------------------------------------------------------------------
-ensure_services_started(Node, Services) ->
-  F = fun(Service, Acc) ->
-          case ensure_service_started(Node, Service) of
-            {ok, Key}                -> [Key|Acc];
-            {error, already_started} -> Acc
-          end
-      end,
-  lists:reverse(lists:foldl(F, [], Services)).
+start_service(Node, Service) ->
+  call(Node, Service, start).
 
 
 %%%_* Internal functions =======================================================
+remote_load_module(Node, Mod, File, Bin) ->
+  case call(Node, code, load_binary, [Mod, File, Bin]) of
+    {module, Mod} = Res -> Res;
+    {error, Rsn}        -> erlang:error(Rsn)
+  end.
 
-ensure_service_started(Node, Service) ->
-  case rpc:call(Node, Service, started_p, []) of
-    true  ->
-      edts_log:info("Service ~p already started on ~p", [Service, Node]),
-      {error, already_started};
-    false ->
-      edts_log:info("Starting service ~p on ~p", [Service, Node]),
-      {ok, rpc:async_call(Node, Service, start, [])}
+
+remote_compile_module(Node, File) ->
+  case call(Node, compile, file, [File, [debug_info, binary, report]]) of
+    {ok, _, _} = Res -> Res;
+    {error, Rsn}     -> erlang:error(Rsn)
   end.
 
 

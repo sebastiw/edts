@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-complete.el --- Auto-completion setup for erlang.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -14,10 +21,9 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
-;;
-;; setup of auto-complete support for erlang.
 
 (require 'auto-complete)
+(require 'pos-tip)
 (require 'ferl)
 
 (load "edts-complete-variable-source" nil edts-start-inhibit-load-msgs)

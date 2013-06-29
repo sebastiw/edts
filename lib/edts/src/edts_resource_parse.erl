@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc node resource
+%%% @doc erlang code parsing resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_code).
+-module(edts_resource_parse).
 
 %%%_* Exports ==================================================================
 
@@ -60,23 +60,27 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  BinStr = mochijson2:decode(binary_to_list(wrq:req_body(ReqData))),
-  Data =
-    case edts_code:free_vars(binary_to_list(BinStr)) of
-      {ok, Vars}      -> [{vars, Vars}];
-      {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
-    end,
-  io:format("data ~p~n", [Data]),
+  Json = mochijson2:decode(binary_to_list(wrq:req_body(ReqData))),
+  Data = lists:map(fun json_to_mfa/1, Json),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+
+json_to_mfa(Str) ->
+  case edts_code:string_to_mfa(binary_to_list(Str)) of
+    {ok, MFA}       -> MFA;
+    {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
+  end.
+
 format_error({Type, File, Line, Desc}) ->
   [ {type, Type}
   , {file, list_to_binary(File)}
   , {line, Line}
   , {description, list_to_binary(Desc)}].
 
+
 %%%_* Unit tests ===============================================================
+
 
 init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
@@ -91,31 +95,36 @@ content_types_provided_test() ->
 to_json_test_() ->
   {setup,
    fun() ->
-       meck:unload(),
-       meck:new(wrq),
-       meck:expect(wrq, req_body, fun(A) ->
-                                      list_to_binary(atom_to_list(A))
-                                  end),
-       meck:new(edts_code),
-       meck:expect(edts_code, free_vars,
-                   fun("req_data1") -> {ok, ['VarA', 'VarB']};
-                      ("req_data2") -> {error, [{err, "S", 13, "D"}]}
-                   end),
-       meck:new(mochijson2),
-       meck:expect(mochijson2, encode, fun(A) -> A end),
-       meck:expect(mochijson2, decode, fun(A) -> list_to_binary(A) end)
+     meck:unload(),
+     meck:new(wrq),
+     meck:expect(wrq, req_body,
+                 fun(A) ->
+                     Str = lists:flatten(io_lib:format("[\"~p\"]", [A])),
+                     list_to_binary(Str)
+                 end),
+     meck:new(edts_code),
+     meck:expect(edts_code, string_to_mfa,
+                 fun("req_data1") ->
+                     {ok, [{module, foo}, {function, bar}, {arity, 1}]};
+                    ("req_data2") ->
+                     {error, [{error, "S", 1, "D"}]}
+                 end),
+     meck:new(mochijson2, [passthrough]),
+     meck:expect(mochijson2, encode, fun(A) -> A end)
    end,
    fun(_) ->
        meck:unload()
    end,
-   [?_assertEqual({[{vars, ['VarA', 'VarB']}], req_data1, []},
+   [?_assertEqual({[[{module, foo}, {function, bar}, {arity, 1}]],
+                   req_data1,
+                   []},
                   to_json(req_data1, [])),
-    ?_assertEqual({[{errors, [[ {type, err}
+    ?_assertEqual({[[{errors, [[ {type, error}
                                 , {file, <<"S">>}
-                                , {line, 13}
-                                , {description, <<"D">>}]]}], req_data2, []},
-                  to_json(req_data2, []))]
-  }.
+                                , {line, 1}
+                                , {description, <<"D">>}]]}]], req_data2, []},
+                  to_json(req_data2, []))
+   ]}.
 
 
 %%%_* Emacs ====================================================================

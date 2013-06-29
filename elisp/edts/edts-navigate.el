@@ -1,4 +1,11 @@
-;; Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
+;;; edts-navigate.el --- Code for navigating through edts projects.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -14,40 +21,45 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
-;;
-;; Rudimentary project support for edts so that we can relate buffers to
-;; projects and communicate with the correct nodes.
-;;
-;; Code for navigating through a project.
+
 (require 'cl)
 (require 'ring)
 (require 'thingatpt)
 
 (require 'ferl)
 
+(defvar edts-navigate-originating-module nil
+  "The module from which we navigated to the current header file. Only
+set for .hrl-files.")
+(make-variable-buffer-local 'edts-navigate-originating-module)
+
 ;; Nameclash (sort of) with edts-find source. One of the names should be
 ;; changed to indicate the differences in how they work.
-(defun edts-find-function ()
+(defun edts-find-global-function ()
   "Find a module in the current project."
   (interactive)
   (let ((modules (edts-get-modules)))
-    (if modules
-        (let* ((choice (edts-query "Module: " modules))
-               (file (cdr (assoc 'source (edts-get-basic-module-info choice))))
-               (mark (copy-marker (point-marker))))
-          (edts-find-file-existing file)
-          (edts-find-local-function))
-        (error "No module found"))))
+    (unless modules
+      (error "No modules found"))
+    (let* ((choice (edts-query "Module: " modules "No such module"))
+           (file (cdr (assoc 'source (edts-get-basic-module-info choice)))))
+      (edts-find-file-existing file)
+      (edts-find-local-function nil))))
 
-(defun edts-find-local-function()
+(defun edts-find-local-function (set-mark)
   "Find a function in the current module."
-  (interactive)
+  (interactive '(t))
   (let* ((functions (ferl-local-functions))
          (names     (mapcar #'(lambda (el) (car el)) functions))
-         (choice    (edts-query "Function: " (cons "-Top of Module-" names))))
+         (choice    (edts-query
+                     "Function: " (cons "-Top of Module-" names)
+                     "No such function"))
+         (mark      (point-marker)))
     (if (string= "-Top of Module-" choice)
         (goto-char 0)
-        (goto-char (cdr (assoc choice functions))))))
+        (goto-char (cdr (assoc choice functions))))
+    (when (and set-mark (not (eq (point) (marker-position mark))))
+      (ring-insert-at-beginning (edts-window-history-ring) mark))))
 
 ;; Borrowed from distel
 (defun edts-find-source-under-point ()
@@ -72,7 +84,8 @@ determine which file to look in, with the following algorithm:
    ((edts-behaviour-under-point-p) (edts-find-behaviour-source))
    ;; look for a M:F/A
    ((apply #'edts-find-source
-           (or (ferl-mfa-at-point) (error "No call at point."))))))
+           (or (edts-mfa-at (point)) (error "No call at point."))))))
+
 
 (defun edts-header-under-point-p ()
   "Return non nil if the form under point is an include or include_lib
@@ -122,15 +135,17 @@ directive."
   "Open the source for the header file under point."
   (let* ((headerfile (edts-header-at-point))
          (mark (copy-marker (point-marker))) ;; Add us to the history list
-         (includes (edts-get-includes))
+         (includes (edts-navigate-get-includes))
+         (module (or (ferl-get-module) edts-navigate-originating-module))
          (file (find-if #'(lambda(x) (string=
                                       (file-name-nondirectory headerfile)
                                       (file-name-nondirectory x)))
                         includes)))
-    (if file
-        (progn (edts-find-file-existing file)
-               (goto-char (point-min)))
-        (null (error "No header filename at point")))))
+    (if (not file)
+        (null (error "No header filename at point"))
+      (edts-find-file-existing file)
+      (setq edts-navigate-originating-module module)
+      (goto-char (point-min)))))
 
 (defun edts-has-suffix (suffix string)
   "returns string if string has suffix"
@@ -178,7 +193,8 @@ and make an entry in edts-window-history-ring."
 Move point there and make an entry in edts-window-history-ring."
   (let ((mark        (copy-marker (point-marker)))
         (group-index (or group-index 0))
-        (includes    (edts-get-includes))
+        (includes    (edts-navigate-get-includes))
+        (module      (or (ferl-get-module) edts-navigate-originating-module))
         (found       nil))
     (with-temp-buffer
       (save-excursion
@@ -189,10 +205,16 @@ Move point there and make an entry in edts-window-history-ring."
           (pop includes))))
     (when found
       (edts-find-file-existing found)
+      (setq edts-navigate-originating-module module)
       (goto-char (point-min))
       (re-search-forward re nil t)
       (beginning-of-line))
     found))
+
+(defun edts-navigate-get-includes ()
+  (if (string= (file-name-extension (buffer-file-name)) "hrl")
+      (edts-get-includes edts-navigate-originating-module)
+    (edts-get-includes)))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
@@ -204,7 +226,7 @@ When FUNCTION is specified, the point is moved to its start."
         ;; Function is local
         (if function
             (progn
-              (ferl-search-function function arity)
+              (edts-search-function function arity)
               (unless (eq (marker-position mark) (point))
                 (ring-insert-at-beginning (edts-window-history-ring) mark)))
             (error "Function %s:%s/%s not found" module function arity))
@@ -224,8 +246,9 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-find-file-existing (file)
   "EDTS wrapper for find-file-existing."
-  (find-file-existing file)  ; Fixme, catch error
-  (ring-insert-at-beginning (edts-window-history-ring) mark))
+  (let ((mark (point-marker)))
+    (find-file-existing file)  ; Fixme, catch error
+    (ring-insert-at-beginning (edts-window-history-ring) mark)))
 
 ;; Borrowed from distel
 (defun edts-find-source-unwind ()
@@ -248,7 +271,7 @@ When FUNCTION is specified, the point is moved to its start."
 
 (defun edts-who-calls ()
   (interactive)
-  (let ((mfa (ferl-mfa-at-point)))
+  (let ((mfa (edts-mfa-at)))
     (if mfa
         (apply #'edts-find-callers  mfa)
       (error "No call at point."))))

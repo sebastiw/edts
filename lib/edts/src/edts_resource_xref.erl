@@ -69,8 +69,8 @@ resource_exists(ReqData, Ctx) ->
   Modules   = orddict:fetch(modules, Ctx),
   Checks   = orddict:fetch(xref_checks, Ctx),
   Analysis = edts:get_module_xref_analysis(Nodename, Modules, Checks),
-  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules])
-              andalso not (Analysis =:= {error, not_found})),
+  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename])
+              andalso (Analysis =/= {error, not_found})),
   {Exists, ReqData, orddict:store(analysis, Analysis, Ctx)}.
 
 to_json(ReqData, Ctx) ->
