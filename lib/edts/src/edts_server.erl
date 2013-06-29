@@ -317,7 +317,8 @@ do_init_node(ProjectName,
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
     init_node_env(Node, AppEnv),
-    start_services(Node, [edts_code])
+    start_services(Node, [edts_code,
+                          edts_debug_server])
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
