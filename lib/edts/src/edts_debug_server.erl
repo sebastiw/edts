@@ -74,8 +74,8 @@
 
 %%%_* API ======================================================================
 start() ->
-  edts_debug_server:start_link(),
-  {node(), ok}.
+  gen_server:start({local, ?SERVER}, ?MODULE, [], []),
+  ok.
 
 stop() ->
   ok.
