@@ -198,7 +198,7 @@ malformed_request_post_test() ->
   meck:expect(wrq, method, fun(_) -> 'POST' end),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, module, file]) ->
+              fun(req_data, [], [nodename, module, file, interpret]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}

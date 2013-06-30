@@ -90,11 +90,7 @@ resource_exists(ReqData, Ctx) ->
 from_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
   Command = orddict:fetch(cmd, Ctx),
-  Info    = case Command of
-               interpret_node -> Exclusions = orddict:fetch(exclusions, Ctx),
-                                 edts:Command(Node, Exclusions);
-               _              -> edts:Command(Node)
-             end,
+  Info    = edts:Command(Node),
   Data    = edts_resource_lib:encode_debugger_info(Info),
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
@@ -138,7 +134,8 @@ from_json_test() ->
   meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
 
   Dict1 =
-    orddict:from_list([{nodename, true}]),
+    orddict:from_list([{nodename, true},
+                       {cmd, step}]),
 
   ?assertEqual({true, {break, "foo.erl", {foo, 42}, [{bar, 1}]}, Dict1},
                from_json(req_data, Dict1)),
@@ -158,7 +155,8 @@ to_json_test() ->
   meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
 
   Dict1 =
-    orddict:from_list([{nodename, true}]),
+    orddict:from_list([{nodename, true},
+                      {cmd,  wait_for_debugger}]),
 
   ?assertEqual({{break, "foo.erl", {foo, 42}, [{bar, 1}]}, req_data1, Dict1},
                to_json(req_data1, Dict1)),

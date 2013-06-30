@@ -478,7 +478,7 @@ arity_validate_test() ->
   meck:expect(wrq, path_info, fun(arity, _) -> "-1" end),
   ?assertEqual(error, arity_validate(foo, bar)),
   meck:expect(wrq, path_info, fun(arity, _) -> "a" end),
-  ?assertEqual(error, arity_validate(foo, bar)),
+  ?assertEqual({error, {badarg, "a"}}, arity_validate(foo, bar)),
   meck:unload().
 
 cmd_validate_test() ->
