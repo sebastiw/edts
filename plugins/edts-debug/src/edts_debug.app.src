@@ -8,6 +8,5 @@
                   stdlib
                  ]},
   {mod, { edts_app, []}},
-  {env, [{edts_resources, [edts_resource_debugger,
-                           edts_resource_breakpoint]}]}
+  {env, []}
  ]}.
