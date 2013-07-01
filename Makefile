@@ -12,9 +12,13 @@ $(PLUGINS):
 	@cd $@ && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)"
 
 .PHONY: clean
-clean:
+clean: clean-$(PLUGINS)
 	rm -rfv elisp/*/*.elc
 	@cd lib/edts && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" clean
+
+.PHONY: $(SPLUGINS:%=clean-%)
+clean-$(PLUGINS):
+	@cd $(@:clean-%=%) && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: ert
 ert:
@@ -24,12 +28,20 @@ ert:
 	-f ert-run-tests-batch-and-exit
 
 .PHONY: eunit
-eunit:
+eunit: eunit-$(PLUGINS)
 	@(cd lib/edts; ./rebar eunit skip_deps=true)
 
+.PHONY: $(SPLUGINS:%=eunit-%)
+eunit-$(PLUGINS):
+	@cd $(@:eunit-%=%) && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" eunit
+
 .PHONY: ct
-ct:
+ct: ct-$(PLUGINS)
 	@(cd lib/edts; ./rebar ct skip_deps=true)
+
+.PHONY: $(SPLUGINS:%=ct-%)
+ct-$(PLUGINS):
+	@cd $(@:eunit-%=%) && $(MAKE) MAKEFLAGS="$(MAKEFLAGS)" ct
 
 .PHONY: test
 test: all ert eunit ct
