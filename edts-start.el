@@ -26,19 +26,27 @@
   (path-util-join (file-name-directory edts-root-directory) "elisp")
   "Directory where edts libraries are located.")
 
+(defconst edts-plugin-directory
+  (path-util-join (file-name-directory edts-root-directory) "plugins")
+  "Directory where edts plugins are located.")
+
 (defconst edts-test-directory
   (path-util-join (file-name-directory edts-root-directory) "test")
   "Directory where edts test data are located.")
 
-(mapcar #'(lambda (p)
-            (add-to-list 'load-path (path-util-join  edts-lib-directory p)))
-        '("auto-complete"
-          "auto-highlight-symbol-mode"
-          "edts"
-          "eproject"
-          "ert"
-          "popup-el"
-          "pos-tip"))
+(defun edts-add-lib-dir-to-load-path (lib-dir)
+  "Add all subdirectories of LIB-DIRS to `load-path'."
+  (mapc #'(lambda (d)
+            (let ((file (nth 0 d)))
+              (when (and (not (string= "." file))
+                         (not (string= ".." file))
+                         (nth 1 d))
+                (add-to-list 'load-path (path-util-join lib-dir file)))))
+        (directory-files-and-attributes lib-dir))
+  load-path)
+
+(edts-add-lib-dir-to-load-path edts-lib-directory)
+(edts-add-lib-dir-to-load-path edts-plugin-directory)
 
 (when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
