@@ -1,0 +1,13 @@
+{application, edts_debug,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { edts_app, []}},
+  {env, [{edts_resources, [edts_resource_debugger,
+                           edts_resource_breakpoint]}]}
+ ]}.

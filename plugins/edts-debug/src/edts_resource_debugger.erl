@@ -43,7 +43,7 @@
 -export([ from_json/2, to_json/2]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
+%% -include_lib("webmachine/include/webmachine.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
@@ -91,7 +91,7 @@ from_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
   Command = orddict:fetch(cmd, Ctx),
   Info    = edts:Command(Node),
-  Data    = edts_resource_lib:encode_debugger_info(Info),
+  Data    = encode_debugger_info(Info),
   {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
@@ -102,6 +102,30 @@ to_json(ReqData, Ctx) ->
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+%%------------------------------------------------------------------------------
+%% @doc
+%% Encodes debugger replies into the appropriate json structure
+%% @end
+-spec encode_debugger_info({ok, Info :: term()}) -> term().
+%%------------------------------------------------------------------------------
+encode_debugger_info({ok, Info}) ->
+  {struct, do_encode_debugger_info(Info)};
+encode_debugger_info({error, Error}) ->
+  {struct, [{state, error}, {message, Error}]}.
+
+do_encode_debugger_info({break, File, {Module, Line}, VarBindings}) ->
+  [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
+   {var_bindings,
+    {struct, encode(VarBindings)}}];
+do_encode_debugger_info([{module, _} | _] = Interpreted) ->
+  [{interpreted, {array, Interpreted}}];
+do_encode_debugger_info(State) ->
+  [{state, State}].
+
+encode(VarBindings) ->
+  [{Key, list_to_binary(io_lib:format("~p", [Value]))}
+   || {Key, Value} <- VarBindings].
+
 %%%_* Unit tests ===============================================================
 init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
@@ -162,6 +186,31 @@ to_json_test() ->
                to_json(req_data1, Dict1)),
   meck:unload().
 
+encode_debugger_info_test() ->
+  ?assertEqual({struct, [{state, error}, {message, foo}]},
+               encode_debugger_info({error, foo})),
+  ?assertEqual({struct, [ {state, break}
+                        , {file, <<"/awsum/foo.erl">>}
+                        , {module, foo}
+                        , {line, 42}
+                        , {var_bindings, {struct, []}}]},
+               encode_debugger_info({ok, {break, "/awsum/foo.erl", {foo, 42},
+                                          []}})),
+  ?assertEqual({struct, [ {state, break}
+                        , {file, <<"/awsum/bar.erl">>}
+                        , {module, bar}
+                        , {line, 123}
+                        , {var_bindings, {struct, [{'A', <<"3.14">>}]}}]},
+               encode_debugger_info({ok, {break, "/awsum/bar.erl", {bar, 123},
+                                          [{'A', 3.14}]}})).
+
+encode_test() ->
+  ?assertEqual([{'A', <<"\"foo\"">>}], encode([{'A', "foo"}])),
+  ?assertEqual([{"bar", <<"\"BAZ\"">>}], encode([{"bar", [$B, $A, $Z]}])),
+  ?assertEqual([{'foo', <<"bar">>}, {"pi", <<"3.14">>}],
+               encode([{'foo', bar}, {"pi", 3.14}])),
+  ?assertEqual([{a_tuple, <<"{with,3,\"fields\"}">>}],
+               encode([{a_tuple, {with, 3, "fields"}}])).
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
