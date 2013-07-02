@@ -41,6 +41,20 @@
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
   (add-to-list `load-path (path-util-join edts-plugin-directory plugin-name))
-  (require (intern plugin-name)))
+  (require (intern plugin-name))
+
+  (edts-plugin--init-keymap plugin-name))
+
+(defun edts-plugin--init-keymap (plugin-name)
+  "Initialize plugin keymap by calling `PLUGIN-NAME-keymap', composing
+the result with the prior `edts-mode-map' and setting it as the new
+`edts-mode-map'."
+  (let ((keymapfun (intern (concat plugin-name "-keymap"))))
+    (when (fboundp keymapfun)
+      (setq edts-mode-map
+            (make-composed-keymap
+             (list (funcall keymapfun) edts-mode-map))))))
+
+
 
 (provide 'edts-plugin)

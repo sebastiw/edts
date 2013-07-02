@@ -72,7 +72,6 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 ;; External
 (require 'auto-highlight-symbol)
 
-(edts-plugin-init-all)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
 (defconst erlang-auto-highlight-exclusions
@@ -112,9 +111,6 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
     (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\C-c\C-dt"    'edts-code-eunit)
-    (define-key map "\C-c\C-d\C-d" 'edts-debug-start-debugging)
-    (define-key map "\C-c\C-di"    'edts-debug-toggle-interpret-minor-mode)
-    (define-key map "\C-c\C-db"    'edts-debug-toggle-breakpoint)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)
@@ -255,6 +251,7 @@ further.
     t))
 
 ;; Global setup
+(edts-plugin-init-all)
 (make-directory edts-data-directory 'parents)
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
 

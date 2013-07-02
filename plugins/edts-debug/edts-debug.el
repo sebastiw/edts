@@ -139,7 +139,14 @@
   (setq *edts-debugger-buffer* (current-buffer))
   (edts-debug-update-breakpoints))
 
-(defvar edts-debug-keymap
+(defun edts-debug-keymap ()
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-d\C-d" 'edts-debug-start-debugging)
+    (define-key map "\C-c\C-di"    'edts-debug-toggle-interpret-minor-mode)
+    (define-key map "\C-c\C-db"    'edts-debug-toggle-breakpoint)
+    map))
+
+(defvar edts-debug-mode-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "SPC") 'edts-debug-toggle-breakpoint)
     (define-key map (kbd "s")   'edts-debug-step)
@@ -154,7 +161,7 @@
   "Major mode for debugging interpreted Erlang code using EDTS"
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
-  (use-local-map edts-debug-keymap))
+  (use-local-map edts-debug-mode-keymap))
 
 (define-minor-mode edts-int-mode
   "Toggle code interpretation for the project node belonging to the current
