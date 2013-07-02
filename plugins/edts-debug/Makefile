@@ -1,6 +1,6 @@
 suite=$(if $(SUITE), suite=$(SUITE), )
 
-.PHONY:	all deps check test clean
+.PHONY:	all deps eunit check test clean
 
 all: deps
 	./rebar compile
@@ -15,7 +15,8 @@ check:
 	./rebar check-plt
 	./rebar dialyze
 
-test:
+test eunit:
+	echo "erl_libs" $(ERL_LIBS)
 	./rebar eunit $(suite) skip_deps=true
 
 

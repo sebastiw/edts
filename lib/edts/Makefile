@@ -15,9 +15,13 @@ check:
 	./rebar check-plt
 	./rebar dialyze
 
-test:
+test: eunit ct
+
+eunit:
 	./rebar eunit $(suite) skip_deps=true
 
+ct:
+	./rebar ct $(suite) skip_deps=true
 
 conf_clean:
 	@:
