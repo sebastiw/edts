@@ -46,7 +46,6 @@
   load-path)
 
 (edts-add-lib-dir-to-load-path edts-lib-directory)
-(edts-add-lib-dir-to-load-path edts-plugin-directory)
 
 (when (and (boundp 'erlang-root-dir) erlang-root-dir)
   ;; add erl under erlang root dir to exec-path
@@ -77,7 +76,6 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (load "edts-log" nil edts-start-inhibit-load-msgs)
 (load "edts-code" nil edts-start-inhibit-load-msgs)
 (load "edts-complete" nil edts-start-inhibit-load-msgs)
-(load "edts-debug" nil edts-start-inhibit-load-msgs)
 (load "edts-doc" nil edts-start-inhibit-load-msgs)
 (load "edts-rest" nil edts-start-inhibit-load-msgs)
 (load "edts-face" nil edts-start-inhibit-load-msgs)
@@ -89,6 +87,16 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;; External
 (require 'auto-highlight-symbol)
+
+;; Plugins
+(edts-add-lib-dir-to-load-path edts-plugin-directory)
+(mapc #'(lambda (d)
+          (let ((file (nth 0 d)))
+            (when (and (not (string= "." file))
+                       (not (string= ".." file))
+                       (nth 1 d))
+              (require (intern file)))))
+      (directory-files-and-attributes edts-plugin-directory))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS

@@ -257,3 +257,5 @@ be interpreted"
        (setq buffer-read-only nil)
        ,@body
        (setq buffer-read-only was-read-only))))
+
+(provide 'edts-debug)
