@@ -543,15 +543,14 @@ parsed response as the single argument."
     (edts-rest-get-async resource nil #'edts-async-callback cb-args)))
 
 
-(defun edts-compile-and-load-async (module file interpret callback)
+(defun edts-compile-and-load-async (module file callback)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument. MODULE becomes interpreted
 if INTERPRET evaluates to a non-NIL value"
   (let* ((node-name   (edts-node-name))
-         (interpreted (if interpret "true" "false"))
          (resource    (list "nodes" node-name "modules" module))
-         (rest-args   (list (cons "file" file) (cons "interpret" interpreted)))
+         (rest-args   (list (cons "file" file)))
          (cb-args     (list callback 201)))
     (edts-log-debug "Compiling %s async on %s" module node-name)
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
