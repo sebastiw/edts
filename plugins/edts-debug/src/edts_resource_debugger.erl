@@ -98,7 +98,7 @@ to_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
   Command = orddict:fetch(cmd, Ctx),
   Info    = edts:Command(Node),
-  Data    = edts_resource_lib:encode_debugger_info(Info),
+  Data    = encode_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
@@ -109,9 +109,9 @@ to_json(ReqData, Ctx) ->
 -spec encode_debugger_info({ok, Info :: term()}) -> term().
 %%------------------------------------------------------------------------------
 encode_debugger_info({ok, Info}) ->
-  {struct, do_encode_debugger_info(Info)};
+  do_encode_debugger_info(Info);
 encode_debugger_info({error, Error}) ->
-  {struct, [{state, error}, {message, Error}]}.
+  [{state, error}, {message, Error}].
 
 do_encode_debugger_info({break, File, {Module, Line}, VarBindings}) ->
   [{state, break}, {file, list_to_binary(File)},{module, Module}, {line, Line},
@@ -151,18 +151,22 @@ from_json_test() ->
   meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
   meck:new(edts),
   meck:expect(edts, step,
-              fun(_) -> {break, "foo.erl", {foo, 42}, [{bar, 1}]} end),
-  meck:new(mochijson2),
-  meck:expect(mochijson2, encode, fun(A) -> A end),
-  meck:new(edts_resource_lib),
-  meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
+              fun(_) -> {ok, {break, "foo.erl", {foo, 42}, [{bar, 1}]}} end),
 
   Dict1 =
     orddict:from_list([{nodename, true},
                        {cmd, step}]),
+  Res = from_json(req_data, Dict1),
+  ?assertMatch({true, _, Dict1}, Res),
 
-  ?assertEqual({true, {break, "foo.erl", {foo, 42}, [{bar, 1}]}, Dict1},
-               from_json(req_data, Dict1)),
+  JSON = element(2, Res),
+  ?assertEqual({struct,
+                [{<<"state">>,<<"break">>},
+                 {<<"file">>,<<"foo.erl">>},
+                 {<<"module">>,<<"foo">>},
+                 {<<"line">>,42},
+                 {<<"var_bindings">>, {struct,[{<<"bar">>,<<"1">>}]}}]},
+               mochijson2:decode(JSON)),
   meck:unload().
 
 to_json_test() ->
@@ -170,37 +174,42 @@ to_json_test() ->
   meck:new(wrq),
   meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
   meck:expect(wrq, get_qs_value, fun("cmd", _) -> "wait_for_debugger" end),
+  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
   meck:new(edts),
   meck:expect(edts, wait_for_debugger,
-              fun(_) -> {break, "foo.erl", {foo, 42}, [{bar, 1}]} end),
-  meck:new(mochijson2),
-  meck:expect(mochijson2, encode, fun(A) -> A end),
-  meck:new(edts_resource_lib),
-  meck:expect(edts_resource_lib, encode_debugger_info, fun(A) -> A end),
+              fun(_) -> {ok, {break, "foo.erl", {foo, 42}, [{bar, 1}]}} end),
 
   Dict1 =
     orddict:from_list([{nodename, true},
                       {cmd,  wait_for_debugger}]),
+  Res = from_json(req_data, Dict1),
+  ?assertMatch({true, _, Dict1}, Res),
 
-  ?assertEqual({{break, "foo.erl", {foo, 42}, [{bar, 1}]}, req_data1, Dict1},
-               to_json(req_data1, Dict1)),
+  JSON = element(2, Res),
+  ?assertEqual({struct,
+                [{<<"state">>,<<"break">>},
+                 {<<"file">>,<<"foo.erl">>},
+                 {<<"module">>,<<"foo">>},
+                 {<<"line">>,42},
+                 {<<"var_bindings">>, {struct,[{<<"bar">>,<<"1">>}]}}]},
+               mochijson2:decode(JSON)),
   meck:unload().
 
 encode_debugger_info_test() ->
-  ?assertEqual({struct, [{state, error}, {message, foo}]},
+  ?assertEqual([{state, error}, {message, foo}],
                encode_debugger_info({error, foo})),
-  ?assertEqual({struct, [ {state, break}
-                        , {file, <<"/awsum/foo.erl">>}
-                        , {module, foo}
-                        , {line, 42}
-                        , {var_bindings, {struct, []}}]},
+  ?assertEqual([ {state, break}
+                 , {file, <<"/awsum/foo.erl">>}
+                 , {module, foo}
+                 , {line, 42}
+                 , {var_bindings, {struct, []}}],
                encode_debugger_info({ok, {break, "/awsum/foo.erl", {foo, 42},
                                           []}})),
-  ?assertEqual({struct, [ {state, break}
-                        , {file, <<"/awsum/bar.erl">>}
-                        , {module, bar}
-                        , {line, 123}
-                        , {var_bindings, {struct, [{'A', <<"3.14">>}]}}]},
+  ?assertEqual([{state, break},
+                {file, <<"/awsum/bar.erl">>},
+                {module, bar},
+                {line, 123},
+                {var_bindings, {struct, [{'A', <<"3.14">>}]}}],
                encode_debugger_info({ok, {break, "/awsum/bar.erl", {bar, 123},
                                           [{'A', 3.14}]}})).
 
