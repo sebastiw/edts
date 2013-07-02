@@ -98,9 +98,9 @@ dispatch_specificity({PathA, _, _ }, {PathB, _, _ }) ->
 
 %%%_* Unit tests ===============================================================
 dispatch_specificity_test_() ->
-  [ ?_assert(dispatch_specificity({[a], 1, 2}, {[a, b], 1, 1})),
-    ?_assertNot(dispatch_specificity({[a, b], 1, 1}, {[a],1,2})),
-    ?_assert(dispatch_specificity({[a, b], 1, 1}, {[a, b], 1, 2}))
+  [ ?_assertNot(dispatch_specificity({[a], 1, 2}, {[a, b], 1, 1})),
+    ?_assert(dispatch_specificity({[a, b], 1, 1}, {[a],1,2})),
+    ?_assertNot(dispatch_specificity({[a, b], 1, 1}, {[a, b], 1, 2}))
   ].
 
 %%%_* Emacs ====================================================================
