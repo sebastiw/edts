@@ -582,21 +582,6 @@ ARGS as the other arguments"
       (null
        (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply)))))))
 
-(defun edts-compile-and-load (module file interpret)
-  "Compile MODULE in FILE on the node associated with current buffer.
-MODULE becomes interpreted if INTERPRET evaluates to a non-NIL value."
-  (let ((node-name (edts-node-name)))
-    (edts-log-debug "Compiling %s on %s" module node-name)
-    (let* ((resource
-            (list "nodes" node-name "modules" module))
-           (interpreted (if interpret "true" "false"))
-           (args (list (cons "file" file) (cons "interpret" interpreted)))
-           (res (edts-rest-post resource args)))
-      (if (equal (assoc 'result res) '(result "201" "Created"))
-          (cdr (assoc 'body res))
-        (null (edts-log-error "Unexpected reply: %s"
-                              (cdr (assoc 'result res))))))))
-
 (defun edts-get-includes (&optional module)
   "Get all includes of module in current-buffer from the node
 associated with that buffer."
