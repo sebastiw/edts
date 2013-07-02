@@ -546,8 +546,7 @@ parsed response as the single argument."
 (defun edts-compile-and-load-async (module file callback)
   "Compile MODULE in FILE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
-parsed response as the single argument. MODULE becomes interpreted
-if INTERPRET evaluates to a non-NIL value"
+parsed response as the single argument."
   (let* ((node-name   (edts-node-name))
          (resource    (list "nodes" node-name "modules" module))
          (rest-args   (list (cons "file" file)))
