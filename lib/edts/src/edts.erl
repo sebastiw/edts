@@ -72,7 +72,7 @@ compile_and_load(Node, Filename) ->
   edts_log:debug("compile_and_load ~p on ~p", [Filename, Node]),
   edts_server:wait_for_node(Node),
   case edts_dist:call(Node, edts_code, compile_and_load, [Filename]) of
-    {badrpc, E} ->
+    {error, E} ->
       Fmt = "Error in remote call edts_code:compile_and_load/1 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
@@ -95,8 +95,8 @@ get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
   edts_log:debug("get_dialyzer_result ~p (~p) -> ~p, ~p",
                  [Files, OtpPlt, OutPlt, Node]),
   case edts_dist:call(Node, edts_dialyzer, run, [OtpPlt, OutPlt, Files]) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 
@@ -113,8 +113,8 @@ get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
 %%------------------------------------------------------------------------------
 get_breakpoints(Node) ->
   case edts_dist:call(Node, edts_debug_server, get_breakpoints, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 %%------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ get_function_info(Node, Module, Function, Arity) ->
               [Module, Function, Arity, Node]),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, get_function_info, Args) of
-    {badrpc, E} ->
+    {error, E} ->
       Fmt = "Error in remote call edts_code:get_function_info/3 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
@@ -156,7 +156,7 @@ who_calls(Node, Module, Function, Arity) ->
   edts_server:wait_for_node(Node),
   Args = [Module, Function, Arity],
   case edts_dist:call(Node, edts_code, who_calls, Args) of
-    {badrpc, E} ->
+    {error, E} ->
       Fmt = "Error in remote call edts_code:who_calls/2 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
@@ -175,7 +175,7 @@ who_calls(Node, Module, Function, Arity) ->
 %%------------------------------------------------------------------------------
 interpret_modules(Node, Modules) ->
   case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
-    {badrpc, _} -> {error, not_found};
+    {error, _}  -> {error, not_found};
     Interpreted -> Interpreted
   end.
 
@@ -191,8 +191,8 @@ interpret_modules(Node, Modules) ->
 uninterpret_modules(Node, Modules) ->
   case edts_dist:call(Node,
                       edts_debug_server, uninterpret_modules, [Modules]) of
-    {badrpc, _} -> {error, not_found};
-    ok          -> ok
+    {error, _} -> {error, not_found};
+    ok         -> ok
   end.
 
 %%------------------------------------------------------------------------------
@@ -210,8 +210,8 @@ uninterpret_modules(Node, Modules) ->
 debugger_toggle_breakpoint(Node, Module, Line) ->
   Args = [Module, Line],
   case edts_dist:call(Node, edts_debug_server, toggle_breakpoint, Args) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 
@@ -224,8 +224,8 @@ debugger_toggle_breakpoint(Node, Module, Line) ->
 %%------------------------------------------------------------------------------
 debugger_step(Node) ->
   case edts_dist:call(Node, edts_debug_server, step, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 %%------------------------------------------------------------------------------
@@ -237,8 +237,8 @@ debugger_step(Node) ->
 %%------------------------------------------------------------------------------
 debugger_step_out(Node) ->
   case edts_dist:call(Node, edts_debug_server, step_out, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 %%------------------------------------------------------------------------------
@@ -250,8 +250,8 @@ debugger_step_out(Node) ->
 %%------------------------------------------------------------------------------
 debugger_continue(Node) ->
   case edts_dist:call(Node, edts_debug_server, continue, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 %%------------------------------------------------------------------------------
@@ -262,8 +262,8 @@ debugger_continue(Node) ->
 %%------------------------------------------------------------------------------
 debugger_stop(Node) ->
   case edts_dist:call(Node, edts_debug_server, stop_debug, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 %%------------------------------------------------------------------------------
@@ -276,8 +276,8 @@ debugger_stop(Node) ->
 %%------------------------------------------------------------------------------
 wait_for_debugger(Node) ->
   case edts_dist:call(Node, edts_debug_server, wait_for_debugger, []) of
-    {badrpc, _} -> {error, not_found};
-    Result      -> Result
+    {error, _} -> {error, not_found};
+    Result     -> Result
   end.
 
 
@@ -293,7 +293,7 @@ wait_for_debugger(Node) ->
 get_module_info(Node, Module, Level) ->
   edts_log:debug("get_module_info ~p, ~p on ~p", [Module, Level, Node]),
   case edts_dist:call(Node, edts_code, get_module_info, [Module, Level]) of
-    {badrpc, E} ->
+    {error, E} ->
       Fmt = "Error in remote call edts_code:get_module_info/2 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
@@ -314,7 +314,7 @@ get_module_info(Node, Module, Level) ->
 get_module_eunit_result(Node, Module) ->
   edts_log:debug("get_module_eunit_result ~p, ~p", [Module, Node]),
   case edts_dist:call(Node, edts_eunit, run_tests, [Module]) of
-    {badrpc, _} -> {error, not_found};
+    {error, _} -> {error, not_found};
     Result      -> Result
   end.
 
@@ -334,7 +334,7 @@ get_module_xref_analysis(Node, Modules, Checks) ->
   edts_log:debug("get_module_xref_analysis ~p, ~p on ~p",
                  [Modules, Checks, Node]),
   case edts_dist:call(Node, edts_code, check_modules, [Modules, Checks]) of
-    {badrpc, E} ->
+    {error, E} ->
       Fmt = "Error in remote call edts_code:check_modules/2 on ~p: ~p",
       edts_log:error(Fmt, [Node, E]),
       {error, not_found};
@@ -446,7 +446,7 @@ get_dialyzer_result_test_() ->
    end,
    [fun() ->
         F = fun(n, edts_dialyzer, run, ["plt", "out", "foo"]) ->
-                {badrpc, error}
+                {error, foo}
             end,
         meck:expect(edts_dist, call, F),
         ?assertEqual({error, not_found},

@@ -65,7 +65,7 @@
 %%------------------------------------------------------------------------------
 run_tests(Module) ->
   try try_run_tests(Module)
-  catch _:E -> error(E)
+  catch _:E -> {error, E}
   end.
 
 try_run_tests(Module) ->

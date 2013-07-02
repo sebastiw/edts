@@ -61,9 +61,9 @@
 add_paths(Node, LibDirs) ->
   ok = call(Node, edts_code, add_paths, [LibDirs]).
 
+
 %%------------------------------------------------------------------------------
-%% @doc
-%% Calls call/4 with Args = [].
+%% @equiv call(Node, Mod, Fun, []).
 %% @end
 -spec call(Node::node(), Mod::atom(), Fun::atom()) ->
               term() | {badrpc, term()}.
@@ -74,7 +74,7 @@ call(Node, Mod, Fun) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Calls Mod:Fun with Args remotely on Node.
+%% Calls Mod:Fun with Args remotely on Node
 %% @end
 -spec call(Node::node(), Mod::atom(), Fun::atom(), Args::[term()]) ->
               term() | {badrpc, term()}.
@@ -89,9 +89,15 @@ call(Node, Mod, Fun, Args) ->
 
 do_call(Parent, Node, Mod, Fun, Args) ->
   try_set_remote_group_leader(Node),
-  try Parent ! {self(), rpc:call(Node, Mod, Fun, Args)}
-  catch C:E -> Parent ! {self(), {C, E}}
-  end.
+  Res =
+    try rpc:call(Node, Mod, Fun, Args) of
+        {badrpc, {'EXIT', Rsn}}    -> {error, Rsn};
+        {badrpc, {error, _} = Err} -> Err;
+        {badrpc, Err}              -> {error, Err};
+        Res0                       -> Res0
+    catch _C:E -> {error, E}
+    end,
+  Parent ! {self(), Res}.
 
 %% @doc Set the group leader to get all tty output on the remote nade.
 try_set_remote_group_leader(Node) ->
@@ -103,6 +109,7 @@ try_set_remote_group_leader(Node) ->
       group_leader(RemoteGroupLeader, self());
     {badrpc, Err} -> Err
   end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
