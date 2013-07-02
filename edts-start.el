@@ -22,16 +22,20 @@
 (add-to-list 'load-path (concat edts-root-directory "elisp/path-util"))
 (require 'path-util)
 
+(defconst edts-code-directory
+  (path-util-join edts-root-directory "elisp" "edts")
+  "Directory where edts code is located.")
+
 (defconst edts-lib-directory
-  (path-util-join (file-name-directory edts-root-directory) "elisp")
+  (path-util-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
 
 (defconst edts-plugin-directory
-  (path-util-join (file-name-directory edts-root-directory) "plugins")
+  (path-util-join edts-root-directory "plugins")
   "Directory where edts plugins are located.")
 
 (defconst edts-test-directory
-  (path-util-join (file-name-directory edts-root-directory) "test")
+  (path-util-join edts-root-directory "test")
   "Directory where edts test data are located.")
 
 ;; Add all libs to load-path
@@ -59,33 +63,16 @@
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;; EDTS
-(load "ferl" nil edts-start-inhibit-load-msgs)
-(load "edts" nil edts-start-inhibit-load-msgs)
-(load "edts-log" nil edts-start-inhibit-load-msgs)
-(load "edts-code" nil edts-start-inhibit-load-msgs)
-(load "edts-complete" nil edts-start-inhibit-load-msgs)
-(load "edts-doc" nil edts-start-inhibit-load-msgs)
-(load "edts-rest" nil edts-start-inhibit-load-msgs)
-(load "edts-face" nil edts-start-inhibit-load-msgs)
-(load "edts-man" nil edts-start-inhibit-load-msgs)
-(load "edts-navigate" nil edts-start-inhibit-load-msgs)
-(load "edts-refactor" nil edts-start-inhibit-load-msgs)
-(load "edts-shell" nil edts-start-inhibit-load-msgs)
-(load "edts-project" nil edts-start-inhibit-load-msgs)
+(loop
+ for     file
+ in      (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
+ do      (load file nil edts-start-inhibit-load-msgs)
+ collect file)
 
 ;; External
 (require 'auto-highlight-symbol)
 
-;; Plugins
-(edts-add-lib-dir-to-load-path edts-plugin-directory)
-(mapc #'(lambda (d)
-          (let ((file (nth 0 d)))
-            (when (and (not (string= "." file))
-                       (not (string= ".." file))
-                       (nth 1 d))
-              (require (intern file)))))
-      (directory-files-and-attributes edts-plugin-directory))
-
+(edts-plugin-init-all)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
 (defconst erlang-auto-highlight-exclusions
