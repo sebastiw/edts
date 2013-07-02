@@ -16,7 +16,6 @@ libs:
 
 .PHONY: $(PLUGINS)
 $(PLUGINS):
-	echo "libs $(ERL_LIBS)"
 	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 
 .PHONY: clean
@@ -44,7 +43,7 @@ test-edts:
 
 .PHONY: $(SPLUGINS:%=test-%)
 test-$(PLUGINS):
-	$(MAKE) -C $(@:test-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
+	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C $(@:test-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
 
 .PHONY: eunit
 eunit: all eunit-edts eunit-$(PLUGINS)
