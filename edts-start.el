@@ -34,23 +34,11 @@
   (path-util-join (file-name-directory edts-root-directory) "test")
   "Directory where edts test data are located.")
 
-(defun edts-add-lib-dir-to-load-path (lib-dir)
-  "Add all subdirectories of LIB-DIRS to `load-path'."
-  (mapc #'(lambda (d)
-            (let ((file (nth 0 d)))
-              (when (and (not (string= "." file))
-                         (not (string= ".." file))
-                         (nth 1 d))
-                (add-to-list 'load-path (path-util-join lib-dir file)))))
-        (directory-files-and-attributes lib-dir))
-  load-path)
-
-(edts-add-lib-dir-to-load-path edts-lib-directory)
-
-(when (and (boundp 'erlang-root-dir) erlang-root-dir)
-  ;; add erl under erlang root dir to exec-path
-  (add-to-list
-   'exec-path (concat (directory-file-name erlang-root-dir) "/bin")))
+;; Add all libs to load-path
+(loop for  (name dirp . rest)
+      in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
+      when dirp
+      do   (add-to-list 'load-path (path-util-join edts-lib-directory name)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
