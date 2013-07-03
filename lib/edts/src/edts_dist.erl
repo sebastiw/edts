@@ -83,19 +83,19 @@ call(Node, Mod, Fun, Args) ->
   Self = self(),
   Pid = spawn(fun() -> do_call(Self, Node, Mod, Fun, Args) end),
   receive
-    {Pid, Res} -> Res
+    {Pid, {badrpc, {'EXIT', Rsn}}}      -> error(Rsn);
+    {Pid, {badrpc, Err}}                -> error(Err);
+    {Pid, Res}                          -> Res
   end.
 
 
 do_call(Parent, Node, Mod, Fun, Args) ->
-  try_set_remote_group_leader(Node),
   Res =
-    try rpc:call(Node, Mod, Fun, Args) of
-        {badrpc, {'EXIT', Rsn}}    -> {error, Rsn};
-        {badrpc, {error, _} = Err} -> Err;
-        {badrpc, Err}              -> {error, Err};
-        Res0                       -> Res0
-    catch _C:E -> {error, E}
+    try
+      try_set_remote_group_leader(Node),
+      rpc:call(Node, Mod, Fun, Args)
+    catch
+      _:Err -> {badrpc, Err}
     end,
   Parent ! {self(), Res}.
 
@@ -107,7 +107,7 @@ try_set_remote_group_leader(Node) ->
       Info = rpc:call(Node, erlang, process_info, [Pid]),
       RemoteGroupLeader = proplists:get_value(group_leader, Info),
       group_leader(RemoteGroupLeader, self());
-    {badrpc, Err} -> Err
+    {badrpc, Err} -> error(Err)
   end.
 
 

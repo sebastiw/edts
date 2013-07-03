@@ -61,17 +61,26 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
+
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
 
+
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Modules   = orddict:fetch(modules, Ctx),
-  Checks   = orddict:fetch(xref_checks, Ctx),
-  Analysis = edts:get_module_xref_analysis(Nodename, Modules, Checks),
-  Exists   = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename])
-              andalso (Analysis =/= {error, not_found})),
-  {Exists, ReqData, orddict:store(analysis, Analysis, Ctx)}.
+  Node    = orddict:fetch(nodename, Ctx),
+  Modules = orddict:fetch(modules, Ctx),
+  Checks  = orddict:fetch(xref_checks, Ctx),
+  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
+    false -> {false, ReqData, Ctx};
+    true  ->
+      case edts:call(Node, edts_code, check_modules, [Modules, Checks]) of
+        {ok, Analysis} ->
+          {true, ReqData, orddict:store(analysis, Analysis, Ctx)};
+        {error, _} ->
+          {false, ReqData, Ctx}
+      end
+  end.
+
 
 to_json(ReqData, Ctx) ->
   Errors = {array, [format_error(Err) || Err <- orddict:fetch(analysis, Ctx)]},
@@ -121,7 +130,7 @@ resource_exists_test() ->
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
   meck:new(edts),
-  meck:expect(edts, get_module_xref_analysis, fun(_, _, _) -> [] end),
+  meck:expect(edts, call, fun(_, _, _, _) -> {ok, []} end),
   ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
   ?assertEqual([], orddict:fetch(analysis,
                                  element(3, resource_exists(req_data, Ctx)))),
