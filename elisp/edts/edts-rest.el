@@ -158,7 +158,8 @@ CALLBACK-ARGS."
   (condition-case nil
       (unless (string-equal string "")
         (let ((json-object-type 'alist)
-              (json-array-type  'list))
+              (json-array-type  'list)
+              (json-false       nil))
           (json-read-from-string string)))
     (error string)))
 
