@@ -102,7 +102,7 @@ with severity as key and a lists of issues as values"
   (let ((module   (ferl-get-module))
         (file     (buffer-file-name)))
     (when module
-      (run-hook-with-args 'edts-code-before-compile-hook (intern result))
+      (run-hook-with-args 'edts-code-before-compile-hook (intern module))
       (edts-compile-and-load-async
        module file #'edts-code-handle-compilation-result))))
 
