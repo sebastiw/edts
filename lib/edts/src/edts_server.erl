@@ -301,14 +301,20 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    ok = edts_dist:remote_load_modules(Node, [edts_code,
-                                              edts_dialyzer,
-                                              edts_debug_server,
-                                              edts_eunit,
-                                              edts_eunit_listener,
-                                              edts_module_server,
-                                              edts_xref,
-                                              edts_util]),
+    Plugins = plugins(),
+    PluginRemoteLoad =
+      lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
+    PluginRemoteServices =
+      lists:flatmap(fun(Plugin) -> Plugin:project_node_services() end, Plugins),
+    ok = edts_dist:remote_load_modules(Node,
+                                       [edts_code,
+                                        edts_dialyzer,
+                                        edts_eunit,
+                                        edts_eunit_listener,
+                                        edts_module_server,
+                                        edts_xref,
+                                        edts_util] ++
+                                         PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
     AppEnv = [{project_name,         ProjectName},
@@ -317,14 +323,18 @@ do_init_node(ProjectName,
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
     init_node_env(Node, AppEnv),
-    start_services(Node, [edts_code,
-                          edts_debug_server])
+    start_services(Node, [edts_code] ++ PluginRemoteServices)
   catch
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
                      [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
+
+plugins() ->
+  {ok, Dir} = application:get_env(edts, plugin_dir),
+  {ok, PluginDirs} = file:list_dir(Dir),
+  [list_to_atom(PluginDir) || PluginDir <- PluginDirs].
 
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
