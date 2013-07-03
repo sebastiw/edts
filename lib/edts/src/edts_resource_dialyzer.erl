@@ -140,21 +140,6 @@ malformed_request_test() ->
   ?assertEqual({true, req_data4, []}, malformed_request(req_data4, [])),
   meck:unload().
 
-resource_exists_test() ->
-  Ctx = orddict:from_list([{nodename, node},
-                           {modules,   mod},
-                           {otp_plt,  otp},
-                           {out_plt,  out}]),
-  meck:unload(),
-  meck:new(edts_resource_lib),
-  meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
-  meck:new(edts),
-  meck:expect(edts, get_dialyzer_result, fun(_, _, _, _) -> ok end),
-  ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
-  ?assertEqual(ok, orddict:fetch(result,
-                                 element(3, resource_exists(req_data, Ctx)))),
-  meck:unload().
-
 to_json_test() ->
   Ctx = orddict:from_list([{result, [{t, "file", 1337, "desc"}]}]),
   meck:unload(),

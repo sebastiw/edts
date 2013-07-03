@@ -65,25 +65,12 @@ content_types_provided(ReqData, Ctx) ->
 malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
 
-
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
-    false -> {false, ReqData, Ctx};
-    true  ->
-      Node    = orddict:fetch(nodename, Ctx),
-      Modules = orddict:fetch(modules, Ctx),
-      Checks  = orddict:fetch(xref_checks, Ctx),
-      case edts:call(Node, edts_code, check_modules, [Modules, Checks]) of
-        {ok, Analysis} ->
-          {true, ReqData, orddict:store(analysis, Analysis, Ctx)};
-        {error, _} ->
-          {false, ReqData, Ctx}
-      end
-  end.
-
+  MFArgKeys = {edts_code, check_modules, [modules, xref_checks]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 to_json(ReqData, Ctx) ->
-  Errors = {array, [format_error(Err) || Err <- orddict:fetch(analysis, Ctx)]},
+  Errors = {array, [format_error(Err) || Err <- orddict:fetch(result, Ctx)]},
   {mochijson2:encode({struct, [{errors, Errors}]}), ReqData, Ctx}.
 
 
@@ -122,22 +109,8 @@ malformed_request_test() ->
   ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
   meck:unload().
 
-resource_exists_test() ->
-  Ctx = orddict:from_list([{nodename, node},
-                           {modules,   [mod]},
-                           {xref_checks, [undefined_function_calls]}]),
-  meck:unload(),
-  meck:new(edts_resource_lib),
-  meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
-  meck:new(edts),
-  meck:expect(edts, call, fun(_, _, _, _) -> {ok, []} end),
-  ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
-  ?assertEqual([], orddict:fetch(analysis,
-                                 element(3, resource_exists(req_data, Ctx)))),
-  meck:unload().
-
 to_json_test_() ->
-  Ctx = orddict:from_list([{analysis, [{t, "file", 1337, "desc"}]}]),
+  Ctx = orddict:from_list([{result, [{t, "file", 1337, "desc"}]}]),
   meck:unload(),
   meck:new(mochijson2),
   meck:expect(mochijson2, encode, fun(Data) -> Data end),

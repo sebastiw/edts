@@ -64,16 +64,8 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
 
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
-    false -> {false, ReqData, Ctx};
-    true ->
-      Node   = orddict:fetch(nodename, Ctx),
-      Module = orddict:fetch(module, Ctx),
-      case edts:call(Node, edts_code, get_module_info, [Module, detailed]) of
-        {ok, Result} -> {true,  ReqData, orddict:store(result, Result, Ctx)};
-        {error, _}   -> {false, ReqData, Ctx}
-      end
-  end.
+  MFArgKeys = {edts_code, get_module_info, [module]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 to_json(ReqData, Ctx) ->
   Exported = orddict:fetch(exported, Ctx),

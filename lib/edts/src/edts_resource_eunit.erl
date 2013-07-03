@@ -64,20 +64,13 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module]).
 
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) of
-    false -> {false, ReqData, Ctx};
-    true  ->
-      Node   = orddict:fetch(nodename, Ctx),
-      Module = orddict:fetch(module,   Ctx),
-      case edts:call(Node, edts_eunit, run_tests, [Module]) of
-        {ok, Result} -> {true, ReqData, orddict:store(result, Result, Ctx)};
-        {error, _}   -> {false, ReqData, Ctx}
-      end
-  end.
+  MFArgKeys = {edts_eunit, run_tests, [module]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [module], MFArgKeys).
 
 to_json(ReqData, Ctx) ->
   IsPassed = fun ({Type, _, _, _}) -> Type =:= 'passed-test' end,
-  {Passed, Failed} = lists:partition(IsPassed, orddict:fetch(result, Ctx)),
+  {ok, Result} = orddict:fetch(result, Ctx),
+  {Passed, Failed} = lists:partition(IsPassed, Result),
   Struct = [ {passed, {array, [format_test(Test) || Test <- Passed]}}
            , {failed, {array, [format_test(Test) || Test <- Failed]}}],
   {mochijson2:encode({struct, Struct}), ReqData, Ctx}.
@@ -118,22 +111,8 @@ malformed_request_test() ->
   ?assertEqual({true, req_data2, []}, malformed_request(req_data2, [])),
   meck:unload().
 
-resource_exists_test() ->
-  Ctx = orddict:from_list([ {nodename, node}
-                          , {module,   mod}
-                          ]),
-  meck:unload(),
-  meck:new(edts_resource_lib),
-  meck:expect(edts_resource_lib, exists_p, fun(_, _, _) -> true end),
-  meck:new(edts),
-  meck:expect(edts, get_module_eunit_result, fun(_, _) -> {ok, []} end),
-  ?assertMatch({true, req_data, _}, resource_exists(req_data, Ctx)),
-  ?assertEqual([], orddict:fetch(result,
-                                 element(3, resource_exists(req_data, Ctx)))),
-  meck:unload().
-
 to_json_test() ->
-  Ctx = orddict:from_list([{result, [{t, "file", 1337, "desc"}]}]),
+  Ctx = orddict:from_list([{result, {ok, [{t, "file", 1337, "desc"}]}}]),
   meck:unload(),
   meck:new(mochijson2),
   meck:expect(mochijson2, encode, fun(Data) -> Data end),

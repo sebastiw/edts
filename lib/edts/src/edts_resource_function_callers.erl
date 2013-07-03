@@ -64,23 +64,12 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
 
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
-    false -> {false, ReqData, Ctx};
-    true  ->
-      Node     = orddict:fetch(nodename, Ctx),
-      Module   = orddict:fetch(module, Ctx),
-      Function = orddict:fetch(function, Ctx),
-      Arity    = orddict:fetch(arity, Ctx),
-      case edts:call(Node, edts_code, who_calls, [Module, Function, Arity]) of
-        {ok, Info} -> {true, ReqData, orddict:store(info, Info, Ctx)};
-        {error, _} -> {false, ReqData, Ctx}
-      end
-  end.
-
+  MFArgKeys = {edts_code, who_calls, [module, function, arity]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Info0 = orddict:fetch(info, Ctx),
+  Info0 = orddict:fetch(result, Ctx),
   Data = {array, [{struct, [{module, M}, {function, F}, {arity, A}]} ||
                              {M, F, A} <- Info0]},
   {mochijson2:encode(Data), ReqData, Ctx}.
