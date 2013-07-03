@@ -82,19 +82,8 @@ malformed_request(ReqData, Ctx0) ->
   end.
 
 resource_exists(ReqData, Ctx) ->
-  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, modules]) of
-    false ->
-      {false, ReqData, Ctx};
-    true  ->
-      Node   = orddict:fetch(nodename, Ctx),
-      OtpPlt = orddict:fetch(otp_plt, Ctx),
-      OutPlt = orddict:fetch(out_plt, Ctx),
-      Files  = orddict:fetch(modules, Ctx),
-      case edts:call(Node, edts_dialyzer, run, [OtpPlt, OutPlt, Files]) of
-        {ok, Result} -> {true, ReqData, orddict:store(result, Result, Ctx)};
-        {error, _}   -> {false, ReqData, Ctx}
-      end
-  end.
+  MFArgKeys = {edts_dialyzer, run, [otp_plt, out_plt, modules]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [modules], MFArgKeys).
 
 
 to_json(ReqData, Ctx) ->

@@ -28,9 +28,10 @@
 %%%_* Exports ==================================================================
 
 %% Application callbacks
--export([ exists_p/3
-        , make_nodename/1
-        , validate/3]).
+-export([ check_exists_and_do_rpc/4,
+          exists_p/3,
+          make_nodename/1,
+          validate/3]).
 
 %%%_* Includes =================================================================
 -include_lib("tulib/include/prelude.hrl").
@@ -43,6 +44,16 @@
 
 %%%_* API ======================================================================
 
+check_exists_and_do_rpc(ReqData, Ctx, Required, {M, F, ArgKeys}) ->
+  case exists_p(ReqData, Ctx, [nodename|Required]) of
+    false -> {false, ReqData, Ctx};
+    true  ->
+      Node = orddict:fetch(nodename, Ctx),
+      case edts:call(Node, M, F, [orddict:fetch(Key, Ctx) || Key <- ArgKeys]) of
+        {ok, Result} -> {true, ReqData, orddict:store(result, Result, Ctx)};
+        {error, _}   -> {false, ReqData, Ctx}
+      end
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

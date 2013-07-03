@@ -66,7 +66,6 @@ to_json(ReqData, Ctx) ->
       {ok, Vars}      -> [{vars, Vars}];
       {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
     end,
-  io:format("data ~p~n", [Data]),
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
