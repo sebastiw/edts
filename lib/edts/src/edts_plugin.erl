@@ -38,8 +38,9 @@
 %%%_* API ======================================================================
 
 behaviour_info(callbacks) ->
-  [ {project_node_modules, 0}
-  , {services, 0}
+  [ {edts_server_services, 0}, %% For future use
+    {project_node_modules, 0},
+    {project_node_services, 0},
   ];
 behaviour_info(_) -> undefined.
 

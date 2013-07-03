@@ -32,7 +32,9 @@
 %%%_* Exports =================================================================
 
 %% Behaviour exports
--export([project_node_modules/0, services/0]).
+-export([edts_server_services/0
+         project_node_modules/0,
+         project_node_services/0]).
 
 
 -export([start/1]).
@@ -46,6 +48,8 @@
 %%%_* API ======================================================================
 start(Node) ->
   edts_dist:call(Node, edts_debug_server, start, []).
+
+edts_server_services() -> [].
 
 project_node_modules() -> [edts_debug_server].
 
