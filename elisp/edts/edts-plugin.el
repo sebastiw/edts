@@ -41,9 +41,9 @@
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
   (add-to-list `load-path (path-util-join edts-plugin-directory plugin-name))
-  (require (intern plugin-name))
-
-  (let ((initfun (intern (concat plugin-name "-init"))))
+  (let* ((plugin-elisp-name (replace-regexp-in-string "_" "-" plugin-name))
+         (initfun (intern (concat plugin-elisp-name "-init"))))
+    (require (intern plugin-elisp-name))
     (when (fboundp initfun)
       (funcall initfun))))
 
