@@ -69,7 +69,8 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 
 to_json(ReqData, Ctx) ->
-  {ok, Modules} = edts:modules(orddict:fetch(nodename, Ctx)),
+  Node = orddict:fetch(nodename, Ctx),
+  {ok, Modules} = edts:call(Node, edts_code, modules),
   {mochijson2:encode(Modules), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
