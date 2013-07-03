@@ -34,6 +34,9 @@
 %% Behaviour exports
 -export([project_node_modules/0, services/0]).
 
+
+-export([start/1]).
+
 %%%_* Includes =================================================================
 
 %%%_* Defines ==================================================================
@@ -41,6 +44,9 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+start(Node) ->
+  edts_dist:call(Node, edts_debug_server, start, []).
+
 project_node_modules() -> [edts_debug_server].
 
 services() -> [].

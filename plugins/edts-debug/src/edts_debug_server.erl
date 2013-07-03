@@ -32,7 +32,7 @@
 %%%_* Exports =================================================================
 
 %% server API
--export([start/0, stop/0, start_link/0]).
+-export([start/0, started_p/0, stop/0, start_link/0]).
 
 %% Debugger API
 -export([ continue/0
@@ -42,7 +42,6 @@
         , is_node_interpreted/0
         , is_module_interpreted/1
         , maybe_attach/1
-        , started_p/0
         , step/0
         , step_out/0
         , stop_debug/0
