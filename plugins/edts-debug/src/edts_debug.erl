@@ -43,7 +43,7 @@
 %%%_* API ======================================================================
 project_node_modules() -> [edts_debug_server].
 
-services() -> [edts_debug_server].
+services() -> [].
 
 %%%_* Internal functions =======================================================
 
