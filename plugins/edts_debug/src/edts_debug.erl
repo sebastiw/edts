@@ -32,7 +32,7 @@
 %%%_* Exports =================================================================
 
 %% Behaviour exports
--export([edts_server_services/0
+-export([edts_server_services/0,
          project_node_modules/0,
          project_node_services/0]).
 
@@ -53,7 +53,7 @@ edts_server_services() -> [].
 
 project_node_modules() -> [edts_debug_server].
 
-services() -> [].
+project_node_services() -> [].
 
 %%%_* Internal functions =======================================================
 

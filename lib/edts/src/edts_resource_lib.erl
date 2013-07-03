@@ -71,7 +71,7 @@ exists_p(ReqData, Ctx, Keys) ->
 %%------------------------------------------------------------------------------
 validate(ReqData0, Ctx0, Keys) ->
   F = fun(Key, {ReqData, Ctx}) ->
-          case (atom_to_validate(Key))(ReqData, Ctx) of
+          case (term_to_validate(Key))(ReqData, Ctx) of
             {ok, Value} ->
               {ReqData, orddict:store(Key, Value, Ctx)};
             {error, Rsn} ->
@@ -109,38 +109,44 @@ atom_to_exists_p(module)   -> fun module_exists_p/2;
 atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 
-atom_to_validate(app_include_dirs) ->
+term_to_validate(app_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
-atom_to_validate(arity)                -> fun arity_validate/2;
-atom_to_validate(cmd)                  -> fun cmd_validate/2;
-atom_to_validate(exported)             ->
+term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate(cmd)                  -> fun cmd_validate/2;
+term_to_validate({enum, Props})            ->
+  fun(RD, _Ctx) -> enum_validate(RD, Props) end;
+term_to_validate(exported)             ->
   fun(ReqData, _Ctx) ->
-      enum_validate(ReqData, "exported", [true, false, all], all)
+      enum_validate(ReqData, [{name,    exported},
+                              {allowed, [true, false, all]},
+                              {default, all},
+                              {required, false}])
   end;
-atom_to_validate(file)                 -> fun file_validate/2;
-atom_to_validate({file, Key})          ->
+term_to_validate(file)                 -> fun file_validate/2;
+term_to_validate({file, Key})          ->
   fun(ReqData, Ctx) -> file_validate(ReqData, Ctx, ?a2l(Key)) end;
-atom_to_validate(files)                -> fun files_validate/2;
-atom_to_validate(function)             -> fun function_validate/2;
-atom_to_validate(info_level)           ->
+term_to_validate(files)                -> fun files_validate/2;
+term_to_validate(function)             -> fun function_validate/2;
+term_to_validate(info_level)           ->
   fun(ReqData, _Ctx) ->
-      enum_validate(ReqData, "info_level", [basic, detailed], basic)
+      enum_validate(ReqData, [{name,     info_level},
+                              {allowed,  [basic, detailed]},
+                              {default,  basic},
+                              {required, false}])
   end;
-atom_to_validate(interpret)            ->
-  fun(RD, _Ctx) -> boolean_validate(RD, "interpret") end;
-atom_to_validate(line) ->
+term_to_validate(line) ->
   fun(RD, _Ctx) -> non_neg_integer_validate(RD, "line") end;
-atom_to_validate(module)               -> fun module_validate/2;
-atom_to_validate(modules)              -> fun modules_validate/2;
-atom_to_validate(nodename)             -> fun nodename_validate/2;
-atom_to_validate(project_name)         ->
+term_to_validate(module)               -> fun module_validate/2;
+term_to_validate(modules)              -> fun modules_validate/2;
+term_to_validate(nodename)             -> fun nodename_validate/2;
+term_to_validate(project_name)         ->
   fun(RD, _Ctx) -> string_validate(RD, "project_name") end;
-atom_to_validate(project_root)         -> fun project_root_validate/2;
-atom_to_validate(project_include_dirs) ->
+term_to_validate(project_root)         -> fun project_root_validate/2;
+term_to_validate(project_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
-atom_to_validate(project_lib_dirs)     ->
+term_to_validate(project_lib_dirs)     ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
-atom_to_validate(xref_checks)          -> fun xref_checks_validate/2.
+term_to_validate(xref_checks)          -> fun xref_checks_validate/2.
 
 
 %%------------------------------------------------------------------------------
@@ -190,17 +196,6 @@ non_neg_integer_validate(ReqData, Key) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate a boolean parameter
-%% @end
--spec boolean_validate(wrq:req_data(), string()) ->
-                    {ok,  boolean()} | {error, {illegal, string()}}.
-%%------------------------------------------------------------------------------
-boolean_validate(ReqData, Key) ->
-  enum_validate(ReqData, Key, [true, false], false).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Validate debugger command
 %% @end
 -spec cmd_validate(wrq:req_data(), orddict:orddict()) ->
@@ -230,22 +225,26 @@ dirs_validate(ReqData, QsKey) ->
 %% Validate an enumeration
 %% @end
 -spec enum_validate(wrq:req_data(),
-                    string(),
-                    [atom()],
-                    atom()) ->
-                    {ok,  atom()} | {error, {illegal, string()}}.
+                    [{atom(), term()}]) ->
+                    {ok,  atom()} |
+                       {error, {illegal, string()}} |
+                       {error, {not_found, atom()}}.
 %%------------------------------------------------------------------------------
-enum_validate(ReqData, QsKey, Allowed, Default) ->
+enum_validate(ReqData, Props) ->
+  {ok, Name}   = tulib_lists:assoc(name,     Props),
+  QsKey = atom_to_list(Name),
+  {ok, Allowed} = tulib_lists:assoc(allowed,  Props),
+  Required      = tulib_lists:assoc(required, Props, false),
   case wrq:get_qs_value(QsKey, ReqData) of
-    undefined -> {ok, Default};
-    V         ->
+    undefined when Required -> {error, {not_found, QsKey}};
+    undefined               -> {ok, _} = tulib_lists:assoc(default, Props);
+    V                       ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of
         true  -> {ok, Atom};
         false -> {error, {illegal, V}}
       end
   end.
-
 
 
 %%------------------------------------------------------------------------------
@@ -564,16 +563,40 @@ xref_checks_validate_test() ->
   meck:unload().
 
 enum_validate_test_() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("test1", _) -> undefined;
-                                    ("test2", _) -> "a";
-                                    ("test3", _) -> "d"
-                                 end),
-  [?_assertEqual({ok, c}, enum_validate(fake_req, "test1", [a, b], c)),
-   ?_assertEqual({ok, a}, enum_validate(fake_req, "test2", [a, b], c)),
-   ?_assertEqual({error, {illegal, "d"}},
-                 enum_validate(fake_req, "test3", [a, b], c))].
+  {setup,
+   fun() ->
+       meck:unload(),
+       meck:new(wrq),
+       meck:expect(wrq, get_qs_value, fun("undefined", _) -> undefined;
+                                         (Name, _) -> Name
+                                      end)
+   end,
+   fun(_) ->
+       meck:unload()
+   end,
+  [%% Value found
+   ?_assertEqual({ok, a}, enum_validate(fake_req, [{name,     a},
+                                                   {allowed,  [a, b]},
+                                                   {default,  a},
+                                                   {required, false}])),
+   %% Value not found, expect default
+   ?_assertEqual({ok, b}, enum_validate(fake_req, [{name,     undefined},
+                                                   {allowed,  [a, b]},
+                                                   {default,  b},
+                                                   {required, false}])),
+   %% Required value not found, expect default
+   ?_assertEqual({error, {not_found, "undefined"}},
+                  enum_validate(fake_req, [{name,     undefined},
+                                           {allowed,  [a, b]},
+                                           {default,  b},
+                                           {required, true}])),
+   %% Illegal value
+   ?_assertEqual({error, {illegal, "c"}},
+                 enum_validate(fake_req, [{name,     c},
+                                          {allowed,  [a, b]},
+                                          {default,  b},
+                                          {required, true}]))
+  ]}.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
