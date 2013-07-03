@@ -38,6 +38,7 @@
 -export([ continue/0
         , get_breakpoints/0
         , interpret_module/2
+        , interpreted_modules/0
         , module_interpreted_p/1
         , maybe_attach/1
         , module_interpretable_p/1
@@ -147,6 +148,14 @@ interpret_module(Module, false) ->
   int:n(Module),
   false.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all interpreted modules.
+%% @end
+-spec interpreted_modules() -> [module()].
+%%------------------------------------------------------------------------------
+interpreted_modules() -> int:interpreted().
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -155,7 +164,7 @@ interpret_module(Module, false) ->
 -spec module_interpreted_p(Module :: module()) -> boolean().
 %%------------------------------------------------------------------------------
 module_interpreted_p(Module) ->
-  lists:member(Module, int:interpreted()).
+  lists:member(Module, interpreted_modules()).
 
 
 %%------------------------------------------------------------------------------

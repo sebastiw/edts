@@ -68,6 +68,22 @@ default to the values associated with current buffer."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
       (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))))
 
+(defun edts-debug-interpreted-modules (&optional node)
+  "Return a list of all modules that are interpreted on NODE. NODE
+default to the values associated with current buffer."
+  (let* ((node-name (or node (edts-node-name)))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes" node-name
+                          "modules"))
+         (rest-args nil)
+         (reply     (edts-rest-get resource rest-args))
+         (res       (assoc 'result reply)))
+    (if (not (equal res '(result "200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
+      (cdr (assoc 'modules (cdr (assoc 'body reply)))))))
+
 ;; (defvar *edts-debug-window-config-to-restore* nil)
 
 ;; (defvar *edts-debug-last-visited-file* nil)

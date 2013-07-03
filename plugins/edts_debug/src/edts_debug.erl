@@ -40,7 +40,8 @@
 -export([ensure_started/1,
          module_interpretable_p/2,
          module_interpreted_p/2,
-         interpret_module/3]).
+         interpret_module/3,
+         interpreted_modules/1]).
 
 %%%_* Includes =================================================================
 
@@ -73,6 +74,11 @@ interpret_module(Node, Module, Interpret) ->
                  edts_debug_server,
                  interpret_module,
                  [Module, Interpret]).
+
+interpreted_modules(Node) ->
+  ensure_started(Node),
+  edts_dist:call(Node, edts_debug_server, interpreted_modules).
+
 
 %%%_* Internal functions =======================================================
 
