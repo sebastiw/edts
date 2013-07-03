@@ -41,13 +41,11 @@
          get_module_info/3,
          get_module_xref_analysis/3,
          init_node/6,
-         interpret_modules/2,
          is_node/1,
          node_available_p/1,
          modules/1,
          node_reachable/1,
          nodes/0,
-         uninterpret_modules/2,
          wait_for_debugger/1,
          who_calls/4]).
 
@@ -163,37 +161,6 @@ who_calls(Node, Module, Function, Arity) ->
     Info  -> Info
   end.
 
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Interprets Modules in Node, if possible, returning the list of interpreted
-%% modules.
-%% @end
--spec interpret_modules( Node :: node()
-                       , Modules :: [module()] ) ->
-                           [module()] | {error, not_found}.
-%%------------------------------------------------------------------------------
-interpret_modules(Node, Modules) ->
-  case edts_dist:call(Node, edts_debug_server, interpret_modules, [Modules]) of
-    {error, _}  -> {error, not_found};
-    Interpreted -> Interpreted
-  end.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Uninterpret Modules in Node.
-%% @end
--spec uninterpret_modules( Node :: node()
-                         , Modules :: [module()] ) ->
-                             ok | {error, not_found}.
-%%------------------------------------------------------------------------------
-uninterpret_modules(Node, Modules) ->
-  case edts_dist:call(Node,
-                      edts_debug_server, uninterpret_modules, [Modules]) of
-    {error, _} -> {error, not_found};
-    ok         -> ok
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

@@ -32,22 +32,19 @@
 %%%_* Exports =================================================================
 
 %% server API
--export([start/0, started_p/0, stop/0, start_link/0]).
+-export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
 
 %% Debugger API
 -export([ continue/0
         , get_breakpoints/0
-        , interpret_modules/1
-        , interpret_node/1
-        , is_node_interpreted/0
-        , is_module_interpreted/1
+        , interpret_module/2
+        , module_interpreted_p/1
         , maybe_attach/1
+        , module_interpretable_p/1
         , step/0
         , step_out/0
         , stop_debug/0
         , toggle_breakpoint/2
-        , uninterpret_modules/1
-        , uninterpret_node/0
         , wait_for_debugger/0 ]).
 
 %% gen_server callbacks
@@ -72,6 +69,12 @@
 -type state():: #dbg_state{}.
 
 %%%_* API ======================================================================
+ensure_started() ->
+  case started_p() of
+    true  -> ok;
+    false -> start()
+  end.
+
 start() ->
   gen_server:start({local, ?SERVER}, ?MODULE, [], []),
   ok.
@@ -98,6 +101,18 @@ maybe_attach(Pid) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Return true if Module is interpretable, false otherwise
+%% @end
+-spec module_interpretable_p(module()) -> boolean().
+%%------------------------------------------------------------------------------
+module_interpretable_p(Module) ->
+  case int:interpretable(Module) of
+    true       -> true;
+    {error, _} -> false
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Get all breakpoints and their status in the current interpreter
 %% @end
 -spec get_breakpoints() -> [{ { Module :: module()
@@ -111,42 +126,37 @@ get_breakpoints() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Make Modules interpretable. Returns the list of modules which were
-%% interpretable and set as such.
+%% Change the interpretation state of Module depending on Intepret. Returns
+%% {ok, Bool} where Bool is true if Module is now interpreted and false
+%% otherwise.
 %% @end
--spec interpret_modules(Modules :: [module()]) -> {ok, [module()]}.
+-spec interpret_module(Modules   :: module(),
+                       Interpret :: true | false | toggle) ->
+                          {ok, boolean()}.
 %%------------------------------------------------------------------------------
-interpret_modules(Modules) ->
-  gen_server:call(?SERVER, {interpret, Modules}).
+interpret_module(Module, toggle) ->
+  interpret_module(Module, not module_interpreted_p(Module));
+interpret_module(Module, true) ->
+  case module_interpretable_p(Module) of
+    false -> {error, uninterpretable};
+    true  ->
+      {module, Module} = int:i(Module),
+      true
+  end;
+interpret_module(Module, false) ->
+  int:n(Module),
+  false.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Make all loaded modules interpretable.
-%% Returns the list of modules which were
-%% interpretable and set as such.
-%% @end
--spec interpret_node(Exclusions :: [module()]) -> {ok, [module()]}.
-%%------------------------------------------------------------------------------
-interpret_node(Exclusions) ->
-  interpret_modules(get_safe_modules(Exclusions)).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Reports if code in the current project node is being interpreted.
-%% @end
--spec is_node_interpreted() -> boolean().
-%%------------------------------------------------------------------------------
-is_node_interpreted() ->
-  gen_server:call(?SERVER, is_node_interpreted).
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Reports if Module is interpreted.
 %% @end
--spec is_module_interpreted(Module :: module()) -> boolean().
+-spec module_interpreted_p(Module :: module()) -> boolean().
 %%------------------------------------------------------------------------------
-is_module_interpreted(Module) ->
-  gen_server:call(?SERVER, {is_interpreted, Module}).
+module_interpreted_p(Module) ->
+  lists:member(Module, int:interpreted()).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -159,24 +169,6 @@ is_module_interpreted(Module) ->
 toggle_breakpoint(Module, Line) ->
   gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
 
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Uninterprets Modules.
-%% @end
--spec uninterpret_modules(Modules :: [module()]) -> ok.
-%%------------------------------------------------------------------------------
-uninterpret_modules(Modules) ->
-  gen_server:call(?SERVER, {uninterpret, Modules}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Make all interpreted modules uninterpretable.
-%% @end
--spec uninterpret_node() -> {ok, [module()]}.
-%%------------------------------------------------------------------------------
-uninterpret_node() ->
-  uninterpret_modules(int:interpreted()).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -275,22 +267,6 @@ handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   {reply, {ok, attach, self()}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {error, {already_attached, Dbg, Pid}}, State};
-
-handle_call({interpret, Modules}, _From, State) ->
-  Reply = lists:filter(fun(E) -> E =/= mod_uninterpretable end,
-                       lists:map(fun(Module) ->
-                                     try
-                                       case int:interpretable(Module) of
-                                         true -> {module, Name} = int:i(Module),
-                                                 Name;
-                                         _    -> mod_uninterpretable
-                                       end
-                                     catch
-                                       _:_ -> mod_uninterpretable
-                                     end
-                                 end, Modules)),
-  {reply, Reply, State#dbg_state{interpretation = true}};
-
 handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
   Reply = case lists:keymember({Module, Line}, 1, int:all_breaks()) of
             true  -> int:delete_break(Module, Line),
@@ -299,17 +275,6 @@ handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
                      {ok, set, {Module, Line}}
           end,
   {reply, Reply, State};
-
-handle_call({uninterpret, Modules}, _From, State) ->
-  lists:map(fun(Module) -> int:n(Module) end, Modules),
-  {reply, {ok, uninterpreted}, State#dbg_state{interpretation = false}};
-
-handle_call({is_interpreted, Module}, _From, State) ->
-  {reply, lists:member(Module, int:interpreted()), State};
-
-handle_call(is_node_interpreted, _From,
-            #dbg_state{interpretation = Value} = State) ->
-  {reply, Value, State};
 
 handle_call(get_breakpoints, _From, State) ->
   {reply, {ok, int:all_breaks()}, State};
@@ -452,22 +417,6 @@ notify(Info, [Client|R]) ->
 %%------------------------------------------------------------------------------
 register_attached(Pid) ->
   gen_server:cast(?SERVER, {register_attached, Pid}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns a list of all loaded modules except OTP modules and those
-%% explicitly belonging to ExcludedApps
-%%
--spec get_safe_modules(ExcludedApps :: [atom()]) -> [module()].
-%%------------------------------------------------------------------------------
-get_safe_modules(ExcludedApps) ->
-  ExcludedAppDirs = [code:lib_dir(App, ebin) || App <- ExcludedApps],
-  ErlLibDir = code:lib_dir(),
-  [Module || {Module, Filename} <- code:all_loaded(),
-             is_list(Filename),
-             not lists:prefix(ErlLibDir, Filename),
-             not code:is_module_native(Module),
-             not lists:member(filename:dirname(Filename), ExcludedAppDirs)].
 
 %%%_* Unit tests ===============================================================
 

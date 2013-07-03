@@ -37,7 +37,10 @@
          project_node_services/0]).
 
 
--export([start/1]).
+-export([ensure_started/1,
+         module_interpretable_p/2,
+         module_interpreted_p/2,
+         interpret_module/3]).
 
 %%%_* Includes =================================================================
 
@@ -46,14 +49,30 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-start(Node) ->
-  edts_dist:call(Node, edts_debug_server, start, []).
 
-edts_server_services() -> [].
-
-project_node_modules() -> [edts_debug_server].
-
+%% Behaviour callbacks
+edts_server_services()  -> [].
+project_node_modules()  -> [edts_debug_server].
 project_node_services() -> [].
+
+module_interpreted_p(Node, Module) ->
+  ensure_started(Node),
+  edts_dist:call(Node, edts_debug_server, module_interpreted_p, [Module]).
+
+
+module_interpretable_p(Node, Module) ->
+  ensure_started(Node),
+  edts_dist:call(Node, edts_debug_server, module_interpretable_p, [Module]).
+
+ensure_started(Node) ->
+  edts_dist:call(Node, edts_debug_server, ensure_started, []).
+
+interpret_module(Node, Module, Interpret) ->
+  ensure_started(Node),
+  edts_dist:call(Node,
+                 edts_debug_server,
+                 interpret_module,
+                 [Module, Interpret]).
 
 %%%_* Internal functions =======================================================
 

@@ -21,20 +21,52 @@
 
 (defun edts-debug-init ()
   "Initialize edts-debug."
-  (define-key edts-mode-map "\C-c\C-di" 'edts-debug-toggle-interpreted))
+  (define-key edts-mode-map "\C-c\C-di" 'edts-debug-interpret))
 
-(defun edts-debug-toggle-interpreted (module)
-  "Interpret MODULE in FILE on the node associated with current buffer."
-  (interactive (list (ferl-get-module)))
-  (let* ((node-name   (edts-node-name))
-         (resource    (list "plugins"
-                            "debugger"
-                            "nodes" node-name
-                            "modules" module))
-         (rest-args   (list (cons "interpret" "toggle"))))
-    (edts-log-debug "Toggling interpretation of %s on %s" module node-name)
-    (edts-rest-post resource rest-args #'edts-async-callback cb-args)))
+(defun edts-debug-interpret (&optional node module interpret)
+  "Set interpretation state for MODULE on NODE. NODE and MODULE default to
+the values associated with current buffer. INTERPRET defaults to \"toggle\""
+  (interactive)
+  (let* ((module    (or module (ferl-get-module)))
+         (node-name (or node (edts-node-name)))
+         (interpret (or interpret "toggle"))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes" node-name
+                          "modules" module))
+         (rest-args (list (cons "interpret" interpret)))
+         (reply     (edts-rest-post resource rest-args))
+         (res       (assoc 'result reply)))
+    (cond
+     ((equal res '(result "201" "Created"))
+      (let* ((interpreted (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))
+             (fmt (if interpreted
+                      "%s is now interpreted on %s"
+                    "%s is no longer interpreted on %s")))
+        (edts-log-info fmt module node-name)))
+     ((equal res '(result "403" "Forbidden"))
+      (null (edts-log-error "%s is not interpretable" module)))
+     (t
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))))
 
+
+(defun edts-debug-interpretedp (&optional node module)
+  "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
+default to the values associated with current buffer."
+  (let* ((module    (or module (ferl-get-module)))
+         (node-name (or node (edts-node-name)))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes" node-name
+                          "modules" module))
+         (rest-args nil)
+         (reply     (edts-rest-get resource rest-args))
+         (res       (assoc 'result reply)))
+    (if (not (equal res '(result "200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
+      (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))))
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
 

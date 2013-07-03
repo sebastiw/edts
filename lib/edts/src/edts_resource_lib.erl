@@ -71,9 +71,15 @@ exists_p(ReqData, Ctx, Keys) ->
 %%------------------------------------------------------------------------------
 validate(ReqData0, Ctx0, Keys) ->
   F = fun(Key, {ReqData, Ctx}) ->
+          Name = case Key of
+                   Key when is_atom(Key) -> Key;
+                   {_Type, Props}        ->
+                     {ok, N} = tulib_lists:assoc(name, Props),
+                     N
+                 end,
           case (term_to_validate(Key))(ReqData, Ctx) of
             {ok, Value} ->
-              {ReqData, orddict:store(Key, Value, Ctx)};
+              {ReqData, orddict:store(Name, Value, Ctx)};
             {error, Rsn} ->
               edts_log:error("API input validation failed. Key ~p, Rsn: ~p",
                              [Key, Rsn]),
@@ -584,7 +590,7 @@ enum_validate_test_() ->
                                                    {allowed,  [a, b]},
                                                    {default,  b},
                                                    {required, false}])),
-   %% Required value not found, expect default
+   %% Required value not found
    ?_assertEqual({error, {not_found, "undefined"}},
                   enum_validate(fake_req, [{name,     undefined},
                                            {allowed,  [a, b]},

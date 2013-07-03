@@ -34,6 +34,7 @@
         , content_types_accepted/2
         , content_types_provided/2
         , create_path/2
+        , forbidden/2
         , init/1
         , malformed_request/2
         , post_is_create/2
@@ -43,7 +44,7 @@
 -export([ from_json/2, to_json/2]).
 
 %%%_* Includes =================================================================
-%% -include_lib("webmachine/include/webmachine.hrl").
+-include_lib("webmachine/include/webmachine.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
@@ -76,8 +77,24 @@ content_types_provided(ReqData, Ctx) ->
 create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
+forbidden(ReqData, Ctx) ->
+  Node      = orddict:fetch(nodename, Ctx),
+  Module    = orddict:fetch(module, Ctx),
+  Forbidden = not edts_debug:module_interpretable_p(Node, Module),
+  {Forbidden, ReqData, Ctx}.
+
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module]).
+  case wrq:method(ReqData) of
+    'GET' ->
+      edts_resource_lib:validate(ReqData, Ctx, [nodename, module]);
+    'POST' ->
+      edts_resource_lib:validate(ReqData,
+                                 Ctx,
+                                 [nodename,
+                                  module,
+                                  {enum, [{name,     interpret},
+                                          {allowed,  [true, false, toggle]}]}])
+  end.
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -87,16 +104,21 @@ resource_exists(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  Node    = orddict:fetch(nodename, Ctx),
-  Module  = orddict:fetch(module, Ctx),
-  edts_dist:call(Node, edts_debug_server, interpret_modules, [Module]),
-  {true, ReqData, Ctx}.
+  Node         = orddict:fetch(nodename, Ctx),
+  Module       = orddict:fetch(module, Ctx),
+  Interpret    = orddict:fetch(interpret, Ctx),
+  InterpretedP = edts_debug:interpret_module(Node, Module, Interpret),
+  Body         = mochijson2:encode([{module, Module},
+                                    {interpreted, InterpretedP}]),
+  {true, wrq:set_resp_body(Body, ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node    = orddict:fetch(nodename, Ctx),
-  Command = orddict:fetch(cmd, Ctx),
-  Info    = edts:Command(Node),
-  {[], ReqData, Ctx}.
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  InterpretedP = edts_debug:module_interpreted_p(Node, Module),
+  Body         = mochijson2:encode([{module, Module},
+                                    {interpreted, InterpretedP}]),
+  {Body, ReqData, Ctx}.
 
 
 
@@ -123,52 +145,36 @@ content_types_provided_test() ->
 from_json_test() ->
   meck:unload(),
   meck:new(wrq),
-  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
-  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "step" end),
   meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
-  meck:new(edts),
-  meck:expect(edts, step,
-              fun(_) -> {ok, {break, "foo.erl", {foo, 42}, [{bar, 1}]}} end),
+  meck:new(edts_debug),
+  meck:expect(edts_debug, interpret_module, fun(_, foo, toggle) -> true end),
 
   Dict1 =
     orddict:from_list([{nodename, true},
-                       {cmd, step}]),
+                       {module, foo},
+                       {interpret, toggle}]),
   Res = from_json(req_data, Dict1),
   ?assertMatch({true, _, Dict1}, Res),
 
   JSON = element(2, Res),
   ?assertEqual({struct,
-                [{<<"state">>,<<"break">>},
-                 {<<"file">>,<<"foo.erl">>},
-                 {<<"module">>,<<"foo">>},
-                 {<<"line">>,42},
-                 {<<"var_bindings">>, {struct,[{<<"bar">>,<<"1">>}]}}]},
+                [{<<"module">>,<<"foo">>},
+                 {<<"interpreted">>,true}]},
                mochijson2:decode(JSON)),
   meck:unload().
 
 to_json_test() ->
   meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, req_body, fun(A) -> list_to_binary(atom_to_list(A)) end),
-  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "wait_for_debugger" end),
-  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
-  meck:new(edts),
-  meck:expect(edts, wait_for_debugger,
-              fun(_) -> {ok, {break, "foo.erl", {foo, 42}, [{bar, 1}]}} end),
+  meck:new(edts_debug),
+  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> true;
+                                                   (_, _)   -> false
+                                                end),
+  Dict1 = orddict:from_list([{nodename, true}, {module, foo}]),
+  Res = to_json(req_data, Dict1),
+  ?assertMatch({_, req_data, Dict1}, Res),
 
-  Dict1 =
-    orddict:from_list([{nodename, true},
-                      {cmd,  wait_for_debugger}]),
-  Res = from_json(req_data, Dict1),
-  ?assertMatch({true, _, Dict1}, Res),
-
-  JSON = element(2, Res),
-  ?assertEqual({struct,
-                [{<<"state">>,<<"break">>},
-                 {<<"file">>,<<"foo.erl">>},
-                 {<<"module">>,<<"foo">>},
-                 {<<"line">>,42},
-                 {<<"var_bindings">>, {struct,[{<<"bar">>,<<"1">>}]}}]},
+  JSON = element(1, Res),
+  ?assertEqual({struct, [{<<"module">>,<<"foo">>},{<<"interpreted">>,true}]},
                mochijson2:decode(JSON)),
   meck:unload().
 
