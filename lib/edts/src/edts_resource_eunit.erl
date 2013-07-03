@@ -64,12 +64,16 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename     = orddict:fetch(nodename, Ctx),
-  Module       = orddict:fetch(module,   Ctx),
-  {ok, Result} = edts:get_module_eunit_result(Nodename, Module),
-  Exists       = (edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module])
-                  andalso not (Result =:= {error, not_found})),
-  {Exists, ReqData, orddict:store(result, Result, Ctx)}.
+  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) of
+    false -> {false, ReqData, Ctx};
+    true  ->
+      Node   = orddict:fetch(nodename, Ctx),
+      Module = orddict:fetch(module,   Ctx),
+      case edts:call(Node, edts_eunit, run_tests, [Module]) of
+        {ok, Result} -> {true, ReqData, orddict:store(result, Result, Ctx)};
+        {error, _}   -> {false, ReqData, Ctx}
+      end
+  end.
 
 to_json(ReqData, Ctx) ->
   IsPassed = fun ({Type, _, _, _}) -> Type =:= 'passed-test' end,

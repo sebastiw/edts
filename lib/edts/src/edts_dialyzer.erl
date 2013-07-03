@@ -52,7 +52,7 @@
 %% @end
 -spec run(BasePlt::filename:filename() | undefined,
           OutPlt ::filename:filename(),
-          Modules::[filename:filename()] | all) -> ok.
+          Modules::[filename:filename()] | all) -> [term()].
 %%------------------------------------------------------------------------------
 run(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules

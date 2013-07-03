@@ -64,14 +64,19 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  Function = orddict:fetch(function, Ctx),
-  Arity    = orddict:fetch(arity, Ctx),
-  Info     = edts:who_calls(Nodename, Module, Function, Arity),
-  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) andalso
-             not (Info =:= {error, not_found}),
-  {Exists, ReqData, orddict:store(info, Info, Ctx)}.
+  case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
+    false -> {false, ReqData, Ctx};
+    true  ->
+      Node     = orddict:fetch(nodename, Ctx),
+      Module   = orddict:fetch(module, Ctx),
+      Function = orddict:fetch(function, Ctx),
+      Arity    = orddict:fetch(arity, Ctx),
+      case edts:call(Node, edts_code, who_calls, [Module, Function, Arity]) of
+        {ok, Info} -> {true, ReqData, orddict:store(info, Info, Ctx)};
+        {error, _} -> {false, ReqData, Ctx}
+      end
+  end.
+
 
 %% Handlers
 to_json(ReqData, Ctx) ->

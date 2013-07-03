@@ -87,29 +87,29 @@ post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  case wrq:method(ReqData) of
-    'GET'  ->
-      case edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]) of
-        false -> {false, ReqData, Ctx};
-        true  ->
-          InfoLevel = orddict:fetch(info_level, Ctx),
-          Info      = edts:get_module_info(Nodename, Module, InfoLevel),
-          {Info =/= {error, not_found}, ReqData, orddict:store(info, Info, Ctx)}
-      end;
-    'POST' ->
-      Exists = edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]),
-      {Exists, ReqData, Ctx}
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  Exists = edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]),
+  Method = wrq:method(ReqData),
+  case {Method, Exists}  of
+    {'POST', _}    -> {Exists, ReqData, Ctx};
+    {'GET', false} -> {false, ReqData, Ctx};
+    {'GET', true}  ->
+      InfoLevel = orddict:fetch(info_level, Ctx),
+      case edts:call(Node, edts_code, get_module_info, [Module, InfoLevel]) of
+        {ok, Info} -> {true, ReqData, orddict:store(info, Info, Ctx)};
+        {error,_}  -> {false, ReqData, Ctx}
+      end
   end.
 
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
+  Node     = orddict:fetch(nodename, Ctx),
   Filename = orddict:fetch(file, Ctx),
-  {Result, {Errors0, Warnings0}} = edts:compile_and_load(Nodename, Filename),
-  Module = orddict:fetch(module, Ctx),
+  edts_server:wait_for_node(Node),
+  {ok, {Result, {Errors0, Warnings0}}} =
+    edts:call(Node, edts_code, compile_and_load, [Filename]),
   Errors   = {array, [format_error(Error) || Error <- Errors0]},
   Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
   Data = {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]},

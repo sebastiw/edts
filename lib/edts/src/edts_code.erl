@@ -40,7 +40,6 @@
          free_vars/1,
          free_vars/2,
          get_function_info/3,
-         get_module_info/1,
          get_module_info/2,
          get_module_source/1,
          modules/0,
@@ -158,12 +157,10 @@ compile_and_load(File0, Opts) ->
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
-          WasInterpreted = maybe_uninterpret_module(Mod),
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
           update_xref([Mod]),
-          maybe_interpret_module(Mod, WasInterpreted),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -172,19 +169,6 @@ compile_and_load(File0, Opts) ->
       end;
     {error, Errors, Warnings} ->
       {error, {format_errors(error, Errors), format_errors(warning, Warnings)}}
-  end.
-
-maybe_uninterpret_module(Module) ->
-  case edts_debug_server:is_module_interpreted(Module) of
-    true -> edts_debug_server:uninterpret_modules([Module]),
-            true;
-    _    -> false
-  end.
-
-maybe_interpret_module(Module, WasInterpreted) ->
-  case WasInterpreted orelse edts_debug_server:is_code_interpreted() of
-    true -> edts_debug_server:interpret_modules([Module]);
-    _    -> ok
   end.
 
 %%------------------------------------------------------------------------------
@@ -318,15 +302,6 @@ parse_expressions(String) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Equivalent to get_module_info(M, detailed).
-%% @end
--spec get_module_info(M::module()) -> [{atom, term()}].
-%%------------------------------------------------------------------------------
-get_module_info(M) ->
-  get_module_info(M, detailed).
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Returns information on M.
 %% @end
 -spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
@@ -392,7 +367,7 @@ pop_dirs(Source0, Rel) ->
 modules() ->
   Beams = lists:append([modules_at_path(Path) || Path <- code:get_path()]),
   Binaries = [Module || {Module, _} <- code:all_loaded()],
-  {ok, lists:usort(Binaries ++ Beams)}.
+  lists:usort(Binaries ++ Beams).
 
 modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
@@ -1146,7 +1121,7 @@ parse_abstract_other_test_() ->
   [?_assertEqual(bar, parse_abstract(foo, bar))].
 
 modules_test_() ->
-  [?_assertMatch({ok, [_|_]}, modules())].
+  [?_assertMatch([_|_], modules())].
 
 get_compile_outdir_test_() ->
   Good = "good/../ebin",

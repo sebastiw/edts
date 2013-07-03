@@ -31,26 +31,18 @@
 -export([call/3,
          call/4,
          call/5,
-         compile_and_load/2,
          debugger_continue/1,
          debugger_step/1,
          debugger_step_out/1,
          debugger_stop/1,
          debugger_toggle_breakpoint/3,
          get_breakpoints/1,
-         get_dialyzer_result/4,
-         get_function_info/4,
-         get_module_eunit_result/2,
-         get_module_info/3,
-         get_module_xref_analysis/3,
          init_node/6,
          is_node/1,
          node_available_p/1,
-         modules/1,
          node_reachable/1,
          nodes/0,
-         wait_for_debugger/1,
-         who_calls/4]).
+         wait_for_debugger/1]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -60,36 +52,6 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Compiles Module on Node and returns a list of any errors and warnings.
-%% If there are no errors, the module will be loaded.
-%% @end
--spec compile_and_load(Node::node(), Filename::file:filename()) ->
-                          [term()] | {error, not_found}.
-%%------------------------------------------------------------------------------
-compile_and_load(Node, Filename) ->
-  edts_log:debug("compile_and_load ~p on ~p", [Filename, Node]),
-  edts_server:wait_for_node(Node),
-  call(Node, edts_code, compile_and_load, [Filename]).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns the result of dialyzing Files on Node.
-%% @end
-%%
--spec get_dialyzer_result(Node::node(),
-                          OtpPlt::filename:filename(),
-                          OutPlt::filename:filename(),
-                          Files::[filename:filename()]) ->
-                             {ok, edts_code:issue()}.
-%%------------------------------------------------------------------------------
-get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
-  edts_log:debug("get_dialyzer_result ~p (~p) -> ~p, ~p",
-                 [Files, OtpPlt, OutPlt, Node]),
-  call(Node, edts_dialyzer, run, [OtpPlt, OutPlt, Files]).
 
 
 %%------------------------------------------------------------------------------
@@ -105,40 +67,6 @@ get_dialyzer_result(Node, OtpPlt, OutPlt, Files) ->
 %%------------------------------------------------------------------------------
 get_breakpoints(Node) ->
   call(Node, edts_debug_server, get_breakpoints).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns information about Module:Function/Arity on Node.
-%% @end
-%%
--spec get_function_info( Node    ::node()
-                       , Module  ::module()
-                       , Function::atom()
-                       , Arity   ::non_neg_integer()) ->
-                           [{atom(), term()}] | {error, not_found}.
-%%------------------------------------------------------------------------------
-get_function_info(Node, Module, Function, Arity) ->
-  edts_log:debug("get_function info ~p:~p/~p on ~p",
-              [Module, Function, Arity, Node]),
-  call(Node, edts_code, get_function_info, [Module, Function, Arity]).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns a list of the functions calling Module:Function/Arity on Node.
-%% @end
-%%
--spec who_calls( Node    ::node()
-               , Module  ::module()
-               , Function::atom()
-               , Arity   ::non_neg_integer()) ->
-                   [{module(), atom(), term()}].
-%%------------------------------------------------------------------------------
-who_calls(Node, Module, Function, Arity) ->
-  edts_log:debug("who_calls ~p:~p/~p on ~p", [Module, Function, Arity, Node]),
-  edts_server:wait_for_node(Node),
-  call(Node, edts_code, who_calls, [Module, Function, Arity]).
 
 
 %%------------------------------------------------------------------------------
@@ -207,53 +135,6 @@ debugger_stop(Node) ->
 wait_for_debugger(Node) ->
   call(Node, edts_debug_server, wait_for_debugger).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns information about Module on Node.
-%% @end
-%%
--spec get_module_info(Node::node(), Module::module(),
-                      Level::detailed | basic) ->
-                         {ok, [{atom(), term()}]}.
-%%------------------------------------------------------------------------------
-get_module_info(Node, Module, Level) ->
-  edts_log:debug("get_module_info ~p, ~p on ~p", [Module, Level, Node]),
-  call(Node, edts_code, get_module_info, [Module, Level]).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns the result of eunit tests in Module on Node
-%% @end
-%%
--spec get_module_eunit_result(Node::node(), Module::module()) ->
-                                 {ok, [{error,
-                                        File::file:filename(),
-                                        non_neg_integer(),
-                                        Desc::string()}]}.
-%%------------------------------------------------------------------------------
-get_module_eunit_result(Node, Module) ->
-  edts_log:debug("get_module_eunit_result ~p, ~p", [Module, Node]),
-  call(Node, edts_eunit, run_tests, [Module]).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns the result of xref checks of Module on Node
-%% @end
-%%
--spec get_module_xref_analysis(Node::node(), [Modules::module()],
-                      Checks::[atom()]) ->
-                         {ok, [{error,
-                                File::file:filename(),
-                                non_neg_integer(),
-                                Desc::string()}]}.
-%%------------------------------------------------------------------------------
-get_module_xref_analysis(Node, Modules, Checks) ->
-  edts_log:debug("get_module_xref_analysis ~p, ~p on ~p",
-                 [Modules, Checks, Node]),
-  call(Node, edts_code, check_modules, [Modules, Checks]).
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -304,17 +185,6 @@ node_available_p(Node) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Returns a list of all erlang modules available on Node.
-%% @end
-%%
--spec modules(Node::node()) -> [module()].
-%%------------------------------------------------------------------------------
-modules(Node) ->
-  call(Node, edts_code, modules).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Returns true if Node is registerend with the epmd on localhost.
 %% @end
 %%
@@ -356,42 +226,6 @@ call(Node, Mod, Fun, Args, LogError) ->
   end.
 
 %%%_* Tests ====================================================================
-
-get_module_eunit_result_test_() ->
-  [?_assertMatch({ok, [{'passed-test', _Source, Line1, "no asserts failed"},
-                       {'passed-test', _Source, Line2, "no asserts failed"}]}
-                 when is_integer(Line1) andalso is_integer(Line2),
-                 get_module_eunit_result(node(), edts_test_module)),
-   ?_assertMatch({error, _},
-                 get_module_eunit_result(not_a_node, edts_test_module)),
-   ?_assertMatch({error, _},
-                 get_module_eunit_result(node(), not_a_module))
-  ].
-
-get_dialyzer_result_test_() ->
-  [{setup,
-   fun() ->
-       meck:unload(),
-       meck:new(edts_dist)
-   end,
-   fun(_) ->
-       meck:unload()
-   end,
-   [fun() ->
-        F = fun(n, edts_dialyzer, run, ["plt", "out", "foo"]) ->
-                {error, foo}
-            end,
-        meck:expect(edts_dist, call, F),
-        ?assertEqual({error, not_found},
-                     get_dialyzer_result(n, "plt", "out", "foo"))
-    end,
-    fun() ->
-        F = fun(n, edts_dialyzer, run, ["plt", "out", "foo"]) -> res end,
-        meck:expect(edts_dist, call, F),
-        ?assertEqual(res, get_dialyzer_result(n, "plt", "out", "foo"))
-
-    end]
-  }].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

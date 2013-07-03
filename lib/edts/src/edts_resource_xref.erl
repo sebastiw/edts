@@ -67,12 +67,12 @@ malformed_request(ReqData, Ctx) ->
 
 
 resource_exists(ReqData, Ctx) ->
-  Node    = orddict:fetch(nodename, Ctx),
-  Modules = orddict:fetch(modules, Ctx),
-  Checks  = orddict:fetch(xref_checks, Ctx),
   case edts_resource_lib:exists_p(ReqData, Ctx, [nodename]) of
     false -> {false, ReqData, Ctx};
     true  ->
+      Node    = orddict:fetch(nodename, Ctx),
+      Modules = orddict:fetch(modules, Ctx),
+      Checks  = orddict:fetch(xref_checks, Ctx),
       case edts:call(Node, edts_code, check_modules, [Modules, Checks]) of
         {ok, Analysis} ->
           {true, ReqData, orddict:store(analysis, Analysis, Ctx)};
