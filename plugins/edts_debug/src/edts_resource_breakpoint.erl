@@ -100,9 +100,7 @@ from_json(ReqData, Ctx) ->
   Node   = orddict:fetch(nodename, Ctx),
   Module = orddict:fetch(module, Ctx),
   Line   = orddict:fetch(line, Ctx),
-  io:format("~p ~p: Line = ~p~n", [?MODULE, ?LINE, Line]),
-  Break   = orddict:fetch(break, Ctx),
-  io:format("~p ~p: Action = ~p~n", [?MODULE, ?LINE, Break]),
+  Break  = orddict:fetch(break, Ctx),
   {ok, Result} = edts_debug:break(Node, Module, Line, Break),
   {true, wrq:set_resp_body(mochijson2:encode([{break, Result}]), ReqData), Ctx}.
 
@@ -139,43 +137,59 @@ content_types_provided_test() ->
                 , {"text/plain",       to_json} ], foo, bar},
               content_types_provided(foo, bar)).
 
-to_json_test() ->
+from_json_test() ->
   meck:unload(),
-  meck:new(edts),
-  meck:expect(edts, get_breakpoints, fun(true) -> {ok, [{{foo, 42},
-                                                         [active,
-                                                          enable,
-                                                          null,
-                                                          null]},
-                                                        {{bar, 314},
-                                                         [active,
-                                                          enable,
-                                                          null,
-                                                          null]}]};
-                                        (_)    -> {error, not_found}
-                                     end),
-  Data =  [[{"module", "foo"},
-            {"line", 42},
-            {"status", "active"},
-            {"trigger", "enable"},
-            {"condition", "null"}],
-           [{"module", "bar"},
-            {"line", 314},
-            {"status", "active"},
-            {"trigger", "enable"},
-            {"condition", "null"}]],
+  meck:new(edts_debug),
+  meck:expect(edts_debug, break, fun(true, foo, 1337, true) -> {ok, true} end),
+  meck:new(wrq),
+  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
+  Dict = orddict:from_list([{nodename, true},
+                            {module,   foo},
+                            {line,     1337},
+                            {break, true}]),
+  Res = from_json(req_data, Dict),
+  ?assertMatch({true, _, Dict}, Res),
+  ?assertEqual({struct, [{<<"break">>, true}]},
+               mochijson2:decode(element(2, Res))).
 
-  meck:new(mochijson2),
-  meck:expect(mochijson2, encode, fun(_) -> Data
-                                  end),
-  Dict1 =
-    orddict:from_list([{nodename, true}]),
-  ?assertMatch({Data, req_data, Dict1}, to_json(req_data, Dict1)),
+%% to_json_test() ->
+%%   meck:unload(),
+%%   meck:new(edts_debug),
+%%   meck:expect(edts_debug, get_breakpoints,
+%%               fun(true) -> {ok, [{{foo, 42},
+%%                                      [active,
+%%                                       enable,
+%%                                       null,
+%%                                       null]},
+%%                                     {{bar, 314},
+%%                                      [active,
+%%                                       enable,
+%%                                       null,
+%%                                       null]}]};
+%%                  (_)    -> {error, not_found}
+%%               end),
+%%   Data =  [[{"module", "foo"},
+%%             {"line", 42},
+%%             {"status", "active"},
+%%             {"trigger", "enable"},
+%%             {"condition", "null"}],
+%%            [{"module", "bar"},
+%%             {"line", 314},
+%%             {"status", "active"},
+%%             {"trigger", "enable"},
+%%             {"condition", "null"}]],
 
-  Dict2 =
-    orddict:from_list([{nodename, false}]),
-  ?assertError({badmatch, {error, not_found}}, to_json(req_data, Dict2)),
-  meck:unload().
+%%   meck:new(mochijson2),
+%%   meck:expect(mochijson2, encode, fun(_) -> Data
+%%                                   end),
+%%   Dict1 =
+%%     orddict:from_list([{nodename, true}]),
+%%   ?assertMatch({Data, req_data, Dict1}, to_json(req_data, Dict1)),
+
+%%   Dict2 =
+%%     orddict:from_list([{nodename, false}]),
+%%   ?assertError({badmatch, {error, not_found}}, to_json(req_data, Dict2)),
+%%   meck:unload().
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

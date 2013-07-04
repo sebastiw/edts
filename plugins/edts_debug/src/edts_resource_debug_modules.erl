@@ -95,15 +95,14 @@ content_types_provided_test() ->
 to_json_test() ->
   meck:unload(),
   meck:new(edts_debug),
-  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> true;
-                                                   (_, _)   -> false
+  meck:expect(edts_debug, interpreted_modules, fun(true) -> {ok, [foo]}
                                                 end),
-  Dict1 = orddict:from_list([{nodename, true}, {module, foo}]),
+  Dict1 = orddict:from_list([{nodename, true}]),
   Res = to_json(req_data, Dict1),
   ?assertMatch({_, req_data, Dict1}, Res),
 
   JSON = element(1, Res),
-  ?assertEqual({struct, [{<<"modules">>,<<"foo">>},{<<"interpreted">>,true}]},
+  ?assertEqual({struct, [{<<"modules">>,[<<"foo">>]}]},
                mochijson2:decode(JSON)),
   meck:unload().
 

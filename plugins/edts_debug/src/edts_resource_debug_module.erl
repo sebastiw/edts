@@ -143,7 +143,9 @@ from_json_test() ->
   meck:new(wrq),
   meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
   meck:new(edts_debug),
-  meck:expect(edts_debug, interpret_module, fun(_, foo, toggle) -> true end),
+  meck:expect(edts_debug,
+              interpret_module,
+              fun(_, foo, toggle) -> {ok, true} end),
 
   Dict1 =
     orddict:from_list([{nodename, true},
@@ -162,8 +164,8 @@ from_json_test() ->
 to_json_test() ->
   meck:unload(),
   meck:new(edts_debug),
-  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> true;
-                                                   (_, _)   -> false
+  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> {ok, true};
+                                                   (_, _)   -> {ok, false}
                                                 end),
   Dict1 = orddict:from_list([{nodename, true}, {module, foo}]),
   Res = to_json(req_data, Dict1),
