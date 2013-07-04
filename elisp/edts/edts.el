@@ -479,12 +479,12 @@ fails."
 
 (defun edts-get-basic-module-info (module)
   "Fetches basic info about module on the node associated with current buffer"
-  (edts-get-module-info module 'basic))
+  (edts-get-module-info (edts-node-name) module 'basic))
 
 (defun edts-get-detailed-module-info (module)
   "Fetches detailed info about MODULE on the node associated with current
 buffer"
-  (edts-get-module-info module 'detailed))
+  (edts-get-module-info (edts-node-name) module 'detailed))
 
 (defun edts-get-free-vars (snippet)
   "Return a list of the free variables in SNIPPET."
@@ -505,10 +505,9 @@ buffer"
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 
-(defun edts-get-module-info (module level)
-  "Fetches info about MODULE on the node associated with current buffer.
-LEVEL is either basic or detailed."
-  (let* ((resource (list "nodes" (edts-node-name) "modules" module))
+(defun edts-get-module-info (node module level)
+  "Fetches info about MODULE on NODE LEVEL is either basic or detailed."
+  (let* ((resource (list "nodes" node "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
          (res      (edts-rest-get resource args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
