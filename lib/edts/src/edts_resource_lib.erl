@@ -152,7 +152,7 @@ term_to_validate(info_level)           ->
                               {required, false}])
   end;
 term_to_validate(line) ->
-  fun(RD, _Ctx) -> non_neg_integer_validate(RD, "line") end;
+  fun(RD, _Ctx) -> non_neg_integer_validate(RD, line) end;
 term_to_validate(module)               -> fun module_validate/2;
 term_to_validate(modules)              -> fun modules_validate/2;
 term_to_validate(nodename)             -> fun nodename_validate/2;
@@ -189,9 +189,9 @@ arity_validate(ReqData, _Ctx) ->
 %% @end
 -spec integer_validate(wrq:req_data(), string()) ->
                {ok, integer()} | error.
-%%------------------------------------------------------------------------------n
+%%------------------------------------------------------------------------------
 integer_validate(ReqData, Key) ->
-  Str = wrq:get_qs_value(Key, ReqData),
+  Str = wrq:path_info(Key, ReqData),
   try {ok, list_to_integer(Str)}
   catch error:badarg -> {error, {badarg, Str}}
   end.
@@ -202,10 +202,10 @@ integer_validate(ReqData, Key) ->
 %% @end
 -spec non_neg_integer_validate(wrq:req_data(), string()) ->
                {ok, integer()} | error.
-%%------------------------------------------------------------------------------n
+%%------------------------------------------------------------------------------
 non_neg_integer_validate(ReqData, Key) ->
   case integer_validate(ReqData, Key) of
-    {ok, Int} when Int =< 0 -> {ok, Int};
+    {ok, Int} when Int >= 0 -> {ok, Int};
     {ok, Int}               -> {error, {illegal, integer_to_list(Int)}};
     Err                     -> Err
   end.

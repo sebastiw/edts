@@ -77,10 +77,15 @@ create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  Validate = case wrq:method(ReqData) of
-               'GET'  -> [nodename];
-               'POST' -> [nodename, module, line]
-             end,
+  Validate =
+    case wrq:method(ReqData) of
+      'GET'  -> [nodename, module];
+      'POST' -> [nodename,
+                 module,
+                 line,
+                 {enum, [{name,    break},
+                         {allowed, [true, false, toggle]}]}]
+    end,
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 post_is_create(ReqData, Ctx) ->
@@ -92,13 +97,14 @@ resource_exists(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  Line     = orddict:fetch(line, Ctx),
-  {ok, Result, {Module, Line}}
-    = edts:debugger_toggle_breakpoint(Nodename, Module, Line),
-  Data = {struct, [{result, Result}, {module, Module}, {line, Line}]},
-  {true, wrq:set_resp_body(mochijson2:encode(Data), ReqData), Ctx}.
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  Line   = orddict:fetch(line, Ctx),
+  io:format("~p ~p: Line = ~p~n", [?MODULE, ?LINE, Line]),
+  Break   = orddict:fetch(break, Ctx),
+  io:format("~p ~p: Action = ~p~n", [?MODULE, ?LINE, Break]),
+  {ok, Result} = edts_debug:break(Node, Module, Line, Break),
+  {true, wrq:set_resp_body(mochijson2:encode([{break, Result}]), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),

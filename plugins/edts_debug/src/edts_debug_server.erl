@@ -35,18 +35,19 @@
 -export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
 
 %% Debugger API
--export([ continue/0
-        , get_breakpoints/0
-        , interpret_module/2
-        , interpreted_modules/0
-        , module_interpreted_p/1
-        , maybe_attach/1
-        , module_interpretable_p/1
-        , step/0
-        , step_out/0
-        , stop_debug/0
-        , toggle_breakpoint/2
-        , wait_for_debugger/0 ]).
+-export([break/3,
+         breakpoint_exists_p/2,
+         continue/0,
+         get_breakpoints/0,
+         interpret_module/2,
+         interpreted_modules/0,
+         module_interpreted_p/1,
+         maybe_attach/1,
+         module_interpretable_p/1,
+         step/0,
+         step_out/0,
+         stop_debug/0,
+         wait_for_debugger/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -122,8 +123,7 @@ module_interpretable_p(Module) ->
                             , Options  :: [term()]
                             }].
 %%------------------------------------------------------------------------------
-get_breakpoints() ->
-  gen_server:call(?SERVER, get_breakpoints).
+get_breakpoints() -> int:all_breaks().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -145,7 +145,7 @@ interpret_module(Module, true) ->
       true
   end;
 interpret_module(Module, false) ->
-  int:n(Module),
+  ok = int:n(Module),
   false.
 
 %%------------------------------------------------------------------------------
@@ -169,14 +169,33 @@ module_interpreted_p(Module) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Toggles a breakpoint at Module:Line.
+%% Returns true if there exists a breakpoint at Line in Module
 %% @end
--spec toggle_breakpoint(Module :: module(), Line :: non_neg_integer()) ->
-                           {ok, set, {Module, Line}}
-                         | {ok, unset, {Module, Line}}.
+-spec breakpoint_exists_p(Module :: module(),
+                          Line   :: non_neg_integer()) -> boolean().
 %%------------------------------------------------------------------------------
-toggle_breakpoint(Module, Line) ->
-  gen_server:call(?SERVER, {toggle_breakpoint, Module, Line}).
+breakpoint_exists_p(Module, Line) ->
+  lists:keymember({Module, Line}, 1, int:all_breaks()).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Create or delete a breakpoint at Line in Module. Returns true if a break
+%% point was created or already existed, false otherwise.
+%% @end
+-spec break(Module :: module(),
+            Line   :: non_neg_integer(),
+            Break :: true | false | toggle) -> boolean().
+%%------------------------------------------------------------------------------
+break(Module, Line, toggle) ->
+  break(Module, Line, not breakpoint_exists_p(Module, Line));
+break(Module, Line, true) ->
+  interpret_module(Module, true),
+  int:break(Module, Line),
+  true;
+break(Module, Line, false) ->
+  int:delete_break(Module, Line),
+  false.
 
 
 %%------------------------------------------------------------------------------
@@ -276,17 +295,6 @@ handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
   {reply, {ok, attach, self()}, State#dbg_state{proc = Pid}};
 handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {error, {already_attached, Dbg, Pid}}, State};
-handle_call({toggle_breakpoint, Module, Line}, _From, State) ->
-  Reply = case lists:keymember({Module, Line}, 1, int:all_breaks()) of
-            true  -> int:delete_break(Module, Line),
-                     {ok, unset, {Module, Line}};
-            false -> int:break(Module, Line),
-                     {ok, set, {Module, Line}}
-          end,
-  {reply, Reply, State};
-
-handle_call(get_breakpoints, _From, State) ->
-  {reply, {ok, int:all_breaks()}, State};
 
 handle_call(wait_for_debugger, From, State) ->
   Listeners = State#dbg_state.listeners,

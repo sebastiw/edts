@@ -69,9 +69,9 @@ resource_exists(ReqData, Ctx) ->
   {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node        = orddict:fetch(nodename, Ctx),
-  Interpreted = edts_debug:interpreted_modules(Node),
-  Body        = mochijson2:encode([{modules, Interpreted}]),
+  Node              = orddict:fetch(nodename, Ctx),
+  {ok, Interpreted} = edts_debug:interpreted_modules(Node),
+  Body              = mochijson2:encode([{modules, Interpreted}]),
   {Body, ReqData, Ctx}.
 
 

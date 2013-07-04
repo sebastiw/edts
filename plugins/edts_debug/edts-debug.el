@@ -25,8 +25,10 @@
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted))
 
 (defun edts-debug-interpret (&optional node module interpret)
-  "Set interpretation state for MODULE on NODE. NODE and MODULE default to
-the values associated with current buffer. INTERPRET defaults to \"toggle\""
+  "Set interpretation state for MODULE on NODE according to INTERPRET.
+NODE and MODULE default to the values associated with current buffer.
+If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
+other value toggles interpretation, which is the default behaviour."
   (interactive (list (edts-node-name) (ferl-get-module) 'toggle))
   (let* ((module    (or module (ferl-get-module)))
          (node-name (or node (edts-node-name)))
@@ -52,7 +54,41 @@ the values associated with current buffer. INTERPRET defaults to \"toggle\""
       (null (edts-log-error "%s is not interpretable" module)))
      (t
       (null
-       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))))
+       (edts-log-error "Unexpected reply: %s" (cdr res)))))))
+
+(defun edts-debug-break (&optional node module line break)
+  "Set breakpoint state for LINE in MODULE on NODE according to
+BREAK. NODE and MODULE default to the values associated with current
+buffer. If BREAK is nil remove any breakpoint; if it is t set a
+breakpoint if one doesn't already exist; any other value toggles
+breakpoint existence at LINE, which is the default behaviour."
+  (interactive (list (edts-node-name)
+                     (ferl-get-module)
+                     (line-number-at-pos)
+                     'toggle))
+  (let* ((module    (or module (ferl-get-module)))
+         (node-name (or node (edts-node-name)))
+         (break     (cond
+                     ((eq break t) "true")
+                     ((null break) "false")
+                     (t            "toggle")))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes"   node-name
+                          "modules" module
+                          "breakpoints" (number-to-string line)))
+         (rest-args (list (cons "break" break)))
+         (reply     (edts-rest-post resource rest-args))
+         (res       (assoc 'result reply)))
+    (cond
+     ((and (equal res '(result "201" "Created"))
+           (cdr (assoc 'break (cdr (assoc 'body reply)))))
+      (edts-log-debug "breakpoint set on %s:%s on %s" module line node-name))
+      ((equal res '(result "201" "Created"))
+       (edts-log-debug "breakpoint unset on %s:%s on %s" module line node-name))
+     (t
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
 
 (defun edts-debug-interpretedp (&optional node module)

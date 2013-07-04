@@ -78,23 +78,19 @@ create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
 forbidden(ReqData, Ctx) ->
-  Node      = orddict:fetch(nodename, Ctx),
-  Module    = orddict:fetch(module, Ctx),
-  Forbidden = not edts_debug:module_interpretable_p(Node, Module),
-  {Forbidden, ReqData, Ctx}.
+  Node                = orddict:fetch(nodename, Ctx),
+  Module              = orddict:fetch(module, Ctx),
+  {ok, Interpretable} = edts_debug:module_interpretable_p(Node, Module),
+  {not Interpretable, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  case wrq:method(ReqData) of
-    'GET' ->
-      edts_resource_lib:validate(ReqData, Ctx, [nodename, module]);
-    'POST' ->
-      edts_resource_lib:validate(ReqData,
-                                 Ctx,
-                                 [nodename,
-                                  module,
-                                  {enum, [{name,     interpret},
-                                          {allowed,  [true, false, toggle]}]}])
-  end.
+  Validate =
+    case wrq:method(ReqData) of
+      'GET'  -> [nodename, module];
+      'POST' -> [nodename, module, {enum, [{name,    interpret},
+                                           {allowed, [true, false, toggle]}]}]
+    end,
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -104,20 +100,20 @@ resource_exists(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  Node         = orddict:fetch(nodename, Ctx),
-  Module       = orddict:fetch(module, Ctx),
-  Interpret    = orddict:fetch(interpret, Ctx),
-  InterpretedP = edts_debug:interpret_module(Node, Module, Interpret),
-  Body         = mochijson2:encode([{module, Module},
-                                    {interpreted, InterpretedP}]),
+  Node               = orddict:fetch(nodename, Ctx),
+  Module             = orddict:fetch(module, Ctx),
+  Interpret          = orddict:fetch(interpret, Ctx),
+  {ok, InterpretedP} = edts_debug:interpret_module(Node, Module, Interpret),
+  Body               = mochijson2:encode([{module, Module},
+                                          {interpreted, InterpretedP}]),
   {true, wrq:set_resp_body(Body, ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node   = orddict:fetch(nodename, Ctx),
-  Module = orddict:fetch(module, Ctx),
-  InterpretedP = edts_debug:module_interpreted_p(Node, Module),
-  Body         = mochijson2:encode([{module, Module},
-                                    {interpreted, InterpretedP}]),
+  Node               = orddict:fetch(nodename, Ctx),
+  Module             = orddict:fetch(module, Ctx),
+  {ok, InterpretedP} = edts_debug:module_interpreted_p(Node, Module),
+  Body               = mochijson2:encode([{module, Module},
+                                          {interpreted, InterpretedP}]),
   {Body, ReqData, Ctx}.
 
 

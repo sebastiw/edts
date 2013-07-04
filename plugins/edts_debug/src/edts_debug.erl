@@ -37,11 +37,12 @@
          project_node_services/0]).
 
 
--export([ensure_started/1,
-         module_interpretable_p/2,
-         module_interpreted_p/2,
+-export([break/4,
+         ensure_started/1,
          interpret_module/3,
-         interpreted_modules/1]).
+         interpreted_modules/1,
+         module_interpretable_p/2,
+         module_interpreted_p/2]).
 
 %%%_* Includes =================================================================
 
@@ -56,28 +57,32 @@ edts_server_services()  -> [].
 project_node_modules()  -> [edts_debug_server].
 project_node_services() -> [].
 
+break(Node, Module, Line, Break) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, break, [Module, Line, Break]).
+
 module_interpreted_p(Node, Module) ->
   ensure_started(Node),
-  edts_dist:call(Node, edts_debug_server, module_interpreted_p, [Module]).
+  edts:call(Node, edts_debug_server, module_interpreted_p, [Module]).
 
 
 module_interpretable_p(Node, Module) ->
   ensure_started(Node),
-  edts_dist:call(Node, edts_debug_server, module_interpretable_p, [Module]).
+  edts:call(Node, edts_debug_server, module_interpretable_p, [Module]).
 
 ensure_started(Node) ->
-  edts_dist:call(Node, edts_debug_server, ensure_started, []).
+  edts:call(Node, edts_debug_server, ensure_started, []).
 
 interpret_module(Node, Module, Interpret) ->
   ensure_started(Node),
-  edts_dist:call(Node,
-                 edts_debug_server,
-                 interpret_module,
-                 [Module, Interpret]).
+  edts:call(Node,
+            edts_debug_server,
+            interpret_module,
+            [Module, Interpret]).
 
 interpreted_modules(Node) ->
   ensure_started(Node),
-  edts_dist:call(Node, edts_debug_server, interpreted_modules).
+  edts:call(Node, edts_debug_server, interpreted_modules).
 
 
 %%%_* Internal functions =======================================================
