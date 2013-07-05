@@ -287,7 +287,9 @@ localhost."
   "Syncronously query epmd to see whether it has a node with NAME registered."
   (condition-case ex
       (with-temp-buffer
-        (let ((socket (open-network-stream "epmd" (current-buffer) "0" 4369)))
+        (let ((socket (open-network-stream "epmd" (current-buffer) "0" 4369))
+              (process (get-buffer-process (current-buffer))))
+          (set-process-query-on-exit-flag process nil)
           (process-send-string socket (edts-build-epmd-message "n"))
           (accept-process-output socket 0.5))
         (member name (edts-nodenames-from-string (buffer-string))))
