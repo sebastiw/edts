@@ -90,9 +90,9 @@ Example:
                    "\\.eterm$"
                    "\\.script$"
                    "\\.yaws$")
-  :irrelevant-files (".edts"
-                     ".gitignore"
-                     ".gitmodules")
+  :irrelevant-files ("^\\.edts$"
+                     "^\\.gitignore$"
+                     "^\\.gitmodules$")
   :lib-dirs ("lib"))
 
 (defun edts-project-selector (file)
@@ -442,7 +442,7 @@ auto-save data."
 ;; Tests
 
 (when (member 'ert features)
-  (ert-deftest basic-project-test ()
+  (ert-deftest edts-project-basic-test ()
     ;; Setup
     (edts-test-with-config
      edts-test-project1-directory
@@ -451,4 +451,6 @@ auto-save data."
            (file (car (edts-test-project1-modules))))
        (find-file file)
        (should (string= "test" (eproject-name)))
-       (edts-test-cleanup)))))
+       (should (get-buffer"*edts*")
+       (should (get-buffer"*test*")))
+       (edts-test-cleanup))))
