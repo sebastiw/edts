@@ -453,4 +453,4 @@ auto-save data."
        (should (string= "test" (eproject-name)))
        (should (get-buffer"*edts*")
        (should (get-buffer"*test*")))
-       (edts-test-cleanup))))
+       (edts-test-cleanup)))))
