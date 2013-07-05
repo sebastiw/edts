@@ -31,18 +31,11 @@
 -export([call/3,
          call/4,
          call/5,
-         debugger_continue/1,
-         debugger_step/1,
-         debugger_step_out/1,
-         debugger_stop/1,
-         debugger_toggle_breakpoint/3,
-         get_breakpoints/1,
          init_node/6,
          is_node/1,
          node_available_p/1,
          node_reachable/1,
-         nodes/0,
-         wait_for_debugger/1]).
+         nodes/0]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -52,89 +45,6 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns information about all breakpoints on Node.
-%% @end
-%%
--spec get_breakpoints(Node :: node()) -> [{ { Module  :: module()
-                                            , Line    :: non_neg_integer()
-                                            }
-                                          , Options :: [term()]
-                                          }].
-%%------------------------------------------------------------------------------
-get_breakpoints(Node) ->
-  call(Node, edts_debug_server, get_breakpoints).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Toggles a breakpoint in Module:Line at Node.
-%% @end
--spec debugger_toggle_breakpoint( Node   :: node()
-                                , Module :: module()
-                                , Line   :: non_neg_integer())
-                                ->
-                                    {ok, set, {Module, Line}}
-                                    | {ok, unset, {Module, Line}}
-                                    | {error, not_found}.
-%%------------------------------------------------------------------------------
-debugger_toggle_breakpoint(Node, Module, Line) ->
-  call(Node, edts_debug_server, toggle_breakpoint, [Module, Line]).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Step through in execution while debugging, in Node.
-%% @end
--spec debugger_step(Node :: node())
-                   -> {ok, Info :: term()} | {error, not_found}.
-%%------------------------------------------------------------------------------
-debugger_step(Node) ->
-  call(Node, edts_debug_server, step).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Step out of the current function while debugging, in Node.
-%% @end
--spec debugger_step_out(Node :: node())
-                       -> {ok, Info :: term()} | {error, not_found}.
-%%------------------------------------------------------------------------------
-debugger_step_out(Node) ->
-  call(Node, edts_debug_server, step_out).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Continue execution until a breakpoint is hit or execution terminates.
-%% @end
--spec debugger_continue(Node :: node())
-                       -> {ok, Info :: term()} | {error, not_found}.
-%%------------------------------------------------------------------------------
-debugger_continue(Node) ->
-  call(Node, edts_debug_server, continue).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Stop debugging
-%% @end
--spec debugger_stop(Node :: node()) -> {ok, finished} | {error, not_found}.
-%%------------------------------------------------------------------------------
-debugger_stop(Node) ->
-  call(Node, edts_debug_server, stop_debug).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Wait for debugger to attach.
-%% @end
--spec wait_for_debugger(Node :: node()) ->
-                           {ok, {module(), non_neg_integer()}}
-                         | {error, not_found}.
-%%------------------------------------------------------------------------------
-wait_for_debugger(Node) ->
-  call(Node, edts_debug_server, wait_for_debugger).
-
 
 %%------------------------------------------------------------------------------
 %% @doc
