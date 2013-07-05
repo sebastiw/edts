@@ -38,7 +38,8 @@
 -export([break/3,
          breakpoint_exists_p/2,
          continue/0,
-         get_breakpoints/0,
+         breakpoints/0,
+         breakpoints/1,
          interpret_module/2,
          interpreted_modules/0,
          module_interpreted_p/1,
@@ -117,13 +118,24 @@ module_interpretable_p(Module) ->
 %% @doc
 %% Get all breakpoints and their status in the current interpreter
 %% @end
--spec get_breakpoints() -> [{ { Module :: module()
+-spec breakpoints() -> [{ { Module :: module()
                               , Line   :: non_neg_integer()
                               }
                             , Options  :: [term()]
                             }].
 %%------------------------------------------------------------------------------
-get_breakpoints() -> int:all_breaks().
+breakpoints() -> int:all_breaks().
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Get all breakpoints and their status in the current interpreter
+%% @end
+-spec breakpoints(Module :: module()) ->
+                     [{{Module :: module(), Line   :: non_neg_integer()},
+                       Options  :: [term()]}].
+%%------------------------------------------------------------------------------
+breakpoints(Module) -> int:all_breaks(Module).
 
 %%------------------------------------------------------------------------------
 %% @doc

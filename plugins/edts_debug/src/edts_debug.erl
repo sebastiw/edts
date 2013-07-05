@@ -38,6 +38,8 @@
 
 
 -export([break/4,
+         breakpoints/1,
+         breakpoints/2,
          ensure_started/1,
          interpret_module/3,
          interpreted_modules/1,
@@ -60,6 +62,14 @@ project_node_services() -> [].
 break(Node, Module, Line, Break) ->
   ensure_started(Node),
   edts:call(Node, edts_debug_server, break, [Module, Line, Break]).
+
+breakpoints(Node) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, breakpoints, []).
+
+breakpoints(Node, Module) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, breakpoints, [Module]).
 
 module_interpreted_p(Node, Module) ->
   ensure_started(Node),
