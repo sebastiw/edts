@@ -450,7 +450,11 @@ auto-save data."
      (let ((eproject-prefer-subproject t)
            (file (car (edts-test-project1-modules))))
        (find-file file)
+
+       ;; Test
        (should (string= "test" (eproject-name)))
-       (should (get-buffer"*edts*")
-       (should (get-buffer"*test*")))
+       (should (get-buffer"*edts*"))
+       (should (get-buffer"*test*"))
+
+       ;; Cleanup
        (edts-test-cleanup)))))

@@ -21,6 +21,7 @@
 
 (defun edts-debug-init ()
   "Initialize edts-debug."
+  (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted))
 
@@ -29,7 +30,10 @@
 NODE and MODULE default to the values associated with current buffer.
 If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
 other value toggles interpretation, which is the default behaviour."
-  (interactive (list (edts-node-name) (ferl-get-module) 'toggle))
+  (interactive (list
+                nil
+                nil
+                'toggle))
   (let* ((module    (or module (ferl-get-module)))
          (node-name (or node (edts-node-name)))
          (interpret (cond
@@ -91,6 +95,23 @@ breakpoint existence at LINE, which is the default behaviour."
       (null
        (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
+(defun edts-debug-breakpoints (&optional node module)
+  "Return a list of all breakpoint state on NODE. NODE default to the
+value associated with current buffer."
+  (let* ((node-name (or node (edts-node-name)))
+         (module    (or module (ferl-get-module)))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes"   node-name
+                          "modules" module
+                          "breakpoints"))
+         (rest-args nil)
+         (reply     (edts-rest-get resource rest-args))
+         (res       (assoc 'result reply)))
+    (if (not (equal res '(result "200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr res)))
+      (cdr (assoc 'body reply)))))
 
 (defun edts-debug-interpretedp (&optional node module)
   "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
@@ -193,6 +214,28 @@ with EDTS."
 
 (defun edts-debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))
+
+(when (member 'ert features)
+  (ert-deftest edts-debug-basic-test ()
+    ;; Setup
+    (edts-test-with-config
+     edts-test-project1-directory
+     '(:name "test")
+     (let ((eproject-prefer-subproject t)
+           (file (car (edts-test-project1-modules))))
+       (find-file file)
+
+       ;; Test
+       (should-not (edts-debug-interpretedp))
+       (edts-debug-interpret nil nil 't)
+       (should (edts-debug-interpretedp))
+       (should-not (edts-debug-breakpoints))
+       (edts-debug-break nil nil nil t)
+       (should (eq 1 (length (edts-debug-breakpoints))))
+
+       ;; Cleanup
+       (edts-test-cleanup)))))
+
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
 
