@@ -21,6 +21,7 @@ $(PLUGINS):
 .PHONY: clean
 clean: clean-$(PLUGINS)
 	rm -rfv elisp/*/*.elc
+	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)" clean
 	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: $(SPLUGINS:%=clean-%)
@@ -29,6 +30,7 @@ clean-$(PLUGINS):
 
 .PHONY: ert
 ert:
+	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	emacs -q --no-splash --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \

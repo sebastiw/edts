@@ -1,7 +1,6 @@
 all:
-	@cd lib/one; erlc -o ebin -pa `pwd`/ebin src/*.erl
-	@cd lib/two; erlc -o ebin -pa `pwd`/ebin src/*.erl
+	@cd lib/one; erlc -o ebin -pa `pwd`/ebin +debug_info src/*.erl
+	@cd lib/two; erlc -o ebin -pa `pwd`/ebin +debug_info src/*.erl
 
 clean:
-	@rm lib/one/ebin/*.beam
-	@rm lib/two/ebin/*.beam
+	@rm -f lib/*/ebin/*.beam
