@@ -23,25 +23,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_breakpoint).
+-module(edts_resource_debug_breakpoints).
 
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
--export([ allow_missing_post/2
-        , allowed_methods/2
-        , content_types_accepted/2
+-export([ allowed_methods/2
         , content_types_provided/2
-        , create_path/2
         , init/1
         , malformed_request/2
-        , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([ from_json/2
-        , to_json/2 ]).
+-export([ to_json/2 ]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -57,15 +52,8 @@ init(_Config) ->
   lager:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
-allow_missing_post(ReqData, Ctx) ->
-  {true, ReqData, Ctx}.
-
 allowed_methods(ReqData, Ctx) ->
-  {['GET', 'POST'], ReqData, Ctx}.
-
-content_types_accepted(ReqData, Ctx) ->
-  Map = [ {"application/json", from_json} ],
-  {Map, ReqData, Ctx}.
+  {['GET'], ReqData, Ctx}.
 
 content_types_provided(ReqData, Ctx) ->
   Map = [ {"application/json", to_json}
@@ -73,41 +61,15 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json} ],
   {Map, ReqData, Ctx}.
 
-create_path(ReqData, Ctx) ->
-  {wrq:path(ReqData), ReqData, Ctx}.
-
 malformed_request(ReqData, Ctx) ->
-  Validate =
-    case wrq:method(ReqData) of
-      'GET'  -> [nodename, module];
-      'POST' -> [nodename,
-                 module,
-                 line,
-                 {enum, [{name,    break},
-                         {allowed, [true, false, toggle]}]}]
-    end,
-  edts_resource_lib:validate(ReqData, Ctx, Validate).
-
-post_is_create(ReqData, Ctx) ->
-  {true, ReqData, Ctx}.
+  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
 
 resource_exists(ReqData, Ctx) ->
-  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
-  {Exists, ReqData, Ctx}.
-
-%% Handlers
-from_json(ReqData, Ctx) ->
-  Node   = orddict:fetch(nodename, Ctx),
-  Module = orddict:fetch(module, Ctx),
-  Line   = orddict:fetch(line, Ctx),
-  Break  = orddict:fetch(break, Ctx),
-  {ok, Result} = edts_debug:break(Node, Module, Line, Break),
-  {true, wrq:set_resp_body(mochijson2:encode([{break, Result}]), ReqData), Ctx}.
+  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node   = orddict:fetch(nodename, Ctx),
-  Module = orddict:fetch(module, Ctx),
-  {ok, Breakpoints} = edts_debug:breakpoints(Node, Module),
+  Nodename = orddict:fetch(nodename, Ctx),
+  {ok, Breakpoints} = edts_debug:breakpoints(Nodename),
   Data = [format(B) || B <- Breakpoints],
   {mochijson2:encode(Data), ReqData, Ctx}.
 
@@ -125,32 +87,13 @@ init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
 
 allowed_methods_test() ->
-  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
-
-content_types_accepted_test() ->
-  ?assertEqual({[ {"application/json", from_json} ], foo, bar},
-               content_types_accepted(foo, bar)).
+  ?assertEqual({['GET'], foo, bar}, allowed_methods(foo, bar)).
 
 content_types_provided_test() ->
   ?assertEqual({[ {"application/json", to_json}
                 , {"text/html",        to_json}
                 , {"text/plain",       to_json} ], foo, bar},
               content_types_provided(foo, bar)).
-
-from_json_test() ->
-  meck:unload(),
-  meck:new(edts_debug),
-  meck:expect(edts_debug, break, fun(true, foo, 1337, true) -> {ok, true} end),
-  meck:new(wrq),
-  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
-  Dict = orddict:from_list([{nodename, true},
-                            {module,   foo},
-                            {line,     1337},
-                            {break, true}]),
-  Res = from_json(req_data, Dict),
-  ?assertMatch({true, _, Dict}, Res),
-  ?assertEqual({struct, [{<<"break">>, true}]},
-               mochijson2:decode(element(2, Res))).
 
 %% to_json_test() ->
 %%   meck:unload(),

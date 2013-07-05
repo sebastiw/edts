@@ -96,8 +96,8 @@ breakpoint existence at LINE, which is the default behaviour."
        (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
 (defun edts-debug-breakpoints (&optional node module)
-  "Return a list of all breakpoint state on NODE. NODE default to the
-value associated with current buffer."
+  "Return a list of all breakpoint states in module on NODE. NODE and
+MODULE default to the value associated with current buffer."
   (let* ((node-name (or node (edts-node-name)))
          (module    (or module (ferl-get-module)))
          (resource  (list "plugins"
@@ -112,6 +112,23 @@ value associated with current buffer."
         (null
          (edts-log-error "Unexpected reply: %s" (cdr res)))
       (cdr (assoc 'body reply)))))
+
+(defun edts-debug-all-breakpoints (&optional node)
+  "Return a list of all breakpoint states on NODE. NODE defaults to the
+value associated with current buffer."
+  (let* ((node-name (or node (edts-node-name)))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes"   node-name
+                          "breakpoints"))
+         (rest-args nil)
+         (reply     (edts-rest-get resource rest-args))
+         (res       (assoc 'result reply)))
+    (if (not (equal res '(result "200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr res)))
+      (cdr (assoc 'body reply)))))
+
 
 (defun edts-debug-interpretedp (&optional node module)
   "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
