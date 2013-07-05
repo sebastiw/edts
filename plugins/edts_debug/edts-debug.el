@@ -62,12 +62,13 @@ BREAK. NODE and MODULE default to the values associated with current
 buffer. If BREAK is nil remove any breakpoint; if it is t set a
 breakpoint if one doesn't already exist; any other value toggles
 breakpoint existence at LINE, which is the default behaviour."
-  (interactive (list (edts-node-name)
-                     (ferl-get-module)
-                     (line-number-at-pos)
+  (interactive (list nil
+                     nil
+                     nil
                      'toggle))
-  (let* ((module    (or module (ferl-get-module)))
-         (node-name (or node (edts-node-name)))
+  (let* ((node-name (or node (edts-node-name)))
+         (module    (or module (ferl-get-module)))
+         (line      (line-number-at-pos))
          (break     (cond
                      ((eq break t) "true")
                      ((null break) "false")
@@ -105,7 +106,7 @@ default to the values associated with current buffer."
          (res       (assoc 'result reply)))
     (if (not (equal res '(result "200" "OK")))
         (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
+         (edts-log-error "Unexpected reply: %s" (cdr res)))
       (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))))
 
 (defun edts-debug-interpreted-modules (&optional node)
