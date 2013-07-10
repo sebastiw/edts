@@ -184,7 +184,11 @@ interactively to set up your man-pages instead")
 `edts-man-root'."
   (edts-man-find-module module)
   (let (foundp
-        (re (format "^[[:space:]]*\\(%s\\)" function)))
+        (re (format 
+             (cond
+              ((zerop arity) "^[[:blank:]]*\\(%s\\)() ->")
+              (t "^[[:blank:]]*\\(%s\\)(\\(?:\\w+,[[:blank:]]\\)\\{%s\\}\\w+) ->"))
+             function (1- arity))))
     (while (and (not foundp) (re-search-forward re))
       (save-excursion
         (goto-char (match-beginning 1))
