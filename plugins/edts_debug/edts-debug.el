@@ -1,4 +1,4 @@
-;; Copyright 2012 João Neves <sevenjp@gmail.com>
+;; Copyright 2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -18,6 +18,8 @@
 ;; Debugger interaction code for EDTS
 
 ;; Window configuration to be restored when quitting debug mode
+
+(require 'edts-debug-list-interpreted-mode)
 
 (defun edts-debug-init ()
   "Initialize edts-debug."
@@ -53,7 +55,10 @@ other value toggles interpretation, which is the default behaviour."
              (fmt (if interpreted
                       "%s is now interpreted on %s"
                     "%s is no longer interpreted on %s")))
-        (edts-log-info fmt module node-name)))
+        (edts-log-info fmt module node-name)
+        (when edts-debug-interpreted-list-buffer
+          (with-current-buffer edts-debug-interpreted-list-buffer
+            (edts-debug-update-interpreted-list)))))
      ((equal res '(result "403" "Forbidden"))
       (null (edts-log-error "%s is not interpretable" module)))
      (t
@@ -163,74 +168,6 @@ default to the values associated with current buffer."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
       (cdr (assoc 'modules (cdr (assoc 'body reply)))))))
 
-(defvar edts-debug-show-interpreted-mode-keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "SPC") 'edts-debug--show-modules-find-module)
-    (define-key map (kbd "RET") 'edts-debug--show-modules-find-module)
-    (define-key map (kbd "u")   'edts-debug--show-modules-uninterpret-module)
-    (define-key map (kbd "q")   'quit-window)
-    map))
-
-
-(define-minor-mode edts-debug-show-interpreted-mode
-  "EDTS mode for listing interpreted buffers."
-  nil
-  ""
-  edts-debug-show-interpreted-mode-keymap
-  (read-only-mode 1))
-
-
-(defun edts-debug-show-interpreted ()
-  "Show a listing of all interpreted modules on all nodes registered
-with EDTS."
-  (interactive)
-  (switch-to-buffer (get-buffer-create "*EDTS Interpreted Modules*"))
-  (edts-debug--update-interpreted-modules)
-  (edts-debug-show-interpreted-mode)
-  (setq truncate-lines t))
-
-(defun edts-debug--update-interpreted-modules ()
-  (let ((buf (get-buffer "*EDTS Interpreted Modules*"))
-        (inhibit-read-only t))
-    (when buf
-      (erase-buffer)
-      (insert "Module\tNode\tFile\n")
-      (insert "------\t------\t------\n")
-      (save-excursion
-        (loop for node in (edts-get-nodes)
-              do  (loop for mod in (edts-debug-interpreted-modules node)
-                        for file = (edts-debug--get-module-source node mod)
-                        do  (insert (format "%s\t%s\t%s\n" mod node file)))))
-      (align-regexp (point-min) (point-max) "\\([^[:space:]]\\)\t" 1 2 t))))
-
-(defvar edts-debug--show-line-regexp
-  "\\([^[:blank:]]*\\)\\s-*\\([^[:blank:]]*\\)\\s-*\\([^[:blank:]]*\\)\n"
-  "Regexp for splitting a line into module, node and file parts")
-
-(defun edts-debug--show-modules-part-of-line (part)
-  (save-excursion
-    (beginning-of-line)
-    (re-search-forward edts-debug--show-line-regexp nil t))
-  (case part
-    ('module (match-string 1))
-    ('node   (match-string 2))
-    ('file   (match-string 3))))
-
-(defun edts-debug--show-modules-uninterpret-module ()
-  (interactive)
-  (let ((node (edts-debug--show-modules-part-of-line 'node))
-        (mod  (edts-debug--show-modules-part-of-line 'module)))
-    (edts-debug-interpret node mod nil)
-    (edts-debug--update-interpreted-modules)))
-
-(defun edts-debug--show-modules-find-module ()
-  (interactive)
-  (let ((file (edts-debug--show-modules-part-of-line 'file)))
-    (when (file-exists-p file)
-        (find-file file))))
-
-(defun edts-debug--get-module-source (node module)
-  (cdr (assoc 'source (edts-get-module-info node module 'basic))))
 
 (when (member 'ert features)
   (ert-deftest edts-debug-basic-test ()
