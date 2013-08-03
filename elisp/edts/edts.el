@@ -655,11 +655,7 @@ executing CALLBACK when a reply is received"
 
 (defun edts-node-registeredp (node &optional no-error)
   "Return non-nil if NODE is registered with the EDTS server."
-  (let* ((res   (edts-get-nodes no-error))
-         (nodes (cdr res)))
-    (when nodes
-      (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))
-            nodes))))
+  (member node (edts-get-nodes no-error)))
 
 (defun edts-get-nodes (&optional no-error)
   "Return all nodes registered with the EDTS server. If NO-ERROR is

@@ -146,7 +146,6 @@ the highest priority any edts overlay at new point if any."
     (save-restriction
       (widen)
       (let* ((pos (ferl-position-at-beginning-of-line line))
-             (blah (goto-char pos))
              (beg (if fill-line pos (ferl-first-char-on-line-at pos)))
              (end (if fill-line (ferl-position-at-end-of-line line)
                     (ferl-last-char-on-line-at  pos)))

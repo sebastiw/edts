@@ -60,7 +60,14 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {ok, Names} = edts:nodes(),
+  {ok, Names0} = edts:nodes(),
+  Names =
+    lists:map(fun(Node) ->
+                  Str = atom_to_list(Node),
+                  SubStr = string:sub_string(Str, 1, string:rchr(Str, $@) -1),
+                  list_to_binary(SubStr)
+              end,
+              Names0),
   {mochijson2:encode([{nodes, Names}]), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
