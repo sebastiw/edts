@@ -82,7 +82,6 @@ with EDTS."
                                 for trigger   = (cdr (assoc 'trigger   break))
                                 for condition = (cdr (assoc 'condition break))
                                 do
-                                (message "break %s" break)
                                 (push (list nil (vector node
                                                         mod
                                                         (number-to-string line)

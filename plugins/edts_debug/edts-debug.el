@@ -22,6 +22,24 @@
 (require 'edts-debug-list-breakpoint-mode)
 (require 'edts-debug-list-interpreted-mode)
 
+(defface edts-debug-breakpoint-active-face
+  '((((class color) (background dark)) (:background "dark blue"))
+    (((class color) (background light)) (:background "light blue"))
+    (t (:bold t)))
+  "Face used for marking warning lines."
+  :group 'edts)
+
+(defface edts-debug-breakpoint-inactive-face
+  '((((class color) (background dark)) (:background "grey"))
+    (((class color) (background light)) (:background "light grey"))
+    (t (:bold t)))
+  "Face used for marking warning lines."
+  :group 'edts)
+
+
+(defvar edts-debug-breakpoint-face-prio 800
+  "Face priority for breakpoints.")
+
 (defun edts-debug-init ()
   "Initialize edts-debug."
   ;; Keys
@@ -36,10 +54,33 @@
 the mode-line.")
 (make-variable-buffer-local 'edts-debug-mode-line-info)
 
-(defun edts-debug-update-mode-line-info ()
-  (if (and edts-mode (edts-debug-interpretedp))
-      (setq edts-debug-mode-line-info "Interpreted ")
-    (setq edts-debug-mode-line-info "")))
+(defun edts-debug-update-buffer-info (node module)
+  "Update the edts-debug related information displayed in"
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and edts-mode
+                 (string= node   (edts-node-name))
+                 (string= module (ferl-get-module)))
+        (if (edts-debug-interpretedp node module)
+            (setq edts-debug-mode-line-info "Interpreted ")
+          (setq edts-debug-mode-line-info "")))
+      (edts-face-remove-overlays '(edts-debug-breakpoint))
+      (loop for break in (edts-debug-breakpoints node module)
+            for line      = (cdr (assoc 'line      break))
+            for status    = (cdr (assoc 'status    break))
+            for trigger   = (cdr (assoc 'trigger   break))
+            for condition = (cdr (assoc 'condition break))
+            for face      = (if (string= status "active")
+                                'edts-debug-breakpoint-active-face
+                              'edts-debug-breakpoint-inactive-face)
+            for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
+            do
+            (edts-face-display-overlay face
+                                       line
+                                       (format fmt status trigger condition)
+                                       'edts-debug-breakpoint
+                                       edts-debug-breakpoint-face-prio
+                                       t)))))
 
 (defun edts-debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
@@ -69,8 +110,7 @@ other value toggles interpretation, which is the default behaviour."
              (fmt (if interpreted
                       "%s is now interpreted on %s"
                     "%s is no longer interpreted on %s")))
-        (edts-log-info fmt module node-name)
-        (edts-debug-update-mode-line-info)
+        (edts-debug-update-buffer-info node-name module)
         (edts-debug-list-interpreted-update)
         (edts-debug-list-breakpoint-update)))
      ((equal res '(result "403" "Forbidden"))
@@ -109,7 +149,7 @@ breakpoint existence at LINE, which is the default behaviour."
       (if (cdr (assoc 'break (cdr (assoc 'body reply))))
           (edts-log-info "breakpoint set on %s:%s on %s" module line node-name)
         (edts-log-info "breakpoint unset on %s:%s on %s" module line node-name))
-      (edts-debug-update-mode-line-info)
+      (edts-debug-update-buffer-info node-name module)
       (edts-debug-list-interpreted-update)
       (edts-debug-list-breakpoint-update))))
 
