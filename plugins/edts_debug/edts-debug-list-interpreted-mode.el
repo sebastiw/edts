@@ -23,16 +23,18 @@
   "*EDTS Interpreted Modules*"
   "Name of buffer where to display the list of interpreted modules")
 
-(defconst edts-debug-list-interpreted-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET")
-      'edts-debug-list-interpreted-find-module)
-    (define-key map (kbd "<delete>")
-      'edts-debug-list-interpreted-uninterpret-module)
-    map))
-
 (define-derived-mode edts-debug-list-interpreted-mode tabulated-list-mode
   "Mode for listing interpreted modules."
+  ;; Keybindings
+  (define-key
+    edts-debug-list-interpreted-mode-map
+    (kbd "RET")
+    'edts-debug-list-interpreted-find-module)
+  (define-key
+    edts-debug-list-interpreted-mode-map
+    (kbd "<delete>")
+    'edts-debug-list-interpreted-uninterpret-module)
+
   (setq major-mode 'edts-debug-list-interpreted-mode)
   (use-local-map edts-debug-list-interpreted-mode-map))
 
