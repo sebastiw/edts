@@ -42,10 +42,13 @@
   "Do the necessary initialization for PLUGIN."
   (add-to-list `load-path (path-util-join edts-plugin-directory plugin-name))
   (let* ((plugin-elisp-name (replace-regexp-in-string "_" "-" plugin-name))
-         (initfun (intern (concat plugin-elisp-name "-init"))))
+         (init-fun          (intern (concat plugin-elisp-name "-init")))
+         (buf-init-fun      (intern (concat plugin-elisp-name "-buffer-init"))))
     (require (intern plugin-elisp-name))
-    (when (fboundp initfun)
-      (funcall initfun))))
+    (when (fboundp init-fun)
+      (funcall init-fun))
+    (when (fboundp buf-init-fun)
+      (add-hook 'edts-mode-hook buf-init-fun))))
 
 
 (provide 'edts-plugin)

@@ -129,6 +129,9 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     "\\.yaws$")
   "Additional extensions for which to auto-activate erlang-mode.")
 
+(defvar edts-mode-hook nil
+  "Hooks to run at the end of edts-mode initialization in a buffer.")
+
 (defun edts-setup ()
   ;; Start with our own stuff
   (edts-face-remove-overlays)
@@ -170,7 +173,8 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
                             #'cdr edts-code-issue-overlay-priorities))))))
 
   ;; Auto-completion
-  (edts-complete-setup))
+  (edts-complete-setup)
+  (apply 'run-hooks edts-mode-hook))
 
 (defun edts-teardown ()
   ;; Start with our own stuff
