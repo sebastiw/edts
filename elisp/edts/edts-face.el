@@ -41,8 +41,8 @@
   :group 'edts)
 
 (defface edts-face-warning-line
-  '((((class color) (background dark)) (:background "dark blue"))
-    (((class color) (background light)) (:background "light blue"))
+  '((((class color) (background dark)) (:background "yellow4"))
+    (((class color) (background light)) (:background "#ffff80"))
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
