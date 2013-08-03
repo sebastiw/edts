@@ -76,10 +76,11 @@ to_json(ReqData, Ctx) ->
 %%%_* Internal functions =======================================================
 format({{Module, Line}, [Status, Trigger, null, Condition]}) ->
   [{module,     Module},
-    {line,      Line},
-    {status,    Status},
-    {trigger,   Trigger},
-    {condition, io_lib:format("~p", [Condition])}].
+   {line,      Line},
+   {status,    Status},
+   {trigger,   Trigger},
+   {condition, list_to_binary(lists:flatten(io_lib:format("~p",
+                                                          [Condition])))}].
 
 %%%_* Unit tests ===============================================================
 
