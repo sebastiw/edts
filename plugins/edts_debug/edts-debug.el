@@ -19,13 +19,27 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
+(require 'edts-debug-list-breakpoint-mode)
 (require 'edts-debug-list-interpreted-mode)
 
 (defun edts-debug-init ()
   "Initialize edts-debug."
+  ;; Keys
   (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
-  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted))
+  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted)
+  (add-to-list 'mode-line-misc-info
+               '(edts-mode edts-debug-mode-line-info)))
+
+(defvar edts-debug-mode-line-info ""
+  "The string with edts-debug related information to display in
+the mode-line.")
+(make-variable-buffer-local 'edts-debug-mode-line-info)
+
+(defun edts-debug-update-mode-line-info ()
+  (if (and edts-mode (edts-debug-interpretedp))
+      (setq edts-debug-mode-line-info "Interpreted ")
+    (setq edts-debug-mode-line-info "")))
 
 (defun edts-debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
@@ -56,9 +70,9 @@ other value toggles interpretation, which is the default behaviour."
                       "%s is now interpreted on %s"
                     "%s is no longer interpreted on %s")))
         (edts-log-info fmt module node-name)
-        (when edts-debug-interpreted-list-buffer
-          (with-current-buffer edts-debug-interpreted-list-buffer
-            (edts-debug-update-interpreted-list)))))
+        (edts-debug-update-mode-line-info)
+        (edts-debug-list-interpreted-update)
+        (edts-debug-list-breakpoint-update)))
      ((equal res '(result "403" "Forbidden"))
       (null (edts-log-error "%s is not interpretable" module)))
      (t
@@ -90,15 +104,14 @@ breakpoint existence at LINE, which is the default behaviour."
          (rest-args (list (cons "break" break)))
          (reply     (edts-rest-post resource rest-args))
          (res       (assoc 'result reply)))
-    (cond
-     ((and (equal res '(result "201" "Created"))
-           (cdr (assoc 'break (cdr (assoc 'body reply)))))
-      (edts-log-debug "breakpoint set on %s:%s on %s" module line node-name))
-      ((equal res '(result "201" "Created"))
-       (edts-log-debug "breakpoint unset on %s:%s on %s" module line node-name))
-     (t
-      (null
-       (edts-log-error "Unexpected reply: %s" (cdr res)))))))
+    (if (not (equal res '(result "201" "Created")))
+        (null (edts-log-error "Unexpected reply: %s" (cdr res)))
+      (if (cdr (assoc 'break (cdr (assoc 'body reply))))
+          (edts-log-info "breakpoint set on %s:%s on %s" module line node-name)
+        (edts-log-info "breakpoint unset on %s:%s on %s" module line node-name))
+      (edts-debug-update-mode-line-info)
+      (edts-debug-list-interpreted-update)
+      (edts-debug-list-breakpoint-update))))
 
 (defun edts-debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
