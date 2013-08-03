@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
-;; Debugger interaction code for EDTS
+;; Mode for listing interpreted modules.
 
 ;; Window configuration to be restored when quitting debug mode
 
@@ -33,49 +33,50 @@
 
 (define-derived-mode edts-debug-list-interpreted-mode tabulated-list-mode
   "Mode for listing interpreted modules."
-  (setq major-mode 'edts-debug-list-mode)
+  (setq major-mode 'edts-debug-list-interpreted-mode)
   (use-local-map edts-debug-list-interpreted-mode-map))
 
 (defun edts-debug-list-interpreted ()
   "Show a listing of all interpreted modules on all nodes registered
 with EDTS."
   (interactive)
-  (switch-to-buffer (get-buffer-create edts-debug-interpreted-list-buffer))
+  (switch-to-buffer (get-buffer-create edts-debug-list-interpreted-buffer))
   (edts-debug-list-interpreted-mode)
-  (edts-debug-update-interpreted-list))
+  (edts-debug-list-interpreted-update))
 
 (defun edts-debug-list-interpreted-find-module ()
   "Find module given by list entry under point."
   (interactive)
-  (find-file-existing (elt (tabulated-list-get-entry) 2)))
+  (let* ((entry (tabulated-list-get-entry))
+         (node (elt entry 0))
+         (mod  (elt entry 1))
+         (file (cdr (assoc 'source (edts-get-module-info node mod 'basic)))))
+    (edts-find-file-existing file)))
 
 (defun edts-debug-list-interpreted-uninterpret-module ()
   "Uninterpret module given by list entry under point."
   (interactive)
   (let ((entry (tabulated-list-get-entry)))
-    (edts-debug-interpret (elt entry 1) (elt entry 0))))
+    (edts-debug-interpret (elt entry 0) (elt entry 1))))
 
-(defun edts-debug-update-interpreted-list ()
-  "Fetch and return a list of all interpreted modules on all nodes. Also
-reintializes the header line."
-  (let ((max-module-len 6) ;; The length of the header names
-        (max-node-len   4)
-        entries)
-    (loop for node in (sort (edts-get-nodes) 'string<)
-          do (loop for mod in (sort (edts-debug-interpreted-modules node)
-                                    'string<)
-                   for file = (edts-debug--get-module-source node mod)
-                   do
-                   (push (list nil (vector mod node file)) entries)
-                   (setq max-module-len (max max-module-len (length mod)))
-                   (setq max-node-len (max max-node-len (length node)))))
-    (setq tabulated-list-format
-        (vector
-         `("Module" ,max-module-len 'string<)
-         `("Node"   ,max-node-len   'string<)
-         '("File"   0               'string<)))
-    (tabulated-list-init-header)
-    (setq tabulated-list-entries (reverse entries))
-    (tabulated-list-print)))
+(defun edts-debug-list-interpreted-update ()
+  "Update the list of interpreted modules and reintialize the header line."
+  (when (buffer-live-p (get-buffer edts-debug-list-interpreted-buffer))
+    (with-current-buffer edts-debug-list-interpreted-buffer
+      (let ((max-node-len 4) ;; The length of the header name
+            entries)
+        (loop for node in (sort (edts-get-nodes) 'string<)
+              do (loop for mod in (sort (edts-debug-interpreted-modules node)
+                                        'string<)
+                       do
+                       (push (list nil (vector node mod)) entries)
+                       (setq max-node-len (max max-node-len (length node)))))
+        (setq tabulated-list-format
+              (vector
+               `("Node"   ,max-node-len 'string< :pad-right 4)
+               '("Module" 0 'string<)))
+        (tabulated-list-init-header)
+        (setq tabulated-list-entries (reverse entries))
+        (tabulated-list-print)))))
 
 (provide 'edts-debug-list-interpreted-mode)
