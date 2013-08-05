@@ -14,18 +14,21 @@ submodule-update:
 libs:
 	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)"
 
+.PHONY: plugins
+plugins: $(PLUGINS)
+
 .PHONY: $(PLUGINS)
 $(PLUGINS):
 	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 
 .PHONY: clean
-clean: clean-$(PLUGINS)
+clean: $(PLUGINS:%=clean-%)
 	rm -rfv elisp/*/*.elc
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)" clean
 	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" clean
 
-.PHONY: $(SPLUGINS:%=clean-%)
-clean-$(PLUGINS):
+.PHONY: $(PLUGINS:%=clean-%)
+$(PLUGINS:%=clean-%):
 	$(MAKE) -C $(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: ert
@@ -37,24 +40,24 @@ ert:
 	-f ert-run-tests-batch-and-exit
 
 .PHONY: test
-test: all ert test-edts test-$(PLUGINS)
+test: all ert test-edts $(PLUGINS:%=test-%)
 
 :PHONY: test-edts
 test-edts:
 	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" test
 
-.PHONY: $(SPLUGINS:%=test-%)
-test-$(PLUGINS):
+.PHONY: $(PLUGINS:%=test-%)
+$(PLUGINS:%=test-%):
 	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C $(@:test-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
 
 .PHONY: eunit
-eunit: all eunit-edts eunit-$(PLUGINS)
+eunit: all eunit-edts $(PLUGINS:%=eunit-%)
 
 :PHONY: eunit-edts
 eunit-edts:
 	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" eunit
 
-.PHONY: $(SPLUGINS:%=eunit-%)
-eunit-$(PLUGINS):
+.PHONY: $(PLUGINS:%=eunit-%)
+$(PLUGINS:%=eunit-%):
 	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C $(@:eunit-%=%) MAKEFLAGS="$(MAKEFLAGS)" eunit
 

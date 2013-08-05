@@ -44,7 +44,7 @@
   (let* ((plugin-elisp-name (replace-regexp-in-string "_" "-" plugin-name))
          (init-fun          (intern (concat plugin-elisp-name "-init")))
          (buf-init-fun      (intern (concat plugin-elisp-name "-buffer-init"))))
-    (require (intern plugin-elisp-name))
+    (require (intern plugin-elisp-name) nil t)
     (when (fboundp init-fun)
       (funcall init-fun))
     (when (fboundp buf-init-fun)
