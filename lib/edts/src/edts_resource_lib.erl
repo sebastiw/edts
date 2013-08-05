@@ -357,10 +357,9 @@ modules_validate(ReqData, _Ctx) ->
 %%------------------------------------------------------------------------------
 module_exists_p(_ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  Module   = orddict:fetch(module, Ctx),
-  case edts_dist:call(Nodename, Module, module_info, []) of
-    {badrpc, _} -> false;
-    _ -> true
+  case edts_dist:call(Nodename, code, which, [orddict:fetch(module, Ctx)]) of
+    non_existing            -> false;
+    File when is_list(File) -> true
   end.
 
 %%------------------------------------------------------------------------------
