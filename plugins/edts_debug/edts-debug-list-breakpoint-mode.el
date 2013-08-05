@@ -41,9 +41,10 @@
   "Show a listing of all breakpoint on all nodes registered
 with EDTS."
   (interactive)
-  (switch-to-buffer (get-buffer-create edts-debug-list-breakpoint-buffer))
-  (edts-debug-list-breakpoint-mode)
-  (edts-debug-list-breakpoint-update))
+  (with-current-buffer (get-buffer-create edts-debug-list-breakpoint-buffer)
+    (edts-debug-list-breakpoint-mode)
+    (edts-debug-list-breakpoint-update)
+    (display-buffer (current-buffer))))
 
 (defun edts-debug-list-breakpoint-find-breakpoint ()
   "Find breakpoint given by list entry under point."

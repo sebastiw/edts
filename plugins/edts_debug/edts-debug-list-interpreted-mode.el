@@ -42,9 +42,10 @@
   "Show a listing of all interpreted modules on all nodes registered
 with EDTS."
   (interactive)
-  (switch-to-buffer (get-buffer-create edts-debug-list-interpreted-buffer))
-  (edts-debug-list-interpreted-mode)
-  (edts-debug-list-interpreted-update))
+  (with-current-buffer (get-buffer-create edts-debug-list-interpreted-buffer)
+    (edts-debug-list-interpreted-mode)
+    (edts-debug-list-interpreted-update)
+    (display-buffer (current-buffer))))
 
 (defun edts-debug-list-interpreted-find-module ()
   "Find module given by list entry under point."
