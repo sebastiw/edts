@@ -52,11 +52,11 @@ with EDTS."
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (mod  (elt entry 1))
-         (line (elt entry 2))
+         (line (string-to-number (elt entry 2)))
          (file (cdr (assoc 'source (edts-get-module-info node mod 'basic)))))
     (edts-find-file-existing file)
     (goto-char (point-min))
-    (forward-line (1- (string-to-number line)))))
+    (forward-line (1- line))))
 
 (defun edts-debug-list-breakpoint-delete-breakpoint ()
   "Uninterpret module given by list entry under point."
@@ -64,7 +64,7 @@ with EDTS."
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (mod  (elt entry 1))
-         (line (elt entry 2)))
+         (line (string-to-number (elt entry 2))))
     (edts-debug-break node mod line nil)))
 
 (defun edts-debug-list-breakpoint-update ()
@@ -74,36 +74,49 @@ with EDTS."
       (let ((max-node-len   4) ;; The length of the header names
             (max-module-len 6)
             entries)
-        (loop for node in (sort (edts-get-nodes) 'string<)
-              do (loop for mod in (sort (edts-debug-interpreted-modules node)
-                                        'string<)
-                       do (loop for break in (edts-debug-breakpoints node mod)
-                                for line      = (cdr (assoc 'line      break))
-                                for status    = (cdr (assoc 'status    break))
-                                for trigger   = (cdr (assoc 'trigger   break))
-                                for condition = (cdr (assoc 'condition break))
-                                do
-                                (push (list nil (vector node
-                                                        mod
-                                                        (number-to-string line)
-                                                        status
-                                                        trigger
-                                                        condition)) entries)
-                                (setq max-module-len (max max-module-len
-                                                          (length mod)))
-                                (setq max-node-len (max max-node-len
-                                                        (length node))))))
-        (setq tabulated-list-format
-              (vector
-               `("Node"      ,max-node-len   'string< :pad-right 4)
-               `("Module"    ,max-module-len 'string< :pad-right 4)
-               '("Line"      8               nil      :pad-right 4)
-               '("Status"    8               nil      :pad-right 4)
-               '("Trigger"   10              nil      :pad-right 4)
-               '("Condition" 0               nil)))
-        (tabulated-list-init-header)
-        (setq tabulated-list-entries (reverse entries))
-        (tabulated-list-print)))))
+        (flet (;; Sort an alist by comparing the keys as strings
+               (key-sort (kvs)
+                         (sort
+                          kvs
+                          #'(lambda (el1 el2)
+                                  (string< (car el1) (car el2)))))
+               ;; Sort breakpoints by line numbers)
+               (line-sort (breakpoints)
+                          (sort
+                           breakpoints
+                           #'(lambda (b1 b2)
+                               (< (cdr (assoc 'line b1))
+                                  (cdr (assoc 'line b2)))))))
+          (loop for (node . modules) in (key-sort edts-debug-breakpoint-alist)
+                do (loop for (mod . breakpoints) in (key-sort modules)
+                         do (loop for break in (line-sort breakpoints)
+                                  for line      = (cdr (assoc 'line      break))
+                                  for status    = (cdr (assoc 'status    break))
+                                  for trigger   = (cdr (assoc 'trigger   break))
+                                  for condition = (cdr (assoc 'condition break))
+                                  do
+                                  (push (list nil
+                                              (vector node
+                                                      mod
+                                                      (number-to-string line)
+                                                      status
+                                                      trigger
+                                                      condition)) entries)
+                                  (setq max-module-len (max max-module-len
+                                                            (length mod)))
+                                  (setq max-node-len (max max-node-len
+                                                          (length node)))))))
+      (setq tabulated-list-format
+            (vector
+             `("Node"      ,max-node-len   'string< :pad-right 4)
+             `("Module"    ,max-module-len 'string< :pad-right 4)
+             '("Line"      8               nil      :pad-right 4)
+             '("Status"    8               nil      :pad-right 4)
+             '("Trigger"   10              nil      :pad-right 4)
+             '("Condition" 0               nil)))
+      (tabulated-list-init-header)
+      (setq tabulated-list-entries (reverse entries))
+      (tabulated-list-print)))))
 
 (defun edts-debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))

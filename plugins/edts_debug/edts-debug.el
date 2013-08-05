@@ -54,33 +54,86 @@
 the mode-line.")
 (make-variable-buffer-local 'edts-debug-mode-line-info)
 
-(defun edts-debug-update-buffer-info (node module)
-  "Update the edts-debug related information displayed in"
+(defvar edts-debug-breakpoint-alist nil
+  "Alist with breakpoints for each node. Each value is an alist with one
+key for each interpreted module the value of which is a list of
+breakpoints for that module")
+
+(defvar edts-debug-interpreted-alist nil
+  "Alist with interpreted modules for each node. Each value is an list
+of strings.")
+
+
+(defun edts-debug-sync ()
+  "Synchronize debug information between EDTS and the Emacs instance."
+  (interactive)
+  ;; (message " %s" edts-debug-interpreted-alist)
+  (edts-debug-sync-interpreted-alist)
+  (edts-debug-list-interpreted-update)
+  (edts-debug-sync-breakpoint-alist)
+  (edts-debug-list-breakpoint-update)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
-      (when (and edts-mode
-                 (string= node   (edts-node-name))
-                 (string= module (ferl-get-module)))
-        (if (edts-debug-interpretedp node module)
-            (setq edts-debug-mode-line-info "Interpreted ")
-          (setq edts-debug-mode-line-info "")))
-      (edts-face-remove-overlays '(edts-debug-breakpoint))
-      (loop for break in (edts-debug-breakpoints node module)
-            for line      = (cdr (assoc 'line      break))
-            for status    = (cdr (assoc 'status    break))
-            for trigger   = (cdr (assoc 'trigger   break))
-            for condition = (cdr (assoc 'condition break))
-            for face      = (if (string= status "active")
-                                'edts-debug-breakpoint-active-face
-                              'edts-debug-breakpoint-inactive-face)
-            for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
-            do
-            (edts-face-display-overlay face
-                                       line
-                                       (format fmt status trigger condition)
-                                       'edts-debug-breakpoint
-                                       edts-debug-breakpoint-face-prio
-                                       t)))))
+      (when edts-mode
+        (let ((node   (edts-node-name))
+              (module (ferl-get-module)))
+          (when (and node module)
+            (edts-debug-update-buffer-info node module)))))))
+
+(defun edts-debug-sync-interpreted-alist ()
+  "Synchronizes `edts-debug-interpreted-alist'."
+  (setq edts-debug-interpreted-alist
+        (loop for node in (edts-get-nodes)
+              collect (cons node (edts-debug-interpreted-modules node)))))
+
+(defun edts-debug-sync-breakpoint-alist ()
+  "Synchronizes `edts-debug-breakpoint-alist'."
+  (setq edts-debug-breakpoint-alist
+        (loop for node in (edts-get-nodes)
+              for node-breakpoints = (edts-debug-all-breakpoints node)
+              when node-breakpoints
+              collect (loop
+                       for breakpoint in node-breakpoints
+                       with breakpoints
+                       for module     = (cdr (assoc 'module breakpoint))
+                       for old-elt    = (assoc module breakpoints)
+                       ;; To get the breakpoint representation, delete the
+                       ;; module key/value of the breakpoint alist (since that
+                       ;; is the key in the outer alist)
+                       for break-list = (cons
+                                         (delete
+                                          (cons 'module module) breakpoint)
+                                         (cdr old-elt))
+                       for new-elt    = (cons module break-list)
+                       do (setq breakpoints
+                                (cons new-elt
+                                      (delete old-elt breakpoints)))
+                       finally (return (cons node breakpoints))))))
+
+(defun edts-debug-update-buffer-info (node module)
+  (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
+      (setq edts-debug-mode-line-info "Interpreted ")
+    (setq edts-debug-mode-line-info ""))
+
+  (edts-face-remove-overlays '(edts-debug-breakpoint))
+  (let ((breaks (cdr (assoc module
+                            (cdr (assoc node edts-debug-breakpoint-alist))))))
+    (loop for break in breaks
+        for line      = (cdr (assoc 'line      break))
+        for status    = (cdr (assoc 'status    break))
+        for trigger   = (cdr (assoc 'trigger   break))
+        for condition = (cdr (assoc 'condition break))
+        for face      = (if (string= status "active")
+                            'edts-debug-breakpoint-active-face
+                          'edts-debug-breakpoint-inactive-face)
+        for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
+        do
+        (edts-face-display-overlay face
+                                   line
+                                   (format fmt status trigger condition)
+                                   'edts-debug-breakpoint
+                                   edts-debug-breakpoint-face-prio
+                                   t))))
 
 (defun edts-debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
@@ -110,9 +163,8 @@ other value toggles interpretation, which is the default behaviour."
              (fmt (if interpreted
                       "%s is now interpreted on %s"
                     "%s is no longer interpreted on %s")))
-        (edts-debug-update-buffer-info node-name module)
-        (edts-debug-list-interpreted-update)
-        (edts-debug-list-breakpoint-update)))
+        (edts-log-info fmt module node-name)
+        (edts-debug-sync)))
      ((equal res '(result "403" "Forbidden"))
       (null (edts-log-error "%s is not interpretable" module)))
      (t
@@ -131,7 +183,7 @@ breakpoint existence at LINE, which is the default behaviour."
                      'toggle))
   (let* ((node-name (or node (edts-node-name)))
          (module    (or module (ferl-get-module)))
-         (line      (line-number-at-pos))
+         (line      (or line (line-number-at-pos)))
          (break     (cond
                      ((eq break t) "true")
                      ((null break) "false")
@@ -149,9 +201,7 @@ breakpoint existence at LINE, which is the default behaviour."
       (if (cdr (assoc 'break (cdr (assoc 'body reply))))
           (edts-log-info "breakpoint set on %s:%s on %s" module line node-name)
         (edts-log-info "breakpoint unset on %s:%s on %s" module line node-name))
-      (edts-debug-update-buffer-info node-name module)
-      (edts-debug-list-interpreted-update)
-      (edts-debug-list-breakpoint-update))))
+      (edts-debug-sync))))
 
 (defun edts-debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and

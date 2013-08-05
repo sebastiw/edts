@@ -67,13 +67,15 @@ with EDTS."
   (when (buffer-live-p (get-buffer edts-debug-list-interpreted-buffer))
     (with-current-buffer edts-debug-list-interpreted-buffer
       (let ((max-node-len 4) ;; The length of the header name
+            (int-alist (sort edts-debug-interpreted-alist
+                             #'(lambda (el1 el2) (string< (car el1)
+                                                          (car el2)))))
             entries)
-        (loop for node in (sort (edts-get-nodes) 'string<)
-              do (loop for mod in (sort (edts-debug-interpreted-modules node)
-                                        'string<)
-                       do
-                       (push (list nil (vector node mod)) entries)
-                       (setq max-node-len (max max-node-len (length node)))))
+        (loop for (node . mods) in int-alist
+              when mods
+              do (loop for mod in (sort mods 'string<)
+                       do (setq max-node-len (max max-node-len (length node)))
+                       do (push (list nil (vector node mod)) entries)))
         (setq tabulated-list-format
               (vector
                `("Node"   ,max-node-len 'string< :pad-right 4)
