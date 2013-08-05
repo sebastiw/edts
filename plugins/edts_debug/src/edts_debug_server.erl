@@ -202,9 +202,12 @@ breakpoint_exists_p(Module, Line) ->
 break(Module, Line, toggle) ->
   break(Module, Line, not breakpoint_exists_p(Module, Line));
 break(Module, Line, true) ->
-  interpret_module(Module, true),
-  int:break(Module, Line),
-  true;
+  case interpret_module(Module, true) of
+    {error, _} = E -> E;
+    true           ->
+      int:break(Module, Line),
+      true
+  end;
 break(Module, Line, false) ->
   int:delete_break(Module, Line),
   false.
