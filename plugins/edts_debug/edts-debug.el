@@ -45,9 +45,13 @@
   ;; Keys
   (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
-  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted)
-  (add-to-list 'mode-line-misc-info
-               '(edts-mode edts-debug-mode-line-info)))
+  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted))
+
+(defun edts-debug-buffer-init ()
+  "edts-debug buffer-specific initialization."
+  (add-to-list 'mode-line-buffer-identification
+               '(edts-mode edts-debug-mode-line-info)
+               't))
 
 (defvar edts-debug-mode-line-info ""
   "The string with edts-debug related information to display in
@@ -114,6 +118,7 @@ of strings.")
   (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
       (setq edts-debug-mode-line-info "Interpreted ")
     (setq edts-debug-mode-line-info ""))
+  (force-mode-line-update)
 
   (edts-face-remove-overlays '(edts-debug-breakpoint))
   (let ((breaks (cdr (assoc module
