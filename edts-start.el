@@ -8,7 +8,7 @@
 (require 'cl)
 (require 'erlang)
 (require 'woman)
-
+(require 'ert nil 'noerror)
 
 (defvar edts-start-inhibit-load-msgs t
   "If non-nil, don't print messages when loading edts-packages.")
@@ -46,7 +46,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
-(require 'ert nil 'noerror)
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars

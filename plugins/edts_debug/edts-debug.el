@@ -61,7 +61,7 @@ the mode-line.")
 (defvar edts-debug-breakpoint-alist nil
   "Alist with breakpoints for each node. Each value is an alist with one
 key for each interpreted module the value of which is a list of
-breakpoints for that module")
+breakpoints for that module.")
 
 (defvar edts-debug-interpreted-alist nil
   "Alist with interpreted modules for each node. Each value is an list
