@@ -34,18 +34,20 @@
 (defun edts-test-cleanup ()
   (edts-log-info "Doing test cleanup")
   (setq eproject-attributes-alist nil)
-  (edts-shell-kill-all)
-  (loop for  buf in (buffer-list)
-        when (and (buffer-live-p buf) (buffer-local-value 'edts-mode buf))
-        do   (progn
-               (kill-buffer buf)
-               (edts-log-info "killed %s" buf)))
   (edts-log-info "Test cleanup done"))
+
+(defmacro edts-test-save-buffer-list (&rest body)
+  "Save buffer-list; execute body; restore buffer-list."
+  `(let ((pre-body-bufs (buffer-list)))
+     (prog1 (progn ,@body)
+       (dolist (buf (buffer-list))
+         (unless (member buf pre-body-bufs)
+           (kill-buffer buf))))))
 
 (defmacro edts-test-with-config (project-path config &rest body)
   "Run BODY with the project in PROJECT-PATH using CONFIG."
   `(let ((cfg-file (path-util-join ,project-path ".edts"))
          (config   ,config))
      (edts-project-write-config cfg-file config)
-     (progn ,@body)
-     (delete-file cfg-file)))
+     (prog1 (progn ,@body)
+       (delete-file cfg-file))))
