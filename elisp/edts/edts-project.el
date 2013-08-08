@@ -444,17 +444,19 @@ auto-save data."
 (when (member 'ert features)
   (ert-deftest edts-project-basic-test ()
     ;; Setup
-    (edts-test-with-config
-     edts-test-project1-directory
-     '(:name "test")
-     (let ((eproject-prefer-subproject t)
-           (file (car (edts-test-project1-modules))))
-       (find-file file)
+    (edts-test-save-buffer-list
+     (edts-test-with-config
+      edts-test-project1-directory
+      '(:name "test")
+      (let ((eproject-prefer-subproject t)
+            (file (car (edts-test-project1-modules))))
+        (find-file file)
 
-       ;; Test
-       (should (string= "test" (eproject-name)))
-       (should (get-buffer"*edts*"))
-       (should (get-buffer"*test*"))
+        ;; Test
+        (should (string= "test" (eproject-name)))
+        (should (string= "test" (eproject-name)))
+        (should (get-buffer"*edts*"))
+        (should (get-buffer"*test*"))
 
-       ;; Cleanup
-       (edts-test-cleanup)))))
+        ;; Cleanup
+        (edts-test-cleanup))))))

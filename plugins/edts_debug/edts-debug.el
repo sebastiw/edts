@@ -280,23 +280,24 @@ default to the values associated with current buffer."
 (when (member 'ert features)
   (ert-deftest edts-debug-basic-test ()
     ;; Setup
-    (edts-test-with-config
-     edts-test-project1-directory
-     '(:name "test")
-     (let ((eproject-prefer-subproject t)
-           (file (car (edts-test-project1-modules))))
-       (find-file file)
+    (edts-test-save-buffer-list
+     (edts-test-with-config
+      edts-test-project1-directory
+      '(:name "test")
+      (let ((eproject-prefer-subproject t)
+            (file (car (edts-test-project1-modules))))
+        (find-file file)
 
-       ;; Test
-       (should-not (edts-debug-interpretedp))
-       (edts-debug-interpret nil nil 't)
-       (should (edts-debug-interpretedp))
-       (should-not (edts-debug-breakpoints))
-       (edts-debug-break nil nil nil t)
-       (should (eq 1 (length (edts-debug-breakpoints))))
+        ;; Test
+        (should-not (edts-debug-interpretedp))
+        (edts-debug-interpret nil nil 't)
+        (should (edts-debug-interpretedp))
+        (should-not (edts-debug-breakpoints))
+        (edts-debug-break nil nil nil t)
+        (should (eq 1 (length (edts-debug-breakpoints))))
 
-       ;; Cleanup
-       (edts-test-cleanup)))))
+        ;; Cleanup
+        (edts-test-cleanup))))))
 
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
