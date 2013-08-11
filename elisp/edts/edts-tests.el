@@ -32,9 +32,9 @@
    (path-util-join edts-test-project1-directory "lib" "*" "src" "*.erl")))
 
 (defun edts-test-cleanup ()
-  (edts-log-info "Doing test cleanup")
+  (edts-log-debug "Doing test cleanup")
   (setq eproject-attributes-alist nil)
-  (edts-log-info "Test cleanup done"))
+  (edts-log-debug "Test cleanup done"))
 
 (defmacro edts-test-save-buffer-list (&rest body)
   "Save buffer-list; execute body; restore buffer-list."
@@ -42,6 +42,7 @@
      (prog1 (progn ,@body)
        (dolist (buf (buffer-list))
          (unless (member buf pre-body-bufs)
+           (edts-log-debug "Cleaning up leftover buffer: %s" buf)
            (kill-buffer buf))))))
 
 (defmacro edts-test-with-config (project-path config &rest body)
