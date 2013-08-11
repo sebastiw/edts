@@ -16,7 +16,6 @@ check:
 	./rebar dialyze
 
 test eunit:
-	echo "erl_libs" $(ERL_LIBS)
 	./rebar eunit $(suite) skip_deps=true
 
 

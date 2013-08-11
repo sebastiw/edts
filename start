@@ -26,4 +26,9 @@ EDTS_HOME="$( cd "$( dirname "$0" )" && pwd )"
 PLUGIN_DIR=$EDTS_HOME/plugins
 
 cd $EDTS_HOME
-exec $ERL -sname edts -edts project_data_dir "\"$PROJDIR\"" -edts plugin_dir "\"$PLUGIN_DIR\"" -pa $EDTS_HOME/{lib,plugins}/*/ebin -s edts_app
+exec $ERL \
+    -sname edts \
+    -edts project_data_dir "\"$PROJDIR\"" \
+    -edts plugin_dir "\"$PLUGIN_DIR\"" \
+    -pa $EDTS_HOME/{lib,plugins}/*/ebin \
+    -s edts_app

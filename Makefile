@@ -1,10 +1,7 @@
 MAKEFLAGS= -s
 PLUGINS= $(wildcard plugins/*)
-ERL_LIBS=`pwd`"/lib"
-
-ifndef EMACS
-	EMACS="emacs"
-endif
+export ERL_LIBS:=`pwd`"/lib"
+EMACS?="emacs"
 
 .PHONY: all
 all: submodule-update libs $(PLUGINS)

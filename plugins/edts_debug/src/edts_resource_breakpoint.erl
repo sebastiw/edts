@@ -151,7 +151,8 @@ from_json_test() ->
   Res = from_json(req_data, Dict),
   ?assertMatch({true, _, Dict}, Res),
   ?assertEqual({struct, [{<<"break">>, true}]},
-               mochijson2:decode(element(2, Res))).
+               mochijson2:decode(element(2, Res))),
+  meck:unload().
 
 %% to_json_test() ->
 %%   meck:unload(),
