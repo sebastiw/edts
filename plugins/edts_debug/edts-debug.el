@@ -36,16 +36,24 @@
   "Face used for marking warning lines."
   :group 'edts)
 
-
-(defvar edts-debug-breakpoint-face-prio 800
+(defconst edts-debug-breakpoint-face-prio 800
   "Face priority for breakpoints.")
+
+(defvar edts-debug--interpret-request-buffer nil
+  "Buffer for requests to attach to the debugged process. One such
+request should always be outstanding if we are not already attached.")
 
 (defun edts-debug-init ()
   "Initialize edts-debug."
   ;; Keys
   (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
-  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted))
+  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted)
+  (add-hook 'edts-node-init-hook 'edts-debug-node-init-hook))
+
+(defun edts-debug-node-init-hook ()
+  "Hook to run after node initialization."
+  t)
 
 (defun edts-debug-buffer-init ()
   "edts-debug buffer-specific initialization."

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Debugger resource
+%%% @doc Breakpoint resource
 %%% @end
 %%% @author João Neves <sevenjp@gmail.com>
 %%% @copyright
@@ -23,32 +23,31 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_debug_module).
+-module(edts_debug_resource_breakpoint).
 
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
--export([ allowed_methods/2
-        , allow_missing_post/2
+-export([ allow_missing_post/2
+        , allowed_methods/2
         , content_types_accepted/2
         , content_types_provided/2
         , create_path/2
-        , forbidden/2
         , init/1
         , malformed_request/2
         , post_is_create/2
         , resource_exists/2]).
 
 %% Handlers
--export([ from_json/2, to_json/2]).
+-export([ from_json/2
+        , to_json/2 ]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
-
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
@@ -58,11 +57,11 @@ init(_Config) ->
   lager:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
-allowed_methods(ReqData, Ctx) ->
-  {['GET', 'POST'], ReqData, Ctx}.
-
 allow_missing_post(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
+
+allowed_methods(ReqData, Ctx) ->
+  {['GET', 'POST'], ReqData, Ctx}.
 
 content_types_accepted(ReqData, Ctx) ->
   Map = [ {"application/json", from_json} ],
@@ -71,24 +70,21 @@ content_types_accepted(ReqData, Ctx) ->
 content_types_provided(ReqData, Ctx) ->
   Map = [ {"application/json", to_json}
         , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
+        , {"text/plain",       to_json} ],
   {Map, ReqData, Ctx}.
 
 create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
 
-forbidden(ReqData, Ctx) ->
-  Node                = orddict:fetch(nodename, Ctx),
-  Module              = orddict:fetch(module, Ctx),
-  {ok, Interpretable} = edts_debug:module_interpretable_p(Node, Module),
-  {not Interpretable, ReqData, Ctx}.
-
 malformed_request(ReqData, Ctx) ->
   Validate =
     case wrq:method(ReqData) of
       'GET'  -> [nodename, module];
-      'POST' -> [nodename, module, {enum, [{name,    interpret},
-                                           {allowed, [true, false, toggle]}]}]
+      'POST' -> [nodename,
+                 module,
+                 line,
+                 {enum, [{name,    break},
+                         {allowed, [true, false, toggle]}]}]
     end,
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
@@ -96,32 +92,36 @@ post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 resource_exists(ReqData, Ctx) ->
-  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]), ReqData, Ctx}.
+  Exists   = edts_resource_lib:exists_p(ReqData, Ctx, [nodename]),
+  {Exists, ReqData, Ctx}.
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  Node               = orddict:fetch(nodename, Ctx),
-  Module             = orddict:fetch(module, Ctx),
-  Interpret          = orddict:fetch(interpret, Ctx),
-  {ok, InterpretedP} = edts_debug:interpret_module(Node, Module, Interpret),
-  Body               = mochijson2:encode([{module, Module},
-                                          {interpreted, InterpretedP}]),
-  {true, wrq:set_resp_body(Body, ReqData), Ctx}.
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  Line   = orddict:fetch(line, Ctx),
+  Break  = orddict:fetch(break, Ctx),
+  {ok, Result} = edts_debug:break(Node, Module, Line, Break),
+  {true, wrq:set_resp_body(mochijson2:encode([{break, Result}]), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node               = orddict:fetch(nodename, Ctx),
-  Module             = orddict:fetch(module, Ctx),
-  {ok, InterpretedP} = edts_debug:module_interpreted_p(Node, Module),
-  Body               = mochijson2:encode([{module, Module},
-                                          {interpreted, InterpretedP}]),
-  {Body, ReqData, Ctx}.
-
-
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  {ok, Breakpoints} = edts_debug:breakpoints(Node, Module),
+  Data = [format(B) || B <- Breakpoints],
+  {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
-
+format({{Module, Line}, [Status, Trigger, null, Condition]}) ->
+  [{module,     Module},
+   {line,      Line},
+   {status,    Status},
+   {trigger,   Trigger},
+   {condition, list_to_binary(lists:flatten(io_lib:format("~p",
+                                                          [Condition])))}].
 
 %%%_* Unit tests ===============================================================
+
 init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
 
@@ -140,45 +140,62 @@ content_types_provided_test() ->
 
 from_json_test() ->
   meck:unload(),
+  meck:new(edts_debug),
+  meck:expect(edts_debug, break, fun(true, foo, 1337, true) -> {ok, true} end),
   meck:new(wrq),
   meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
-  meck:new(edts_debug),
-  meck:expect(edts_debug,
-              interpret_module,
-              fun(_, foo, toggle) -> {ok, true} end),
-
-  Dict1 =
-    orddict:from_list([{nodename, true},
-                       {module, foo},
-                       {interpret, toggle}]),
-  Res = from_json(req_data, Dict1),
-  ?assertMatch({true, _, Dict1}, Res),
-
-  JSON = element(2, Res),
-  ?assertEqual({struct,
-                [{<<"module">>,<<"foo">>},
-                 {<<"interpreted">>,true}]},
-               mochijson2:decode(JSON)),
+  Dict = orddict:from_list([{nodename, true},
+                            {module,   foo},
+                            {line,     1337},
+                            {break, true}]),
+  Res = from_json(req_data, Dict),
+  ?assertMatch({true, _, Dict}, Res),
+  ?assertEqual({struct, [{<<"break">>, true}]},
+               mochijson2:decode(element(2, Res))),
   meck:unload().
 
-to_json_test() ->
-  meck:unload(),
-  meck:new(edts_debug),
-  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> {ok, true};
-                                                   (_, _)   -> {ok, false}
-                                                end),
-  Dict1 = orddict:from_list([{nodename, true}, {module, foo}]),
-  Res = to_json(req_data, Dict1),
-  ?assertMatch({_, req_data, Dict1}, Res),
+%% to_json_test() ->
+%%   meck:unload(),
+%%   meck:new(edts_debug),
+%%   meck:expect(edts_debug, get_breakpoints,
+%%               fun(true) -> {ok, [{{foo, 42},
+%%                                      [active,
+%%                                       enable,
+%%                                       null,
+%%                                       null]},
+%%                                     {{bar, 314},
+%%                                      [active,
+%%                                       enable,
+%%                                       null,
+%%                                       null]}]};
+%%                  (_)    -> {error, not_found}
+%%               end),
+%%   Data =  [[{"module", "foo"},
+%%             {"line", 42},
+%%             {"status", "active"},
+%%             {"trigger", "enable"},
+%%             {"condition", "null"}],
+%%            [{"module", "bar"},
+%%             {"line", 314},
+%%             {"status", "active"},
+%%             {"trigger", "enable"},
+%%             {"condition", "null"}]],
 
-  JSON = element(1, Res),
-  ?assertEqual({struct, [{<<"module">>,<<"foo">>},{<<"interpreted">>,true}]},
-               mochijson2:decode(JSON)),
-  meck:unload().
+%%   meck:new(mochijson2),
+%%   meck:expect(mochijson2, encode, fun(_) -> Data
+%%                                   end),
+%%   Dict1 =
+%%     orddict:from_list([{nodename, true}]),
+%%   ?assertMatch({Data, req_data, Dict1}, to_json(req_data, Dict1)),
 
+%%   Dict2 =
+%%     orddict:from_list([{nodename, false}]),
+%%   ?assertError({badmatch, {error, not_found}}, to_json(req_data, Dict2)),
+%%   meck:unload().
 
 %%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
+
