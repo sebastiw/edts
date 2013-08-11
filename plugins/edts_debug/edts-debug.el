@@ -296,9 +296,7 @@ default to the values associated with current buffer."
         (should (eq 1 (length (edts-debug-breakpoints))))
 
         ;; Cleanup
-        (message "foo 1")
-        (edts-test-cleanup)
-        (message "foo 2"))))))
+        (edts-test-cleanup))))))
 
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
