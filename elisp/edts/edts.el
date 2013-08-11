@@ -56,6 +56,9 @@ node."
   "The node-name of current-buffer")
 (make-variable-buffer-local 'edts-buffer-node-name)
 
+(defvar edts-after-node-init-hook nil
+  "Hooks to run after a node has been initialized.")
+
 
 (defun edts-buffer-node-name ()
   "Print the node sname of the erlang node connected to current
@@ -334,7 +337,8 @@ localhost."
                       root
                       libs
                       app-include-dirs
-                      project-include-dirs))))
+                      project-include-dirs)
+      (run-hooks 'edts-after-node-init-hook))))
 
 (defun edts-init-node-async (project-name
                              node-name
