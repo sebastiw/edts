@@ -4,6 +4,6 @@ otp-release:
 before_install:
  - sudo apt-key add ./test/ubuntu_extras_pub_key
  - sudo apt-get update -qq
- - sudo apt-get install -y -qq emacs23 erlang-mode
+ - sudo apt-get install -y -qq emacs23 erlang-mode erlang-debugger
  - ./test/install-ert.sh
 script: "make -s test"

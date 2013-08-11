@@ -135,7 +135,9 @@ breakpoints() -> int:all_breaks().
                      [{{Module :: module(), Line   :: non_neg_integer()},
                        Options  :: [term()]}].
 %%------------------------------------------------------------------------------
-breakpoints(Module) -> int:all_breaks(Module).
+breakpoints(Module) ->
+  %% int:all_breaks/1 is broken in OTP < R15.
+  [Break || Break = {{M, _},_} <- int:all_breaks(), M =:= Module].
 
 %%------------------------------------------------------------------------------
 %% @doc

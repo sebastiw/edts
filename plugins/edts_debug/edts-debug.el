@@ -71,7 +71,6 @@ of strings.")
 (defun edts-debug-sync ()
   "Synchronize debug information between EDTS and the Emacs instance."
   (interactive)
-  ;; (message " %s" edts-debug-interpreted-alist)
   (edts-debug-sync-interpreted-alist)
   (edts-debug-list-interpreted-update)
   (edts-debug-sync-breakpoint-alist)
