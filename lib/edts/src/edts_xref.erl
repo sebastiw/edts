@@ -308,7 +308,7 @@ do_query(QueryFmt, Args) ->
 
 try_add_module(Mod) ->
   case find_beam(Mod) of
-    non_existing -> {error, no_beam};
+    non_existing -> {error, {no_beam, Mod}};
     Beam         -> try_add_module(Mod, Beam)
   end.
 
@@ -332,7 +332,7 @@ try_add_module(Mod, Beam) ->
         end;
       false ->
          error_logger:error_msg("xref can't add ~p: no debug-info", [Mod]),
-        {error, no_beam}
+        {error, {no_beam, Mod}}
     end
   catch
     error:undef ->
@@ -418,7 +418,7 @@ update_paths_test() ->
 
 who_calls_test() ->
   stop(),
-  {ok, _Pid} = do_start_from_scratch(),
+  ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], who_calls(edts_test_module2, bar, 1)),
   ?assertEqual(
@@ -430,7 +430,7 @@ who_calls_test() ->
 
 check_undefined_functions_calls_test() ->
   stop(),
-  {ok, _Pid} = do_start_from_scratch(),
+  ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], check_modules([edts_test_module],
                                     [undefined_function_calls])),
@@ -441,7 +441,7 @@ check_undefined_functions_calls_test() ->
 
 check_unused_exports_test() ->
   stop(),
-  {ok, _Pid} = do_start_from_scratch(),
+  ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], check_modules([edts_test_module], [unused_exports])),
   ?assertMatch([{error, _File2, _Line1, Str1},
@@ -452,7 +452,7 @@ check_unused_exports_test() ->
 
 check_modules_test() ->
   stop(),
-  {ok, _Pid} = do_start_from_scratch(),
+  ok = start(),
   compile_and_add_test_modules(),
   Checks = [unused_exports, undefined_function_calls],
   ?assertEqual([],     check_modules([edts_test_module], Checks)),
@@ -472,13 +472,18 @@ compile_and_add_test_modules() ->
   TestDir = code:lib_dir(edts, 'test'),
   EbinDir = code:lib_dir(edts, 'ebin'),
   true    = code:add_patha(EbinDir),
-  Opts    = [debug_info, {outdir, EbinDir}],
-  File1   = filename:join(TestDir, "edts_test_module.erl"),
-  {ok, _} = c:c(File1, Opts),
-  File2   = filename:join(TestDir, "edts_test_module2.erl"),
-  {ok, _} = c:c(File2, Opts),
-  ok      = try_add_module(edts_test_module),
-  ok      = try_add_module(edts_test_module2).
+  compile_and_add_test_module(TestDir, EbinDir, edts_test_module),
+  compile_and_add_test_module(TestDir, EbinDir, edts_test_module2).
+
+compile_and_add_test_module(SrcDir, OutDir, Mod) ->
+  case lists:keymember(Mod, 1, xref:info(?SERVER, modules)) of
+    true -> ok;
+    false ->
+      Opts    = [debug_info, {outdir, OutDir}],
+      File1   = filename:join(SrcDir, atom_to_list(Mod) ++ ".erl"),
+      {ok, _} = c:c(File1, Opts),
+      ok      = try_add_module(Mod)
+  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
