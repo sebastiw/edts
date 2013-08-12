@@ -139,12 +139,12 @@ interactively to set up your man-pages instead")
 (defun edts-man-module-function-entries (module)
   "Return a list of all functions documented in the man-page of MODULE."
   (let (funs
-        (re (concat "^\\.B\n"(edts-any-function-regexp))))
+        (re (format "^\\.B\n\\(%s:\\)?%s" module (edts-any-function-regexp))))
     (with-temp-buffer
       (insert-file-contents (edts-man-locate-file edts-man-root module 3))
       (goto-char 0)
       (while (re-search-forward re nil t)
-        (push (match-string 1) funs))
+        (push (match-string 2) funs))
       (sort
        ;; each mfa is '(mod fun arity), but we don't want the module part
        (mapcar #'(lambda (mfa) (format "%s/%s"  (cadr mfa) (caddr mfa)))
@@ -164,9 +164,10 @@ interactively to set up your man-pages instead")
     ;; section of interest, then decode that section ('til
     ;; end-of-buffer) and finally we delete everything before the
     ;; section of interest.
-    (re-search-forward (format "^\\.B\n%s" function))
-    (let ((end   (point-max)))
-      (while (re-search-forward (format "^\\.B\n%s" function) nil t) nil)
+    (let ((end (point-max))
+          (re  (format "^\\.B\n\\(%s:\\)?%s" module function)))
+      (re-search-forward re)
+      (while (re-search-forward re nil t) nil)
       (when
           (re-search-forward "^\\.\\(\\(B\n\\)\\|\\(SH[[:space:]]\\)\\)" nil 't)
         (setq end (match-beginning 0)))
@@ -184,7 +185,7 @@ interactively to set up your man-pages instead")
 `edts-man-root'."
   (edts-man-find-module module)
   (let (foundp
-        (re (format "^[[:space:]]*\\(%s\\)(.*)\\s-->" function)))
+        (re (format "^\\s-*\\(\\(%s:\\)?%s\\)(.*)\\s-->" module function)))
     (while (and (not foundp) (re-search-forward re))
       (save-excursion
         (goto-char (match-beginning 1))
