@@ -246,6 +246,7 @@ string_to_mfa(String0) ->
   String = prepare_string(String0),
   case parse_expressions(String) of
     {error, _} = Err -> Err;
+    [_, _|_]         -> {error, more_than_one_expr};
     [Expr]           ->
       case form_to_mfa(Expr) of
         {F, A}    -> {ok, [{function, F}, {arity, A}]};
