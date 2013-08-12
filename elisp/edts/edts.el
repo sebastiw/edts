@@ -625,7 +625,10 @@ non-nil, don't report an error if the request fails."
 (defun edts-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex
-      (eproject-attribute :node-sname)
+      (let ((name 
+             (eproject-attribute :node-sname)))
+        (or name
+            (edts-shell-node-name (get-buffer "*edts*"))))
     ('error (edts-shell-node-name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
