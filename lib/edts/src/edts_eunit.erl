@@ -152,7 +152,10 @@ format_error({error, {Reason, Info} = Err, _Stack}) ->
                     [Reason, to_str(Expected), to_str(Value)]);
     {error, not_found} ->
       io_lib:format("~p", [Err])
-  end.
+  end;
+format_error({exit,Err,Stack}) ->
+  io_lib:format("~p", [Err]).
+
 
 get_line(Result) ->
   case proplists:get_value(line, Result) of
