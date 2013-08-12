@@ -184,7 +184,7 @@ interactively to set up your man-pages instead")
 `edts-man-root'."
   (edts-man-find-module module)
   (let (foundp
-        (re (format "^[[:space:]]*\\(%s\\)" function)))
+        (re (format "^[[:space:]]*\\(%s\\)(.*)\\s-->" function)))
     (while (and (not foundp) (re-search-forward re))
       (save-excursion
         (goto-char (match-beginning 1))
