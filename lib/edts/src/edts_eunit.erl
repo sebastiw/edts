@@ -153,7 +153,9 @@ format_error({error, {Reason, Info} = Err, _Stack}) ->
     {error, not_found} ->
       io_lib:format("~p", [Err])
   end;
-format_error({exit,Err,Stack}) ->
+format_error({exit,Err,_Stack}) ->
+  io_lib:format("~p", [Err]);
+format_error(Err) ->
   io_lib:format("~p", [Err]).
 
 
