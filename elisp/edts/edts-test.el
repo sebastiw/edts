@@ -52,3 +52,46 @@
      (edts-project-write-config cfg-file config)
      (prog1 (progn ,@body)
        (delete-file cfg-file))))
+
+
+(defmacro edts-deftest (suite name args desc &rest body)
+  "Define a testcase in SUITE. All other arguments are the same is in
+`ert-deftest'."
+  (declare (indent 3))
+  `(macroexpand (ert-deftest ,name ,args ,desc :tags '(,suite) ,@body)))
+
+
+(defvar edts-test-suite-alist nil
+  "edts-tests")
+
+(defmacro edts-test-add-suite (suite setup teardown)
+  (assert (symbolp suite))
+  `(add-to-list 'edts-test-suite-alist '(,suite ,setup ,teardown)))
+
+
+(defun edts-test-run-suite-interactively (suite-name)
+  (edts-test-run-suite 'ert-run-tests-interactively suite-name))
+
+(defun edts-test-run-suite-batch (suite-name)
+  (edts-test-run-suite 'ert-run-tests-batch suite-name))
+
+(defun edts-test-run-suites-batch-and-exit ()
+  (unwind-protect
+      (let ((exit-status 0))
+        (dolist (suite edts-test-suite-alist)
+          (let* ((suite-name (car suite))
+                 (stats (edts-test-run-suite-batch suite-name)))
+            (unless (zerop (ert-stats-completed-unexpected stats))
+              (setq exit-status 1))))
+        (kill-emacs exit-status))
+    (progn
+      (message "Error running tests")
+      (backtrace))))
+
+(defun edts-test-run-suite (ert-fun suite-name)
+  (let ((suite (cdr (assoc suite-name edts-test-suite-alist))))
+    (when suite
+      (let ((setup-res (funcall (car suite)))
+            (test-res  (funcall ert-fun (list 'tag suite-name))))
+        (funcall (cadr suite) setup-res)
+        test-res))))
