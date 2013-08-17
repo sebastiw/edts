@@ -336,7 +336,7 @@ plugins() ->
     undefined -> [];
     {ok, Dir} ->
       {ok, PluginDirs} = file:list_dir(Dir),
-      [list_to_atom(PluginDir) || PluginDir <- PluginDirs]
+      [list_to_atom(PluginDir) || PluginDir <- PluginDirs, PluginDir =/= ".gitignore"]
   end.
 
 init_node_env(Node, AppEnv) ->
