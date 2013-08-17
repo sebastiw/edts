@@ -213,19 +213,6 @@ non_neg_integer_validate(ReqData, Key) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate debugger command
-%% @end
--spec cmd_validate(wrq:req_data(), orddict:orddict()) ->
-                      {ok, atom()} | error.
-%%------------------------------------------------------------------------------
-cmd_validate(ReqData, _Ctx) ->
-  case wrq:get_qs_value("cmd", ReqData) of
-    undefined         -> error;
-    L when is_list(L) -> {ok, list_to_atom(L)}
-  end.
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Validate and convert a list of directory names.
 %% @end
 -spec dirs_validate(wrq:req_data(), string()) -> {ok, file:filename()}.
