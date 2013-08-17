@@ -153,17 +153,19 @@ of (function-name . starting-point)."
   (when (eq (char-after) ?:)
     (forward-sexp)))
 
-(defun ferl-is-point-in-export-list ()
+(defun ferl-is-point-in-export-list-p ()
   "Return t if point is inside an export definition list else nil"
   (save-excursion
     (let ((res nil) (oldpoint (point)))
     (goto-char (point-min))
       (unwind-protect
 	  (progn
-	    (while (re-search-forward "^-export\\s *(\\s *\\[" oldpoint t)
-	      (setq res t)
-	      (while (and (re-search-forward "\\]" oldpoint t) (not (erlang-in-literal))) 
-	        (setq res nil)))
-	    res)))))
+	    (while (and (not res) (re-search-forward "^-export\\s-*(" oldpoint t) )
+	      (erlang-skip-blank)
+              (if (eq (following-char) ?\[)
+                (progn
+                  (forward-sexp)
+                  (setq res (> (point) oldpoint))) ))
+            res)))))
 
 (provide 'ferl)
