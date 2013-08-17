@@ -36,37 +36,6 @@
   (setq eproject-attributes-alist nil)
   (edts-log-debug "Test cleanup done"))
 
-;; (defmacro edts-test-save-buffer-list (&rest body)
-;;   "Save buffer-list; execute body; restore buffer-list."
-;;   `(let ((pre-body-bufs (buffer-list)))
-;;      (prog1 (progn ,@body)
-       ;; (dolist (buf (buffer-list))
-       ;;   (unless (member buf pre-body-bufs)
-       ;;     (edts-log-debug "Cleaning up leftover buffer: %s" buf)
-       ;;     (kill-buffer buf))))))
-
-(defvar edts-test-pre-suite-buffer-list nil
-  "List of pre-test-suite buffers.")
-
-(defun edts-test-save-buffer-list ()
-  "Save the list of pre-test-suite buffers."
-  (setq edts-test-pre-suite-buffer-list (buffer-list)))
-
-(defun edts-test-reset-buffer-list ()
-  "Kill all buffers that did not exist the last time the buffer list was
-saved."
-  (dolist (buf (buffer-list))
-    (unless (member buf edts-test-pre-suite-buffer-list)
-      (edts-log-debug "Cleaning up leftover buffer: %s" buf)
-      (kill-buffer buf))))
-
-(defmacro edts-test-with-config (project-path config &rest body)
-  "Run BODY with the project in PROJECT-PATH using CONFIG."
-  `(let ((cfg-file (path-util-join ,project-path ".edts"))
-         (config   ,config))
-     (edts-project-write-config cfg-file config)
-     (prog1 (progn ,@body)
-       (delete-file cfg-file))))
 
 (defun edts-test-setup-project (root name config)
   "Create project with NAME and CONFIG in ROOT."
