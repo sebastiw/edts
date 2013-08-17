@@ -36,14 +36,29 @@
   (setq eproject-attributes-alist nil)
   (edts-log-debug "Test cleanup done"))
 
-(defmacro edts-test-save-buffer-list (&rest body)
-  "Save buffer-list; execute body; restore buffer-list."
-  `(let ((pre-body-bufs (buffer-list)))
-     (prog1 (progn ,@body)
-       (dolist (buf (buffer-list))
-         (unless (member buf pre-body-bufs)
-           (edts-log-debug "Cleaning up leftover buffer: %s" buf)
-           (kill-buffer buf))))))
+;; (defmacro edts-test-save-buffer-list (&rest body)
+;;   "Save buffer-list; execute body; restore buffer-list."
+;;   `(let ((pre-body-bufs (buffer-list)))
+;;      (prog1 (progn ,@body)
+       ;; (dolist (buf (buffer-list))
+       ;;   (unless (member buf pre-body-bufs)
+       ;;     (edts-log-debug "Cleaning up leftover buffer: %s" buf)
+       ;;     (kill-buffer buf))))))
+
+(defvar edts-test-pre-suite-buffer-list nil
+  "List of pre-test-suite buffers.")
+
+(defun edts-test-save-buffer-list ()
+  "Save the list of pre-test-suite buffers."
+  (setq edts-test-pre-suite-buffer-list (buffer-list)))
+
+(defun edts-test-reset-buffer-list ()
+  "Kill all buffers that did not exist the last time the buffer list was
+saved."
+  (dolist (buf (buffer-list))
+    (unless (member buf edts-test-pre-suite-buffer-list)
+      (edts-log-debug "Cleaning up leftover buffer: %s" buf)
+      (kill-buffer buf))))
 
 (defmacro edts-test-with-config (project-path config &rest body)
   "Run BODY with the project in PROJECT-PATH using CONFIG."
@@ -53,8 +68,21 @@
      (prog1 (progn ,@body)
        (delete-file cfg-file))))
 
+(defun edts-test-setup-project (root name config)
+  "Create project with NAME and CONFIG in ROOT."
+  (edts-project-write-config (path-util-join root ".edts")
+                             (append (list :name name) config)))
 
-(defmacro edts-deftest (suite name args desc &rest body)
+(defun edts-test-teardown-project (root)
+  "Kill all buffers of the project in ROOT and remove its config."
+  (with-each-buffer-in-project (buf root)
+      (kill-buffer buf))
+  (delete-file (path-util-join root ".edts"))
+  (setf eproject-attributes-alist
+          (delete-if (lambda (x) (equal (car x) root))
+                     eproject-attributes-alist)))
+
+(defmacro edts-test-case (suite name args desc &rest body)
   "Define a testcase in SUITE. All other arguments are the same is in
 `ert-deftest'."
   (declare (indent 3))
@@ -64,10 +92,19 @@
 (defvar edts-test-suite-alist nil
   "edts-tests")
 
-(defmacro edts-test-add-suite (suite setup teardown)
-  (assert (symbolp suite))
-  `(add-to-list 'edts-test-suite-alist '(,suite ,setup ,teardown)))
+(defmacro edts-test-add-suite (suite-name &optional setup teardown)
+  (assert (symbolp suite-name))
+  ;; (assert (or (functionp setup) (null setup)))
+  ;; (assert (or (functionp teardown) (null teardown)))
+  (let ((alistvar (make-symbol "alist")))
 
+    `(let ((,alistvar (remove-if #'(lambda (suite)
+                                     (eq (car suite) ',suite-name))
+                                 edts-test-suite-alist)))
+       (setq edts-test-suite-alist
+             (cons '(,suite-name ,(eval setup)
+                                 ,(eval teardown))
+                   ,alistvar)))))
 
 (defun edts-test-run-suite-interactively (suite-name)
   (edts-test-run-suite 'ert-run-tests-interactively suite-name))
@@ -86,12 +123,16 @@
         (kill-emacs exit-status))
     (progn
       (message "Error running tests")
-      (backtrace))))
+      (backtrace)
+      (kill-emacs 2))))
 
 (defun edts-test-run-suite (ert-fun suite-name)
-  (let ((suite (cdr (assoc suite-name edts-test-suite-alist))))
+  (let* ((suite (cdr (assoc suite-name edts-test-suite-alist))))
     (when suite
-      (let ((setup-res (funcall (car suite)))
+      (let ((setup-res (when (car suite) (funcall (car suite))))
             (test-res  (funcall ert-fun (list 'tag suite-name))))
-        (funcall (cadr suite) setup-res)
+        (when (cadr suite)
+          (funcall (cadr suite) setup-res))
         test-res))))
+
+(provide 'edts-test)

@@ -442,21 +442,27 @@ auto-save data."
 ;; Tests
 
 (when (member 'ert features)
-  (ert-deftest edts-project-basic-test ()
-    ;; Setup
-    (edts-test-save-buffer-list
-     (edts-test-with-config
-      edts-test-project1-directory
-      '(:name "test")
-      (let ((eproject-prefer-subproject t)
-            (file (car (edts-test-project1-modules))))
-        (find-file file)
 
-        ;; Test
+  (require 'edts-test)
+  (edts-test-add-suite
+   ;; Name
+   edts-project-suite
+   ;; Setup
+   (lambda ()
+     (edts-test-setup-project edts-test-project1-directory
+                              "test"
+                              nil))
+   ;; Teardown
+   (lambda (setup-config)
+     (edts-test-teardown-project edts-test-project1-directory)))
+
+
+  (edts-test-case edts-project-suite edts-project-basic-test ()
+    "Basic project setup test"
+    (let ((eproject-prefer-subproject t))
+        (find-file (car (edts-test-project1-modules)))
+
         (should (string= "test" (eproject-name)))
         (should (string= "test" (eproject-name)))
         (should (get-buffer"*edts*"))
-        (should (get-buffer"*test*"))
-
-        ;; Cleanup
-        (edts-test-cleanup))))))
+        (should (get-buffer"*test*")))))

@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 PLUGINS = $(subst plugins/,,$(wildcard plugins/*))
 export ERL_LIBS:=`pwd`"/lib"
-EMACS? = "emacs"
+EMACS?= "emacs"
 
 .PHONY: all
 all: submodule-update libs $(PLUGINS)
@@ -38,7 +38,7 @@ ert:
 	$(EMACS) -q --no-splash --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \
-	-f ert-run-tests-batch-and-exit
+	-f edts-test-run-suites-batch-and-exit
 
 .PHONY: test
 test: all ert test-edts $(PLUGINS:%=test-%)

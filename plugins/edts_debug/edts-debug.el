@@ -49,9 +49,9 @@ request should always be outstanding if we are not already attached.")
   (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted)
-  (add-hook 'edts-node-init-hook 'edts-debug-node-init-hook))
+  (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook))
 
-(defun edts-debug-node-init-hook ()
+(defun edts-debug-after-node-init-hook ()
   "Hook to run after node initialization."
   t)
 
@@ -285,15 +285,25 @@ default to the values associated with current buffer."
 
 
 (when (member 'ert features)
-  (ert-deftest edts-debug-basic-test ()
+
+  (require 'edts-test)
+  (edts-test-add-suite
+   ;; Name
+   edts-debug-suite
+   ;; Setup
+   (lambda ()
+     (edts-test-setup-project edts-test-project1-directory
+                              "test"
+                              nil))
+   ;; Teardown
+   (lambda (setup-config)
+     (edts-test-teardown-project edts-test-project1-directory)))
+
+  (edts-test-case edts-debug-suite edts-debug-basic-test ()
+    "Basic debugger setup test"
     ;; Setup
-    (edts-test-save-buffer-list
-     (edts-test-with-config
-      edts-test-project1-directory
-      '(:name "test")
-      (let ((eproject-prefer-subproject t)
-            (file (car (edts-test-project1-modules))))
-        (find-file file)
+      (let ((eproject-prefer-subproject t))
+        (find-file (car (edts-test-project1-modules)))
 
         ;; Test
         (should-not (edts-debug-interpretedp))
@@ -301,10 +311,7 @@ default to the values associated with current buffer."
         (should (edts-debug-interpretedp))
         (should-not (edts-debug-breakpoints))
         (edts-debug-break nil nil nil t)
-        (should (eq 1 (length (edts-debug-breakpoints))))
-
-        ;; Cleanup
-        (edts-test-cleanup))))))
+        (should (eq 1 (length (edts-debug-breakpoints)))))))
 
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
