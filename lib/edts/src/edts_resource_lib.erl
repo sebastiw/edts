@@ -129,7 +129,6 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 term_to_validate(app_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
 term_to_validate(arity)                -> fun arity_validate/2;
-term_to_validate(cmd)                  -> fun cmd_validate/2;
 term_to_validate({enum, Props})            ->
   fun(RD, _Ctx) -> enum_validate(RD, Props) end;
 term_to_validate(exported)             ->
@@ -449,15 +448,6 @@ arity_validate_test() ->
   ?assertEqual(error, arity_validate(foo, bar)),
   meck:expect(wrq, path_info, fun(arity, _) -> "a" end),
   ?assertEqual({error, {badarg, "a"}}, arity_validate(foo, bar)),
-  meck:unload().
-
-cmd_validate_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("cmd", _) -> undefined end),
-  ?assertEqual(error, cmd_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("cmd", _) -> "foo" end),
-  ?assertEqual({ok, foo}, cmd_validate(foo, bar)),
   meck:unload().
 
 file_validate_test() ->
