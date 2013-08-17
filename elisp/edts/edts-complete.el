@@ -96,8 +96,9 @@ character before that."
         char)))
 
 (defadvice ac-expand-string (before edts-complete-trim-arity)
-  "Removes any /x at the end of completion string"
-  (ad-set-arg 0 (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0))))
+  "Removes any /x at the end of completion string unless point is in an export list"
+  (when      (ferl-is-point-in-export-list)  ())
+  (when (not (ferl-is-point-in-export-list)) (ad-set-arg 0 (replace-regexp-in-string "/[0-9]+$" "" (ad-get-arg 0)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup
