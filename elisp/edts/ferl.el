@@ -158,13 +158,12 @@ of (function-name . starting-point)."
   (save-excursion
     (let ((res nil) (oldpoint (point)))
     (goto-char (point-min))
-    (progn
-      (while (and (not res) (re-search-forward "^-export\\s-*(" oldpoint t) )
-        (erlang-skip-blank)
-        (if (eq (following-char) ?\[)
-            (progn
-              (forward-sexp)
-              (setq res (> (point) oldpoint))) ))
-      res))))
+    (while (and (not res) (re-search-forward "^-export\\s-*(" oldpoint t) )
+      (erlang-skip-blank)
+      (if (eq (following-char) ?\[)
+          (progn
+            (forward-sexp)
+            (setq res (> (point) oldpoint))) ))
+    res)))
 
 (provide 'ferl)
