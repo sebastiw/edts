@@ -158,9 +158,10 @@ of (function-name . starting-point)."
   (save-excursion
     (let ((oldpoint (point)))
       (if (re-search-backward "^-export\\s-*(\\s-*\\[" nil t)
-          (progn 
-            (goto-char (1- (match-end 0)))
-            (forward-sexp)
-            (> (point) oldpoint))))))
+          (condition-case ex
+              (progn
+                (forward-sexp)
+                (> (point) oldpoint))
+            (error t))))))
 
 (provide 'ferl)
