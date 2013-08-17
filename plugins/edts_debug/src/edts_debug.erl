@@ -44,7 +44,8 @@
          interpret_module/3,
          interpreted_modules/1,
          module_interpretable_p/2,
-         module_interpreted_p/2]).
+         module_interpreted_p/2,
+         wait_for_break/1]).
 
 %%%_* Includes =================================================================
 
@@ -94,6 +95,9 @@ interpreted_modules(Node) ->
   ensure_started(Node),
   edts:call(Node, edts_debug_server, interpreted_modules).
 
+wait_for_break(Node) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, wait_for_break).
 
 %%%_* Internal functions =======================================================
 

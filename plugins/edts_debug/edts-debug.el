@@ -301,17 +301,15 @@ default to the values associated with current buffer."
 
   (edts-test-case edts-debug-suite edts-debug-basic-test ()
     "Basic debugger setup test"
-    ;; Setup
-      (let ((eproject-prefer-subproject t))
-        (find-file (car (edts-test-project1-modules)))
+    (let ((eproject-prefer-subproject t))
+      (find-file (car (edts-test-project1-modules)))
 
-        ;; Test
-        (should-not (edts-debug-interpretedp))
-        (edts-debug-interpret nil nil 't)
-        (should (edts-debug-interpretedp))
-        (should-not (edts-debug-breakpoints))
-        (edts-debug-break nil nil nil t)
-        (should (eq 1 (length (edts-debug-breakpoints)))))))
+      (should-not (edts-debug-interpretedp))
+      (edts-debug-interpret nil nil 't)
+      (should (edts-debug-interpretedp))
+      (should-not (edts-debug-breakpoints))
+      (edts-debug-break nil nil nil t)
+      (should (eq 1 (length (edts-debug-breakpoints)))))))
 
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)

@@ -48,7 +48,7 @@
          step/0,
          step_out/0,
          stop_debug/0,
-         wait_for_debugger/0]).
+         wait_for_break/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -220,10 +220,10 @@ break(Module, Line, false) ->
 %% Waits for debugging to be triggered by a breakpoint and returns
 %% relevant module and line information.
 %% @end
--spec wait_for_debugger() -> {ok, {module(), non_neg_integer()}}.
+-spec wait_for_break() -> {ok, {module(), non_neg_integer()}}.
 %%------------------------------------------------------------------------------
-wait_for_debugger() ->
-  gen_server:call(?SERVER, wait_for_debugger, infinity).
+wait_for_break() ->
+  gen_server:call(?SERVER, wait_for_break, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -313,7 +313,7 @@ handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
 handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
   {reply, {error, {already_attached, Dbg, Pid}}, State};
 
-handle_call(wait_for_debugger, From, State) ->
+handle_call(wait_for_break, From, State) ->
   Listeners = State#dbg_state.listeners,
   {noreply, State#dbg_state{listeners = [From|Listeners]}};
 
