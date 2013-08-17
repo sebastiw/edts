@@ -33,7 +33,7 @@ $(PLUGINS:%=clean-%):
 	$(MAKE) -C plugins/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: ert
-ert:
+ert: all
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -q --no-splash --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
