@@ -508,5 +508,4 @@ are not considered for erl-files."
     (find-file (car (edts-test-project1-modules)))
     (message "current-buffer %s %s" (current-buffer) (eproject-root))
     (should (string= (path-util-normalize edts-test-project1-directory)
-                     (path-util-normalize (eproject-root)))))
-)
+                     (path-util-normalize (eproject-root))))))

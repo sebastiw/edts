@@ -288,17 +288,13 @@ localhost."
 
 (defun edts-node-started-p (name)
   "Syncronously query epmd to see whether it has a node with NAME registered."
-  (condition-case ex
-      (with-temp-buffer
-        (let ((socket (open-network-stream "epmd" (current-buffer) "0" 4369))
-              (process (get-buffer-process (current-buffer))))
-          (set-process-query-on-exit-flag process nil)
-          (process-send-string socket (edts-build-epmd-message "n"))
-          (accept-process-output socket 0.5))
-        (member name (edts-nodenames-from-string (buffer-string))))
-    ('file-error nil)))
+  (with-temp-buffer
+    (let* ((otp-bin-dir (file-truename (path-util-pop edts-erl-command)))
+           (epmd        (path-util-join otp-bin-dir "epmd")))
+    (call-process epmd nil (current-buffer) nil "-names")
+    (member name (edts-epmd-nodenames-from-string (buffer-string))))))
 
-(defun edts-nodenames-from-string (string)
+(defun edts-epmd-nodenames-from-string (string)
   "Convert the epmd reply STRING into a list of nodenames."
   (setq string (split-string (substring string 4)))
   (let ((names  nil))
@@ -307,13 +303,6 @@ localhost."
         (setq names (cons (cadr string) names)))
       (setq string (cdr string)))
     names))
-
-(defun edts-build-epmd-message (msg)
-  "Build a message for the epmd from MSG. Logic taken from distel's epmd.el."
-  (let* ((len (length msg))
-         (len-msb (ash len -8))
-         (len-lsb (logand len 255)))
-    (concat (string len-msb len-lsb) msg)))
 
 (defun edts-init-node-when-ready (project-name
                                   node-name
