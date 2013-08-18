@@ -51,6 +51,14 @@
           (delete-if (lambda (x) (equal (car x) root))
                      eproject-attributes-alist)))
 
+(defun edts-test-cleanup-all-buffers ()
+  (interactive)
+  (edts-shell-kill-all)
+  (dolist (buf (buffer-list))
+    (when (and (buffer-live-p buf) (buffer-local-value 'edts-mode buf))
+      (kill-buffer buf)
+      (edts-log-info "Killed %s" buf))))
+
 (defmacro edts-test-case (suite name args desc &rest body)
   "Define a testcase in SUITE. All other arguments are the same is in
 `ert-deftest'."
@@ -75,8 +83,20 @@
                                  ,(eval teardown))
                    ,alistvar)))))
 
+(defvar edts-test--suite-hist nil
+  "List of recent test suites run interactively.")
+
 (defun edts-test-run-suite-interactively (suite-name)
+  (interactive
+   (list
+    (let* ((default (car edts-test--suite-hist))
+           (prompt (if default
+                       (format "Run suite (default %s): " default)
+                     "Run suite: ")))
+      (read-from-minibuffer prompt nil nil t 'edts-test--suite-hist default))))
   (edts-test-run-suite 'ert-run-tests-interactively suite-name))
+
+(defalias 'edts-test 'edts-test-run-suite-interactively)
 
 (defun edts-test-run-suite-batch (suite-name)
   (edts-test-run-suite 'ert-run-tests-batch suite-name))
