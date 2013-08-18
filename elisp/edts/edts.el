@@ -338,7 +338,8 @@ localhost."
                       libs
                       app-include-dirs
                       project-include-dirs)
-      (run-hooks 'edts-after-node-init-hook))))
+      (run-hooks 'edts-after-node-init-hook)
+      t)))
 
 (defun edts-init-node-async (project-name
                              node-name

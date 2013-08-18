@@ -95,12 +95,19 @@ Example:
                      "^\\.gitmodules$")
   :lib-dirs ("lib"))
 
-(defun edts-project-selector (file)
+(defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
-  (edts-project-maybe-create file)
-  (let ((res (look-for ".edts")))
-    (edts-log-debug "edts-project-selector result %s" res)
-    res))
+  (edts-project-maybe-create file-name)
+  (let (prev-root
+        (cur-root (path-util-pop file-name))
+        bestroot)
+    (while (and cur-root (not (string= prev-root cur-root)))
+      (setq prev-root cur-root)
+      (setq cur-root (path-util-pop cur-root))
+      (when (file-exists-p (path-util-join cur-root ".edts"))
+        (setq bestroot cur-root)))
+    (edts-log-debug "edts-project-selector result: %s" bestroot)
+    bestroot))
 
 (define-project-type edts-otp (edts)
   (edts-project-otp-selector file)
@@ -110,7 +117,9 @@ Example:
 (defun edts-project-otp-selector (file)
   "Try to figure out if FILE should be part of an otp-project."
   (when (not (edts-project-selector file))
-    (edts-project-otp-selector-path file)))
+    (let ((res (edts-project-otp-selector-path file)))
+      (edts-log-debug "edts-project-otp selector result: %s" res)
+      res)))
 
 (defun edts-project-otp-selector-path (file)
     (let ((path (look-for "bin/erl")))
@@ -134,13 +143,13 @@ Example:
 (defun edts-project-temp-selector (file)
   "Try to figure out if FILE should be part of a temp-project."
   (let ((res (when (and
-                    ;; otp-selector also checks that the normal project
-                    ;; selector returns nil
+                    ;; otp-selector also checks that the normal project selector
+                    ;; returns nil
                     (not (edts-project-selector file))
                     (not (edts-project-otp-selector file))
                     (string-match "\\.[eh]rl$" file))
-                 (edts-project--temp-root file))))
-    (edts-log-debug "edts-project-temp-selector result %s" res)
+               (edts-project--temp-root file))))
+    (edts-log-debug "edts-project-otp-selector result: %s" res)
     res))
 
 
@@ -191,7 +200,7 @@ Example:
       ;; Register it with the EDTS node
       (edts-project--register-project-node)
       (sleep-for 1))
-    (edts-project--kill-output-buffer)))
+      (edts-project--kill-output-buffer)))
 
 (defun edts-project-node-refresh ()
   "Asynchronously refresh the state of current buffer's project node"
@@ -456,6 +465,7 @@ auto-save data."
    edts-project-suite
    ;; Setup
    (lambda ()
+     (edts-test-cleanup-all-buffers)
      (edts-test-setup-project edts-test-project1-directory
                               "test"
                               nil))
@@ -467,9 +477,39 @@ auto-save data."
   (edts-test-case edts-project-suite edts-project-basic-test ()
     "Basic project setup test"
     (let ((eproject-prefer-subproject t))
-        (find-file (car (edts-test-project1-modules)))
+      (find-file (car (edts-test-project1-modules)))
+      (should (file-exists-p
+               (path-util-join edts-test-project1-directory ".edts")))
+      (should (string= "test" (eproject-name)))
+      (should (get-buffer"*edts*"))
+      (should (get-buffer"*test*"))))
 
-        (should (string= "test" (eproject-name)))
-        (should (string= "test" (eproject-name)))
-        (should (get-buffer"*edts*"))
-        (should (get-buffer"*test*")))))
+  (edts-test-case edts-project-suite edts-project-selector-test ()
+    "Test that the in the case of multiple levels of projects, the super
+project is selected as the root, and other project types such as git-generic
+are not considered for erl-files."
+    ;; Setup
+
+    ;; Assume that .git exists in edts directory (Yes, this is generally a
+    ;; stupid idea, but I'm feeling lazy right now).
+    (should (file-exists-p
+             (path-util-join (path-util-pop edts-test-project1-directory 2)
+                             ".git")))
+    (edts-test-setup-project (path-util-join edts-test-project1-directory
+                                             "lib"
+                                             "one")
+                             "test-dep"
+                             nil)
+
+    ;; There! Now we have a subproject called test-dep in
+    ;; `edts-test-project1-directory'/lib/one, a super project in
+    ;; `edts-test-project1-directory' and a git-project in
+    ;; `edts-test-project1-directory'/../..
+    ;; This test ensures that for
+    ;; `edts-test-project1-directory'/lib/one/src/one.erl, we choose
+    ;; `edts-test-project1-directory' as the project root.
+    (find-file (car (edts-test-project1-modules)))
+    (message "current-buffer %s %s" (current-buffer) (eproject-root))
+    (should (string= (path-util-normalize edts-test-project1-directory)
+                     (path-util-normalize (eproject-root)))))
+)

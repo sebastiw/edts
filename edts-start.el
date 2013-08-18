@@ -132,6 +132,17 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
   "Hooks to run at the end of edts-mode initialization in a buffer.")
 
 (defun edts-setup ()
+  (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
+
+  ;; HACKWARNING!!
+  ;; To avoid weird eproject types like generic-git interfering with us
+  ;; make sure we only consider edts project types.
+  (make-local-variable 'eproject-project-types)
+  (delete-if-not
+   #'(lambda (project-typedef)
+       (member (car project-typedef) '(generic edts edts-otp edts-temp)))
+        eproject-project-types)
+
   ;; Start with our own stuff
   (edts-face-remove-overlays)
   (edts-ensure-server-started)

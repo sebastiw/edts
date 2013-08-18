@@ -1,9 +1,14 @@
 language: erlang
 otp-release:
+ - R16B
+ - R15B03
  - R14B04
 before_install:
  - sudo apt-key add ./test/ubuntu_extras_pub_key
+ - sudo add-apt-repository -y ppa:cassou/emacs
  - sudo apt-get update -qq
- - sudo apt-get install -y -qq emacs23 erlang-mode erlang-debugger
+ - sudo apt-get install -y -qq emacs23 emacs24 erlang-mode erlang-debugger
  - ./test/install-ert.sh
-script: "make -s test"
+script:
+ - "EMACS=emacs24 make -s test"
+ - "EMACS=emacs23 make -s ert"

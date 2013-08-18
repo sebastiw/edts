@@ -336,7 +336,9 @@ plugins() ->
     undefined -> [];
     {ok, Dir} ->
       {ok, PluginDirs} = file:list_dir(Dir),
-      [list_to_atom(PluginDir) || PluginDir <- PluginDirs]
+      [list_to_atom(PluginDir) || PluginDir <- PluginDirs,
+                                  filelib:is_dir(
+                                    filename:absname_join(Dir, PluginDir))]
   end.
 
 init_node_env(Node, AppEnv) ->
