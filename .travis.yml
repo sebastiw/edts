@@ -9,6 +9,8 @@ before_install:
  - sudo apt-get update -qq
  - sudo apt-get install -y -qq emacs23 emacs24 erlang-mode erlang-debugger
  - ./test/install-ert.sh
+ env:
+ - EMACS=emacs23
+ - EMACS=emacs24
 script:
- - "EMACS=emacs24 make -s test"
- - "EMACS=emacs23 make -s ert"
+ - "make -s test"
