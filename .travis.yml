@@ -1,5 +1,7 @@
 language: erlang
 otp-release:
+ - R16B
+ - R15B03
  - R14B04
 before_install:
  - sudo apt-key add ./test/ubuntu_extras_pub_key
