@@ -6,7 +6,6 @@
 
 ;; Prerequisites
 (require 'cl)
-(require 'erlang)
 (require 'woman)
 (require 'ert nil 'noerror)
 
@@ -38,6 +37,17 @@
   (path-util-join edts-root-directory "test")
   "Directory where edts test data are located.")
 
+(unless (require 'erlang nil 'noerror)
+  (add-to-list 'load-path
+               (car
+                (file-expand-wildcards
+                 (path-util-join
+                  (path-util-pop (file-truename (executable-find "erl")) 2)
+                           "lib"
+                           "tools*"
+                           "emacs"))))
+  (require 'erlang))
+
 ;; Add all libs to load-path
 (loop for  (name dirp . rest)
       in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
@@ -46,6 +56,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requires
+
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
