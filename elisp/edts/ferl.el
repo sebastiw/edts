@@ -153,4 +153,15 @@ of (function-name . starting-point)."
   (when (eq (char-after) ?:)
     (forward-sexp)))
 
+(defun ferl-is-point-in-export-list-p ()
+  "Return t if point is inside an export definition list else nil"
+  (save-excursion
+    (let ((oldpoint (point)))
+      (if (re-search-backward "^-export\\s-*(\\s-*\\[" nil t)
+          (condition-case ex
+              (progn
+                (forward-sexp)
+                (> (point) oldpoint))
+            (error t))))))
+
 (provide 'ferl)
