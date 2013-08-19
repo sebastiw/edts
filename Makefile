@@ -32,16 +32,24 @@ clean: $(PLUGINS:%=clean-%)
 $(PLUGINS:%=clean-%):
 	$(MAKE) -C plugins/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
-.PHONY: ert
-ert:
+.PHONY: integration
+integration:
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
-	$(EMACS) -q --no-splash --batch \
+	$(EMACS) -Q --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \
 	-f edts-test-run-suites-batch-and-exit
 
+.PHONY: ert
+ert:
+	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
+	$(EMACS) -Q --batch \
+	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
+	-l edts-start.el \
+	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-suite-test)))"
+
 .PHONY: test
-test: all ert test-edts $(PLUGINS:%=test-%)
+test: all test-edts ert integration $(PLUGINS:%=test-%)
 
 :PHONY: test-edts
 test-edts:

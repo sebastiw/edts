@@ -63,7 +63,8 @@
   "Define a testcase in SUITE. All other arguments are the same is in
 `ert-deftest'."
   (declare (indent 3))
-  `(macroexpand (ert-deftest ,name ,args ,desc :tags '(,suite) ,@body)))
+  `(macroexpand
+    (ert-deftest ,name ,args ,desc :tags '(,suite edts-suite-test) ,@body)))
 
 
 (defvar edts-test-suite-alist nil
