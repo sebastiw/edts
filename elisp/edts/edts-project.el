@@ -88,7 +88,7 @@ Example:
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
-                   "\\.erl$"
+\                   "\\.erl$"
                    "\\.es$"
                    "\\.escript$"
                    "\\.eterm$"
@@ -113,9 +113,22 @@ Example:
     (edts-log-debug "edts-project-selector result: %s" bestroot)
     bestroot))
 
-(define-project-type edts-otp (edts)
+(define-project-type edts-otp (generic)
   (edts-project-otp-selector file)
   :config-file nil
+  :relevant-files ("^\\.erlang$"
+                   "\\.app$"
+                   "\\.app.src$"
+                   "\\.config$"
+                   "\\.erl$"
+                   "\\.es$"
+                   "\\.escript$"
+                   "\\.eterm$"
+                   "\\.script$"
+                   "\\.yaws$")
+  :irrelevant-files ("^\\.edts$"
+                     "^\\.gitignore$"
+                     "^\\.gitmodules$")
   :lib-dirs ("lib/erlang/lib"))
 
 (defun edts-project-otp-selector (file)
@@ -136,9 +149,22 @@ Example:
           ;; Do nothing if we're in an otp-repository.
           path))))
 
-(define-project-type edts-temp (edts)
+(define-project-type edts-temp (generic)
   (edts-project-temp-selector file)
   :config-file nil
+  :relevant-files ("^\\.erlang$"
+                   "\\.app$"
+                   "\\.app.src$"
+                   "\\.config$"
+                   "\\.erl$"
+                   "\\.es$"
+                   "\\.escript$"
+                   "\\.eterm$"
+                   "\\.script$"
+                   "\\.yaws$")
+  :irrelevant-files ("^\\.edts$"
+                     "^\\.gitignore$"
+                     "^\\.gitmodules$")
   :lib-dirs nil)
 
 (defun edts-project-temp-selector (file)
@@ -146,11 +172,10 @@ Example:
   (let ((res (when (and
                     ;; otp-selector also checks that the normal project selector
                     ;; returns nil
-                    (not (edts-project-selector file))
                     (not (edts-project-otp-selector file))
                     (string-match "\\.[eh]rl$" file))
                (edts-project--temp-root file))))
-    (edts-log-debug "edts-project-otp-selector result: %s" res)
+    (edts-log-debug "edts-project-temp-selector result: %s" res)
     res))
 
 
@@ -229,37 +254,39 @@ Example:
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
-  (edts-log-debug "Initializing temporary project for %s" (current-buffer))
-  (edts-ensure-server-started)
-  (let* ((file (buffer-file-name))
-         (root-dir (edts-project--temp-root file))
-         (node-name (path-util-base-name root-dir)))
-    (unless (edts-shell-find-by-path root-dir)
-      (edts-shell-make-comint-buffer
-       (format "*%s*" node-name) ; buffer-name
-       node-name ; node-name
-       root-dir ; pwd
-       (list "erl" "-sname" node-name))) ; command
-    (edts-init-node-when-ready node-name node-name root-dir nil)
-    (edts-project-set-attribute root-dir :node-sname node-name)))
+  (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
+    (edts-log-debug "Initializing temporary project for %s" (current-buffer))
+    (edts-ensure-server-started)
+    (let* ((file (buffer-file-name))
+           (root-dir (edts-project--temp-root file))
+           (node-name (path-util-base-name root-dir)))
+      (unless (edts-shell-find-by-path root-dir)
+        (edts-shell-make-comint-buffer
+         (format "*%s*" node-name) ; buffer-name
+         node-name ; node-name
+         root-dir ; pwd
+         (list "erl" "-sname" node-name))) ; command
+      (edts-init-node-when-ready node-name node-name root-dir nil)
+      (edts-project-set-attribute root-dir :node-sname node-name))))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
-  (edts-log-debug "Initializing otp project for %s" (current-buffer))
-  (edts-ensure-server-started)
-  (let* ((file (buffer-file-name))
-         (root-dir (eproject-root))
-         (node-name (format "otp-%s" (eproject-name)))
-         (erl (path-util-join (eproject-root) "bin/erl")))
-    (unless (edts-shell-find-by-path root-dir)
-      (edts-shell-make-comint-buffer
-       (format "*%s*" node-name) ; buffer-name
-       node-name ; node-name
-       root-dir ; pwd
-       (list erl "-sname" node-name))) ; command
-    (edts-init-node-when-ready node-name node-name root-dir nil)
-    (edts-project-set-attribute root-dir :node-sname node-name)))
+  (when (and (buffer-file-name) (eproject-classify-file (buffer-file-name)))
+    (edts-log-debug "Initializing otp project for %s" (current-buffer))
+    (edts-ensure-server-started)
+    (let* ((file (buffer-file-name))
+           (root-dir (eproject-root))
+           (node-name (format "otp-%s" (eproject-name)))
+           (erl (path-util-join (eproject-root) "bin/erl")))
+      (unless (edts-shell-find-by-path root-dir)
+        (edts-shell-make-comint-buffer
+         (format "*%s*" node-name) ; buffer-name
+         node-name ; node-name
+         root-dir ; pwd
+         (list erl "-sname" node-name))) ; command
+      (edts-init-node-when-ready node-name node-name root-dir nil)
+      (edts-project-set-attribute root-dir :node-sname node-name))))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
 
