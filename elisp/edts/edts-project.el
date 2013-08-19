@@ -80,6 +80,10 @@ Example:
 (define-project-type edts (generic)
   (edts-project-selector file)
   :config-file ".edts"
+  ;; TODO:
+  ;; This is copied from `edts-erlang-mode-regexps', can't figure out right now
+  ;; how to use that variable here and expand it inside the define-project-type
+  ;; macro instead of hardcoding the regexps
   :relevant-files ("^\\.erlang$"
                    "\\.app$"
                    "\\.app.src$"
@@ -506,6 +510,5 @@ are not considered for erl-files."
     ;; `edts-test-project1-directory'/lib/one/src/one.erl, we choose
     ;; `edts-test-project1-directory' as the project root.
     (find-file (car (edts-test-project1-modules)))
-    (message "current-buffer %s %s" (current-buffer) (eproject-root))
     (should (string= (path-util-normalize edts-test-project1-directory)
                      (path-util-normalize (eproject-root))))))
