@@ -54,9 +54,18 @@
       when dirp
       do   (add-to-list 'load-path (path-util-join edts-lib-directory name)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Requires
-
+(defcustom edts-erlang-mode-regexps
+  '("^\\.erlang$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.config$"
+    "\\.erl$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.script$"
+    "\\.yaws$")
+  "Additional extensions for which to auto-activate erlang-mode.")
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
@@ -102,6 +111,21 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EDTS mode
 
+
+;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
+;;
+;; To avoid weird eproject types like generic-git interfering with us
+;; make sure we only consider edts project types.
+(defadvice eproject--all-types (around edts-eproject-types)
+  "Ignore irrelevant eproject types for files where we should really only
+consider EDTS."
+  (let ((re (eproject--combine-regexps edts-erlang-mode-regexps)))
+    (if (string-match re (buffer-file-name))
+        (setq ad-return-value '(generic edts edts-temp edts-otp))
+      ad-do-it)))
+(ad-activate-regexp "edts-eproject-types")
+
+
 (defgroup edts nil
   "Erlang development tools"
   :group 'convenience
@@ -127,32 +151,11 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     map)
   "Keymap for EDTS.")
 
-(defcustom edts-erlang-mode-regexps
-  '("^\\.erlang$"
-    "\\.app$"
-    "\\.app.src$"
-    "\\.config$"
-    "\\.es$"
-    "\\.escript$"
-    "\\.eterm$"
-    "\\.script$"
-    "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode.")
-
 (defvar edts-mode-hook nil
   "Hooks to run at the end of edts-mode initialization in a buffer.")
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
-
-  ;; HACKWARNING!!
-  ;; To avoid weird eproject types like generic-git interfering with us
-  ;; make sure we only consider edts project types.
-  (make-local-variable 'eproject-project-types)
-  (delete-if-not
-   #'(lambda (project-typedef)
-       (member (car project-typedef) '(generic edts edts-otp edts-temp)))
-        eproject-project-types)
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)

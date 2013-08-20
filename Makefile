@@ -32,8 +32,8 @@ clean: $(PLUGINS:%=clean-%)
 $(PLUGINS:%=clean-%):
 	$(MAKE) -C plugins/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
-.PHONY: integration
-integration:
+.PHONY: integration-tests
+integration-tests:
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
@@ -49,7 +49,7 @@ ert:
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-suite-test)))"
 
 .PHONY: test
-test: all test-edts ert integration $(PLUGINS:%=test-%)
+test: all test-edts ert integration-tests $(PLUGINS:%=test-%)
 
 :PHONY: test-edts
 test-edts:
