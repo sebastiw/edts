@@ -119,8 +119,10 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (defadvice eproject--all-types (around edts-eproject-types)
   "Ignore irrelevant eproject types for files where we should really only
 consider EDTS."
-  (let ((re (eproject--combine-regexps edts-erlang-mode-regexps)))
-    (if (string-match re (buffer-file-name))
+  (let ((re (eproject--combine-regexps edts-erlang-mode-regexps))
+        (file-name (buffer-file-name)))
+    ;; dired buffer has no file
+    (if (and file-name (string-match re file-name))
         (setq ad-return-value '(generic edts edts-temp edts-otp))
       ad-do-it)))
 (ad-activate-regexp "edts-eproject-types")
