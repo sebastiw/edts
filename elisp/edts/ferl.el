@@ -160,6 +160,7 @@ of (function-name . starting-point)."
       (if (re-search-backward "^-export\\s-*(\\s-*\\[" nil t)
           (condition-case ex
               (progn
+                (goto-char (1- (match-end 0)))
                 (forward-sexp)
                 (> (point) oldpoint))
             (error t))))))
