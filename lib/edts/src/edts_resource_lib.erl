@@ -75,7 +75,6 @@ exists_p(ReqData, Ctx, Keys) ->
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate ReqData and convert values to internal representation.
-%% Fixme, should not be _p.
 %% @end
 -spec validate(wrq:req_data(), orddict:orddict(), [atom]) ->
                {boolean(), wrq:req_data(), orddict:orddict()}.

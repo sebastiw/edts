@@ -36,7 +36,6 @@ the module to be compiled as the only argument.")
 
 (defvar edts-code-after-compile-hook
   '(edts-code-eunit
-    edts-code-xref-analyze-related
     edts-code-dialyze-related-hook-fun)
   "Hooks to run after compilation finishes. Hooks are called with the
 compilation result as a symbol as the only argument")
@@ -44,11 +43,6 @@ compilation result as a symbol as the only argument")
   'edts-code-after-compilation-hook
   'edts-code-after-compile-hook
   "This variable is deprecated, use `edts-code-after-compile-hook'")
-
-(defcustom edts-code-xref-checks '(undefined_function_calls)
-  "What xref checks EDTS should perform. A list of 0 or more of
-undefined_function_calls, unexported_functions"
-  :group 'edts)
 
 (defvar edts-code-buffer-issues nil
   "A plist describing the current issues (errors and warnings) in the
@@ -118,56 +112,6 @@ with severity as key and a lists of issues as values"
       (edts-face-update-buffer-mode-line (edts-code-buffer-status))
       (run-hook-with-args 'edts-code-after-compile-hook (intern result))
       result)))
-
-(defun edts-code-xref-analyze-related (&optional result)
-  "Runs xref-checks for all live buffers related to current
-buffer either by belonging to the same project or, if current buffer
-does not belong to any project, being in the same directory as the
-current buffer's file."
-  (when (and edts-code-xref-checks (not (eq result 'error)))
-    (interactive '(ok))
-    (let* ((mods nil))
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((mod (ferl-get-module)))
-          (when mod
-            (edts-face-remove-overlays '("edts-code-xref"))
-            (push mod mods))))
-      (edts-get-module-xref-analysis-async
-       mods
-       edts-code-xref-checks
-       #'edts-code-handle-xref-analysis-result))))
-
-
-(defun edts-code-xref-analyze-no-project ()
-  "Runs xref-checks for all live buffers with its file in current
-buffer's directory, on the node related to that buffer."
-  (mapc
-   #'(lambda (buf) (with-current-buffer buf (edts-code-xref-analyze))))
-  (edts-code--modules-in-dir default-directory))
-
-
-(defun edts-code-xref-analyze ()
-  "Runs xref-checks for current buffer on the node related to that
-buffer's project."
-  (interactive)
-  (let ((module (ferl-get-module)))
-    (when module
-      (edts-face-remove-overlays '("edts-code-xref"))
-      (edts-get-module-xref-analysis-async
-       (list module) edts-code-xref-checks
-       #'edts-code-handle-xref-analysis-result))))
-
-(defun edts-code-handle-xref-analysis-result (analysis-res)
-  (when analysis-res
-    (let* ((all-errors (cdr (assoc 'errors analysis-res)))
-           (err-alist  (edts-code--issue-to-file-map all-errors)))
-      ;; Set the error list in each project-buffer
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((errors (cdr (assoc (buffer-file-name) err-alist))))
-          (edts-code--set-issues 'edts-code-xref (list 'error errors))
-          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when errors
-            (edts-code-display-error-overlays "edts-code-xref" errors)))))))
 
 (defun edts-code--issue-to-file-map (issues)
   "Creates an alist with mapping between filenames and related elements
@@ -264,10 +208,11 @@ non-recursive."
       ;; Set the warning list in each project-buffer
       (with-each-buffer-in-project (gen-sym) (eproject-root)
         (let ((warnings (cdr (assoc (buffer-file-name) warn-alist))))
-          (edts-code--set-issues 'edts-code-xref (list 'warning warnings))
+          (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
           (edts-face-update-buffer-mode-line (edts-code-buffer-status))
           (when warnings
-            (edts-code-display-warning-overlays "edts-code-xref" warnings)))))))
+            (edts-code-display-warning-overlays "edts-code-dialyzer"
+                                                warnings)))))))
 
 
 (defun edts-code-display-error-overlays (type errors)

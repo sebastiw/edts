@@ -27,15 +27,16 @@
 
 %%%_* Exports ==================================================================
 
-%% Extended xref API
--export([start/0,
-         stop/0
-        ]).
+%% EDTS plugin API
+-export([project_node_modules/0,
+         project_node_services/0]).
 
 %% API
 -export([allowed_checks/0,
          check_modules/2,
          get_state/0,
+         start/0,
+         stop/0,
          start/1,
          started_p/0,
          update/0,
@@ -46,6 +47,9 @@
 
 %% Internal exports.
 -export([do_start_from_state/1]).
+
+%% Internal exports.
+%% -export([save_xref_state/0]).
 
 -export_type([xref_check/0]).
 
@@ -60,6 +64,13 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%% EDTS Plugin API
+project_node_modules() -> [?MODULE].
+%% Just the empty list here. We want to start the server asynchronously from
+%% the node-init-hook to avoid a long blocking node initialization.
+project_node_services() -> [].
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -146,15 +157,22 @@ get_state() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Do an xref-analysis of Modules, applying Checks
+%% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
-                       {ok, [{ Type::error,
-                               File::string(),
-                               Line::non_neg_integer(),
-                               Description::string()}]}.
+                       {ok, [edts_code:issue()]}.
 %%------------------------------------------------------------------------------
-check_modules(Modules, Checks) ->
+check_modules(Modules0, Checks) ->
+  MaybeReloadFun =
+    fun(Module) ->
+        %% We can only do xref checks on compiled, successfully loaded modules
+        %% atm (We don't have the location of the source-file at this point).
+        case edts_code:ensure_module_loaded(false, Module) of
+          Res when is_boolean(Res) -> true;
+          {error, _}               -> false
+        end
+    end,
+  Modules = lists:filter(MaybeReloadFun, Modules0),
   update_modules(Modules),
   Files = [proplists:get_value(source, M:module_info(compile)) || M <- Modules],
   Fun  = fun(Check) -> do_check_modules(Modules, Files, Check) end,
@@ -460,6 +478,62 @@ check_modules_test() ->
   stop().
 
 %%%_* Unit test helpers ========================================================
+
+
+%% do_init_xref() ->
+%%   File = xref_file(),
+%%   try
+%%     case file:read_file(File) of
+%%       {ok, BinState}      ->
+%%         error_logger:info_msg("Found previous state to start from in ~p.",
+%%                               [File]),
+%%         edts_xref:start(binary_to_term(BinState));
+%%       {error, enoent}     ->
+%%         error_logger:info_msg("Found no previous state to start from."),
+%%         start_xref();
+%%       {error, _} = Error  ->
+%%         error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+%%         start_xref()
+%%     end
+%%   catch
+%%     C:E ->
+%%       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
+%%                              "Starting with clean state instead.",
+%%                              [File, C, E]),
+%%       start_xref()
+%%   end.
+
+%% start_xref() ->
+%%   edts_xref:start(),
+%%   spawn(?MODULE, save_xref_state, []),
+%%   ok.
+
+%% update_xref() ->
+%%   edts_xref:update(),
+%%   spawn(?MODULE, save_xref_state, []),
+%%   ok.
+
+%% update_xref(Modules) ->
+%%   edts_xref:update_modules(Modules),
+%%   spawn(?MODULE, save_xref_state, []),
+%%   ok.
+
+%% save_xref_state() ->
+%%   File = xref_file(),
+%%   State = edts_xref:get_state(),
+%%   case file:write_file(File, term_to_binary(State)) of
+%%     ok -> ok;
+%%     {error, _} = Error ->
+%%       error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
+%%   end.
+
+%% xref_file() ->
+%%   {ok, XrefDir} = application:get_env(edts, project_data_dir),
+%%   {ok, RootDir} = application:get_env(edts, project_root_dir),
+%%   {ok, ProjectName} = application:get_env(edts, project_name),
+%%   Filename = io_lib:format("~p_~s.xref", [erlang:phash2(RootDir), ProjectName]),
+%%   filename:join(XrefDir, Filename).
+
 
 mock_path() ->
   {LibDirs, AppDirs0} = edts_util:lib_and_app_dirs(),

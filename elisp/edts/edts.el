@@ -359,7 +359,9 @@ localhost."
   "Handle the result of an asynchronous node registration."
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
-        (edts-log-debug "Successfuly intialized node %s" node-name)
+        (progn
+          (edts-log-debug "Successfuly intialized node %s" node-name)
+          (run-hooks 'edts-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
 
@@ -415,20 +417,6 @@ current-buffer."
       (null (edts-log-error "Unexpected reply: %s"
                             (cdr (assoc 'result res)))))))
 
-
-(defun edts-get-who-calls (module function arity)
-  "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on
-current buffer's project node."
-  (let* ((resource (list "nodes" (edts-node-name)
-                         "modules" module
-                         "functions" function
-                         (number-to-string arity)
-                         "callers"))
-         (res      (edts-rest-get resource nil)))
-    (if (equal (assoc 'result res) '(result "200" "OK"))
-        (cdr (assoc 'body res))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-get-function-info (module function arity)
   "Fetches info MODULE on the current buffer's project node associated with
@@ -511,19 +499,6 @@ buffer"
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
-(defun edts-get-module-xref-analysis-async (modules checks callback)
-  "Run xref-checks on MODULE on the node associated with current buffer,
-asynchronously. When the request terminates, call CALLBACK with the
-parsed response as the single argument"
-  (let* ((node-name (edts-node-name))
-         (resource  (list "nodes" node-name
-                          "xref_analysis"))
-         (rest-args `(("xref_checks" . ,(mapcar #'symbol-name checks))
-                      ("modules"     . ,modules)))
-         (cb-args   (list callback 200)))
-    (edts-log-debug
-     "fetching xref-analysis of %s async on %s" modules node-name)
-    (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
 (defun edts-get-module-eunit-async (module callback)
   "Run eunit tests in MODULE on the node associated with current-buffer,
