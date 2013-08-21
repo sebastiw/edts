@@ -88,7 +88,7 @@ Example:
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
-\                   "\\.erl$"
+                   "\\.erl$"
                    "\\.es$"
                    "\\.escript$"
                    "\\.eterm$"

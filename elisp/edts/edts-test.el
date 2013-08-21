@@ -140,7 +140,6 @@
   (edts-test-run-testcase 'ert-run-tests-interactively test-name))
 
 (defun edts-test-run-testcase (ert-fun test-name)
-  (message "fooo")
   (let* ((ert-test-obj (car (ert-select-tests 'edts-project-selector-test t)))
          (suite-name (car (remq 'edts-test-suite (ert-test-tags ert-test-obj))))
          (suite (cdr (assoc suite-name edts-test-suite-alist))))
