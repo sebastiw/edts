@@ -24,6 +24,15 @@
 
 (require 'cl)
 (require 'eproject)
+
+;; Prevent project-file-visit-hooks from being run several times every
+;; time a file is opened or reverted.
+;; Without this, the project-file-visit-hook for a file will be called three
+;; times. Once for `after-change-major-mode-hook' for fundamental-mode, once for
+;; `after-change-major-mode-hook' for erlang-mode and once for `find-file-hook'
+(remove-hook 'after-change-major-mode-hook
+             'eproject--after-change-major-mode-hook)
+
 (require 'eproject-extras)
 (require 'path-util)
 
