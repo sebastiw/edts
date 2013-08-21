@@ -46,7 +46,7 @@ ert:
 	$(EMACS) -Q --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \
-	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-suite-test)))"
+	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test
 test: all test-edts ert integration-tests $(PLUGINS:%=test-%)
