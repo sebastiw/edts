@@ -44,6 +44,10 @@
          get_module_source/1,
          modules/0,
          parse_expressions/1,
+         project_data_dir/0,
+         project_name/0,
+         project_root_dir/0,
+         project_specific_data_file/1,
          start/0,
          started_p/0,
          string_to_mfa/1]).
@@ -346,6 +350,47 @@ modules() ->
 modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
   [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the nome of this node's project.
+%% @end
+-spec project_name() -> string().
+%%------------------------------------------------------------------------------
+project_name() ->
+  {ok, ProjectName} = application:get_env(edts, project_name),
+  ProjectName.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the directory where EDTS-related data is stored for this node's
+%% project.
+%% @end
+-spec project_data_dir() -> string().
+%%------------------------------------------------------------------------------
+project_data_dir() ->
+  {ok, DataDir} = application:get_env(edts, project_data_dir),
+  DataDir.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the nome of this node's project.
+%% @end
+-spec project_root_dir() -> string().
+%%------------------------------------------------------------------------------
+project_root_dir() ->
+  {ok, DataDir} = application:get_env(edts, project_root_dir),
+  DataDir.
+
+project_specific_data_file(Suffix) ->
+  DataDir = project_data_dir(),
+  RootDir = project_root_dir(),
+  ProjectName = project_name(),
+  Filename = io_lib:format("~p_~s~s",
+                           [erlang:phash2(RootDir), ProjectName, Suffix]),
+  filename:join(DataDir, Filename).
 
 
 %%------------------------------------------------------------------------------
