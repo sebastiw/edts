@@ -29,12 +29,13 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ wait_for_node/1
-        , init_node/6
-        , node_available_p/1
-        , node_registered_p/1
-        , nodes/0
-        , start_link/0]).
+-export([ wait_for_node/1,
+          init_node/6,
+          node_available_p/1,
+          node_registered_p/1,
+          nodes/0,
+          start_link/0,
+          start_service/2]).
 
 %% gen_server callbacks
 -export([ code_change/3
