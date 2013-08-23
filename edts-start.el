@@ -97,9 +97,9 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (defconst erlang-auto-highlight-exclusions
   (cons (quote erlang-mode)
                (concat
-                "\\(" erlang-operators-regexp
+                "^\\(" erlang-operators-regexp
                 "\\|" erlang-keywords-regexp
-                "\\|\\<[[:digit:]]+\\>\\)")))
+                "\\|\\<[[:digit:]]+\\>\\)$")))
 
 (defvar erlang-current-function-ahs-plugin
   '((name    . "erlang current function")
