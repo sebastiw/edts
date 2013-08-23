@@ -121,7 +121,6 @@ Example:
       (setq cur-root (path-util-pop cur-root))
       (when (file-exists-p (path-util-join cur-root ".edts"))
         (setq bestroot cur-root)))
-    (edts-log-debug "edts-project-selector result: %s" bestroot)
     bestroot))
 
 (define-project-type edts-otp (generic)
@@ -147,7 +146,6 @@ Example:
   "Try to figure out if FILE should be part of an otp-project."
   (when (not (edts-project-selector file))
     (let ((res (edts-project-otp-selector-path file)))
-      (edts-log-debug "edts-project-otp selector result: %s" res)
       res)))
 
 (defun edts-project-otp-selector-path (file)
@@ -189,12 +187,12 @@ Example:
                     (not (edts-project-otp-selector file))
                     (string-match "\\.[eh]rl$" file))
                (edts-project--temp-root file))))
-    (edts-log-debug "edts-project-temp-selector result: %s" res)
     res))
 
 
 (defun edts-project-init-buffer ()
   "Called each time a buffer inside a configured edts-project is opened."
+  (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
     (edts-log-debug "Initializing project for %s" (current-buffer))
     (edts-ensure-server-started)
@@ -271,6 +269,7 @@ Example:
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
+  (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
     (edts-ensure-server-started)
     (let* ((file (buffer-file-name))
@@ -291,6 +290,7 @@ Example:
 
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
+  (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
     (edts-ensure-server-started)
     (let* ((file (buffer-file-name))
