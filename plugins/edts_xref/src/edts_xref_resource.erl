@@ -25,6 +25,8 @@
 %%%_* Module declaration =======================================================
 -module(edts_xref_resource).
 
+-compile({parse_transform, lager_transform}).
+
 %%%_* Exports ==================================================================
 
 %% API
@@ -68,7 +70,8 @@ malformed_request(ReqData, Ctx) ->
   end.
 
 process_post(ReqData, Ctx) ->
-  io:format("Callaaed!"),
+  Nodename = orddict:fetch(nodename, Ctx),
+  ok = edts_server:start_service(Nodename, edts_xref_server),
   {true, ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

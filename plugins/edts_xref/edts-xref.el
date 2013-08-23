@@ -33,7 +33,7 @@ undefined_function_calls, unexported_functions"
   ;; Keys
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
-  (add-hook 'edts-after-compilation-hook 'edts-xref-analyze-related)
+  (add-hook 'edts-code-after-compile-hook 'edts-xref-analyze-related)
   (add-hook 'edts-after-node-init-hook 'edts-xref-after-node-init-hook))
 
 (defun edts-xref-after-node-init-hook ()
@@ -44,10 +44,10 @@ undefined_function_calls, unexported_functions"
                          "xref"
                          "nodes" (edts-node-name)))
         (rest-args '(("start" . "true")))
-        (cb-args   '(edts-xref-server-init-callback 204 (edts-node-name))))
+        (cb-args   `(edts-xref-server-init-callback 204 ,(edts-node-name))))
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
 
-(defun edts-xref-server-init-callback (node-name)
+(defun edts-xref-server-init-callback (body node-name)
   "Callback for when the xref server has been initialized."
   (add-to-list 'edts-xref-initialized node-name))
 
