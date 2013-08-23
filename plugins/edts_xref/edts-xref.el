@@ -112,8 +112,9 @@ buffer's project."
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
   (let* ((node-name (edts-node-name))
-         (resource  (list "nodes" node-name
-                          "xref_analysis"))
+         (resource  (list "plugins" "xref"
+                          "nodes" node-name
+                          "analysis"))
          (rest-args `(("xref_checks" . ,(mapcar #'symbol-name checks))
                       ("modules"     . ,modules)))
          (cb-args   (list callback 200)))

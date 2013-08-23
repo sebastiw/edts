@@ -128,6 +128,8 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 term_to_validate(app_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
 term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate({enum_list, Props})            ->
+  fun(RD, _Ctx) -> enum_list_validate(RD, Props) end;
 term_to_validate({enum, Props})            ->
   fun(RD, _Ctx) -> enum_validate(RD, Props) end;
 term_to_validate(exported)             ->
@@ -160,8 +162,7 @@ term_to_validate(project_root)         -> fun project_root_validate/2;
 term_to_validate(project_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
 term_to_validate(project_lib_dirs)     ->
-  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end;
-term_to_validate(xref_checks)          -> fun xref_checks_validate/2.
+  fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end.
 
 
 %%------------------------------------------------------------------------------
@@ -221,6 +222,34 @@ dirs_validate(ReqData, QsKey) ->
     Str       -> {ok, string:tokens(Str, ",")}
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a list where every element is part of an enumeration.
+%% @end
+-spec enum_list_validate(wrq:req_data(),
+                         [{atom(), term()}]) ->
+                          {ok,  atom()} |
+                          {error, {illegal, string()}} |
+                          {error, {not_found, atom()}}.
+%%------------------------------------------------------------------------------
+enum_list_validate(ReqData, Props) ->
+  {ok, Name}   = tulib_lists:assoc(name,     Props),
+  QsKey = atom_to_list(Name),
+  {ok, Allowed} = tulib_lists:assoc(allowed,  Props),
+  Required      = tulib_lists:assoc(required, Props, false),
+  case wrq:get_qs_value(QsKey, ReqData) of
+    undefined when Required -> {error, {not_found, QsKey}};
+    undefined               -> {ok, _} = tulib_lists:assoc(default, Props, []);
+    Str                     ->
+      Vals = [list_to_atom(Mod) || Mod <- string:tokens(Str, ",")],
+      Filter = fun(Val) -> lists:member(Val, Allowed) end,
+      case lists:partition(Filter, Vals) of
+        {_, []} -> {ok, Vals};
+        {_, Invalid} ->
+          edts_log:debug("resource_exists failed: ~p", [Invalid]),
+          {error, Invalid}
+      end
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -239,7 +268,8 @@ enum_validate(ReqData, Props) ->
   Required      = tulib_lists:assoc(required, Props, false),
   case wrq:get_qs_value(QsKey, ReqData) of
     undefined when Required -> {error, {not_found, QsKey}};
-    undefined               -> {ok, _} = tulib_lists:assoc(default, Props);
+    undefined               ->
+      {ok, _} = tulib_lists:assoc(default, Props, undefined);
     V                       ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of
@@ -413,27 +443,6 @@ string_validate(ReqData, Key) ->
   end.
 
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate xref_checks
-%% @end
--spec xref_checks_validate(wrq:req_data(), orddict:orddict()) ->
-                              {ok, [edts_xref:xref_check()]} |
-                              {error, {illegal, [atom()]}}.
-%%------------------------------------------------------------------------------
-xref_checks_validate(ReqData, _Ctx) ->
-  case wrq:get_qs_value("xref_checks", ReqData) of
-    undefined  -> {ok, [undefined_function_calls]};
-    Val        ->
-      Checks   = [list_to_atom(Check) || Check <- string:tokens(Val, ",")],
-      IsLegalF = fun(Check) ->
-                     lists:member(Check, edts_xref:allowed_checks())
-                 end,
-      case lists:partition(IsLegalF, Checks) of
-        {Legal, []}       -> {ok, Legal};
-        {_Legal, Illegal} -> {error, {illegal, Illegal}}
-      end
-  end.
 
 %%%_* Unit tests ===============================================================
 arity_validate_test() ->
@@ -529,29 +538,6 @@ root_validate_test() ->
   meck:expect(wrq, get_qs_value,
               fun("project_root", _) -> Path end),
   ?assertEqual({error, {not_dir, Path}}, project_root_validate(foo, bar)),
-  meck:unload().
-
-xref_checks_validate_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> undefined end),
-  ?assertEqual({ok, [undefined_function_calls]},
-               xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value,
-              fun("xref_checks", _) -> "undefined_function_calls" end),
-  ?assertEqual({ok, [undefined_function_calls]},
-               xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("xref_checks", _) -> "something" end),
-  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value, fun("xref_checks", _) ->
-                                     "something,undefined_function_calls" end),
-  ?assertEqual({error, {illegal, [something]}}, xref_checks_validate(foo, bar)),
-  meck:expect(wrq, get_qs_value,
-              fun("xref_checks", _) ->
-                  "undefined_function_calls,unused_exports"
-              end),
-  ?assertEqual({ok, [undefined_function_calls,unused_exports]},
-               xref_checks_validate(foo, bar)),
   meck:unload().
 
 enum_validate_test_() ->

@@ -63,10 +63,14 @@ content_types_provided(ReqData, Ctx) ->
 
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
+  Allowed = edts_xref_server:allowed_checks(),
+  Validate = [nodename, modules, {enum_list, [{name,     xref_checks},
+                                              {required, true},
+                                              {allowed,  Allowed}]}],
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 resource_exists(ReqData, Ctx) ->
-  MFArgKeys = {edts_code, check_modules, [modules, xref_checks]},
+  MFArgKeys = {edts_xref_server, check_modules, [modules, xref_checks]},
   edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 to_json(ReqData, Ctx) ->

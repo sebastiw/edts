@@ -75,10 +75,9 @@ malformed_request(ReqData, Ctx0) ->
                      "Rsn: undefined", []),
       {true, ReqData, Ctx0};
     true ->
-      Validators = [nodename, modules],
       Ctx =
         orddict:store(otp_plt, OtpPlt, orddict:store(out_plt, OutPlt, Ctx0)),
-      edts_resource_lib:validate(ReqData, Ctx, Validators)
+      edts_resource_lib:validate(ReqData, Ctx, [nodename, modules])
   end.
 
 resource_exists(ReqData, Ctx) ->
