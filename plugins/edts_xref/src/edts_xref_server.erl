@@ -83,37 +83,37 @@ start() ->
         error_logger:info_msg("Found previous state to start from in ~p.",
                               [File]),
         State = binary_to_term(BinState),
-        do_start(fun() -> proc_lib:start(?MODULE, init, [State]) end);
+        do_start(State);
       {error, enoent}     ->
         error_logger:info_msg("Found no previous state to start from."),
-        do_start(fun() -> xref:start(?MODULE) end);
+        do_start();
       {error, _} = Error  ->
         error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-        do_start(fun() -> xref:start(?MODULE) end)
+        do_start()
     end
   catch
     C:E ->
       error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
                              "Starting with clean state instead.",
                              [File, C, E]),
-      do_start(fun() -> xref:start(?MODULE) end)
-  end.
+      do_start()
+  end,
+  ok = update().
 
-%% start_xref() ->
-%%   edts_xref:start(),
-%%   spawn(?MODULE, save_xref_state, []),
-%%   ok.
+do_start() ->
+  do_start_with(fun() -> xref:start(?MODULE) end).
 
+do_start(State) ->
+  do_start_with(fun() -> proc_lib:start(?MODULE, init, [State]) end).
 
-do_start(StartF) ->
+do_start_with(StartF) ->
   case started_p() of
     true  -> ok;
     false ->
       {ok, _Pid} = StartF(),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
       wait_until_started()
-  end,
-  ok = update().
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -223,7 +223,7 @@ ignored_p(M, F, A) ->
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
   Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
-  {ok, Calls} = xref:q(edts_xref, Str),
+  {ok, Calls} = xref:q(?SERVER, Str),
   [Caller || {Caller, _Callee} <- Calls].
 
 
@@ -367,6 +367,19 @@ get_xref_ignores(Mod) ->
       end,
   lists:foldl(F, [], Mod:module_info(attributes)).
 
+save_state() ->
+  File = xref_file(),
+  State = get_state(),
+  case file:write_file(File, term_to_binary(State)) of
+    ok -> ok;
+    {error, _} = Error ->
+      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
+  end.
+
+xref_file() ->
+  edts_code:project_specific_data_file(".xref").
+
+
 %%%_* Unit tests ===============================================================
 
 start_test() ->
@@ -374,26 +387,30 @@ start_test() ->
     true  -> stop();
     false -> ok
   end,
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  MonitorRef = erlang:monitor(process, ?SERVER),
-  stop(),
-  receive
-    {'DOWN', MonitorRef, _Type, _Object, _Info} ->
-      ?assertEqual(undefined, whereis(?SERVER)),
-      {error, not_started} = stop()
-  end,
+  meck:unload(),
+  mock_edts_code(),
+  ?assertNot(started_p()),
   start(),
-  {error, already_started} = start(),
-  ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
+  ?assert(started_p()),
+  stop(),
+  meck:unload().
+
+start_from_state_test() ->
+  case started_p() of
+    true  -> stop();
+    false -> ok
+  end,
+  meck:unload(),
+  mock_edts_code(),
+  start(),
+  [{Mod, _}|_] = Modules = xref:info(?SERVER, modules),
+  xref:remove_module(?SERVER, Mod),
   State = get_state(),
   xref:stop(?SERVER),
-  ?assertEqual(undefined, whereis(?SERVER)),
-  %% start(State),
-  %% {error, already_started} = start(State),
-  State = get_state(),
+  do_start(State),
+  ?assertEqual(State, get_state()),
   stop(),
-  code:set_path(OrigPath).
+  meck:unload().
 
 update_paths_test() ->
   case started_p() of
@@ -401,7 +418,6 @@ update_paths_test() ->
     false -> ok
   end,
   OrigPath = code:get_path(),
-  code:set_path(mock_path()),
   ?assertEqual(undefined, whereis(?SERVER)),
   xref:start(?SERVER),
   ?assertEqual(lists:sort([{verbose,  false},
@@ -427,8 +443,9 @@ update_paths_test() ->
   stop(),
   code:set_path(OrigPath).
 
-
 who_calls_test() ->
+  meck:unload(),
+  mock_edts_code(),
   stop(),
   ok = start(),
   compile_and_add_test_modules(),
@@ -438,9 +455,12 @@ who_calls_test() ->
      {edts_test_module,  baz, 1},
      {edts_test_module2, bar, 1}],
      who_calls(edts_test_module, bar, 1)),
-  stop().
+  stop(),
+  meck:unload().
 
 check_undefined_functions_calls_test() ->
+  meck:unload(),
+  mock_edts_code(),
   stop(),
   ok = start(),
   compile_and_add_test_modules(),
@@ -449,9 +469,12 @@ check_undefined_functions_calls_test() ->
   ?assertMatch([{error, _File, _Line, Str}] when is_list(Str),
                check_modules([edts_test_module2],
                                [undefined_function_calls])),
-  stop().
+  stop(),
+  meck:unload().
 
 check_unused_exports_test() ->
+  meck:unload(),
+  mock_edts_code(),
   stop(),
   ok = start(),
   compile_and_add_test_modules(),
@@ -460,39 +483,28 @@ check_unused_exports_test() ->
                 {error, _File2, _Line2, Str2}] when is_list(Str1) andalso
                                                     is_list(Str2),
                check_modules([edts_test_module2], [unused_exports])),
-  stop().
+  stop(),
+  meck:unload().
 
 check_modules_test() ->
+  meck:unload(),
+  mock_edts_code(),
   stop(),
   ok = start(),
   compile_and_add_test_modules(),
   Checks = [unused_exports, undefined_function_calls],
   ?assertEqual([],     check_modules([edts_test_module], Checks)),
   ?assertMatch([_, _, _], check_modules([edts_test_module2], Checks)),
-  stop().
+  stop(),
+  meck:unload().
 
 %%%_* Unit test helpers ========================================================
 
-
-save_state() ->
-  File = xref_file(),
-  State = get_state(),
-  case file:write_file(File, term_to_binary(State)) of
-    ok -> ok;
-    {error, _} = Error ->
-      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
-  end.
-
-xref_file() ->
-  edts_code:project_specific_data_file(".xref").
-
-mock_path() ->
-  {LibDirs, AppDirs0} = edts_util:lib_and_app_dirs(),
-  Filter = fun(P) -> filename:basename(P) =:= ".eunit" end,
-  case lists:filter(Filter, AppDirs0) of
-    [_] = EunitDir -> EunitDir ++ LibDirs;
-    _              -> AppDirs0 ++ LibDirs
-  end.
+mock_edts_code() ->
+  meck:new(edts_code, [passthrough]),
+  meck:expect(edts_code,
+              project_specific_data_file,
+              fun(_) -> "./test/test.xref" end).
 
 compile_and_add_test_modules() ->
   TestDir = code:lib_dir(edts, 'test'),

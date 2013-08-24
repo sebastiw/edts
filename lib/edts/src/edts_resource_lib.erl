@@ -127,7 +127,8 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 term_to_validate(app_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
-term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate(arity)                ->
+  fun(RD, _Ctx) -> non_neg_integer_validate(RD, "arity") end;
 term_to_validate({enum_list, Props})            ->
   fun(RD, _Ctx) -> enum_list_validate(RD, Props) end;
 term_to_validate({enum, Props})            ->
@@ -163,24 +164,6 @@ term_to_validate(project_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
 term_to_validate(project_lib_dirs)     ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate arity
-%% @end
--spec arity_validate(wrq:req_data(), orddict:orddict()) ->
-               {ok, non_neg_integer()} | error.
-%%------------------------------------------------------------------------------
-arity_validate(ReqData, _Ctx) ->
-  Str = wrq:path_info(arity, ReqData),
-  try
-    case list_to_integer(Str) of
-      Arity when Arity >= 0 -> {ok, Arity};
-      _ -> error
-    end
-  catch error:badarg -> {error, {badarg, Str}}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -239,15 +222,16 @@ enum_list_validate(ReqData, Props) ->
   Required      = tulib_lists:assoc(required, Props, false),
   case wrq:get_qs_value(QsKey, ReqData) of
     undefined when Required -> {error, {not_found, QsKey}};
-    undefined               -> {ok, _} = tulib_lists:assoc(default, Props, []);
+    undefined               -> {ok, tulib_lists:assoc(default, Props, [])};
     Str                     ->
-      Vals = [list_to_atom(Mod) || Mod <- string:tokens(Str, ",")],
+      Tokens = string:tokens(Str, ","),
+      Vals = [list_to_atom(string:strip(Mod, both)) || Mod <- Tokens],
       Filter = fun(Val) -> lists:member(Val, Allowed) end,
       case lists:partition(Filter, Vals) of
         {_, []} -> {ok, Vals};
         {_, Invalid} ->
           edts_log:debug("resource_exists failed: ~p", [Invalid]),
-          {error, Invalid}
+          {error, {illegal, Invalid}}
       end
   end.
 
@@ -269,7 +253,7 @@ enum_validate(ReqData, Props) ->
   case wrq:get_qs_value(QsKey, ReqData) of
     undefined when Required -> {error, {not_found, QsKey}};
     undefined               ->
-      {ok, _} = tulib_lists:assoc(default, Props, undefined);
+      {ok, tulib_lists:assoc(default, Props, undefined)};
     V                       ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of
@@ -445,17 +429,42 @@ string_validate(ReqData, Key) ->
 
 
 %%%_* Unit tests ===============================================================
-arity_validate_test() ->
+
+
+string_validate_test() ->
   meck:unload(),
   meck:new(wrq),
-  meck:expect(wrq, path_info, fun(arity, _) -> "0" end),
-  ?assertEqual({ok, 0}, arity_validate(foo, bar)),
-  meck:expect(wrq, path_info, fun(arity, _) -> "1" end),
-  ?assertEqual({ok, 1}, arity_validate(foo, bar)),
-  meck:expect(wrq, path_info, fun(arity, _) -> "-1" end),
-  ?assertEqual(error, arity_validate(foo, bar)),
-  meck:expect(wrq, path_info, fun(arity, _) -> "a" end),
-  ?assertEqual({error, {badarg, "a"}}, arity_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun(bar, _) -> undefined end),
+  ?assertEqual({ok, ""}, string_validate(foo, bar)),
+  meck:expect(wrq, get_qs_value, fun(bar, _) -> "a_string" end),
+  ?assertEqual({ok, "a_string"}, string_validate(foo, bar)),
+  meck:unload().
+
+
+integer_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(bar, _) -> "0" end),
+  ?assertEqual({ok, 0}, integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "1" end),
+  ?assertEqual({ok, 1}, integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "-1" end),
+  ?assertEqual({ok, -1}, integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "a" end),
+  ?assertEqual({error, {badarg, "a"}}, integer_validate(foo, bar)),
+  meck:unload().
+
+non_neg_integer_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(bar, _) -> "0" end),
+  ?assertEqual({ok, 0}, non_neg_integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "1" end),
+  ?assertEqual({ok, 1}, non_neg_integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "-1" end),
+  ?assertEqual({error, {illegal, "-1"}}, non_neg_integer_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(bar, _) -> "a" end),
+  ?assertEqual({error, {badarg, "a"}}, non_neg_integer_validate(foo, bar)),
   meck:unload().
 
 file_validate_test() ->
@@ -574,6 +583,51 @@ enum_validate_test_() ->
                                           {allowed,  [a, b]},
                                           {default,  b},
                                           {required, true}]))
+  ]}.
+
+enum_list_validate_test_() ->
+  {setup,
+   fun() ->
+       meck:unload(),
+       meck:new(wrq),
+       meck:expect(wrq, get_qs_value,
+                   fun("undefined", _)     -> undefined;
+                      ("one_invalid", _)   -> "valid_1, invalid";
+                      ("invalid_value", _) -> "invalid";
+                      ("valid", _)         -> "valid_1"
+                                           end)
+   end,
+   fun(_) ->
+       meck:unload()
+   end,
+  [%% Value found
+   ?_assertEqual({ok, [valid_1]}, enum_list_validate(fake_req,
+                                        [{name,     valid},
+                                         {allowed,  [valid_1, valid_2]},
+                                         {default,  [valid_2]},
+                                         {required, false}])),
+   %% Value not found, expect default
+   ?_assertEqual({ok, [valid_2]}, enum_list_validate(fake_req,
+                                             [{name,     undefined},
+                                              {allowed,  [valid_1, valid_2]},
+                                              {default,  [valid_2]},
+                                              {required, false}])),
+   %% Value not found and not default given, expect []
+   ?_assertEqual({ok, []}, enum_list_validate(fake_req,
+                                              [{name,     undefined},
+                                               {allowed,  [valid_1, valid_2]},
+                                               {required, false}])),
+   %% Required value not found
+   ?_assertEqual({error, {not_found, "undefined"}},
+                 enum_list_validate(fake_req, [{name,     undefined},
+                                               {allowed,  [valid_1, valid_2]},
+                                               {required, true}])),
+   %% One illegal value
+   ?_assertEqual({error, {illegal, [invalid]}},
+                 enum_list_validate(fake_req, [{name,     one_invalid},
+                                               {allowed,  [valid_1, valid_2]},
+                                               {default,  [valid_1]},
+                                               {required, true}]))
   ]}.
 
 %%%_* Emacs ====================================================================
