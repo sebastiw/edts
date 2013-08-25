@@ -35,6 +35,7 @@
          connect_all/0,
          start_service/2,
          load_all/1,
+         load_app/2,
          make_sname/1,
          make_sname/2,
          refresh_service/2,
@@ -136,6 +137,16 @@ connect_all() ->
                     connect(Nodename)
                 end,
                 Nodes).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Load application spec AppSpec on Node.
+%% @end
+-spec load_app(node(), term()) -> ok | {error, term()}.
+%%------------------------------------------------------------------------------
+load_app(Node, AppSpec) ->
+  call(Node, application, load, [AppSpec]).
 
 
 %%------------------------------------------------------------------------------

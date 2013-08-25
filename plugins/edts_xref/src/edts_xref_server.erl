@@ -78,7 +78,7 @@ allowed_checks() -> [undefined_function_calls, unused_exports].
 start() ->
   File = xref_file(),
   try
-    case file:read_file(File) of
+    case read_file(File) of
       {ok, BinState}      ->
         error_logger:info_msg("Found previous state to start from in ~p.",
                               [File]),
@@ -370,7 +370,7 @@ get_xref_ignores(Mod) ->
 save_state() ->
   File = xref_file(),
   State = get_state(),
-  case file:write_file(File, term_to_binary(State)) of
+  case write_file(File, term_to_binary(State)) of
     ok -> ok;
     {error, _} = Error ->
       error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
@@ -379,44 +379,37 @@ save_state() ->
 xref_file() ->
   edts_code:project_specific_data_file(".xref").
 
+write_file(File, Data) ->
+  {ok, BE} = application:get_env(edts_xref, file_backend),
+  BE:write_file(File, Data).
+
+read_file(File) ->
+  {ok, BE} = application:get_env(edts_xref, file_backend),
+  BE:read_file(File).
+
 
 %%%_* Unit tests ===============================================================
 
 start_test() ->
-  case started_p() of
-    true  -> stop();
-    false -> ok
-  end,
-  meck:unload(),
-  mock_edts_code(),
+  init_eunit_test(),
   ?assertNot(started_p()),
   start(),
   ?assert(started_p()),
   stop(),
-  meck:unload().
+  teardown_eunit().
 
 start_from_state_test() ->
-  case started_p() of
-    true  -> stop();
-    false -> ok
-  end,
-  meck:unload(),
-  mock_edts_code(),
+  init_eunit_test(),
   start(),
-  [{Mod, _}|_] = Modules = xref:info(?SERVER, modules),
+  [{Mod, _}|_] = xref:info(?SERVER, modules),
   xref:remove_module(?SERVER, Mod),
   State = get_state(),
   xref:stop(?SERVER),
   do_start(State),
   ?assertEqual(State, get_state()),
-  stop(),
-  meck:unload().
+  teardown_eunit().
 
 update_paths_test() ->
-  case started_p() of
-    true  -> stop();
-    false -> ok
-  end,
   OrigPath = code:get_path(),
   ?assertEqual(undefined, whereis(?SERVER)),
   xref:start(?SERVER),
@@ -444,9 +437,7 @@ update_paths_test() ->
   code:set_path(OrigPath).
 
 who_calls_test() ->
-  meck:unload(),
-  mock_edts_code(),
-  stop(),
+  init_eunit_test(),
   ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], who_calls(edts_test_module2, bar, 1)),
@@ -455,56 +446,59 @@ who_calls_test() ->
      {edts_test_module,  baz, 1},
      {edts_test_module2, bar, 1}],
      who_calls(edts_test_module, bar, 1)),
-  stop(),
-  meck:unload().
+  teardown_eunit().
 
 check_undefined_functions_calls_test() ->
-  meck:unload(),
-  mock_edts_code(),
-  stop(),
+  init_eunit_test(),
   ok = start(),
   compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([], [undefined_function_calls])),
   ?assertEqual([], check_modules([edts_test_module],
                                     [undefined_function_calls])),
   ?assertMatch([{error, _File, _Line, Str}] when is_list(Str),
                check_modules([edts_test_module2],
                                [undefined_function_calls])),
-  stop(),
-  meck:unload().
+  teardown_eunit().
 
 check_unused_exports_test() ->
-  meck:unload(),
-  mock_edts_code(),
-  stop(),
+  init_eunit_test(),
   ok = start(),
   compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([], [unused_exports])),
   ?assertEqual([], check_modules([edts_test_module], [unused_exports])),
   ?assertMatch([{error, _File2, _Line1, Str1},
                 {error, _File2, _Line2, Str2}] when is_list(Str1) andalso
                                                     is_list(Str2),
                check_modules([edts_test_module2], [unused_exports])),
-  stop(),
-  meck:unload().
+  teardown_eunit().
 
 check_modules_test() ->
-  meck:unload(),
-  mock_edts_code(),
-  stop(),
+  init_eunit_test(),
   ok = start(),
   compile_and_add_test_modules(),
   Checks = [unused_exports, undefined_function_calls],
+  ?assertEqual([],     check_modules([], Checks)),
   ?assertEqual([],     check_modules([edts_test_module], Checks)),
   ?assertMatch([_, _, _], check_modules([edts_test_module2], Checks)),
-  stop(),
-  meck:unload().
+  teardown_eunit().
 
 %%%_* Unit test helpers ========================================================
 
-mock_edts_code() ->
+init_eunit_test() ->
+  stop(),
+  meck:unload(),
+  meck:new(dummy_file_backend),
+  meck:expect(dummy_file_backend, read_file, fun(_) -> {error, enoent} end),
+  meck:expect(dummy_file_backend, write_file, fun(_, _) -> ok end),
   meck:new(edts_code, [passthrough]),
-  meck:expect(edts_code,
-              project_specific_data_file,
-              fun(_) -> "./test/test.xref" end).
+  meck:expect(edts_code, project_specific_data_file,
+           fun(_) -> "eunit-test.xref" end),
+  application:set_env(edts_xref, file_backend, dummy_file_backend).
+
+teardown_eunit() ->
+  stop(),
+  meck:unload(),
+  application:set_env(edts_xref, file_backend, file).
 
 compile_and_add_test_modules() ->
   TestDir = code:lib_dir(edts, 'test'),

@@ -45,6 +45,8 @@
         , handle_info/2
         , terminate/2]).
 
+-export([plugin_spec/1]).
+
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
@@ -302,7 +304,12 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    Plugins = plugins(),
+    PluginDirs = plugin_dirs(),
+    Plugins = plugin_dirs_to_names(PluginDirs),
+    ok = lists:foreach(fun(Dir) ->
+                           edts_dist:load_app(Node, plugin_spec(Dir))
+                       end,
+                       PluginDirs),
     PluginRemoteLoad =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
@@ -331,15 +338,26 @@ do_init_node(ProjectName,
       E
   end.
 
-plugins() ->
+plugin_dirs() ->
   case application:get_env(edts, plugin_dir) of
     undefined -> [];
     {ok, Dir} ->
-      {ok, PluginDirs} = file:list_dir(Dir),
-      [list_to_atom(PluginDir) || PluginDir <- PluginDirs,
-                                  filelib:is_dir(
-                                    filename:absname_join(Dir, PluginDir))]
+      AbsDir = filename:absname(Dir),
+      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
+      [PluginDir || PluginDir <- PluginDirs,
+                    filelib:is_dir(PluginDir)]
   end.
+
+
+plugin_dirs_to_names(Dirs) ->
+  [list_to_atom(filename:basename(Dir)) || Dir <- Dirs].
+
+
+plugin_spec(Dir) ->
+  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  {ok, [AppSpec]} = file:consult(AppFile),
+  AppSpec.
+
 
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].

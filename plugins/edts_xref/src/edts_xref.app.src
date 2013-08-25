@@ -7,5 +7,5 @@
                   kernel,
                   stdlib
                  ]},
-  {env, []}
+  {env, [{file_backend, file}]}
  ]}.
