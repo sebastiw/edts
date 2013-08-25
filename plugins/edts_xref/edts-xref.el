@@ -25,7 +25,7 @@
 undefined_function_calls, unexported_functions"
   :group 'edts)
 
-(defvar edts-xref-initialized nil
+(defvar edts-xref-initialized-nodes nil
   "The nodes for on which the xref-server has been initialized")
 
 (defun edts-xref-init ()
