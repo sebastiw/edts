@@ -629,6 +629,6 @@ non-nil, don't report an error if the request fails."
     (find-file (car (edts-test-project1-modules)))
     (kill-buffer (get-buffer"*test*"))
     (should (equal '("test") edts-node-down-test-nodes))
-    (remove-hook 'edts-node-down-hook 'edts-node-down-test-hook))))
+    (remove-hook 'edts-node-down-hook 'edts-node-down-test-hook)))
 
 (provide 'edts)
