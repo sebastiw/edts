@@ -33,8 +33,9 @@ undefined_function_calls, unexported_functions"
   ;; Keys
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
-  (add-hook 'edts-code-after-compile-hook 'edts-xref-analyze-related)
-  (add-hook 'edts-after-node-init-hook 'edts-xref-after-node-init-hook))
+  (add-hook 'edts-code-after-compile-hook 'edts-xref-after-compile-hook)
+  (add-hook 'edts-after-node-init-hook 'edts-xref-after-node-init-hook)
+  (add-hook 'edts-node-down-hook 'edts-xref-node-down-hook))
 
 (defun edts-xref-after-node-init-hook ()
   "Hook to run after node initialization."
@@ -47,12 +48,21 @@ undefined_function_calls, unexported_functions"
         (cb-args   `(edts-xref-server-init-callback 204 ,(edts-node-name))))
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
 
+(defun edts-xref-node-down-hook (node)
+  "Hook to run after a node has gone down"
+  (setq edts-xref-initialized (remove node edts-xref-initialized)))
+
+(defun edts-xref-after-compile-hook (&optional result)
+  "Hook to run after compilation of a module."
+  (when (member (edts-node-name) edts-xref-initialized-nodes)
+    (edts-xref-analyze-related result)))
+
 (defun edts-xref-server-init-callback (body node-name)
   "Callback for when the xref server has been initialized."
   (add-to-list 'edts-xref-initialized node-name))
 
 (defun edts-debug-buffer-init ()
-  "edts-debug buffer-specific initialization."p
+  "edts-debug buffer-specific initialization."
   (add-to-list 'mode-line-buffer-identification
                '(edts-mode edts-debug-mode-line-info)
                't))

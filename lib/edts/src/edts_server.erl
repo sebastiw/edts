@@ -29,11 +29,12 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ init_node/6,
-          node_registered_p/1,
-          nodes/0,
-          start_link/0,
-          start_service/2]).
+-export([init_node/6,
+         node_registered_p/1,
+         nodes/0,
+         start_link/0,
+         start_service/2,
+         wait_for_nodedown/0]).
 
 %% gen_server callbacks
 -export([ code_change/3
@@ -50,13 +51,14 @@
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
--record(node, { name     = undefined :: atom()}).
+-record(node, {name :: node()}).
 
--record(state, {nodes = [] :: edts_node()}).
+-record(state, {nodes         = [] :: edts_node(),
+                nodedown_reqs = [] :: [pid()]}).
 
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
--type state():: #state{}.
+-type state()     :: #state{}.
 
 %%%_* API ======================================================================
 
@@ -116,6 +118,17 @@ node_registered_p(Node) ->
 %%------------------------------------------------------------------------------
 nodes() ->
   gen_server:call(?SERVER, nodes, infinity).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Wait for the
+%% @end
+%%
+-spec wait_for_nodedown() -> node().
+%%------------------------------------------------------------------------------
+wait_for_nodedown() ->
+  gen_server:call(?SERVER, wait_for_nodedown, infinity).
 
 
 %%%_* gen_server callbacks  ====================================================
@@ -182,6 +195,8 @@ handle_call({node_registered_p, NodeName}, _From, State) ->
             false   -> false
           end,
   {reply, Reply, State};
+handle_call(wait_for_nodedown, From, #state{nodedown_reqs = Reqs} = State) ->
+  {noreply, State#state{nodedown_reqs = [From|Reqs]}};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
   {reply, {ok, [N#node.name || N <- Nodes]}, State};
 handle_call(_Request, _From, State) ->
@@ -208,12 +223,15 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({nodedown, Node, _Info}, State) ->
+handle_info({nodedown, Node, _Info} = Msg, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  case node_find(Node, State) of
-    false   -> {noreply, State};
-    #node{} -> {noreply, node_delete(Node, State)}
-  end;
+  ok = lists:foreach(fun(Pid) -> gen_server:reply(Pid, Msg) end,
+                     State0#state.nodedown_reqs),
+  State = case node_find(Node, State0) of
+            false   -> State0;
+            #node{} -> node_delete(Node, State0)
+          end,
+    {noreply, State#state{nodedown_reqs = []}};
 handle_info(Info, State) ->
   edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.

@@ -528,13 +528,12 @@ auto-save data."
 
   (edts-test-case edts-project-suite edts-project-basic-test ()
     "Basic project setup test"
-    (let ((eproject-prefer-subproject t))
-      (find-file (car (edts-test-project1-modules)))
-      (should (file-exists-p
-               (path-util-join edts-test-project1-directory ".edts")))
-      (should (string= "test" (eproject-name)))
-      (should (get-buffer"*edts*"))
-      (should (get-buffer"*test*"))))
+    (find-file (car (edts-test-project1-modules)))
+    (should (file-exists-p
+             (path-util-join edts-test-project1-directory ".edts")))
+    (should (string= "test" (eproject-name)))
+    (should (get-buffer"*edts*"))
+    (should (get-buffer"*test*")))
 
   (edts-test-case edts-project-suite edts-project-selector-test ()
     "Test that the in the case of multiple levels of projects, the super

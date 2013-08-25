@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_nodes).
+-module(edts_resource_node_down).
 
 %%%_* Exports ==================================================================
 
@@ -60,13 +60,9 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {ok, Names0} = edts:nodes(),
-  Names =
-    lists:map(fun(Node) ->
-                  list_to_binary(edts_util:nodename2shortname(Node))
-              end,
-              Names0),
-  {mochijson2:encode([{nodes, Names}]), ReqData, Ctx}.
+  {nodedown, Node, _Info} = edts_server:wait_for_nodedown(),
+  ShortNode = list_to_binary(edts_util:nodename2shortname(Node)),
+  {mochijson2:encode([{node, ShortNode}]), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
 

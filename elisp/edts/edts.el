@@ -59,6 +59,10 @@ node."
 (defvar edts-after-node-init-hook nil
   "Hooks to run after a node has been initialized.")
 
+(defvar edts-node-down-hook nil
+  "Hooks to run after a node has gone down. These hooks are called with
+the node-name of the node that has gone down as the argument.")
+
 
 (defun edts-buffer-node-name ()
   "Print the node sname of the erlang node connected to current
@@ -278,7 +282,18 @@ for ARITY will give a regexp matching any arity."
       (setq available (edts-get-nodes t))
       (sit-for 0.5)
       (decf retries))
+    (when available
+      (edts-node-down-request))
     available))
+
+(defun edts-node-down-request (&optional reply)
+  "Initialize things needed to detect when a node goes down"
+  (when reply
+    (run-hook-with-args 'edts-node-down-hook (cdr (assoc 'node reply))))
+  (edts-rest-get-async '("nodes" "node_down")
+                       nil
+                       #'edts-async-callback
+                       '(edts-node-down-request 200)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -583,6 +598,37 @@ non-nil, don't report an error if the request fails."
     ('error (edts-shell-node-name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Unit tests
+;; Tests
+
+(when (member 'ert features)
+
+  (require 'edts-test)
+  (edts-test-add-suite
+   ;; Name
+   edts-suite
+   ;; Setup
+   (lambda ()
+     (edts-test-cleanup-all-buffers)
+     (edts-test-setup-project edts-test-project1-directory
+                              "test"
+                              nil
+                              ;; :node-sname "test"
+                              ))
+   ;; Teardown
+   (lambda (setup-config)
+     (edts-test-teardown-project edts-test-project1-directory)))
+
+
+  (edts-test-case edts-suite edts-node-down-test ()
+    "Basic project setup test"
+    (defvar edts-node-down-test-nodes nil)
+
+    (defun edts-node-down-test-hook (node)
+      (add-to-list 'edts-node-down-test-nodes node))
+    (add-hook 'edts-node-down-hook 'edts-node-down-test-hook)
+    (find-file (car (edts-test-project1-modules)))
+    (kill-buffer (get-buffer"*test*"))
+    (should (equal '("test") edts-node-down-test-nodes))
+    (remove-hook 'edts-node-down-hook 'edts-node-down-test-hook))))
 
 (provide 'edts)
