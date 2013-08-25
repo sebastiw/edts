@@ -104,7 +104,7 @@ malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, modules, xref_checks]) ->
+              fun(req_data, [], [nodename, modules, {enum_list, _}]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}
