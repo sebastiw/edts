@@ -33,7 +33,6 @@
          call/5,
          init_node/6,
          is_node/1,
-         node_available_p/1,
          node_reachable/1,
          nodes/0]).
 
@@ -80,17 +79,6 @@ init_node(ProjectName,
 %%------------------------------------------------------------------------------
 is_node(Node) ->
   edts_server:node_registered_p(Node).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true iff Node is registered with this edts instance and has fisished
-%% its initialization.
-%% @end
-%%
--spec node_available_p(Node::node()) -> boolean().
-%%------------------------------------------------------------------------------
-node_available_p(Node) ->
-  edts_server:node_available_p(Node).
 
 
 %%------------------------------------------------------------------------------

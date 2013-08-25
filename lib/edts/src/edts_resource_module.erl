@@ -101,7 +101,6 @@ resource_exists(ReqData, Ctx) ->
 from_json(ReqData, Ctx) ->
   Node     = orddict:fetch(nodename, Ctx),
   Filename = orddict:fetch(file, Ctx),
-  edts_server:wait_for_node(Node),
   {ok, {Result, {Errors0, Warnings0}}} =
     edts:call(Node, edts_code, compile_and_load, [Filename]),
   Errors   = {array, [format_error(Error) || Error <- Errors0]},
