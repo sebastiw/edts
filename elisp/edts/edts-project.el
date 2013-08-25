@@ -230,18 +230,13 @@ Example:
 
 (defun edts-project-node-init ()
   (interactive)
-  (save-window-excursion
-    (with-output-to-temp-buffer "EDTS Project"
-      (edts-project--init-output-buffer)
-      ;; Ensure project node is started
-      (unless (edts-node-started-p (eproject-attribute :node-sname))
-        (edts-project--display "Starting project node for %s\n"
-                               (eproject-root))
-        (edts-project-start-node))
-      ;; Register it with the EDTS node
-      (edts-project--register-project-node)
-      (sleep-for 1))
-      (edts-project--kill-output-buffer)))
+  ;; Ensure project node is started
+  (unless (edts-node-started-p (eproject-attribute :node-sname))
+    (edts-project--display "Starting project node for %s\n"
+                           (eproject-root))
+    (edts-project-start-node))
+  ;; Register it with the EDTS node
+  (edts-project--register-project-node))
 
 (defun edts-project-node-refresh ()
   "Asynchronously refresh the state of current buffer's project node"
@@ -253,19 +248,6 @@ Example:
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)
    (eproject-attribute :project-include-dirs)))
-
-(defun edts-project--init-output-buffer ()
-  (with-current-buffer "EDTS Project"
-    (erase-buffer))
-  (display-buffer "EDTS Project")
-  (redisplay))
-
-(defun edts-project--kill-output-buffer ()
-  (kill-buffer "EDTS Project"))
-
-(defun edts-project--display (fmt &rest args)
-  (princ (format fmt args))
-  (redisplay))
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
