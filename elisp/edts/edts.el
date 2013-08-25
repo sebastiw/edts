@@ -600,35 +600,4 @@ non-nil, don't report an error if the request fails."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 
-(when (member 'ert features)
-
-  (require 'edts-test)
-  (edts-test-add-suite
-   ;; Name
-   edts-suite
-   ;; Setup
-   (lambda ()
-     (edts-test-cleanup-all-buffers)
-     (edts-test-setup-project edts-test-project1-directory
-                              "test"
-                              nil
-                              ;; :node-sname "test"
-                              ))
-   ;; Teardown
-   (lambda (setup-config)
-     (edts-test-teardown-project edts-test-project1-directory)))
-
-
-  (edts-test-case edts-suite edts-node-down-test ()
-    "Basic project setup test"
-    (defvar edts-node-down-test-nodes nil)
-
-    (defun edts-node-down-test-hook (node)
-      (add-to-list 'edts-node-down-test-nodes node))
-    (add-hook 'edts-node-down-hook 'edts-node-down-test-hook)
-    (find-file (car (edts-test-project1-modules)))
-    (kill-buffer (get-buffer"*test*"))
-    (should (equal '("test") edts-node-down-test-nodes))
-    (remove-hook 'edts-node-down-hook 'edts-node-down-test-hook)))
-
 (provide 'edts)

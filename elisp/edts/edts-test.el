@@ -140,7 +140,7 @@
   (edts-test-run-testcase 'ert-run-tests-interactively test-name))
 
 (defun edts-test-run-testcase (ert-fun test-name)
-  (let* ((ert-test-obj (car (ert-select-tests 'edts-project-selector-test t)))
+  (let* ((ert-test-obj (car (ert-select-tests test-name t)))
          (suite-name (car (remq 'edts-test-suite (ert-test-tags ert-test-obj))))
          (suite (cdr (assoc suite-name edts-test-suite-alist))))
     (when suite
