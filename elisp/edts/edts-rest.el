@@ -97,14 +97,16 @@ CALLBACK-ARGS."
          (status        (cdr (assoc 'result reply)))
          (reply-buf     (current-buffer)))
     (edts-log-debug "Reply %s received for request to %s" status url)
-    (with-current-buffer cb-buf
-      (apply cb reply cb-args))
-    ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
-    ;; when we are back outside the `with-current-buffer'. This seems to be
-    ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
-    (unless (eq (current-buffer) reply-buf)
-      (set-buffer reply-buf))
-    (url-mark-buffer-as-dead reply-buf)))
+    (if (not (buffer-live-p cb-buf))
+        (edts-log-error "Callback buffer %s was killed!" cb-buf)
+      (with-current-buffer cb-buf
+        (apply cb reply cb-args))
+      ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
+      ;; when we are back outside the `with-current-buffer'. This seems to be
+      ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
+      (unless (eq (current-buffer) reply-buf)
+        (set-buffer reply-buf))
+      (url-mark-buffer-as-dead reply-buf))))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
