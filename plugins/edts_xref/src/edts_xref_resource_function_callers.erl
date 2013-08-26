@@ -64,7 +64,7 @@ malformed_request(ReqData, Ctx) ->
   edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
 
 resource_exists(ReqData, Ctx) ->
-  MFArgKeys = {edts_code, who_calls, [module, function, arity]},
+  MFArgKeys = {edts_xref_server, who_calls, [module, function, arity]},
   edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 %% Handlers

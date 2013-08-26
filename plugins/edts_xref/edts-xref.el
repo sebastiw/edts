@@ -106,18 +106,6 @@ buffer's project."
        (list module) edts-xref-checks
        #'edts-handle-xref-analysis-result))))
 
-(defun edts-handle-xref-analysis-result (analysis-res)
-  (when analysis-res
-    (let* ((all-errors (cdr (assoc 'errors analysis-res)))
-           (err-alist  (edts-code--issue-to-file-map all-errors)))
-      ;; Set the error list in each project-buffer
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((errors (cdr (assoc (buffer-file-name) err-alist))))
-          (edts-code--set-issues 'edts-xref (list 'error errors))
-          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when errors
-            (edts-code-display-error-overlays 'edts-xref errors)))))))
-
 (defun edts-get-module-xref-analysis-async (modules checks callback)
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
@@ -133,10 +121,25 @@ parsed response as the single argument"
      "fetching xref-analysis of %s async on %s" modules node-name)
     (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
-(defun edts-get-who-calls (module function arity)
+
+(defun edts-handle-xref-analysis-result (analysis-res)
+  (when analysis-res
+    (let* ((all-errors (cdr (assoc 'errors analysis-res)))
+           (err-alist  (edts-code--issue-to-file-map all-errors)))
+      ;; Set the error list in each project-buffer
+      (with-each-buffer-in-project (gen-sym) (eproject-root)
+        (let ((errors (cdr (assoc (buffer-file-name) err-alist))))
+          (edts-code--set-issues 'edts-xref (list 'error errors))
+          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+          (when errors
+            (edts-code-display-error-overlays 'edts-xref errors)))))))
+
+
+(defun edts-xref-get-who-calls (module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on
 current buffer's project node."
-  (let* ((resource (list "nodes" (edts-node-name)
+  (let* ((resource (list "plugins" "xref"
+                         "nodes" (edts-node-name)
                          "modules" module
                          "functions" function
                          (number-to-string arity)
@@ -146,6 +149,32 @@ current buffer's project node."
         (cdr (assoc 'body res))
         (null
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
+(defun edts-xref-who-calls ()
+  (interactive)
+  (let ((mfa (edts-mfa-at)))
+    (if mfa
+        (apply #'edts-xref--find-callers  mfa)
+      (error "No call at point."))))
+
+(defvar edts-xref--last-who-calls-result nil
+  "The callers found during the last call to edts-who-calls")
+
+(defun edts-xref--find-callers (module function arity)
+  "Jump to any all functions calling `module':`function'/`arity' in the
+current buffer's project."
+  (edts-log-info "Finding callers of %s:%s/%s" module function arity)
+  (let ((callers (edts-xref-get-who-calls module function arity)))
+    (if (not callers)
+        (error "No callers found")
+      (setq edts-xref--last-who-calls-result callers)
+      (edts-navigate-function-popup callers))))
+
+(defun edts-xref-last-who-calls ()
+  "Redo previous call to edts-who-calls"
+  (interactive)
+  (edts-log-info "Re-doing last edts-who-calls")
+  (edts-navigate-function-popup edts-xref--last-who-calls-result))
 
 
 

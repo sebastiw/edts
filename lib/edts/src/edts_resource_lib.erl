@@ -127,11 +127,10 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/2.
 
 term_to_validate(app_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "app_include_dirs") end;
-term_to_validate(arity)                ->
-  fun(RD, _Ctx) -> non_neg_integer_validate(RD, "arity") end;
-term_to_validate({enum_list, Props})            ->
+term_to_validate(arity)                -> fun arity_validate/2;
+term_to_validate({enum_list, Props})   ->
   fun(RD, _Ctx) -> enum_list_validate(RD, Props) end;
-term_to_validate({enum, Props})            ->
+term_to_validate({enum, Props})        ->
   fun(RD, _Ctx) -> enum_validate(RD, Props) end;
 term_to_validate(exported)             ->
   fun(ReqData, _Ctx) ->
@@ -164,6 +163,23 @@ term_to_validate(project_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
 term_to_validate(project_lib_dirs)     ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_lib_dirs") end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate arity
+%% @end
+-spec arity_validate(wrq:req_data(), orddict:orddict()) ->
+               {ok, non_neg_integer()} | error.
+%%------------------------------------------------------------------------------
+arity_validate(ReqData, _Ctx) ->
+  Str = wrq:path_info(arity, ReqData),
+  try
+    case list_to_integer(Str) of
+      Arity when Arity >= 0 -> {ok, Arity};
+      _ -> error
+    end
+  catch error:badarg -> {error, {badarg, Str}}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -429,7 +445,18 @@ string_validate(ReqData, Key) ->
 
 
 %%%_* Unit tests ===============================================================
-
+arity_validate_test() ->
+  meck:unload(),
+  meck:new(wrq),
+  meck:expect(wrq, path_info, fun(arity, _) -> "0" end),
+  ?assertEqual({ok, 0}, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "1" end),
+  ?assertEqual({ok, 1}, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "-1" end),
+  ?assertEqual(error, arity_validate(foo, bar)),
+  meck:expect(wrq, path_info, fun(arity, _) -> "a" end),
+  ?assertEqual({error, {badarg, "a"}}, arity_validate(foo, bar)),
+  meck:unload().
 
 string_validate_test() ->
   meck:unload(),
