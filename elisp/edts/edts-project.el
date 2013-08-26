@@ -94,6 +94,7 @@ Example:
   ;; how to use that variable here and expand it inside the define-project-type
   ;; macro instead of hardcoding the regexps
   :relevant-files ("^\\.erlang$"
+                   "^\\.edts$"
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
@@ -111,9 +112,10 @@ Example:
 (defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
   (edts-project-maybe-create file-name)
-  (let (prev-root
+  (let* (prev-root
         (cur-root (path-util-pop file-name))
-        bestroot)
+        (bestroot  (when (file-exists-p (path-util-join cur-root ".edts"))
+                     cur-root)))
     (while (and cur-root (not (string= prev-root cur-root)))
       (setq prev-root cur-root)
       (setq cur-root (path-util-pop cur-root))
@@ -126,6 +128,7 @@ Example:
   (edts-project-otp-selector file)
   :config-file nil
   :relevant-files ("^\\.erlang$"
+                   "^\\.edts$"
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
@@ -162,6 +165,7 @@ Example:
   (edts-project-temp-selector file)
   :config-file nil
   :relevant-files ("^\\.erlang$"
+                   "^\\.edts$"
                    "\\.app$"
                    "\\.app.src$"
                    "\\.config$"
