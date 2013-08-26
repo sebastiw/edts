@@ -40,7 +40,8 @@ undefined_function_calls, unexported_functions"
 (defun edts-xref-after-node-init-hook ()
   "Hook to run after node initialization."
   ;; Start the xref server
-  (setq edts-xref-initialized (remove (edts-node-name) edts-xref-initialized))
+  (setq edts-xref-initialized-nodes
+        (remove (edts-node-name) edts-xref-initialized-nodes))
   (let ((resource  (list "plugins"
                          "xref"
                          "nodes" (edts-node-name)))
@@ -50,7 +51,7 @@ undefined_function_calls, unexported_functions"
 
 (defun edts-xref-node-down-hook (node)
   "Hook to run after a node has gone down"
-  (setq edts-xref-initialized (remove node edts-xref-initialized)))
+  (setq edts-xref-initialized-nodes (remove node edts-xref-initialized-nodes)))
 
 (defun edts-xref-after-compile-hook (&optional result)
   "Hook to run after compilation of a module."
@@ -59,7 +60,7 @@ undefined_function_calls, unexported_functions"
 
 (defun edts-xref-server-init-callback (body node-name)
   "Callback for when the xref server has been initialized."
-  (add-to-list 'edts-xref-initialized node-name))
+  (add-to-list 'edts-xref-initialized-nodes node-name))
 
 (defun edts-debug-buffer-init ()
   "edts-debug buffer-specific initialization."
