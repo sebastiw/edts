@@ -493,12 +493,13 @@ auto-save data."
    edts-project-suite
    ;; Setup
    (lambda ()
-     (edts-test-cleanup-all-buffers)
+     (edts-test-pre-cleanup-all-buffers)
      (edts-test-setup-project edts-test-project1-directory
                               "test"
                               nil))
    ;; Teardown
    (lambda (setup-config)
+     (edts-test-post-cleanup-all-buffers)
      (edts-test-teardown-project edts-test-project1-directory)))
 
 

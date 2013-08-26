@@ -51,13 +51,28 @@
           (delete-if (lambda (x) (equal (car x) root))
                      eproject-attributes-alist)))
 
-(defun edts-test-cleanup-all-buffers ()
+(defvar edts-test-pre-test-buffer-list nil
+  "The buffer list prior to running tests.")
+
+(defun edts-test-pre-cleanup-all-buffers ()
   (interactive)
   (edts-shell-kill-all)
   (dolist (buf (buffer-list))
-    (when (and (buffer-live-p buf) (buffer-local-value 'edts-mode buf))
+    (when (and (buffer-live-p buf) edts-mode)
       (kill-buffer buf)
-      (edts-log-info "Killed %s" buf))))
+      (edts-log-info "Killed %s" buf)))
+  (setq edts-test-pre-test-buffers (buffer-list)))
+
+(defun edts-test-post-cleanup-all-buffers ()
+  (interactive)
+  (edts-shell-kill-all)
+  (dolist (buf (buffer-list))
+    (when (and (buffer-live-p buf)
+               (buffer-file-name buf)
+               (not (member buf edts-test-pre-test-buffer-list)))
+          (kill-buffer buf)
+      (edts-log-info "Killed %s" buf)))
+  (setq edts-test-pre-test-buffer-list nil))
 
 (defmacro edts-test-case (suite name args desc &rest body)
   "Define a testcase in SUITE. All other arguments are the same is in
@@ -112,7 +127,7 @@
               (setq exit-status 1))))
         (kill-emacs exit-status))
     (progn
-      (message "Error running tests")
+      (edts-log-error "Error running tests")
       (backtrace)
       (kill-emacs 2))))
 
