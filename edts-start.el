@@ -123,7 +123,7 @@ consider EDTS."
         (file-name (buffer-file-name)))
     ;; dired buffer has no file
     (if (and file-name (string-match re file-name))
-        (setq ad-return-value '(generic edts edts-temp edts-otp))
+        (setq ad-return-value (reverse '(generic edts edts-temp edts-otp)))
       ad-do-it)))
 (ad-activate-regexp "edts-eproject-types")
 
