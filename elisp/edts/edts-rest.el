@@ -89,7 +89,8 @@ CALLBACK-ARGS."
     (with-current-buffer
         (url-retrieve url #'edts-rest-request-callback callback-args t)
       (make-local-variable 'url-show-status)
-      (setq url-show-status nil))))
+      (setq url-show-status nil)
+      (current-buffer))))
 
 (defun edts-rest-request-callback (events url cb-buf cb &rest cb-args)
   "Callback for asynchronous http requests."

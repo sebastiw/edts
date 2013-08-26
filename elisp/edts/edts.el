@@ -290,10 +290,11 @@ for ARITY will give a regexp matching any arity."
   "Initialize things needed to detect when a node goes down"
   (when reply
     (run-hook-with-args 'edts-node-down-hook (cdr (assoc 'node reply))))
-  (edts-rest-get-async '("nodes" "node_down")
+  (let ((buf (edts-rest-get-async '("nodes" "node_down")
                        nil
                        #'edts-async-callback
-                       '(edts-node-down-request 200)))
+                       '(edts-node-down-request 200))))
+    (set-process-query-on-exit-flag (get-buffer-process buf) nil)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
