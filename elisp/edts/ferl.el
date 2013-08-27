@@ -68,6 +68,7 @@ buffer if no argument is given"
   (with-current-buffer (or buffer (current-buffer))
     (or (erlang-get-module)
         (and
+         (buffer-file-name)
          (string= (file-name-extension (buffer-file-name buffer)) "erl")
          (erlang-get-module-from-file-name)))))
 

@@ -121,10 +121,11 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 consider EDTS."
   (let ((re (eproject--combine-regexps
              (cons "^\\.edts$" edts-erlang-mode-regexps)))
-        (file-name (path-util-base-name buffer-file-name)))
+        (file-name (buffer-file-name)))
     ;; dired buffer has no file
-    (if (and file-name (string-match re file-name))
-        (setq ad-return-value '(generic edts edts-temp edts-otp))
+    (if (and file-name
+             (string-match re (path-util-base-name file-name)))
+        (setq ad-return-value '(edts-otp edts-temp edts generic))
       ad-do-it)))
 (ad-activate-regexp "edts-eproject-types")
 
