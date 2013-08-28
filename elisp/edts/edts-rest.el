@@ -65,11 +65,11 @@
             (kill-buffer (current-buffer))
             reply))))))
 
-(defun edts-rest-get-async (resource args callback callback-args)
+(defun edts-rest-get-async (resource args callback &optional callback-args)
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "GET" resource args callback callback-args))
 
-(defun edts-rest-post-async (resource args callback callback-args)
+(defun edts-rest-post-async (resource args callback &optional callback-args)
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "POST" resource args callback callback-args))
 
