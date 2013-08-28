@@ -244,6 +244,19 @@ When FUNCTION is specified, the point is moved to its start."
             (edts-log-error
               "Function %s:%s/%s not found" module function arity))))))
 
+(defun edts-navigate-to-module (module &optional line)
+  "Find the source code for MODULE in a buffer, loading it if necessary.
+When FUNCTION is specified, the point is moved to its start."
+  ;; Add us to the history list
+  (let* ((mark (copy-marker (point-marker)))
+         (info (edts-get-basic-module-info module)))
+    (if (not info)
+        (null (edts-log-error "Module %s not found" module))
+      (edts-find-file-existing (cdr (assoc 'source info)))
+      (when line
+        (ferl-goto-line line))
+      t)))
+
 (defun edts-find-file-existing (file)
   "EDTS wrapper for find-file-existing."
   (let ((mark (point-marker)))
@@ -277,8 +290,11 @@ function and arity."
          (choice       (popup-menu* menu-items :scroll-bar t))
          (module       (cdr (assoc 'module   choice)))
          (function     (cdr (assoc 'function choice)))
-         (arity        (cdr (assoc 'arity    choice))))
-    (edts-find-source module function arity)))
+         (arity        (cdr (assoc 'arity    choice)))
+         (line         (car (cdr (assoc 'lines choice)))))
+    (if line
+        (edts-navigate-to-module module line)
+      (edts-find-source module function arity))))
 
 (defun edts-navigate--popup-item (item)
   "Formats an association list describing a function as a string"

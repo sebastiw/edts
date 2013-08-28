@@ -70,8 +70,8 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Info0 = orddict:fetch(result, Ctx),
-  Data = {array, [{struct, [{module, M}, {function, F}, {arity, A}]} ||
-                             {M, F, A} <- Info0]},
+  Data = [[{module, M}, {function, F}, {arity, A}, {lines, Lines}] ||
+                             {{M, F, A}, Lines} <- Info0],
   {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

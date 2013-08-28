@@ -222,10 +222,9 @@ ignored_p(M, F, A) ->
                    [{module(), atom(), non_neg_integer()}].
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
+  Str = lists:flatten(io_lib:format("(XLin) (E || ~p)", [{M, F, A}])),
   {ok, Calls} = xref:q(?SERVER, Str),
-  [Caller || {Caller, _Callee} <- Calls].
-
+  [{Caller, Lines} || {{Caller, _Callee}, Lines} <- Calls].
 
 %%------------------------------------------------------------------------------
 %% @doc
