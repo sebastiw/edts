@@ -329,8 +329,8 @@ FILE."
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
   (if (edts-node-registeredp (eproject-attribute :node-sname))
-      (edts-log-info "Re-initializing project node for %s." (eproject-root))
-    (edts-log-info "Initializing project node for %s." (eproject-root)))
+      (edts-log-info "Re-initializing node for project %s" (eproject-name))
+    (edts-log-info "Initializing node for project %s" (eproject-name)))
   (edts-init-node-when-ready
    (eproject-attribute :name)
    (eproject-attribute :node-sname)

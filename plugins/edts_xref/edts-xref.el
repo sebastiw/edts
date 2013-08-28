@@ -53,14 +53,16 @@ undefined_function_calls, unexported_functions"
   "Hook to run after a node has gone down"
   (setq edts-xref-initialized-nodes (remove node edts-xref-initialized-nodes)))
 
-(defun edts-xref-after-compile-hook (&optional result)
+(defun edts-xref-after-compile-hook (result)
   "Hook to run after compilation of a module."
-  (when (member (edts-node-name) edts-xref-initialized-nodes)
-    (edts-xref-analyze-related result)))
+  (when (not (eq result 'error))
+    (edts-xref-analyze-related)))
+
 
 (defun edts-xref-server-init-callback (body node-name)
   "Callback for when the xref server has been initialized."
   (add-to-list 'edts-xref-initialized-nodes node-name))
+
 
 (defun edts-debug-buffer-init ()
   "edts-debug buffer-specific initialization."
@@ -68,23 +70,26 @@ undefined_function_calls, unexported_functions"
                '(edts-mode edts-debug-mode-line-info)
                't))
 
-(defun edts-xref-analyze-related (&optional result)
+
+(defun edts-xref-analyze-related ()
   "Runs xref-checks for all live buffers related to current
 buffer either by belonging to the same project or, if current buffer
 does not belong to any project, being in the same directory as the
 current buffer's file."
-  (when (and edts-xref-checks (not (eq result 'error)))
-    (interactive '(ok))
-    (let* ((mods nil))
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((mod (ferl-get-module)))
-          (when mod
-            (edts-face-remove-overlays '(edts-xref))
-            (push mod mods))))
-      (edts-get-module-xref-analysis-async
-       mods
-       edts-xref-checks
-       #'edts-handle-xref-analysis-result))))
+  (if (not (member (edts-node-name) edts-xref-initialized-nodes))
+      (edts-log-info "Not running xref analysis on %s, server not ready yet"
+                     (edts-node-name))
+    (when edts-xref-checks
+      (let* ((mods nil))
+        (with-each-buffer-in-project (gen-sym) (eproject-root)
+          (let ((mod (ferl-get-module)))
+            (when mod
+              (edts-face-remove-overlays '(edts-xref))
+              (push mod mods))))
+        (edts-get-module-xref-analysis-async
+         mods
+         edts-xref-checks
+         #'edts-handle-xref-analysis-result)))))
 
 
 (defun edts-xref-analyze-no-project ()
