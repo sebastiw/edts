@@ -58,10 +58,12 @@
   (interactive)
   (edts-shell-kill-all)
   (dolist (buf (buffer-list))
-    (when (and (buffer-live-p buf) edts-mode)
-      (kill-buffer buf)
+    (when (and
+           (buffer-live-p buf)
+           edts-mode
+           (kill-buffer buf))
       (edts-log-info "Killed %s" buf)))
-  (setq edts-test-pre-test-buffers (buffer-list)))
+  (setq edts-test-pre-test-buffer-list (buffer-list)))
 
 (defun edts-test-post-cleanup-all-buffers ()
   (interactive)

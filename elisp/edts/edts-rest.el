@@ -48,7 +48,7 @@
   (edts-rest-request "POST" resource args body))
 
 (defun edts-rest-request (method resource args &optional body)
-  "Send a get request to RESOURCE with ARGS"
+  "Send a request to RESOURCE with ARGS"
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))

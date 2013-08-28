@@ -294,7 +294,8 @@ for ARITY will give a regexp matching any arity."
   (let ((buf (edts-rest-get-async '("nodes" "node_down")
                                   nil
                                   #'edts-node-down-request-callback)))
-    (set-process-query-on-exit-flag (get-buffer-process buf) nil)))
+    (when buf
+      (set-process-query-on-exit-flag (get-buffer-process buf) nil))))
 
 
 (defun edts-node-down-request-callback (reply)
