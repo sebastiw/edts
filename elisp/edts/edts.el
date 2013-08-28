@@ -56,6 +56,9 @@ node."
   "The node-name of current-buffer")
 (make-variable-buffer-local 'edts-buffer-node-name)
 
+(defvar edts-server-down-hook nil
+  "Hooks to be run after the EDTS server has gone down")
+
 (defvar edts-after-node-init-hook nil
   "Hooks to run after a node has been initialized.")
 
@@ -286,15 +289,28 @@ for ARITY will give a regexp matching any arity."
       (edts-node-down-request))
     available))
 
-(defun edts-node-down-request (&optional reply)
-  "Initialize things needed to detect when a node goes down"
-  (when reply
-    (run-hook-with-args 'edts-node-down-hook (cdr (assoc 'node reply))))
+
+(defun edts-node-down-request ()
   (let ((buf (edts-rest-get-async '("nodes" "node_down")
-                       nil
-                       #'edts-async-callback
-                       '(edts-node-down-request 200))))
+                                  nil
+                                  #'edts-node-down-request-callback)))
     (set-process-query-on-exit-flag (get-buffer-process buf) nil)))
+
+
+(defun edts-node-down-request-callback (reply)
+  "Initialize things needed to detect when a node goes down"
+    (if reply
+        (let* ((result (cdr (assoc 'result reply)))
+               (body   (cdr (assoc 'body reply)))
+               (node   (cdr (assoc 'node body))))
+          (if (not (string= (car result) "200"))
+              (null (edts-log-error "Unexpected reply %s" result))
+            (edts-log-info "Node %s down" node)
+            (run-hook-with-args 'edts-node-down-hook node)
+            (edts-node-down-request)))
+      ;; Assume that the server went down if reply is empty
+      (edts-log-info "EDTS server down")
+      (run-hooks 'edts-server-down-hook)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on

@@ -33,6 +33,7 @@ undefined_function_calls, unexported_functions"
   ;; Keys
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
+  (add-hook 'edts-server-down-hook 'edts-xref-server-down-hook)
   (add-hook 'edts-code-after-compile-hook 'edts-xref-after-compile-hook)
   (add-hook 'edts-after-node-init-hook 'edts-xref-after-node-init-hook)
   (add-hook 'edts-node-down-hook 'edts-xref-node-down-hook))
@@ -48,6 +49,11 @@ undefined_function_calls, unexported_functions"
         (rest-args '(("start" . "true")))
         (cb-args   `(edts-xref-server-init-callback 204 ,(edts-node-name))))
     (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
+
+(defun edts-xref-server-down-hook ()
+  "Hook to run after the main edts server goes down"
+  ;; Assume that we'll have to re-initialize all nodes.
+  (setq edts-xref-initialized-nodes nil))
 
 (defun edts-xref-node-down-hook (node)
   "Hook to run after a node has gone down"
