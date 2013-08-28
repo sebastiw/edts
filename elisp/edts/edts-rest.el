@@ -87,7 +87,9 @@ CALLBACK-ARGS."
     (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
-        (url-retrieve url #'edts-rest-request-callback callback-args t)
+      (if (>= emacs-major-version 24)
+          (url-retrieve url #'edts-rest-request-callback callback-args t)
+        (url-retrieve url #'edts-rest-request-callback callback-args))
       (make-local-variable 'url-show-status)
       (setq url-show-status nil)
       (current-buffer))))
@@ -97,7 +99,7 @@ CALLBACK-ARGS."
   (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply)))
          (reply-buf     (current-buffer)))
-    (edts-log-debug "Reply %s received for request to %s" status url)
+    (edts-log-debug "Reply %s received for async request to %s" status url)
     (if (not (buffer-live-p cb-buf))
         (edts-log-error "Callback buffer %s was killed!" cb-buf)
       (with-current-buffer cb-buf
