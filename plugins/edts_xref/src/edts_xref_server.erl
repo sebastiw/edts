@@ -222,7 +222,7 @@ ignored_p(M, F, A) ->
                    [{module(), atom(), non_neg_integer()}].
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(XLin) (E || ~p)", [{M, F, A}])),
+  Str = lists:flatten(io_lib:format("(Lin) (E || ~p)", [{M, F, A}])),
   {ok, Calls} = xref:q(?SERVER, Str),
   [{Caller, Lines} || {{Caller, _Callee}, Lines} <- Calls].
 
@@ -390,7 +390,7 @@ read_file(File) ->
 %%%_* Unit tests ===============================================================
 
 start_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   ?assertNot(started_p()),
   start(),
   ?assert(started_p()),
@@ -398,7 +398,7 @@ start_test() ->
   teardown_eunit().
 
 start_from_state_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   start(),
   [{Mod, _}|_] = xref:info(?SERVER, modules),
   xref:remove_module(?SERVER, Mod),
@@ -436,19 +436,19 @@ update_paths_test() ->
   code:set_path(OrigPath).
 
 who_calls_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], who_calls(edts_test_module2, bar, 1)),
   ?assertEqual(
-    [{edts_test_module,  bar, 1},
-     {edts_test_module,  baz, 1},
-     {edts_test_module2, bar, 1}],
+    [{{edts_test_module,  bar, 1}, [37]},
+     {{edts_test_module,  baz, 1}, [7]},
+     {{edts_test_module2, bar, 1}, [32]}],
      who_calls(edts_test_module, bar, 1)),
   teardown_eunit().
 
 check_undefined_functions_calls_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], check_modules([], [undefined_function_calls])),
@@ -460,7 +460,7 @@ check_undefined_functions_calls_test() ->
   teardown_eunit().
 
 check_unused_exports_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], check_modules([], [unused_exports])),
@@ -472,7 +472,7 @@ check_unused_exports_test() ->
   teardown_eunit().
 
 check_modules_test() ->
-  init_eunit_test(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   Checks = [unused_exports, undefined_function_calls],
@@ -483,7 +483,7 @@ check_modules_test() ->
 
 %%%_* Unit test helpers ========================================================
 
-init_eunit_test() ->
+eunit_test_init() ->
   stop(),
   meck:unload(),
   meck:new(dummy_file_backend),
