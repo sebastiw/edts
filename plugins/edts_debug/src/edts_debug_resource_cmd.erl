@@ -23,20 +23,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_debug_resource_modules).
+-module(edts_debug_resource_cmd).
 
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
 -export([ allowed_methods/2
-        , content_types_provided/2
+        , content_types_accepted/2
         , init/1
         , malformed_request/2
         , resource_exists/2]).
 
 %% Handlers
--export([ to_json/2]).
+-export([ from_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -54,25 +54,25 @@ init(_Config) ->
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
+  {['POST'], ReqData, Ctx}.
 
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
+content_types_accepted(ReqData, Ctx) ->
+  Map = [ {"application/json", from_json} ],
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
+  Validate = [nodename, modulen],
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 resource_exists(ReqData, Ctx) ->
-  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
+  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]), ReqData, Ctx}.
 
-to_json(ReqData, Ctx) ->
-  Node              = orddict:fetch(nodename, Ctx),
-  {ok, Interpreted} = edts_debug:interpreted_modules(Node),
-  Body              = mochijson2:encode([{modules, Interpreted}]),
-  {Body, ReqData, Ctx}.
+%% Handlers
+from_json(_ReqData, Ctx) ->
+  Node = orddict:fetch(nodename, Ctx),
+  Cmd  = orddict:fetch(cmd, Ctx),
+  edts_debug:Cmd(Node).
+
 
 
 
@@ -84,28 +84,11 @@ init_test() ->
   ?assertEqual({ok, orddict:new()}, init(foo)).
 
 allowed_methods_test() ->
-  ?assertEqual({['GET'], foo, bar}, allowed_methods(foo, bar)).
+  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
 
-content_types_provided_test() ->
-  ?assertEqual({[ {"application/json", to_json}
-                , {"text/html",        to_json}
-                , {"text/plain",       to_json} ], foo, bar},
-              content_types_provided(foo, bar)).
-
-to_json_test() ->
-  meck:unload(),
-  meck:new(edts_debug),
-  meck:expect(edts_debug, interpreted_modules, fun(true) -> {ok, [foo]}
-                                                end),
-  Dict1 = orddict:from_list([{nodename, true}]),
-  Res = to_json(req_data, Dict1),
-  ?assertMatch({_, req_data, Dict1}, Res),
-
-  JSON = element(1, Res),
-  ?assertEqual({struct, [{<<"modules">>,[<<"foo">>]}]},
-               mochijson2:decode(JSON)),
-  meck:unload().
-
+content_types_accepted_test() ->
+  ?assertEqual({[ {"application/json", from_json} ], foo, bar},
+               content_types_accepted(foo, bar)).
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

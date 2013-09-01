@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc Breakpoint resource
 %%% @end
-%%% @author João Neves <sevenjp@gmail.com>
+%%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 João Neves <sevenjp@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -54,7 +54,8 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  error_logger:error_msg("oooooooooo"),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allow_missing_post(ReqData, Ctx) ->

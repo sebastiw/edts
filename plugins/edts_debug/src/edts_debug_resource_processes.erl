@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_debug_resource_modules).
+-module(edts_debug_resource_processes).
 
 %%%_* Exports ==================================================================
 
@@ -50,7 +50,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
@@ -69,10 +69,20 @@ resource_exists(ReqData, Ctx) ->
   {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
 
 to_json(ReqData, Ctx) ->
-  Node              = orddict:fetch(nodename, Ctx),
-  {ok, Interpreted} = edts_debug:interpreted_modules(Node),
-  Body              = mochijson2:encode([{modules, Interpreted}]),
+  Node        = orddict:fetch(nodename, Ctx),
+  {ok, Procs} = edts_debug:processes(Node),
+  Data        = [format_proc(P) || P <- Procs],
+  Body        = mochijson2:encode([{processes, Data}]),
   {Body, ReqData, Ctx}.
+
+format_proc({Pid, Init, Status, Info}) ->
+  [{pid, list_to_binary(pid_to_list(Pid))},
+   {init, list_to_binary(lists:flatten(io_lib:format("~p", [Init])))},
+   {status, Status},
+   {info, case Info of
+            {} -> list_to_binary("");
+            _  -> list_to_binary(lists:flatten(io_lib:format("~p", [Info])))
+          end}].
 
 
 

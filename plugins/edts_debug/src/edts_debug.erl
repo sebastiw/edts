@@ -3,9 +3,9 @@
 %%% Erlang interpreter interface through a gen_server for communication
 %%% with external processes
 %%% @end
-%%% @author João Neves <sevenjp@gmail.com>
+%%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 João Neves <sevenjp@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -40,11 +40,13 @@
 -export([break/4,
          breakpoints/1,
          breakpoints/2,
+         continue/2,
          ensure_started/1,
          interpret_module/3,
          interpreted_modules/1,
          module_interpretable_p/2,
          module_interpreted_p/2,
+         processes/1,
          wait_for_break/1]).
 
 %%%_* Includes =================================================================
@@ -72,6 +74,10 @@ breakpoints(Node, Module) ->
   ensure_started(Node),
   edts:call(Node, edts_debug_server, breakpoints, [Module]).
 
+continue(Node, Pid) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, continue, [Pid]).
+
 module_interpreted_p(Node, Module) ->
   ensure_started(Node),
   edts:call(Node, edts_debug_server, module_interpreted_p, [Module]).
@@ -94,6 +100,10 @@ interpret_module(Node, Module, Interpret) ->
 interpreted_modules(Node) ->
   ensure_started(Node),
   edts:call(Node, edts_debug_server, interpreted_modules).
+
+processes(Node) ->
+  ensure_started(Node),
+  edts:call(Node, edts_debug_server, processes).
 
 wait_for_break(Node) ->
   ensure_started(Node),

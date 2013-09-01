@@ -72,7 +72,11 @@ key for each interpreted module the value of which is a list of
 breakpoints for that module.")
 
 (defvar edts-debug-interpreted-alist nil
-  "Alist with interpreted modules for each node. Each value is an list
+  "Alist with interpreted modules for each node. Each value is a list
+of strings.")
+
+(defvar edts-debug-processes-alist nil
+  "Alist with all debugged processes for each node. Each value is a list
 of strings.")
 
 
@@ -83,6 +87,8 @@ of strings.")
   (edts-debug-list-interpreted-update)
   (edts-debug-sync-breakpoint-alist)
   (edts-debug-list-breakpoint-update)
+  (edts-debug-sync-processes-alist)
+  (edts-debug-list-processes-update)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode
@@ -120,6 +126,33 @@ of strings.")
                                 (cons new-elt
                                       (delete old-elt breakpoints)))
                        finally (return (cons node breakpoints))))))
+
+(defun edts-debug-sync-processes-alist ()
+  "Synchronizes `edts-debug-processes-alist'."
+  (setq edts-debug-processes-alist
+        (loop for node in (edts-get-nodes)
+              for procs = (edts-debug-all-processes node)
+              collect (cons
+                       node
+                       (cdr (assoc 'processes procs))))))
+
+(defun edts-debug-continue (node pid)
+  "Send a continue-command to PID on NODE."
+  (edts-debug--cmd node pid 'continue))
+
+(defun edts-debug--cmd (node pid cmd)
+  "Send the command CMD to PID on NODE."
+  (let* ((resource  (list "plugins"
+                          "debugger"
+                          "nodes" node
+                          "processes" pid
+                          "command"))
+         (rest-args (list (cons "cmd" (symbol-name cmd))))
+         (reply     (edts-rest-post resource rest-args))
+         (res       (assoc 'result reply)))
+    (message "res %s" res)
+    (unless (equal res '(result "204" "Created"))
+      (null (edts-log-error "Unexpected reply %s" res)))))
 
 (defun edts-debug-update-buffer-info (node module)
   (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
@@ -241,6 +274,22 @@ value associated with current buffer."
                           "debugger"
                           "nodes"   node-name
                           "breakpoints"))
+         (rest-args nil)
+         (reply     (edts-rest-get resource rest-args))
+         (res       (assoc 'result reply)))
+    (if (not (equal res '(result "200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr res)))
+      (cdr (assoc 'body reply)))))
+
+(defun edts-debug-all-processes (&optional node)
+  "Return a list of all breakpoint states on NODE. NODE defaults to the
+value associated with current buffer."
+  (let* ((node-name (or node (edts-node-name)))
+         (resource  (list "plugins"
+                          "debugger"
+                          "nodes"   node-name
+                          "processes"))
          (rest-args nil)
          (reply     (edts-rest-get resource rest-args))
          (res       (assoc 'result reply)))

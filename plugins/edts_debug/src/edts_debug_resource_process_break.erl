@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% @doc Debugger resource
 %%% @end
-%%% @author João Neves <sevenjp@gmail.com>
+%%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 João Neves <sevenjp@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -68,7 +68,6 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
-  Command = orddict:fetch(cmd, Ctx),
   Info    = edts_debug:wait_for_break(Node),
   Data    = encode_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.

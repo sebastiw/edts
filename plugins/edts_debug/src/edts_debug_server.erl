@@ -3,9 +3,9 @@
 %%% Erlang interpreter interface through a gen_server for communication
 %%% with external processes
 %%% @end
-%%% @author João Neves <sevenjp@gmail.com>
+%%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2012 João Neves <sevenjp@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
 %%% This file is part of EDTS.
 %%%
@@ -37,7 +37,7 @@
 %% Debugger API
 -export([break/3,
          breakpoint_exists_p/2,
-         continue/0,
+         continue/1,
          breakpoints/0,
          breakpoints/1,
          interpret_module/2,
@@ -45,6 +45,7 @@
          module_interpreted_p/1,
          maybe_attach/1,
          module_interpretable_p/1,
+         processes/0,
          step/0,
          step_out/0,
          stop_debug/0,
@@ -113,6 +114,23 @@ module_interpretable_p(Module) ->
     true       -> true;
     {error, _} -> false
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all non terminated processes known to the debug server.
+%% @end
+%% @see int:snapshot/0
+-spec processes() -> [{ { Module :: module()
+                              , Line   :: non_neg_integer()
+                              }
+                            , Options  :: [term()]
+                            }].
+%%------------------------------------------------------------------------------
+processes() ->
+  [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
+
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -230,10 +248,10 @@ wait_for_break() ->
 %% Orders the debugger to continue execution until it reaches another
 %% breakpoint or execution terminates.
 %% @end
--spec continue() -> ok.
+-spec continue(pid()) -> ok.
 %%------------------------------------------------------------------------------
-continue() ->
-  gen_server:call(?SERVER, continue, infinity).
+continue(Pid) ->
+  int:continue(Pid).
 
 %%------------------------------------------------------------------------------
 %% @doc
