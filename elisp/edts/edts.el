@@ -275,15 +275,13 @@ for ARITY will give a regexp matching any arity."
     (error "EDTS: Server already running"))
   (let* ((pwd (path-util-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory edts-erl-command))
-         (retries 10)
-         started
+         (retries 20)
          available)
     (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
-    (while (and (> retries 0) (or (not started)
-                                  (not available)))
-      (setq started (edts-node-started-p "edts"))
+    (setq available (edts-get-nodes t))
+    (while (and (> retries 0) (not available))
       (setq available (edts-get-nodes t))
-      (sit-for 0.5)
+      (sit-for 0.1)
       (decf retries))
     (when available
       (edts-node-down-request))
@@ -337,31 +335,67 @@ localhost."
       (setq string (cdr string)))
     names))
 
+(defcustom edts-async-node-init t
+  "Whether or not node initialization should be synchronous")
+
+(defvar edts--pending-node-startups nil
+  "List of nodes that we are waiting on to get ready for registration.")
+
+(defvar edts--outstanding-node-registration-requests nil
+  "List of nodes for which there are outstanding async registration
+requests.")
+
 (defun edts-init-node-when-ready (project-name
                                   node-name
                                   root
                                   libs
                                   &optional
                                   app-include-dirs
-                                  project-include-dirs)
-  "Once NODE-NAME is registered with epmd, register it with the edts"
-  (let ((retries 5))
-    (edts-log-debug "Waiting for node %s to start, (retries %s)"
+                                  project-include-dirs
+                                  &optional retries)
+  "Once NODE-NAME is registered with epmd, register it with the edts server."
+  (add-to-list 'edts--pending-node-startups node-name)
+  (let ((retries (or retries 5)))
+    (edts-log-debug "Waiting for node %s to start (retries %s)"
                     node-name
                     retries)
-    (while (and (> retries 0) (not (edts-node-started-p node-name)))
-      (sleep-for 0.5)
-      (decf retries))
     (if (not (edts-node-started-p node-name))
-        (null (edts-log-error "Node %s failed to start." node-name))
-      (edts-init-node project-name
-                      node-name
-                      root
-                      libs
-                      app-include-dirs
-                      project-include-dirs)
-      (run-hooks 'edts-after-node-init-hook)
-      t)))
+        (if (> retries 0)
+            ;; Wait same more
+            (if edts-async-node-init
+                (run-with-idle-timer 0.5
+                                     nil
+                                     'edts-init-node-when-ready
+                                     project-name
+                                     node-name
+                                     root
+                                     libs
+                                     app-include-dirs
+                                     project-include-dirs
+                                     (1- retries))
+              ;; Synchronous init
+              (sit-for 0.5)
+              (edts-init-node-when-ready project-name
+                                         node-name
+                                         root
+                                         libs
+                                         app-include-dirs
+                                         project-include-dirs
+                                         (1- retries)))
+          ;; Give up
+          (setq edts--pending-node-startups
+                (remove node-name edts--pending-node-startups))
+          (null (edts-log-error "Node %s failed to start." node-name)))
+      ;; Node started, remove it from list of pending nodes and start
+      ;; initialization.
+      (setq edts--pending-node-startups
+            (remove node-name edts--pending-node-startups))
+      (edts-init-node-async project-name
+                            node-name
+                            root
+                            libs
+                            app-include-dirs
+                            project-include-dirs))))
 
 (defun edts-init-node-async (project-name
                              node-name
@@ -370,26 +404,31 @@ localhost."
                              app-include-dirs
                              project-include-dirs)
   "Register NODE-NAME with the EDTS server asynchronously."
-  (interactive (list (eproject-attribute :name)
-                     (edts-node-name)
-                     (eproject-attribute :root)
-                     (eproject-attribute :lib-dirs)
-                     (eproject-attribute :app-include-dirs)
-                     (eproject-attribute :project-include-dirs)))
-  (let* ((resource (list "nodes" node-name))
-         (args     (list (cons "project_name"         project-name)
-                         (cons "project_root"         root)
-                         (cons "project_lib_dirs"     libs)
-                         (cons "app_include_dirs"     app-include-dirs)
-                         (cons "project_include_dirs" project-include-dirs)))
-         (cb-args  (list node-name)))
-    (edts-rest-post-async resource
-                          args
-                          #'edts-init-node-async-callback
-                          cb-args)))
+  (unless (member node-name edts--outstanding-node-registration-requests)
+    (edts-log-debug "Initializing node %s" node-name)
+    (add-to-list 'edts--outstanding-node-registration-requests node-name)
+    (interactive (list (eproject-attribute :name)
+                       (edts-node-name)
+                       (eproject-attribute :root)
+                       (eproject-attribute :lib-dirs)
+                       p(eproject-attribute :app-include-dirs)
+                       (eproject-attribute :project-include-dirs)))
+    (let* ((resource (list "nodes" node-name))
+           (args     (list (cons "project_name"         project-name)
+                           (cons "project_root"         root)
+                           (cons "project_lib_dirs"     libs)
+                           (cons "app_include_dirs"     app-include-dirs)
+                           (cons "project_include_dirs" project-include-dirs)))
+           (cb-args  (list node-name)))
+      (edts-rest-post-async resource
+                            args
+                            #'edts-init-node-async-callback
+                            cb-args))))
 
-(defun edts-init-node-async-callback (reply node-name &rest rest)
+(defun edts-init-node-async-callback (reply node-name)
   "Handle the result of an asynchronous node registration."
+  (setq edts--outstanding-node-registration-requests
+        (remove node-name edts--outstanding-node-registration-requests))
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
         (progn
@@ -397,58 +436,6 @@ localhost."
           (run-hooks 'edts-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
-
-(defun edts-init-node (project-name
-                       node-name
-                       root
-                       libs
-                       app-include-dirs
-                       project-include-dirs)
-  "Register NODE-NAME with the EDTS server.
-
-If called interactively, fetch arguments from project of
-current-buffer."
-  (interactive (list (eproject-attribute :name)
-                     (edts-node-name)
-                     (eproject-attribute :root)
-                     (eproject-attribute :lib-dirs)
-                     (eproject-attribute :app-include-dirs)
-                     (eproject-attribute :project-include-dirs)))
-  (let ((retries 5))
-    (while (and (> retries 0)
-                (not (edts-try-init-node project-name
-                                         node-name
-                                         root
-                                         libs
-                                         app-include-dirs
-                                         project-include-dirs)))
-      (edts-log-error "Failed to register node %s, Retrying (%s attempts left)"
-                      node-name
-                      retries)
-      (decf retries))
-    (if (edts-node-registeredp node-name t)
-        t
-      (null (edts-log-error "Failed to register node '%s'" node-name)))))
-
-(defun edts-try-init-node (project-name
-                           node-name
-                           root
-                           libs
-                           app-include-dirs
-                           project-include-dirs)
-  "Initialize NODE-NAME with the edts node."
-  (edts-log-debug "Registering node %s, (retries %s)" node-name retries)
-  (let* ((resource (list "nodes" node-name))
-         (args     (list (cons "project_name"         project-name)
-                         (cons "project_root"         root)
-                         (cons "project_lib_dirs"     libs)
-                         (cons "app_include_dirs"     app-include-dirs)
-                         (cons "project_include_dirs" project-include-dirs)))
-         (res      (edts-rest-post resource args)))
-    (if (equal (cdr (assoc 'result res)) '("201" "Created"))
-        res
-      (null (edts-log-error "Unexpected reply: %s"
-                            (cdr (assoc 'result res)))))))
 
 
 (defun edts-get-function-info (module function arity)
