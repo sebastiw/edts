@@ -254,7 +254,8 @@ When FUNCTION is specified, the point is moved to its start."
         (null (edts-log-error "Module %s not found" module))
       (edts-find-file-existing (cdr (assoc 'source info)))
       (when line
-        (ferl-goto-line line))
+        (ferl-goto-line line)
+        (back-to-indentation))
       t)))
 
 (defun edts-find-file-existing (file)
