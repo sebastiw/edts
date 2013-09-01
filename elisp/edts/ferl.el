@@ -68,6 +68,7 @@ buffer if no argument is given"
   (with-current-buffer (or buffer (current-buffer))
     (or (erlang-get-module)
         (and
+         (buffer-file-name)
          (string= (file-name-extension (buffer-file-name buffer)) "erl")
          (erlang-get-module-from-file-name)))))
 
@@ -152,5 +153,17 @@ of (function-name . starting-point)."
   ;; class '_'). FIXME.
   (when (eq (char-after) ?:)
     (forward-sexp)))
+
+(defun ferl-is-point-in-export-list-p ()
+  "Return t if point is inside an export definition list else nil"
+  (save-excursion
+    (let ((oldpoint (point)))
+      (if (re-search-backward "^-export\\s-*(\\s-*\\[" nil t)
+          (condition-case ex
+              (progn
+                (goto-char (1- (match-end 0)))
+                (forward-sexp)
+                (> (point) oldpoint))
+            (error t))))))
 
 (provide 'ferl)

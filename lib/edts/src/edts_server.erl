@@ -29,12 +29,12 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([ wait_for_node/1
-        , init_node/6
-        , node_available_p/1
-        , node_registered_p/1
-        , nodes/0
-        , start_link/0]).
+-export([init_node/6,
+         node_registered_p/1,
+         nodes/0,
+         start_link/0,
+         start_service/2,
+         wait_for_nodedown/0]).
 
 %% gen_server callbacks
 -export([ code_change/3
@@ -44,19 +44,21 @@
         , handle_info/2
         , terminate/2]).
 
+-export([plugin_spec/1]).
+
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
--record(node, { name     = undefined :: atom()
-              , promises = []        :: [rpc:key()]}).
+-record(node, {name :: node()}).
 
--record(state, {nodes = [] :: edts_node()}).
+-record(state, {nodes         = [] :: edts_node(),
+                nodedown_reqs = [] :: [pid()]}).
 
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
--type state():: #state{}.
+-type state()     :: #state{}.
 
 %%%_* API ======================================================================
 
@@ -69,17 +71,6 @@
 %%------------------------------------------------------------------------------
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Wait for Node's initialization to finish (wait for all its promises to be
-%% fulfilled).
-%% @end
-%%
--spec wait_for_node(node()) -> ok.
-%%------------------------------------------------------------------------------
-wait_for_node(Node) ->
-  gen_server:call(?SERVER, {wait_for_node, Node}, infinity).
 
 
 %%------------------------------------------------------------------------------
@@ -104,17 +95,6 @@ init_node(ProjectName, Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) ->
           SysInclDirs},
   gen_server:call(?SERVER, Call, infinity).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true iff Node is registered with this edts instance and has finished
-%% its initialization.
-%% @end
-%%
--spec node_available_p(node()) -> boolean().
-%%------------------------------------------------------------------------------
-node_available_p(Node) ->
-  gen_server:call(?SERVER, {node_available_p, Node}, infinity).
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -138,6 +118,17 @@ node_registered_p(Node) ->
 %%------------------------------------------------------------------------------
 nodes() ->
   gen_server:call(?SERVER, nodes, infinity).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Wait for the
+%% @end
+%%
+-spec wait_for_nodedown() -> node().
+%%------------------------------------------------------------------------------
+wait_for_nodedown() ->
+  gen_server:call(?SERVER, wait_for_nodedown, infinity).
 
 
 %%%_* gen_server callbacks  ====================================================
@@ -170,15 +161,6 @@ init([]) ->
                      {stop, Reason::atom(), term(), state()} |
                      {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_call({wait_for_node, NodeName}, _From, State) ->
-    case node_find(NodeName, State) of
-      false -> {reply, {error, not_found}, State};
-      #node{promises = [_|_]} = Node->
-        lists:foreach(fun rpc:yield/1, Node#node.promises),
-        {reply, ok, node_store(Node#node{promises = []}, State)};
-      #node{} ->
-        {reply, ok, State}
-    end;
 handle_call({init_node,
              ProjectName,
              NodeName,
@@ -207,19 +189,14 @@ handle_call({init_node,
       edts_log:error("Initializing node ~p failed with ~p.", [NodeName, Err]),
       {reply, Err, State0}
   end;
-handle_call({node_available_p, NodeName}, _From, State) ->
-  Reply = case node_find(NodeName, State) of
-            #node{promises = []} -> true;
-            #node{}              -> false;
-            false                -> false
-          end,
-  {reply, Reply, State};
 handle_call({node_registered_p, NodeName}, _From, State) ->
   Reply = case node_find(NodeName, State) of
             #node{} -> true;
             false   -> false
           end,
   {reply, Reply, State};
+handle_call(wait_for_nodedown, From, #state{nodedown_reqs = Reqs} = State) ->
+  {noreply, State#state{nodedown_reqs = [From|Reqs]}};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
   {reply, {ok, [N#node.name || N <- Nodes]}, State};
 handle_call(_Request, _From, State) ->
@@ -246,12 +223,15 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({nodedown, Node, _Info}, State) ->
+handle_info({nodedown, Node, _Info} = Msg, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  case node_find(Node, State) of
-    false   -> {noreply, State};
-    #node{} -> {noreply, node_delete(Node, State)}
-  end;
+  ok = lists:foreach(fun(Pid) -> gen_server:reply(Pid, Msg) end,
+                     State0#state.nodedown_reqs),
+  State = case node_find(Node, State0) of
+            false   -> State0;
+            #node{} -> node_delete(Node, State0)
+          end,
+    {noreply, State#state{nodedown_reqs = []}};
 handle_info(Info, State) ->
   edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.
@@ -301,7 +281,12 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    Plugins = plugins(),
+    PluginDirs = plugin_dirs(),
+    Plugins = plugin_dirs_to_names(PluginDirs),
+    ok = lists:foreach(fun(Dir) ->
+                           edts_dist:load_app(Node, plugin_spec(Dir))
+                       end,
+                       PluginDirs),
     PluginRemoteLoad =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
@@ -312,7 +297,6 @@ do_init_node(ProjectName,
                                         edts_eunit,
                                         edts_eunit_listener,
                                         edts_module_server,
-                                        edts_xref,
                                         edts_util] ++
                                          PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
@@ -331,15 +315,26 @@ do_init_node(ProjectName,
       E
   end.
 
-plugins() ->
+plugin_dirs() ->
   case application:get_env(edts, plugin_dir) of
     undefined -> [];
     {ok, Dir} ->
-      {ok, PluginDirs} = file:list_dir(Dir),
-      [list_to_atom(PluginDir) || PluginDir <- PluginDirs,
-                                  filelib:is_dir(
-                                    filename:absname_join(Dir, PluginDir))]
+      AbsDir = filename:absname(Dir),
+      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
+      [PluginDir || PluginDir <- PluginDirs,
+                    filelib:is_dir(PluginDir)]
   end.
+
+
+plugin_dirs_to_names(Dirs) ->
+  [list_to_atom(filename:basename(Dir)) || Dir <- Dirs].
+
+
+plugin_spec(Dir) ->
+  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  {ok, [AppSpec]} = file:consult(AppFile),
+  AppSpec.
+
 
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
@@ -387,22 +382,6 @@ node_store(Node, State) ->
 
 %%%_* Unit tests ===============================================================
 
-wait_for_node_test() ->
-  S1 = #state{},
-  ?assertEqual({reply, {error, not_found}, S1},
-               handle_call({wait_for_node, foo}, self(), S1)),
-  meck:new(rpc, [unstick]),
-  meck:expect(rpc, yield, fun(dummy) -> ok end),
-  N2 = #node{name = foo, promises = [dummy]},
-  S2 = #state{nodes = [N2]},
-  ?assertEqual({reply, ok, S2#state{nodes = [N2#node{promises = []}]}},
-               handle_call({wait_for_node, foo}, self(), S2)),
-  N3 = #node{name = foo, promises = []},
-  S3 = #state{nodes = [N3]},
-  ?assertEqual({reply, ok, S3},
-               handle_call({wait_for_node, foo}, self(), S3)),
-  meck:unload().
-
 init_node_test() ->
   N1 = #node{name = foo},
   S1 = #state{},
@@ -446,7 +425,7 @@ init_node_test() ->
   meck:unload().
 
 node_registered_p_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
+  N1 = #node{name = foo},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({reply, true, S1},
@@ -454,20 +433,8 @@ node_registered_p_test() ->
   ?assertEqual({reply, false, S1},
                handle_call({node_registered_p, N2#node.name}, self(), S1)).
 
-node_available_p_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
-  N2 = #node{name = bar},
-  S1 = #state{nodes = [N1]},
-  S2 = #state{nodes = [N2]},
-  ?assertEqual({reply, false, S1},
-               handle_call({node_available_p, N1#node.name}, self(), S1)),
-  ?assertEqual({reply, false, S2},
-               handle_call({node_available_p, N1#node.name}, self(), S2)),
-  ?assertEqual({reply, true, S2},
-               handle_call({node_available_p, N2#node.name}, self(), S2)).
-
 nodes_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
+  N1 = #node{name = foo},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   S2 = #state{nodes = [N2]},
@@ -486,7 +453,7 @@ handle_cast_test() ->
   ?assertEqual({noreply, foo}, handle_cast(bar, foo)).
 
 nodedown_test() ->
-  N1 = #node{name = foo, promises = [dummy]},
+  N1 = #node{name = foo},
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({noreply, S1},

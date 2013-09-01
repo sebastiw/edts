@@ -23,29 +23,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_xref).
+-module(edts_xref_server).
 
 %%%_* Exports ==================================================================
-
-%% Extended xref API
--export([start/0,
-         stop/0
-        ]).
 
 %% API
 -export([allowed_checks/0,
          check_modules/2,
          get_state/0,
-         start/1,
+         start/0,
+         stop/0,
          started_p/0,
          update/0,
          update_modules/1,
-         who_calls/3
-        ]).
+         who_calls/3]).
 
 
 %% Internal exports.
--export([do_start_from_state/1]).
+%% -export([save_xref_state/0]).
+
+%% Internal exports.
+-export([init/1]).
+
 
 -export_type([xref_check/0]).
 
@@ -72,39 +71,49 @@ allowed_checks() -> [undefined_function_calls, unused_exports].
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Startns the edts xref-server on the local node.
+%% Starts the edts xref-server on the local node.
 %% @end
 -spec start() -> {ok, pid()} | {error, already_started}.
 %%------------------------------------------------------------------------------
 start() ->
-  case started_p() of
-    false ->
-      {ok, _Pid} = do_start_from_scratch(),
-      update(),
-      ok;
-    true ->
-      {error, already_started}
-  end.
+  File = xref_file(),
+  try
+    case read_file(File) of
+      {ok, BinState}      ->
+        error_logger:info_msg("Found previous state to start from in ~p.",
+                              [File]),
+        State = binary_to_term(BinState),
+        do_start(State);
+      {error, enoent}     ->
+        error_logger:info_msg("Found no previous state to start from."),
+        do_start();
+      {error, _} = Error  ->
+        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
+        do_start()
+    end
+  catch
+    C:E ->
+      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
+                             "Starting with clean state instead.",
+                             [File, C, E]),
+      do_start()
+  end,
+  ok = update().
 
+do_start() ->
+  do_start_with(fun() -> xref:start(?MODULE) end).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Starts the edts xref-server with State on the local node.
-%% @end
--spec start(State::term()) -> ok | {error, already_started}.
-%%------------------------------------------------------------------------------
-start(State) ->
+do_start(State) ->
+  do_start_with(fun() -> proc_lib:start(?MODULE, init, [State]) end).
+
+do_start_with(StartF) ->
   case started_p() of
+    true  -> ok;
     false ->
-      proc_lib:start(?MODULE, do_start_from_state, [State]),
+      {ok, _Pid} = StartF(),
       ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-      wait_until_started(),
-      {ok, _} = update(),
-      ok;
-    true ->
-      {error, already_started}
+      wait_until_started()
   end.
-
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -146,15 +155,22 @@ get_state() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Do an xref-analysis of Modules, applying Checks
+%% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
-                       {ok, [{ Type::error,
-                               File::string(),
-                               Line::non_neg_integer(),
-                               Description::string()}]}.
+                       {ok, [edts_code:issue()]}.
 %%------------------------------------------------------------------------------
-check_modules(Modules, Checks) ->
+check_modules(Modules0, Checks) ->
+  MaybeReloadFun =
+    fun(Module) ->
+        %% We can only do xref checks on compiled, successfully loaded modules
+        %% atm (We don't have the location of the source-file at this point).
+        case edts_code:ensure_module_loaded(false, Module) of
+          Res when is_boolean(Res) -> true;
+          {error, _}               -> false
+        end
+    end,
+  Modules = lists:filter(MaybeReloadFun, Modules0),
   update_modules(Modules),
   Files = [proplists:get_value(source, M:module_info(compile)) || M <- Modules],
   Fun  = fun(Check) -> do_check_modules(Modules, Files, Check) end,
@@ -206,10 +222,9 @@ ignored_p(M, F, A) ->
                    [{module(), atom(), non_neg_integer()}].
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(E || ~p)", [{M, F, A}])),
-  {ok, Calls} = xref:q(edts_xref, Str),
-  [Caller || {Caller, _Callee} <- Calls].
-
+  Str = lists:flatten(io_lib:format("(Lin) (E || ~p)", [{M, F, A}])),
+  {ok, Calls} = xref:q(?SERVER, Str),
+  [{Caller, Lines} || {{Caller, _Callee}, Lines} <- Calls].
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -220,7 +235,8 @@ who_calls(M, F, A) ->
 update() ->
   {ErlLibDirs, AppDirs} = edts_util:lib_and_app_dirs(),
   update_paths(ErlLibDirs, AppDirs),
-  xref:update(?SERVER).
+  xref:update(?SERVER),
+  save_state().
 
 update_modules(Modules) ->
   Added  = ordsets:from_list([M || {M, _Props} <- xref:info(?SERVER, modules)]),
@@ -236,12 +252,7 @@ update_modules(Modules) ->
 
 %%%_* INTERNAL functions =======================================================
 
-do_start_from_scratch() ->
-  {ok, Pid} = xref:start(?SERVER),
-  ok = xref:set_default(?SERVER, [{verbose,false}, {warnings,false}]),
-  {ok, Pid}.
-
-do_start_from_state(State) ->
+init(State) ->
   erlang:register(?SERVER, self()),
   proc_lib:init_ack({ok, self()}),
   gen_server:enter_loop(xref, [], State).
@@ -355,41 +366,50 @@ get_xref_ignores(Mod) ->
       end,
   lists:foldl(F, [], Mod:module_info(attributes)).
 
+save_state() ->
+  File = xref_file(),
+  State = get_state(),
+  case write_file(File, term_to_binary(State)) of
+    ok -> ok;
+    {error, _} = Error ->
+      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
+  end.
+
+xref_file() ->
+  edts_code:project_specific_data_file(".xref").
+
+write_file(File, Data) ->
+  {ok, BE} = application:get_env(edts_xref, file_backend),
+  BE:write_file(File, Data).
+
+read_file(File) ->
+  {ok, BE} = application:get_env(edts_xref, file_backend),
+  BE:read_file(File).
+
+
 %%%_* Unit tests ===============================================================
 
 start_test() ->
-  case started_p() of
-    true  -> stop();
-    false -> ok
-  end,
-  OrigPath = code:get_path(),
-  code:set_path(mock_path()),
-  MonitorRef = erlang:monitor(process, ?SERVER),
-  stop(),
-  receive
-    {'DOWN', MonitorRef, _Type, _Object, _Info} ->
-      ?assertEqual(undefined, whereis(?SERVER)),
-      {error, not_started} = stop()
-  end,
+  eunit_test_init(),
+  ?assertNot(started_p()),
   start(),
-  {error, already_started} = start(),
-  ?assertMatch(Pid when is_pid(Pid), whereis(?SERVER)),
+  ?assert(started_p()),
+  stop(),
+  teardown_eunit().
+
+start_from_state_test() ->
+  eunit_test_init(),
+  start(),
+  [{Mod, _}|_] = xref:info(?SERVER, modules),
+  xref:remove_module(?SERVER, Mod),
   State = get_state(),
   xref:stop(?SERVER),
-  ?assertEqual(undefined, whereis(?SERVER)),
-  start(State),
-  {error, already_started} = start(State),
-  State = get_state(),
-  stop(),
-  code:set_path(OrigPath).
+  do_start(State),
+  ?assertEqual(State, get_state()),
+  teardown_eunit().
 
 update_paths_test() ->
-  case started_p() of
-    true  -> stop();
-    false -> ok
-  end,
   OrigPath = code:get_path(),
-  code:set_path(mock_path()),
   ?assertEqual(undefined, whereis(?SERVER)),
   xref:start(?SERVER),
   ?assertEqual(lists:sort([{verbose,  false},
@@ -415,58 +435,69 @@ update_paths_test() ->
   stop(),
   code:set_path(OrigPath).
 
-
 who_calls_test() ->
-  stop(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   ?assertEqual([], who_calls(edts_test_module2, bar, 1)),
   ?assertEqual(
-    [{edts_test_module,  bar, 1},
-     {edts_test_module,  baz, 1},
-     {edts_test_module2, bar, 1}],
+    [{{edts_test_module,  bar, 1}, [37]},
+     {{edts_test_module,  baz, 1}, [7]},
+     {{edts_test_module2, bar, 1}, [32]}],
      who_calls(edts_test_module, bar, 1)),
-  stop().
+  teardown_eunit().
 
 check_undefined_functions_calls_test() ->
-  stop(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([], [undefined_function_calls])),
   ?assertEqual([], check_modules([edts_test_module],
                                     [undefined_function_calls])),
   ?assertMatch([{error, _File, _Line, Str}] when is_list(Str),
                check_modules([edts_test_module2],
                                [undefined_function_calls])),
-  stop().
+  teardown_eunit().
 
 check_unused_exports_test() ->
-  stop(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
+  ?assertEqual([], check_modules([], [unused_exports])),
   ?assertEqual([], check_modules([edts_test_module], [unused_exports])),
   ?assertMatch([{error, _File2, _Line1, Str1},
                 {error, _File2, _Line2, Str2}] when is_list(Str1) andalso
                                                     is_list(Str2),
                check_modules([edts_test_module2], [unused_exports])),
-  stop().
+  teardown_eunit().
 
 check_modules_test() ->
-  stop(),
+  eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),
   Checks = [unused_exports, undefined_function_calls],
+  ?assertEqual([],     check_modules([], Checks)),
   ?assertEqual([],     check_modules([edts_test_module], Checks)),
   ?assertMatch([_, _, _], check_modules([edts_test_module2], Checks)),
-  stop().
+  teardown_eunit().
 
 %%%_* Unit test helpers ========================================================
 
-mock_path() ->
-  {LibDirs, AppDirs0} = edts_util:lib_and_app_dirs(),
-  case lists:filter(fun(P) -> filename:basename(P) =:= ".eunit" end, AppDirs0) of
-    [_] = EunitDir -> EunitDir ++ LibDirs;
-    _              -> AppDirs0 ++ LibDirs
-  end.
+eunit_test_init() ->
+  stop(),
+  meck:unload(),
+  meck:new(dummy_file_backend),
+  meck:expect(dummy_file_backend, read_file, fun(_) -> {error, enoent} end),
+  meck:expect(dummy_file_backend, write_file, fun(_, _) -> ok end),
+  meck:new(edts_code, [passthrough]),
+  meck:expect(edts_code, project_specific_data_file,
+           fun(_) -> "eunit-test.xref" end),
+  application:set_env(edts_xref, file_backend, dummy_file_backend).
+
+teardown_eunit() ->
+  stop(),
+  meck:unload(),
+  application:set_env(edts_xref, file_backend, file).
 
 compile_and_add_test_modules() ->
   TestDir = code:lib_dir(edts, 'test'),

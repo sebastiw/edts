@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_xref).
+-module(edts_xref_resource_analysis).
 
 %%%_* Exports ==================================================================
 
@@ -63,10 +63,14 @@ content_types_provided(ReqData, Ctx) ->
 
 
 malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, modules, xref_checks]).
+  Allowed = edts_xref_server:allowed_checks(),
+  Validate = [nodename, modules, {enum_list, [{name,     xref_checks},
+                                              {required, true},
+                                              {allowed,  Allowed}]}],
+  edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 resource_exists(ReqData, Ctx) ->
-  MFArgKeys = {edts_code, check_modules, [modules, xref_checks]},
+  MFArgKeys = {edts_xref_server, check_modules, [modules, xref_checks]},
   edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 to_json(ReqData, Ctx) ->
@@ -100,7 +104,7 @@ malformed_request_test() ->
   meck:unload(),
   meck:new(edts_resource_lib),
   meck:expect(edts_resource_lib, validate,
-              fun(req_data, [], [nodename, modules, xref_checks]) ->
+              fun(req_data, [], [nodename, modules, {enum_list, _}]) ->
                   {false, req_data, []};
                  (ReqData, Ctx, _) ->
                   {true, ReqData, Ctx}

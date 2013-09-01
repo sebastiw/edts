@@ -30,7 +30,8 @@
 
 %%%_* Exports ==================================================================
 
--export([lib_and_app_dirs/0,
+-export([nodename2shortname/1,
+         lib_and_app_dirs/0,
          shorten_path/1]).
 
 %%%_* Defines ==================================================================
@@ -38,6 +39,10 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+nodename2shortname(Nodename) ->
+  Str = atom_to_list(Nodename),
+  string:sub_string(Str, 1, string:rchr(Str, $@) -1).
 
 lib_and_app_dirs() ->
   ErlLibDir = code:lib_dir(),

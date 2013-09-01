@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc function callers resource
+%%% @doc nodes resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_function_callers).
+-module(edts_resource_node_down).
 
 %%%_* Exports ==================================================================
 
@@ -31,12 +31,10 @@
 %% Webmachine callbacks
 -export([ allowed_methods/2
         , content_types_provided/2
-        , init/1
-        , malformed_request/2
-        , resource_exists/2]).
+        , init/1]).
 
 %% Handlers
--export([to_json/2]).
+-export([ to_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -49,7 +47,7 @@
 %% Webmachine callbacks
 init(_Config) ->
   edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, orddict:new()}.
+  {ok, []}.
 
 allowed_methods(ReqData, Ctx) ->
   {['GET'], ReqData, Ctx}.
@@ -60,22 +58,13 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
-malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
-
-resource_exists(ReqData, Ctx) ->
-  MFArgKeys = {edts_code, who_calls, [module, function, arity]},
-  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
-
 %% Handlers
 to_json(ReqData, Ctx) ->
-  Info0 = orddict:fetch(result, Ctx),
-  Data = {array, [{struct, [{module, M}, {function, F}, {arity, A}]} ||
-                             {M, F, A} <- Info0]},
-  {mochijson2:encode(Data), ReqData, Ctx}.
+  {nodedown, Node, _Info} = edts_server:wait_for_nodedown(),
+  ShortNode = list_to_binary(edts_util:nodename2shortname(Node)),
+  {mochijson2:encode([{node, ShortNode}]), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
-
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

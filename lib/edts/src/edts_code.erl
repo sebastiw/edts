@@ -35,8 +35,8 @@
 
 %%%_* Exports ==================================================================
 -export([add_paths/1,
-         check_modules/2,
          compile_and_load/1,
+         ensure_module_loaded/2,
          free_vars/1,
          free_vars/2,
          get_function_info/3,
@@ -44,14 +44,13 @@
          get_module_source/1,
          modules/0,
          parse_expressions/1,
+         project_data_dir/0,
+         project_name/0,
+         project_root_dir/0,
+         project_specific_data_file/1,
          start/0,
          started_p/0,
-         string_to_mfa/1,
-         who_calls/3]).
-
-%% Internal exports.
--export([save_xref_state/0]).
-
+         string_to_mfa/1]).
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -85,27 +84,6 @@ add_path(Path) -> code:add_patha(edts_util:shorten_path(Path)).
 -spec add_paths([filename:filename()]) -> ok.
 %%------------------------------------------------------------------------------
 add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Do an xref-analysis of Module, applying Checks
-%% @end
--spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
-                       {ok, [issue()]}.
-%%------------------------------------------------------------------------------
-check_modules(Modules0, Checks) ->
-  MaybeReloadFun =
-    fun(Module) ->
-        %% We can only do xref checks on compiled, successfully loaded modules
-        %% atm (We don't have the location of the source-file at this point).
-        case ensure_module_loaded(false, Module) of
-          Res when is_boolean(Res) -> true;
-          {error, _}               -> false
-        end
-    end,
-  Modules = lists:filter(MaybeReloadFun, Modules0),
-  edts_xref:check_modules(Modules, Checks).
 
 
 %%------------------------------------------------------------------------------
@@ -160,7 +138,6 @@ compile_and_load(File0, Opts) ->
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
-          update_xref([Mod]),
           {ok, {[], format_errors(warning, Warnings)}};
         {error, _} = Err ->
           error_logger:error_msg("(~p) Failed to write ~p: ~p",
@@ -374,18 +351,55 @@ modules_at_path(Path) ->
   Beams = filelib:wildcard(filename:join(Path, "*.beam")),
   [list_to_atom(filename:rootname(filename:basename(Beam))) || Beam <- Beams].
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the nome of this node's project.
+%% @end
+-spec project_name() -> string().
+%%------------------------------------------------------------------------------
+project_name() ->
+  {ok, ProjectName} = application:get_env(edts, project_name),
+  ProjectName.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Starts the edts xref-server on the local node.
+%% Return the directory where EDTS-related data is stored for this node's
+%% project.
+%% @end
+-spec project_data_dir() -> string().
+%%------------------------------------------------------------------------------
+project_data_dir() ->
+  {ok, DataDir} = application:get_env(edts, project_data_dir),
+  DataDir.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the nome of this node's project.
+%% @end
+-spec project_root_dir() -> string().
+%%------------------------------------------------------------------------------
+project_root_dir() ->
+  {ok, DataDir} = application:get_env(edts, project_root_dir),
+  DataDir.
+
+project_specific_data_file(Suffix) ->
+  DataDir = project_data_dir(),
+  RootDir = project_root_dir(),
+  ProjectName = project_name(),
+  Filename = io_lib:format("~p_~s~s",
+                           [erlang:phash2(RootDir), ProjectName, Suffix]),
+  filename:join(DataDir, Filename).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Starts the edts services on the node
 %% @end
 -spec start() -> ok.
 %%------------------------------------------------------------------------------
 start() ->
-  case edts_xref:started_p() of
-    true  -> update_xref();
-    false -> do_init_xref()
-  end,
   case edts_module_server:started_p() of
     true  -> edts_module_server:update();
     false -> {ok, _} = edts_module_server:start()
@@ -400,75 +414,10 @@ start() ->
 -spec started_p() -> boolean().
 %%------------------------------------------------------------------------------
 started_p() ->
-  edts_xref:started_p() andalso
-    edts_module_server:started_p().
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns alist with all functions that call M:F/A on the local node.
-%% @end
--spec who_calls(module(), atom(), non_neg_integer()) ->
-                   [{module(), atom(), non_neg_integer()}].
-%%------------------------------------------------------------------------------
-who_calls(M, F, A) -> edts_xref:who_calls(M, F, A).
+  edts_module_server:started_p().
 
 
 %%%_* Internal functions =======================================================
-
-do_init_xref() ->
-  File = xref_file(),
-  try
-    case file:read_file(File) of
-      {ok, BinState}      ->
-        error_logger:info_msg("Found previous state to start from in ~p.",
-                              [File]),
-        edts_xref:start(binary_to_term(BinState));
-      {error, enoent}     ->
-        error_logger:info_msg("Found no previous state to start from."),
-        start_xref();
-      {error, _} = Error  ->
-        error_logger:error_msg("Reading ~p failed with: ~p", [File, Error]),
-        start_xref()
-    end
-  catch
-    C:E ->
-      error_logger:error_msg("Starting xref from ~p failed with: ~p:~p~n~n"
-                             "Starting with clean state instead.",
-                             [File, C, E]),
-      start_xref()
-  end.
-
-start_xref() ->
-  edts_xref:start(),
-  spawn(?MODULE, save_xref_state, []),
-  ok.
-
-update_xref() ->
-  edts_xref:update(),
-  spawn(?MODULE, save_xref_state, []),
-  ok.
-
-update_xref(Modules) ->
-  edts_xref:update_modules(Modules),
-  spawn(?MODULE, save_xref_state, []),
-  ok.
-
-save_xref_state() ->
-  File = xref_file(),
-  State = edts_xref:get_state(),
-  case file:write_file(File, term_to_binary(State)) of
-    ok -> ok;
-    {error, _} = Error ->
-      error_logger:error_msg("Failed to write ~p: ~p", [File, Error])
-  end.
-
-xref_file() ->
-  {ok, XrefDir} = application:get_env(edts, project_data_dir),
-  {ok, RootDir} = application:get_env(edts, project_root_dir),
-  {ok, ProjectName} = application:get_env(edts, project_name),
-  Filename = io_lib:format("~p_~s.xref", [erlang:phash2(RootDir), ProjectName]),
-  filename:join(XrefDir, Filename).
 
 
 %%------------------------------------------------------------------------------

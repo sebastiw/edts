@@ -6,7 +6,6 @@
 
 ;; Prerequisites
 (require 'cl)
-(require 'erlang)
 (require 'woman)
 (require 'ert nil 'noerror)
 
@@ -38,14 +37,35 @@
   (path-util-join edts-root-directory "test")
   "Directory where edts test data are located.")
 
+(unless (require 'erlang nil 'noerror)
+  (add-to-list 'load-path
+               (car
+                (file-expand-wildcards
+                 (path-util-join
+                  (path-util-pop (file-truename (executable-find "erl")) 2)
+                           "lib"
+                           "tools*"
+                           "emacs"))))
+  (require 'erlang))
+
 ;; Add all libs to load-path
 (loop for  (name dirp . rest)
       in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
       when dirp
       do   (add-to-list 'load-path (path-util-join edts-lib-directory name)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Requires
+(defcustom edts-erlang-mode-regexps
+  '("^\\.erlang$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.config$"
+    "\\.erl$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.script$"
+    "\\.yaws$")
+  "Additional extensions for which to auto-activate erlang-mode.")
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
@@ -77,9 +97,9 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 (defconst erlang-auto-highlight-exclusions
   (cons (quote erlang-mode)
                (concat
-                "\\(" erlang-operators-regexp
+                "^\\(" erlang-operators-regexp
                 "\\|" erlang-keywords-regexp
-                "\\|\\<[[:digit:]]+\\>\\)")))
+                "\\|\\<[[:digit:]]+\\>\\)$")))
 
 (defvar erlang-current-function-ahs-plugin
   '((name    . "erlang current function")
@@ -90,6 +110,25 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EDTS mode
+
+
+;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
+;;
+;; To avoid weird eproject types like generic-git interfering with us
+;; make sure we only consider edts project types.
+(defadvice eproject--all-types (around edts-eproject-types)
+  "Ignore irrelevant eproject types for files where we should really only
+consider EDTS."
+  (let ((re (eproject--combine-regexps
+             (cons "^\\.edts$" edts-erlang-mode-regexps)))
+        (file-name (buffer-file-name)))
+    ;; dired buffer has no file
+    (if (and file-name
+             (string-match re (path-util-base-name file-name)))
+        (setq ad-return-value '(edts-otp edts-temp edts generic))
+      ad-do-it)))
+(ad-activate-regexp "edts-eproject-types")
+
 
 (defgroup edts nil
   "Erlang development tools"
@@ -104,8 +143,6 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     (define-key map "\C-c\C-d\S-f" 'edts-find-global-function)
     (define-key map "\C-c\C-dH"    'edts-find-doc)
     (define-key map "\C-c\C-dh"    'edts-show-doc-under-point)
-    (define-key map "\C-c\C-dw"    'edts-who-calls)
-    (define-key map "\C-c\C-dW"    'edts-last-who-calls)
     (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
     (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
@@ -116,32 +153,11 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
     map)
   "Keymap for EDTS.")
 
-(defcustom edts-erlang-mode-regexps
-  '("^\\.erlang$"
-    "\\.app$"
-    "\\.app.src$"
-    "\\.config$"
-    "\\.es$"
-    "\\.escript$"
-    "\\.eterm$"
-    "\\.script$"
-    "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode.")
-
 (defvar edts-mode-hook nil
   "Hooks to run at the end of edts-mode initialization in a buffer.")
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
-
-  ;; HACKWARNING!!
-  ;; To avoid weird eproject types like generic-git interfering with us
-  ;; make sure we only consider edts project types.
-  (make-local-variable 'eproject-project-types)
-  (delete-if-not
-   #'(lambda (project-typedef)
-       (member (car project-typedef) '(generic edts edts-otp edts-temp)))
-        eproject-project-types)
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)

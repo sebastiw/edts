@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc nodes resource
+%%% @doc function callers resource
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,7 +23,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_nodes).
+-module(edts_xref_resource_function_callers).
 
 %%%_* Exports ==================================================================
 
@@ -31,10 +31,12 @@
 %% Webmachine callbacks
 -export([ allowed_methods/2
         , content_types_provided/2
-        , init/1]).
+        , init/1
+        , malformed_request/2
+        , resource_exists/2]).
 
 %% Handlers
--export([ to_json/2]).
+-export([to_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -47,7 +49,7 @@
 %% Webmachine callbacks
 init(_Config) ->
   edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, []}.
+  {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
   {['GET'], ReqData, Ctx}.
@@ -58,17 +60,22 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
+malformed_request(ReqData, Ctx) ->
+  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, function, arity]).
+
+resource_exists(ReqData, Ctx) ->
+  MFArgKeys = {edts_xref_server, who_calls, [module, function, arity]},
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
+
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {ok, Names0} = edts:nodes(),
-  Names =
-    lists:map(fun(Node) ->
-                  list_to_binary(edts_util:nodename2shortname(Node))
-              end,
-              Names0),
-  {mochijson2:encode([{nodes, Names}]), ReqData, Ctx}.
+  Info0 = orddict:fetch(result, Ctx),
+  Data = [[{module, M}, {function, F}, {arity, A}, {lines, Lines}] ||
+                             {{M, F, A}, Lines} <- Info0],
+  {mochijson2:encode(Data), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
+
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

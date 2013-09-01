@@ -48,7 +48,7 @@
   (edts-rest-request "POST" resource args body))
 
 (defun edts-rest-request (method resource args &optional body)
-  "Send a get request to RESOURCE with ARGS"
+  "Send a request to RESOURCE with ARGS"
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr))
@@ -65,11 +65,11 @@
             (kill-buffer (current-buffer))
             reply))))))
 
-(defun edts-rest-get-async (resource args callback callback-args)
+(defun edts-rest-get-async (resource args callback &optional callback-args)
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "GET" resource args callback callback-args))
 
-(defun edts-rest-post-async (resource args callback callback-args)
+(defun edts-rest-post-async (resource args callback &optional callback-args)
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request-async "POST" resource args callback callback-args))
 
@@ -87,24 +87,29 @@ CALLBACK-ARGS."
     (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
-        (url-retrieve url #'edts-rest-request-callback callback-args)
+      (if (>= emacs-major-version 24)
+          (url-retrieve url #'edts-rest-request-callback callback-args t)
+        (url-retrieve url #'edts-rest-request-callback callback-args))
       (make-local-variable 'url-show-status)
-      (setq url-show-status nil))))
+      (setq url-show-status nil)
+      (current-buffer))))
 
 (defun edts-rest-request-callback (events url cb-buf cb &rest cb-args)
   "Callback for asynchronous http requests."
   (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply)))
          (reply-buf     (current-buffer)))
-    (edts-log-debug "Reply %s received for request to %s" status url)
-    (with-current-buffer cb-buf
-      (apply cb reply cb-args))
-    ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
-    ;; when we are back outside the `with-current-buffer'. This seems to be
-    ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
-    (unless (eq (current-buffer) reply-buf)
-      (set-buffer reply-buf))
-    (url-mark-buffer-as-dead reply-buf)))
+    (edts-log-debug "Reply %s received for async request to %s" status url)
+    (if (not (buffer-live-p cb-buf))
+        (edts-log-error "Callback buffer %s was killed!" cb-buf)
+      (with-current-buffer cb-buf
+        (apply cb reply cb-args))
+      ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
+      ;; when we are back outside the `with-current-buffer'. This seems to be
+      ;; bug somewhere in `save-current-buffer', but is not present in Emacs 24.
+      (unless (eq (current-buffer) reply-buf)
+        (set-buffer reply-buf))
+      (url-mark-buffer-as-dead reply-buf))))
 
 (defun edts-rest-parse-http-response ()
   "Parses the contents of an http response in current buffer."
@@ -162,6 +167,36 @@ CALLBACK-ARGS."
               (json-false       nil))
           (json-read-from-string string)))
     (error string)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Test support
+
+(defun edts-rest-force-sync (force)
+  "If FORCE is non-nil, force all requests to be synchronous. Otherwise
+ensure that this is not enforced."
+  (if force
+      (ad-activate-regexp "edts-rest-test-sync")
+    (ad-deactivate-regexp "edts-rest-test-sync")))
+
+(defadvice edts-rest-request-async (around edts-rest-test-sync (method
+                                                           resource
+                                                           args
+                                                           callback
+                                                           callback-args))
+  "** Use only for testing **
+
+Wrap a an async request to RESOURCE with ARGS and turn it into a
+synchronous request, calling CALLBACK with CALLBACK-ARGS when the
+request completes."
+    (make-local-variable 'url-show-status)
+    (setq url-show-status nil)
+  (let ((url                       (edts-rest-resource-url resource args))
+        (url-request-method        method)
+        (url-request-extra-headers (list edts-rest-content-type-hdr)))
+    (apply callback
+           (edts-rest-request method resource args)
+           callback-args)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
