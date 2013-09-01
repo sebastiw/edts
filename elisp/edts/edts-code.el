@@ -119,7 +119,7 @@ of ISSUES."
   (let* ((issue-alist nil))
     (mapc
      #'(lambda (e)
-         (let* ((file (cdr (assoc 'file e)))
+         (let* ((file (file-truename (cdr (assoc 'file e))))
                 (new-e (cons e (cdr (assoc file issue-alist)))))
            (push (cons file new-e) issue-alist)))
      issues)

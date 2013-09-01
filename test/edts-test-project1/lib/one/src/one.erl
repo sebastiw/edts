@@ -10,9 +10,8 @@
 -define(macro_ok, ok).
 
 -spec one(any()) -> string().
-one(Foo) ->
-  lists:keymap(fo, bar, a),
-  case one_two:one_two_fun() of
+one(Foo) -> lists:keymap(fo, bar, a),
+  case one_two:one_two_fun(a) of
     Foo -> ?macro_ok;
     _   -> error(oo)
   end,
@@ -22,6 +21,7 @@ one(Foo) ->
 
 -spec some_function(string()) -> atom().
 some_function(Foo) ->
+  one_two:one_two_fun(),
   #record{field = list_to_atom(Foo)}.
 
 %%%_* Emacs ====================================================================

@@ -92,10 +92,7 @@ current buffer's file."
             (when mod
               (edts-face-remove-overlays '(edts-xref))
               (push mod mods))))
-        (edts-get-module-xref-analysis-async
-         mods
-         edts-xref-checks
-         #'edts-handle-xref-analysis-result)))))
+        (edts-xref-module-analysis-async mods)))))
 
 
 (defun edts-xref-analyze-no-project ()
@@ -113,11 +110,11 @@ buffer's project."
   (let ((module (ferl-get-module)))
     (when module
       (edts-face-remove-overlays '(edts-xref))
-      (edts-get-module-xref-analysis-async
+      (edts-xref-module-analysis-async
        (list module) edts-xref-checks
-       #'edts-handle-xref-analysis-result))))
+       #'edts-xref-analysis-callback))))
 
-(defun edts-get-module-xref-analysis-async (modules checks callback)
+(defun edts-xref-module-analysis-async (modules)
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
@@ -125,21 +122,21 @@ parsed response as the single argument"
          (resource  (list "plugins" "xref"
                           "nodes" node-name
                           "analysis"))
-         (rest-args `(("xref_checks" . ,(mapcar #'symbol-name checks))
+         (rest-args `(("xref_checks" . ,(mapcar #'symbol-name edts-xref-checks))
                       ("modules"     . ,modules)))
-         (cb-args   (list callback 200)))
+         (cb-args   (list #'edts-xref-analysis-callback 200)))
     (edts-log-debug
      "fetching xref-analysis of %s async on %s" modules node-name)
     (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
 
 
-(defun edts-handle-xref-analysis-result (analysis-res)
+(defun edts-xref-analysis-callback (analysis-res)
   (when analysis-res
     (let* ((all-errors (cdr (assoc 'errors analysis-res)))
            (err-alist  (edts-code--issue-to-file-map all-errors)))
       ;; Set the error list in each project-buffer
       (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((errors (cdr (assoc (buffer-file-name) err-alist))))
+        (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
           (edts-code--set-issues 'edts-xref (list 'error errors))
           (edts-face-update-buffer-mode-line (edts-code-buffer-status))
           (when errors
@@ -188,5 +185,53 @@ current buffer's project."
   (edts-navigate-function-popup edts-xref--last-who-calls-result))
 
 
+(when (member 'ert features)
+
+  (require 'edts-test)
+  (edts-test-add-suite
+   ;; Name
+   edts-xref-suite
+   ;; Setup
+   (lambda ()
+     (edts-test-pre-cleanup-all-buffers)
+     (edts-test-setup-project edts-test-project1-directory
+                              "test"
+                              nil)
+     (edts-rest-force-sync t))
+
+   ;; Teardown
+   (lambda (setup-config)
+     (edts-test-teardown-project edts-test-project1-directory)
+     (edts-test-post-cleanup-all-buffers)
+     (edts-rest-force-sync nil)))
+
+  (edts-test-case edts-xref-suite edts-xref-analysis-test ()
+    "Basic xref analysis setup test"
+    (flet ((edts-node-down-request () nil))
+      (find-file (car (edts-test-project1-modules)))
+      (edts-xref-module-analysis-async '("one"))
+      (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
+                                'error)))
+        (should (equal (length errors) 1))
+        (should (equal (cdr (assoc 'line (car errors))) 24))
+        (should (string= (cdr (assoc 'type (car errors))) "error"))
+        (should (string= (cdr (assoc 'file (car errors)))
+                         (file-truename (buffer-file-name)))))))
+
+  (edts-test-case edts-xref-suite edts-xref-who-calls-test ()
+    "Basic project setup test"
+    (flet ((edts-node-down-request () nil))
+      (find-file (car (edts-test-project1-modules)))
+      (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
+             (caller   (car callers))
+             (module   (cdr (assoc 'module caller)))
+             (function (cdr (assoc 'function caller)))
+             (arity    (cdr (assoc 'arity caller)))
+             (lines    (cdr (assoc 'lines caller))))
+        (should (equal (length callers) 1))
+        (should (equal module "one"))
+        (should (equal function "one"))
+        (should (equal arity 1))))))
 
 (provide 'edts-xref)
+

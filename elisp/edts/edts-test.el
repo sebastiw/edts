@@ -62,7 +62,7 @@
            (buffer-live-p buf)
            edts-mode
            (kill-buffer buf))
-      (edts-log-info "Killed %s" buf)))
+      (edts-log-debug "Killed %s" buf)))
   (setq edts-test-pre-test-buffer-list (buffer-list)))
 
 (defun edts-test-post-cleanup-all-buffers ()
@@ -73,7 +73,7 @@
                (buffer-file-name buf)
                (not (member buf edts-test-pre-test-buffer-list)))
           (kill-buffer buf)
-      (edts-log-info "Killed %s" buf)))
+      (edts-log-debug "Killed %s" buf)))
   (setq edts-test-pre-test-buffer-list nil))
 
 (defmacro edts-test-case (suite name args desc &rest body)
@@ -89,8 +89,6 @@
 
 (defmacro edts-test-add-suite (suite-name &optional setup teardown)
   (assert (symbolp suite-name))
-  ;; (assert (or (functionp setup) (null setup)))
-  ;; (assert (or (functionp teardown) (null teardown)))
   (let ((alistvar (make-symbol "alist")))
 
     `(let ((,alistvar (remove-if #'(lambda (suite)
