@@ -78,14 +78,14 @@
   `((((class color))  (:background ,edts-face-error-color-dark
                        :foreground "white"))
     (t (:bold t)))
-  "Face used for marking warning lines."
+  "Face used for marking errors in the mode-line."
   :group 'edts)
 
-(defface edts-face-error-mode-line
+(defface edts-face-warning-mode-line
   `((((class color))  (:background ,edts-face-warning-color-dark
                        :foreground "black"))
     (t (:bold t)))
-  "Face used for marking warning lines."
+  "Face used for marking warnings in the mode-line."
   :group 'edts)
 
 (defvar edts-face-modeline-remap-cookie nil
