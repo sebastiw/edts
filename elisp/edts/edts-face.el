@@ -192,7 +192,7 @@ the highest priority any edts overlay at new point if any."
         (when (and (not edts-inhibit-fringe-markers) fringe)
           (overlay-put overlay
                        'before-string
-                       (propertize " " 'display (cons 'left-fringe fringe))))
+                       (propertize " " 'display (cons edts-marker-fringe fringe))))
         overlay))))
 
 (defun edts-face-remove-overlays (&optional type)
