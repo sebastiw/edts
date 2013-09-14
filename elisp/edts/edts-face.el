@@ -75,13 +75,17 @@
   :group 'edts)
 
 (defface edts-face-error-mode-line
-  '((default (:foreground "white" :inherit edts-face-error-line)))
-  "The face to use for the modeline when there are errors in the buffer"
+  `((((class color))  (:background ,edts-face-error-color-dark
+                       :foreground "white"))
+    (t (:bold t)))
+  "Face used for marking warning lines."
   :group 'edts)
 
-(defface edts-face-warning-mode-line
-  '((default (:foreground "white" :inherit edts-face-warning-line)))
-  "The face to use for the modeline when there are warnings in the buffer"
+(defface edts-face-error-mode-line
+  `((((class color))  (:background ,edts-face-warning-color-dark
+                       :foreground "black"))
+    (t (:bold t)))
+  "Face used for marking warning lines."
   :group 'edts)
 
 (defvar edts-face-modeline-remap-cookie nil
