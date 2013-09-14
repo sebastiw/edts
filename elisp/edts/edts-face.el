@@ -33,16 +33,43 @@
   :group 'edts
   :type 'boolean)
 
+(define-fringe-bitmap 'small-rectangle (vector #b00111110
+                                               #b00111110
+                                               #b00111110
+                                               #b00111110
+                                               #b00111110
+                                               #b00111110
+                                               #b00111110))
+
+(defconst edts-face-warning-color-light "#ffc000")
+(defconst edts-face-warning-color-dark "#ffc000")
+(defconst edts-face-error-color-light "#ff0000")
+(defconst edts-face-error-color-dark "#ff0000")
+
+(defface edts-face-error-fringe-bitmap
+  `((((class color) (background dark))  (:foreground ,edts-face-error-color-dark))
+    (((class color) (background light)) (:foreground ,edts-face-error-color-light))
+    (t (:bold t)))
+  "Face used for marking error lines."
+  :group 'edts)
+
+(defface edts-face-warning-fringe-bitmap
+  `((((class color) (background dark))  (:foreground ,edts-face-warning-color-dark))
+    (((class color) (background light)) (:foreground ,edts-face-warning-color-light))
+    (t (:bold t)))
+  "Face used for marking error lines."
+  :group 'edts)
+
 (defface edts-face-error-line
-  '((((class color) (background dark)) (:background "Firebrick"))
-    (((class color) (background light)) (:background "LightPink1"))
+  `((((class color) (background dark))  (:underline (:color ,edts-face-error-color-dark)))
+    (((class color) (background light)) (:underline (:color ,edts-face-error-color-light)))
     (t (:bold t)))
   "Face used for marking error lines."
   :group 'edts)
 
 (defface edts-face-warning-line
-  '((((class color) (background dark)) (:background "yellow4"))
-    (((class color) (background light)) (:background "#ffff80"))
+  `((((class color) (background dark))  (:underline (:color ,edts-face-warning-color-dark)))
+    (((class color) (background light)) (:underline (:color ,edts-face-warning-color-light)))
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
@@ -140,7 +167,14 @@ the highest priority any edts overlay at new point if any."
       overlay1
       overlay2))
 
-(defun edts-face-display-overlay (face line desc type prio &optional fill-line)
+(defun edts-face-display-overlay (face
+                                  line
+                                  desc
+                                  type
+                                  prio
+                                  &optional
+                                  fill-line
+                                  fringe)
   "Displays overlay for ISSUE in current buffer."
   (save-excursion
     (save-restriction
@@ -155,6 +189,10 @@ the highest priority any edts overlay at new point if any."
         (overlay-put overlay 'help-echo desc)
         (overlay-put overlay 'edts-face-overlay-type type)
         (overlay-put overlay 'priority prio)
+        (when (and (not edts-inhibit-fringe-markers) fringe)
+          (overlay-put overlay
+                       'before-string
+                       (propertize " " 'display (cons 'left-fringe fringe))))
         overlay))))
 
 (defun edts-face-remove-overlays (&optional type)
