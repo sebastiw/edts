@@ -35,6 +35,7 @@
     (kbd "<delete>")
     'edts-debug-list-breakpoint-delete-breakpoint)
   (setq major-mode 'edts-debug-list-breakpoint-mode)
+  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-breakpoint-update)
   (use-local-map edts-debug-list-breakpoint-mode-map))
 
 (defun edts-debug-list-breakpoints ()

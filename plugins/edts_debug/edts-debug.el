@@ -21,6 +21,7 @@
 
 (require 'edts-debug-list-breakpoint-mode)
 (require 'edts-debug-list-interpreted-mode)
+(require 'edts-debug-list-processes-mode)
 
 (defface edts-debug-breakpoint-active-face
   '((((class color) (background dark)) (:background "dark blue"))
@@ -48,7 +49,9 @@ request should always be outstanding if we are not already attached.")
   ;; Keys
   (define-key edts-mode-map "\C-c\C-db"   'edts-debug-break)
   (define-key edts-mode-map "\C-c\C-di"   'edts-debug-interpret)
-  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-show-interpreted)
+  (define-key edts-mode-map "\C-c\C-d\M-b" 'edts-debug-list-breakpoints)
+  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-list-interpreted)
+  (define-key edts-mode-map "\C-c\C-d\M-p" 'edts-debug-list-processes)
   (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook))
 
 (defun edts-debug-after-node-init-hook ()
@@ -79,16 +82,17 @@ of strings.")
   "Alist with all debugged processes for each node. Each value is a list
 of strings.")
 
+(defvar edts-debug-after-sync-hook nil
+  "Hook to run after synchronizing debug information (interpreted
+modules, breakpoints and debugged processes).")
 
 (defun edts-debug-sync ()
   "Synchronize debug information between EDTS and the Emacs instance."
   (interactive)
   (edts-debug-sync-interpreted-alist)
-  (edts-debug-list-interpreted-update)
   (edts-debug-sync-breakpoint-alist)
-  (edts-debug-list-breakpoint-update)
   (edts-debug-sync-processes-alist)
-  (edts-debug-list-processes-update)
+  (run-hook 'edts-debug-after-sync-hook)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode

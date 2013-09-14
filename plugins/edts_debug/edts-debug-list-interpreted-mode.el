@@ -34,7 +34,7 @@
     edts-debug-list-interpreted-mode-map
     (kbd "<delete>")
     'edts-debug-list-interpreted-uninterpret-module)
-
+  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-interpreted-update)
   (setq major-mode 'edts-debug-list-interpreted-mode)
   (use-local-map edts-debug-list-interpreted-mode-map))
 

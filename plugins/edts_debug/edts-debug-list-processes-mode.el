@@ -38,6 +38,7 @@
     edts-debug-list-processes-mode-map
     (kbd "c")
     'edts-debug-list-processes-continue)
+  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-processes-update)
   (setq major-mode 'edts-debug-list-processes-mode)
   (use-local-map edts-debug-list-processes-mode-map))
 
@@ -117,7 +118,6 @@ with EDTS."
                   `("Init"   ,max-init-len    nil     :pad-right 4)
                   `("Status" ,max-status-len  nil     :pad-right 4)
                   `("Info"   ,max-info-len    nil     :pad-right 4)))
-           (message "%s" tabulated-list-format)
            (tabulated-list-init-header)
            (setq tabulated-list-entries (reverse entries))
            (tabulated-list-print))))))
