@@ -78,13 +78,13 @@ with EDTS."
         (flet (;; Sort an alist by comparing the keys as strings
                (key-sort (kvs)
                          (sort
-                          kvs
+                          (copy-sequence kvs)
                           #'(lambda (el1 el2)
-                                  (string< (car el1) (car el2)))))
+                              (string< (car el1) (car el2)))))
                ;; Sort breakpoints by line numbers)
                (line-sort (breakpoints)
                           (sort
-                           breakpoints
+                           (copy-sequence breakpoints)
                            #'(lambda (b1 b2)
                                (< (cdr (assoc 'line b1))
                                   (cdr (assoc 'line b2)))))))
@@ -106,18 +106,19 @@ with EDTS."
                                   (setq max-module-len (max max-module-len
                                                             (length mod)))
                                   (setq max-node-len (max max-node-len
-                                                          (length node)))))))
-      (setq tabulated-list-format
-            (vector
-             `("Node"      ,max-node-len   'string< :pad-right 4)
-             `("Module"    ,max-module-len 'string< :pad-right 4)
-             '("Line"      8               nil      :pad-right 4)
-             '("Status"    8               nil      :pad-right 4)
-             '("Trigger"   10              nil      :pad-right 4)
-             '("Condition" 0               nil)))
-      (tabulated-list-init-header)
-      (setq tabulated-list-entries (reverse entries))
-      (tabulated-list-print)))))
+                                                          (length node))))))
+          (message "breakpoint alist 2 %s" edts-debug-breakpoint-alist)
+          (setq tabulated-list-format
+                (vector
+                 `("Node"      ,max-node-len   'string< :pad-right 4)
+                 `("Module"    ,max-module-len 'string< :pad-right 4)
+                 '("Line"      8               nil      :pad-right 4)
+                 '("Status"    8               nil      :pad-right 4)
+                 '("Trigger"   10              nil      :pad-right 4)
+                 '("Condition" 0               nil)))
+          (tabulated-list-init-header)
+          (setq tabulated-list-entries (reverse entries))
+          (tabulated-list-print))))))
 
 (defun edts-debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))

@@ -73,7 +73,7 @@ with EDTS."
             entries)
         (loop for (node . mods) in int-alist
               when mods
-              do (loop for mod in (sort mods 'string<)
+              do (loop for mod in (sort (copy-sequence mods) 'string<)
                        do (setq max-node-len (max max-node-len (length node)))
                        do (push (list nil (vector node mod)) entries)))
         (setq tabulated-list-format

@@ -84,7 +84,7 @@ with EDTS."
         (flet (;; Sort an alist by comparing the keys as strings
                (key-sort (kvs)
                          (sort
-                          kvs
+                          (copy-sequence kvs)
                           #'(lambda (el1 el2)
                                   (string< (car el1) (car el2))))))
           (loop for (node . procs) in (key-sort edts-debug-processes-alist)

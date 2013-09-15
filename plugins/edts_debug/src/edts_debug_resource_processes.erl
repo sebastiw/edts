@@ -77,7 +77,6 @@ to_json(ReqData, Ctx) ->
 
 format_proc({Pid, Init, Status, Info}) ->
   PidStr0 = pid_to_list(Pid),
-  io:format("PidStr0 ~p~n", [PidStr0]),
   PidStr = string:sub_string(PidStr0, 2, length(PidStr0) - 1),
   [{pid, list_to_binary(PidStr)},
    {init, list_to_binary(lists:flatten(io_lib:format("~p", [Init])))},
