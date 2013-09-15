@@ -68,7 +68,7 @@ resource_exists(ReqData, Ctx) ->
 %% Handlers
 to_json(ReqData, Ctx) ->
   Node    = orddict:fetch(nodename, Ctx),
-  Info    = edts_debug:wait_for_break(Node),
+  Info    = edts:call(Node, edts_debug, wait_for_break),
   Data    = encode_debugger_info(Info),
   {mochijson2:encode(Data), ReqData, Ctx}.
 

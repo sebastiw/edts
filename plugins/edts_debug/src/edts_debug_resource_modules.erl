@@ -25,6 +25,8 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_modules).
 
+-compile({parse_transform, lager_transform}).
+
 %%%_* Exports ==================================================================
 
 %% API
@@ -70,7 +72,7 @@ resource_exists(ReqData, Ctx) ->
 
 to_json(ReqData, Ctx) ->
   Node              = orddict:fetch(nodename, Ctx),
-  {ok, Interpreted} = edts_debug:interpreted_modules(Node),
+  {ok, Interpreted} = edts:call(Node, edts_debug, interpreted_modules),
   Body              = mochijson2:encode([{modules, Interpreted}]),
   {Body, ReqData, Ctx}.
 

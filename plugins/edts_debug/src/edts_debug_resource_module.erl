@@ -80,7 +80,8 @@ create_path(ReqData, Ctx) ->
 forbidden(ReqData, Ctx) ->
   Node                = orddict:fetch(nodename, Ctx),
   Module              = orddict:fetch(module, Ctx),
-  {ok, Interpretable} = edts_debug:module_interpretable_p(Node, Module),
+  {ok, Interpretable} =
+    edts:call(Node, edts_debug, module_interpretable_p, [Module]),
   {not Interpretable, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
@@ -103,7 +104,8 @@ from_json(ReqData, Ctx) ->
   Node               = orddict:fetch(nodename, Ctx),
   Module             = orddict:fetch(module, Ctx),
   Interpret          = orddict:fetch(interpret, Ctx),
-  {ok, InterpretedP} = edts_debug:interpret_module(Node, Module, Interpret),
+  {ok, InterpretedP} =
+    edts:call(Node, edts_debug, interpret_module, [Module, Interpret]),
   Body               = mochijson2:encode([{module, Module},
                                           {interpreted, InterpretedP}]),
   {true, wrq:set_resp_body(Body, ReqData), Ctx}.
@@ -111,7 +113,8 @@ from_json(ReqData, Ctx) ->
 to_json(ReqData, Ctx) ->
   Node               = orddict:fetch(nodename, Ctx),
   Module             = orddict:fetch(module, Ctx),
-  {ok, InterpretedP} = edts_debug:module_interpreted_p(Node, Module),
+  {ok, InterpretedP} =
+    edts:call(Node, edts_debug, module_interpreted_p, [Module]),
   Body               = mochijson2:encode([{module, Module},
                                           {interpreted, InterpretedP}]),
   {Body, ReqData, Ctx}.

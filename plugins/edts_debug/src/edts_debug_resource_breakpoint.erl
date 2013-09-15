@@ -101,13 +101,13 @@ from_json(ReqData, Ctx) ->
   Module = orddict:fetch(module, Ctx),
   Line   = orddict:fetch(line, Ctx),
   Break  = orddict:fetch(break, Ctx),
-  {ok, Result} = edts_debug:break(Node, Module, Line, Break),
+  {ok, Result} = edts:call(Node, edts_debug, break, [Module, Line, Break]),
   {true, wrq:set_resp_body(mochijson2:encode([{break, Result}]), ReqData), Ctx}.
 
 to_json(ReqData, Ctx) ->
   Node   = orddict:fetch(nodename, Ctx),
   Module = orddict:fetch(module, Ctx),
-  {ok, Breakpoints} = edts_debug:breakpoints(Node, Module),
+  {ok, Breakpoints} = edts:call(Node, edts_debug, breakpoints, [Module]),
   Data = [format(B) || B <- Breakpoints],
   {mochijson2:encode(Data), ReqData, Ctx}.
 

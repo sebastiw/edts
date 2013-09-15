@@ -37,17 +37,18 @@
          project_node_services/0]).
 
 
--export([break/4,
+-export([break/3,
+         breakpoint_exists_p/2,
+         breakpoints/0,
          breakpoints/1,
-         breakpoints/2,
-         continue/2,
-         ensure_started/1,
-         interpret_module/3,
-         interpreted_modules/1,
-         module_interpretable_p/2,
-         module_interpreted_p/2,
-         processes/1,
-         wait_for_break/1]).
+         continue/1,
+         ensure_started/0,
+         interpret_module/2,
+         interpreted_modules/0,
+         module_interpretable_p/1,
+         module_interpreted_p/1,
+         processes/0,
+         wait_for_break/0]).
 
 %%%_* Includes =================================================================
 
@@ -59,57 +60,174 @@
 
 %% Behaviour callbacks
 edts_server_services()  -> [].
-project_node_modules()  -> [edts_debug_server].
+project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
 
-break(Node, Module, Line, Break) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, break, [Module, Line, Break]).
+%%------------------------------------------------------------------------------
+%% @doc
+%% Create or delete a breakpoint at Line in Module. Returns true if a break
+%% point was created or already existed, false otherwise.
+%% @end
+-spec break(Module :: module(),
+            Line   :: non_neg_integer(),
+            Break :: true | false | toggle) -> boolean().
+%%------------------------------------------------------------------------------
+break(Module, Line, Break) ->
+  ensure_started(),
+  do_break(Module, Line, Break).
 
-breakpoints(Node) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, breakpoints, []).
+do_break(Module, Line, toggle) ->
+  do_break(Module, Line, not breakpoint_exists_p(Module, Line));
+do_break(Module, Line, true) ->
+  case interpret_module(Module, true) of
+    {error, _} = E -> E;
+    true           ->
+      int:break(Module, Line),
+      true
+  end;
+do_break(Module, Line, false) ->
+  int:delete_break(Module, Line),
+  false.
 
-breakpoints(Node, Module) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, breakpoints, [Module]).
-
-continue(Node, Pid) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, continue, [Pid]).
-
-module_interpreted_p(Node, Module) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, module_interpreted_p, [Module]).
+%%------------------------------------------------------------------------------
+%% @doc
+%% Returns true if there exists a breakpoint at Line in Module
+%% @end
+-spec breakpoint_exists_p(Module :: module(),
+                          Line   :: non_neg_integer()) -> boolean().
+%%------------------------------------------------------------------------------
+breakpoint_exists_p(Module, Line) ->
+  lists:keymember({Module, Line}, 1, int:all_breaks()).
 
 
-module_interpretable_p(Node, Module) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, module_interpretable_p, [Module]).
 
-ensure_started(Node) ->
-  edts:call(Node, edts_debug_server, ensure_started, []).
 
-interpret_module(Node, Module, Interpret) ->
-  ensure_started(Node),
-  edts:call(Node,
-            edts_debug_server,
-            interpret_module,
-            [Module, Interpret]).
 
-interpreted_modules(Node) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, interpreted_modules).
+%%------------------------------------------------------------------------------
+%% @doc
+%% Get all breakpoints and their status in the current interpreter
+%% @end
+-spec breakpoints() -> [{ { Module :: module()
+                              , Line   :: non_neg_integer()
+                              }
+                            , Options  :: [term()]
+                            }].
+%%------------------------------------------------------------------------------
+breakpoints() ->
+  ensure_started(),
+  int:all_breaks().
 
-processes(Node) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, processes).
 
-wait_for_break(Node) ->
-  ensure_started(Node),
-  edts:call(Node, edts_debug_server, wait_for_break).
+%%------------------------------------------------------------------------------
+%% @doc
+%% Get all breakpoints and their status in the current interpreter
+%% @end
+-spec breakpoints(Module :: module()) ->
+                     [{{Module :: module(), Line   :: non_neg_integer()},
+                       Options  :: [term()]}].
+%%------------------------------------------------------------------------------
+breakpoints(Module) ->
+  ensure_started(),
+  %% int:all_breaks/1 is broken in OTP < R15.
+  [Break || Break = {{M, _},_} <- int:all_breaks(), M =:= Module].
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to continue execution until it reaches another
+%% breakpoint or execution terminates.
+%% @end
+-spec continue(pid()) -> ok.
+%%------------------------------------------------------------------------------
+continue(Pid) ->
+  ensure_started(),
+  int:continue(Pid).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Change the interpretation state of Module depending on Intepret. Returns
+%% {ok, Bool} where Bool is true if Module is now interpreted and false
+%% otherwise.
+%% @end
+-spec interpret_module(Modules   :: module(),
+                       Interpret :: true | false | toggle) ->
+                          {ok, boolean()}.
+%%------------------------------------------------------------------------------
+interpret_module(Module, Interpret) ->
+  ensure_started(),
+  do_interpret_module(Module, Interpret).
+
+do_interpret_module(Module, toggle) ->
+  do_interpret_module(Module, not module_interpreted_p(Module));
+do_interpret_module(Module, true) ->
+  case module_interpretable_p(Module) of
+    false -> {error, uninterpretable};
+    true  ->
+      {module, Module} = int:i(Module),
+      true
+  end;
+do_interpret_module(Module, false) ->
+  ok = int:n(Module),
+  false.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all interpreted modules.
+%% @end
+-spec interpreted_modules() -> [module()].
+%%------------------------------------------------------------------------------
+interpreted_modules() ->
+  ensure_started(),
+  int:interpreted().
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Reports if Module is interpreted.
+%% @end
+-spec module_interpreted_p(Module :: module()) -> boolean().
+%%------------------------------------------------------------------------------
+module_interpreted_p(Module) ->
+  ensure_started(),
+  lists:member(Module, interpreted_modules()).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if Module is interpretable, false otherwise
+%% @end
+-spec module_interpretable_p(module()) -> boolean().
+%%------------------------------------------------------------------------------
+module_interpretable_p(Module) ->
+  ensure_started(),
+  case int:interpretable(Module) of
+    true       -> true;
+    {error, _} -> false
+  end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all non terminated processes known to the debug server.
+%% @end
+%% @see int:snapshot/0
+-spec processes() -> [{ { Module :: module()
+                              , Line   :: non_neg_integer()
+                              }
+                            , Options  :: [term()]
+                            }].
+%%------------------------------------------------------------------------------
+processes() ->
+  ensure_started(),
+  [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
+
+
+wait_for_break() ->
+  ensure_started(),
+  edts_debug_server:wait_for_break().
 
 %%%_* Internal functions =======================================================
+
+ensure_started() ->
+  edts_debug_server:ensure_started().
 
 %%%_* Unit tests ===============================================================
 

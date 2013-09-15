@@ -70,7 +70,7 @@ resource_exists(ReqData, Ctx) ->
 
 to_json(ReqData, Ctx) ->
   Node        = orddict:fetch(nodename, Ctx),
-  {ok, Procs} = edts_debug:processes(Node),
+  {ok, Procs} = edts:call(Node, edts_debug, processes),
   Data        = [format_proc(P) || P <- Procs],
   Body        = mochijson2:encode([{processes, Data}]),
   {Body, ReqData, Ctx}.

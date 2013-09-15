@@ -71,7 +71,7 @@ resource_exists(ReqData, Ctx) ->
 
 to_json(ReqData, Ctx) ->
   Nodename = orddict:fetch(nodename, Ctx),
-  {ok, Breakpoints} = edts_debug:breakpoints(Nodename),
+  {ok, Breakpoints} = edts:call(Nodename, edts_debug, breakpoints),
   Data = [format(B) || B <- Breakpoints],
   {mochijson2:encode(Data), ReqData, Ctx}.
 

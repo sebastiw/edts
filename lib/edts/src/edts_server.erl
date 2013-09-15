@@ -297,6 +297,7 @@ do_init_node(ProjectName,
                                         edts_eunit,
                                         edts_eunit_listener,
                                         edts_module_server,
+                                        edts_plugin,
                                         edts_util] ++
                                          PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),

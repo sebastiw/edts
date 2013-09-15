@@ -78,7 +78,7 @@ process_post(ReqData, Ctx) ->
   Node = orddict:fetch(nodename, Ctx),
   Pid  = orddict:fetch(process, Ctx),
   Cmd  = orddict:fetch(cmd, Ctx),
-  edts_debug:Cmd(Node, Pid),
+  ok = edts:call(Node, edts_debug, Cmd, [Pid]),
   {true, ReqData, Ctx}.
 
 

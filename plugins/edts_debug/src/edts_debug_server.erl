@@ -35,17 +35,7 @@
 -export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
 
 %% Debugger API
--export([break/3,
-         breakpoint_exists_p/2,
-         continue/1,
-         breakpoints/0,
-         breakpoints/1,
-         interpret_module/2,
-         interpreted_modules/0,
-         module_interpreted_p/1,
-         maybe_attach/1,
-         module_interpretable_p/1,
-         processes/0,
+-export([maybe_attach/1,
          step/0,
          step_out/0,
          stop_debug/0,
@@ -103,134 +93,15 @@ maybe_attach(Pid) ->
       {already_attached, AttPid, Pid}
   end.
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Return true if Module is interpretable, false otherwise
-%% @end
--spec module_interpretable_p(module()) -> boolean().
-%%------------------------------------------------------------------------------
-module_interpretable_p(Module) ->
-  case int:interpretable(Module) of
-    true       -> true;
-    {error, _} -> false
-  end.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Return a list of all non terminated processes known to the debug server.
-%% @end
-%% @see int:snapshot/0
--spec processes() -> [{ { Module :: module()
-                              , Line   :: non_neg_integer()
-                              }
-                            , Options  :: [term()]
-                            }].
-%%------------------------------------------------------------------------------
-processes() ->
-  [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
 
 
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Get all breakpoints and their status in the current interpreter
-%% @end
--spec breakpoints() -> [{ { Module :: module()
-                              , Line   :: non_neg_integer()
-                              }
-                            , Options  :: [term()]
-                            }].
-%%------------------------------------------------------------------------------
-breakpoints() -> int:all_breaks().
 
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Get all breakpoints and their status in the current interpreter
-%% @end
--spec breakpoints(Module :: module()) ->
-                     [{{Module :: module(), Line   :: non_neg_integer()},
-                       Options  :: [term()]}].
-%%------------------------------------------------------------------------------
-breakpoints(Module) ->
-  %% int:all_breaks/1 is broken in OTP < R15.
-  [Break || Break = {{M, _},_} <- int:all_breaks(), M =:= Module].
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Change the interpretation state of Module depending on Intepret. Returns
-%% {ok, Bool} where Bool is true if Module is now interpreted and false
-%% otherwise.
-%% @end
--spec interpret_module(Modules   :: module(),
-                       Interpret :: true | false | toggle) ->
-                          {ok, boolean()}.
-%%------------------------------------------------------------------------------
-interpret_module(Module, toggle) ->
-  interpret_module(Module, not module_interpreted_p(Module));
-interpret_module(Module, true) ->
-  case module_interpretable_p(Module) of
-    false -> {error, uninterpretable};
-    true  ->
-      {module, Module} = int:i(Module),
-      true
-  end;
-interpret_module(Module, false) ->
-  ok = int:n(Module),
-  false.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Return a list of all interpreted modules.
-%% @end
--spec interpreted_modules() -> [module()].
-%%------------------------------------------------------------------------------
-interpreted_modules() -> int:interpreted().
 
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Reports if Module is interpreted.
-%% @end
--spec module_interpreted_p(Module :: module()) -> boolean().
-%%------------------------------------------------------------------------------
-module_interpreted_p(Module) ->
-  lists:member(Module, interpreted_modules()).
 
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns true if there exists a breakpoint at Line in Module
-%% @end
--spec breakpoint_exists_p(Module :: module(),
-                          Line   :: non_neg_integer()) -> boolean().
-%%------------------------------------------------------------------------------
-breakpoint_exists_p(Module, Line) ->
-  lists:keymember({Module, Line}, 1, int:all_breaks()).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Create or delete a breakpoint at Line in Module. Returns true if a break
-%% point was created or already existed, false otherwise.
-%% @end
--spec break(Module :: module(),
-            Line   :: non_neg_integer(),
-            Break :: true | false | toggle) -> boolean().
-%%------------------------------------------------------------------------------
-break(Module, Line, toggle) ->
-  break(Module, Line, not breakpoint_exists_p(Module, Line));
-break(Module, Line, true) ->
-  case interpret_module(Module, true) of
-    {error, _} = E -> E;
-    true           ->
-      int:break(Module, Line),
-      true
-  end;
-break(Module, Line, false) ->
-  int:delete_break(Module, Line),
-  false.
 
 
 %%------------------------------------------------------------------------------
@@ -243,15 +114,6 @@ break(Module, Line, false) ->
 wait_for_break() ->
   gen_server:call(?SERVER, wait_for_break, infinity).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Orders the debugger to continue execution until it reaches another
-%% breakpoint or execution terminates.
-%% @end
--spec continue(pid()) -> ok.
-%%------------------------------------------------------------------------------
-continue(Pid) ->
-  int:continue(Pid).
 
 %%------------------------------------------------------------------------------
 %% @doc
