@@ -33,8 +33,7 @@
          node_registered_p/1,
          nodes/0,
          start_link/0,
-         start_service/2,
-         wait_for_nodedown/0]).
+         start_service/2]).
 
 %% gen_server callbacks
 -export([ code_change/3
@@ -53,8 +52,7 @@
 -define(SERVER, ?MODULE).
 -record(node, {name :: node()}).
 
--record(state, {nodes         = [] :: edts_node(),
-                nodedown_reqs = [] :: [pid()]}).
+-record(state, {nodes         = [] :: edts_node()}).
 
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
@@ -118,17 +116,6 @@ node_registered_p(Node) ->
 %%------------------------------------------------------------------------------
 nodes() ->
   gen_server:call(?SERVER, nodes, infinity).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Wait for the
-%% @end
-%%
--spec wait_for_nodedown() -> node().
-%%------------------------------------------------------------------------------
-wait_for_nodedown() ->
-  gen_server:call(?SERVER, wait_for_nodedown, infinity).
 
 
 %%%_* gen_server callbacks  ====================================================
@@ -195,8 +182,6 @@ handle_call({node_registered_p, NodeName}, _From, State) ->
             false   -> false
           end,
   {reply, Reply, State};
-handle_call(wait_for_nodedown, From, #state{nodedown_reqs = Reqs} = State) ->
-  {noreply, State#state{nodedown_reqs = [From|Reqs]}};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
   {reply, {ok, [N#node.name || N <- Nodes]}, State};
 handle_call(_Request, _From, State) ->
@@ -223,15 +208,15 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({nodedown, Node, _Info} = Msg, State0) ->
+handle_info({nodedown, Node, _Info}, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  ok = lists:foreach(fun(Pid) -> gen_server:reply(Pid, Msg) end,
-                     State0#state.nodedown_reqs),
+  ShortNode = edts_util:nodename2shortname(Node),
+  edts_event_server:dispatch_event(node_down, [{node, ShortNode}]),
   State = case node_find(Node, State0) of
             false   -> State0;
             #node{} -> node_delete(Node, State0)
           end,
-    {noreply, State#state{nodedown_reqs = []}};
+  {noreply, State};
 handle_info(Info, State) ->
   edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.
@@ -296,13 +281,15 @@ do_init_node(ProjectName,
                                         edts_dialyzer,
                                         edts_eunit,
                                         edts_eunit_listener,
+                                        edts_event,
                                         edts_module_server,
                                         edts_plugin,
                                         edts_util] ++
                                          PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
-    AppEnv = [{project_name,         ProjectName},
+    AppEnv = [{server_node,          node()},
+              {project_name,         ProjectName},
               {project_data_dir,     ProjectDir},
               {project_root_dir,     ProjectRoot},
               {app_include_dirs,     AppIncludeDirs},

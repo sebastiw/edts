@@ -23,7 +23,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_node_down).
+-module(edts_resource_event).
+
+-compile({parse_transform, lager_transform}).
 
 %%%_* Exports ==================================================================
 
@@ -46,7 +48,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
+  lager:debug("Call to ~p", [?MODULE]),
   {ok, []}.
 
 allowed_methods(ReqData, Ctx) ->
@@ -60,9 +62,9 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {nodedown, Node, _Info} = edts_server:wait_for_nodedown(),
-  ShortNode = list_to_binary(edts_util:nodename2shortname(Node)),
-  {mochijson2:encode([{node, ShortNode}]), ReqData, Ctx}.
+  {ok, {EventType, EventInfo}} = edts_event_server:listen(),
+  {mochijson2:encode([{event, [{type, EventType},
+                               {info, EventInfo}]}]), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================
 

@@ -64,7 +64,10 @@ init([]) ->
   Edts = {edts_server,
           {edts_server, start_link, []},
           permanent, 5000, worker, [edts_server]},
-  Children = [Edts, WemachineRouter, Webmachine],
+  EdtsEvent = {edts_event_server,
+               {edts_event_server, start_link, []},
+               permanent, 5000, worker, [edts_event_server]},
+  Children = [Edts, EdtsEvent, WemachineRouter, Webmachine],
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 

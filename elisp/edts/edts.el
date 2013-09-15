@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'edts-event)
+
 (defcustom edts-erl-command
   (or (executable-find "erl")
       (null
@@ -65,6 +67,17 @@ node."
 (defvar edts-node-down-hook nil
   "Hooks to run after a node has gone down. These hooks are called with
 the node-name of the node that has gone down as the argument.")
+
+(defun edts-node-down-event-handler (evt-type evt-info)
+  (let ((node (cdr (assoc 'node evt-info))))
+    (edts-log-info "Node %s down" node)
+    (run-hook-with-args 'edts-node-down-hook node)))
+(edts-event-register-handler 'edts-node-down-event-handler 'node_down)
+
+(defun edts-server-down-event-handler (evt-type evt-info)
+  (edts-log-info "EDTS server down")
+  (run-hooks 'edts-server-down-hook))
+(edts-event-register-handler 'edts-server-down-event-handler 'server_down)
 
 
 (defun edts-buffer-node-name ()
@@ -284,32 +297,9 @@ for ARITY will give a regexp matching any arity."
       (sit-for 0.1)
       (decf retries))
     (when available
-      (edts-node-down-request))
+      (edts-event-listen))
     available))
 
-
-(defun edts-node-down-request ()
-  (let ((buf (edts-rest-get-async '("nodes" "node_down")
-                                  nil
-                                  #'edts-node-down-request-callback)))
-    (when buf
-      (set-process-query-on-exit-flag (get-buffer-process buf) nil))))
-
-
-(defun edts-node-down-request-callback (reply)
-  "Initialize things needed to detect when a node goes down"
-    (if reply
-        (let* ((result (cdr (assoc 'result reply)))
-               (body   (cdr (assoc 'body reply)))
-               (node   (cdr (assoc 'node body))))
-          (if (not (string= (car result) "200"))
-              (null (edts-log-error "Unexpected reply %s" result))
-            (edts-log-info "Node %s down" node)
-            (run-hook-with-args 'edts-node-down-hook node)
-            (edts-node-down-request)))
-      ;; Assume that the server went down if reply is empty
-      (edts-log-info "EDTS server down")
-      (run-hooks 'edts-server-down-hook)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on

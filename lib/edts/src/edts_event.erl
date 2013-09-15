@@ -23,16 +23,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_util).
+-module(edts_event).
 
 %%%_* Includes =================================================================
--include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
 
--export([nodename2shortname/1,
-         lib_and_app_dirs/0,
-         shorten_path/1]).
+-export([dispatch_event/1]).
 
 %%%_* Defines ==================================================================
 
@@ -40,49 +37,12 @@
 
 %%%_* API ======================================================================
 
-nodename2shortname(Nodename) ->
-  Str = atom_to_list(Nodename),
-  list_to_atom(string:sub_string(Str, 1, string:rchr(Str, $@) -1)).
-
-lib_and_app_dirs() ->
-  ErlLibDir = code:lib_dir(),
-  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end,
-                  code:get_path()).
-
-
-shorten_path("") -> "";
-shorten_path(P)  ->
-  case shorten_path(filename:split(P), []) of
-    [Component] -> Component;
-    Components  -> filename:join(Components)
-  end.
-
-shorten_path([],           [])         -> ["."];
-shorten_path([],           Acc)        -> lists:reverse(Acc);
-shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
-shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
-shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
-shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
-shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
-
-
-
+dispatch_event(Event) ->
+  {ok, Node} = application:get_env(edts, server_node),
+  rpc:call(Node, edts_event_server, dispatch_event, [node(), Event]).
 %%%_* Internal functions =======================================================
 
-
 %%%_* Unit tests ===============================================================
-
-shorten_path_test_() ->
-  [ ?_assertEqual("", shorten_path("")),
-    ?_assertEqual(".", shorten_path(".")),
-    ?_assertEqual("..", shorten_path("..")),
-    ?_assertEqual("../..", shorten_path("../..")),
-    ?_assertEqual("../ebin", shorten_path("../ebin")),
-    ?_assertEqual("..", shorten_path("../ebin/..")),
-    ?_assertEqual("..", shorten_path("../ebin/./.."))
-  ].
-
-%%%_* Test helpers =============================================================
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
