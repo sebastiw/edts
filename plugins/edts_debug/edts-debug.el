@@ -92,7 +92,7 @@ modules, breakpoints and debugged processes).")
   (edts-debug-sync-interpreted-alist)
   (edts-debug-sync-breakpoint-alist)
   (edts-debug-sync-processes-alist)
-  (run-hook 'edts-debug-after-sync-hook)
+  (run-hooks 'edts-debug-after-sync-hook)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode
@@ -154,7 +154,6 @@ modules, breakpoints and debugged processes).")
          (rest-args (list (cons "cmd" (symbol-name cmd))))
          (reply     (edts-rest-post resource rest-args))
          (res       (assoc 'result reply)))
-    (message "res %s" res)
     (unless (equal res '(result "204" "Created"))
       (null (edts-log-error "Unexpected reply %s" res)))))
 
@@ -336,6 +335,26 @@ default to the values associated with current buffer."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
       (cdr (assoc 'modules (cdr (assoc 'body reply)))))))
 
+(defun edts-debug-process-continue (node-name pid)
+  "Send a continue-command to the debugged process with PID on NODE."
+  (edts-debug-process-command 'continue node-name pid))
+
+(defun edts-debug-process-command (command node-name pid)
+  "Send COMMAND to the debugged process with PID on NODE. Command is
+one of continue...tbc."
+  (let* ((resource (list "plugins"   "debugger"
+                         "nodes"     node-name
+                         "processes" pid
+                         "command"))
+         (args  (list (cons "cmd" (symbol-name command))))
+         (reply (edts-rest-post resource args))
+         (res   (car (cdr (assoc 'result reply)))))
+    (if (not (equal res "204"))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
+      (edts-debug-sync))))
+
+
 
 (when (member 'ert features)
 
@@ -363,7 +382,6 @@ default to the values associated with current buffer."
       (should-not (edts-debug-breakpoints))
       (edts-debug-break nil nil nil t)
       (should (eq 1 (length (edts-debug-breakpoints)))))))
-
 
 ;; (defvar *edts-debug-window-config-to-restore* nil)
 

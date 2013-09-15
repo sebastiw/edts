@@ -25,18 +25,20 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_cmd).
 
+-compile({parse_transform, lager_transform}).
+
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
 -export([ allowed_methods/2
+        , allow_missing_post/2
         , content_types_accepted/2
         , init/1
         , malformed_request/2
+        , process_post/2
         , resource_exists/2]).
 
-%% Handlers
--export([ from_json/2]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -61,19 +63,23 @@ content_types_accepted(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  Validate = [nodename, modulen],
+  Validate = [nodename, process, {enum, [{name,    cmd},
+                                         {required, true},
+                                         {allowed, [continue]}]}],
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 resource_exists(ReqData, Ctx) ->
-  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename, module]), ReqData, Ctx}.
+  {false, ReqData, Ctx}.
 
-%% Handlers
-from_json(_ReqData, Ctx) ->
+allow_missing_post(ReqData, Ctx) ->
+  {true, ReqData, Ctx}.
+
+process_post(ReqData, Ctx) ->
   Node = orddict:fetch(nodename, Ctx),
+  Pid  = orddict:fetch(process, Ctx),
   Cmd  = orddict:fetch(cmd, Ctx),
-  edts_debug:Cmd(Node).
-
-
+  edts_debug:Cmd(Node, Pid),
+  {true, ReqData, Ctx}.
 
 
 %%%_* Internal functions =======================================================

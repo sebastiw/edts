@@ -25,6 +25,8 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_breakpoints).
 
+-compile({parse_transform, lager_transform}).
+
 %%%_* Exports ==================================================================
 
 %% API
@@ -49,7 +51,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
+  lager:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->

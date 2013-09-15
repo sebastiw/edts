@@ -54,7 +54,6 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  error_logger:error_msg("oooooooooo"),
   edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 

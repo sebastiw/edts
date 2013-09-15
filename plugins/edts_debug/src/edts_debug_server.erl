@@ -306,7 +306,7 @@ started_p() -> whereis(?SERVER) =/= undefined.
                       {stop, atom()}.
 %%------------------------------------------------------------------------------
 init([]) ->
-  int:auto_attach([break], {?MODULE, maybe_attach, []}),
+  %% int:auto_attach([break], {?MODULE, maybe_attach, []}),
   {ok, #dbg_state{}}.
 
 %%------------------------------------------------------------------------------
@@ -412,8 +412,11 @@ handle_info({_Meta, {attached, _, _, _}}, State) ->
 handle_info({_Meta, {exit_at, _, _Reason, _}}, State) ->
   {noreply, State};
 
+handle_info({int, _}, State) ->
+  {noreply, State};
+
 handle_info(Msg, State) ->
-  error_logger:info_msg("Unexpected message: ~p~n", [Msg]),
+  error_logger:info_msg("~p: Unexpected message: ~p~n", [?MODULE, Msg]),
   {noreply, State}.
 
 
