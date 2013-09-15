@@ -99,13 +99,16 @@ validate(ReqData0, Ctx0, Keys) ->
   try
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
-  catch throw:{error, Key} = E ->
-      KeyString = case Key of
-                    {_Type, KeyAtom} -> atom_to_list(KeyAtom);
-                    KeyAtom          -> atom_to_list(KeyAtom)
-                  end,
-      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
-                     [Key, wrq:get_qs_value(KeyString, ReqData0)]),
+  catch throw:{error, Key0} = E ->
+      Key = case Key0 of
+              Key1          when is_atom(Key1) -> atom_to_list(Key1);
+              {_Type, Key1} when is_atom(Key1) -> Key1;
+              {_Type, Props} ->
+                {ok, N} = tulib_lists:assoc(name, Props),
+                N
+            end,
+      Value = wrq:get_qs_value(atom_to_list(Key), ReqData0),
+      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p", [Key, Value]),
       {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
