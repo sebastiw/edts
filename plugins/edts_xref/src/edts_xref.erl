@@ -25,33 +25,28 @@
 %%%_* Module declaration =======================================================
 -module(edts_xref).
 
+-behaviour(edts_plugin).
+
 %%%_* Exports ==================================================================
 
 %% EDTS plugin API
--export([project_node_modules/0,
+-export([edts_server_services/0,
+         event_formatters/0,
+         project_node_modules/0,
          project_node_services/0]).
-
-%% API
--export([]).
-
-%% Internal exports.
-%% -export([save_xref_state/0]).
-
--export_type([xref_check/0]).
-
--type xref_check() :: xref:analysis().
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
--define(SERVER, ?MODULE).
 
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
 
 %% EDTS Plugin API
+edts_server_services() -> [].
+event_formatters()     -> [].
 project_node_modules() -> [edts_xref_server].
 %% Just the empty list here. We want to start the server asynchronously from
 %% the node-init-hook to avoid a long blocking node initialization.
