@@ -29,7 +29,8 @@
 
 %%%_* Exports ==================================================================
 
--export([dispatch_event/3]).
+-export([dispatch_event/2,
+         dispatch_event/3]).
 
 %%%_* Defines ==================================================================
 
@@ -37,9 +38,18 @@
 
 %%%_* API ======================================================================
 
+dispatch_event(Class, Type) ->
+  dispatch_event(Class, Type, []).
+
 dispatch_event(Class, Type, Info) ->
-  {ok, Node} = application:get_env(edts, server_node),
-  rpc:call(Node, edts_event_server, dispatch_event, [Class, Type, Info]).
+  EdtsNode = case application:get_env(edts, server_node) of
+               undefined -> node();
+               {ok, Node} -> Node
+             end,
+  rpc:call(EdtsNode,
+           edts_event_server,
+           dispatch_event,
+           [node(), Class, Type, Info]).
 
 %%%_* Internal functions =======================================================
 

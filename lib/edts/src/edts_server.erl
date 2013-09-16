@@ -208,7 +208,7 @@ handle_cast(_Msg, State) ->
 %%------------------------------------------------------------------------------
 handle_info({nodedown, Node, _Info}, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  edts_event_server:dispatch_event(edts, node_down, [{node, Node}]),
+  edts_event:dispatch_event(edts, node_down, [{node, Node}]),
   State = case node_find(Node, State0) of
             false   -> State0;
             #node{} -> node_delete(Node, State0)

@@ -33,6 +33,7 @@
          add_formatter/3,
          formatters/0,
          dispatch_event/3,
+         dispatch_event/4,
          listen/0,
          start_link/1
         ]).
@@ -67,6 +68,9 @@
 
 dispatch_event(Class, Type, Info) ->
   gen_server:cast(?SERVER, {dispatch_event, {Class, Type, Info}}).
+
+dispatch_event(Node, Class, Type, Info) ->
+  gen_server:cast(?SERVER, {dispatch_event, {Node, Class, Type, Info}}).
 
 add_formatter(Class, Formatter) ->
   gen_server:call(?SERVER, {add_formatter, {Class, Formatter}}).
@@ -135,9 +139,9 @@ handle_call(Message, _From, State) ->
                      {noreply, state(), timeout() | hibernate} |
                      {stop, Reason::term(), state()}.
 %%------------------------------------------------------------------------------
-handle_cast({dispatch_event, {Class, Type, Info}},
+handle_cast({dispatch_event, Event0},
             #state{listeners = Listeners0} = State0) ->
-  Event = fmt_event(Class, Type, Info, State0#state.formatters),
+  Event = fmt_event(Event0, State0#state.formatters),
   State =
     case queue:is_empty(Listeners0) of
       true  -> State0#state{events = queue:in(Event, State0#state.events)};
@@ -179,8 +183,13 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%_* Internal functions =======================================================
 
-fmt_event(Class, Type, Info, Formatters) ->
+fmt_event({Class, Type, Info}, Formatters) ->
   [{class, Class},
+   {type,  Type},
+   {info,  fmt_event_info(Class, Type, Info, Formatters)}];
+fmt_event({Node, Class, Type, Info}, Formatters) ->
+  [{node,  Node},
+   {class, Class},
    {type,  Type},
    {info,  fmt_event_info(Class, Type, Info, Formatters)}].
 
