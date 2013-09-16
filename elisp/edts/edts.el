@@ -68,10 +68,10 @@ node."
   "Hooks to run after a node has gone down. These hooks are called with
 the node-name of the node that has gone down as the argument.")
 
-(defun edts-event-handler (evt-class evt-type evt-info)
-  (case evt-type
+(defun edts-event-handler (node class type info)
+  (case type
     (node_down
-     (let ((node (cdr (assoc 'node evt-info))))
+     (let ((node (cdr (assoc 'node info))))
        (edts-log-info "Node %s down" node)
        (run-hook-with-args 'edts-node-down-hook node)))
     (server_down

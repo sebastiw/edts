@@ -56,31 +56,27 @@ that class."
 (defun edts-event-listen-callback (reply)
   "Initialize things needed to detect when a node goes down"
   (if reply
-      (let* ((result      (cdr (assoc 'result reply)))
-             (event       (cdr (assoc 'event (cdr (assoc 'body reply)))))
-             (event-class (intern (cdr (assoc 'class event))))
-             (event-type  (intern (cdr (assoc 'type event))))
-             (info        (cdr (assoc 'info event))))
-        (message "class %s" event-class)
-        (message "type %s" event-type)
-        (message "info %s" info)
+      (let* ((result (cdr (assoc 'result reply)))
+             (event  (cdr (assoc 'event (cdr (assoc 'body reply)))))
+             (node   (intern (cdr (assoc 'node event))))
+             (class  (intern (cdr (assoc 'class event))))
+             (type   (intern (cdr (assoc 'type event))))
+             (info   (cdr (assoc 'info event))))
         (if (not (string= (car result) "200"))
             (null (edts-log-error "Unexpected reply %s" result))
-          (edts-event-handle event-class event-type info)
+          (edts-event-handle node class type info)
           (edts-event-listen)))
     ;; Assume that the server went down if reply is empty
-    (edts-event-handle 'edts 'server_down)))
+    (edts-event-handle nil 'edts 'server_down nil)))
 
 (defun edts-event-handlers (event-class)
   (cdr (assoc event-class edts-event-handlers)))
 
-(defun edts-event-handle (event-class event-type &optional event-info)
+(defun edts-event-handle (node class type info)
   (mapc #'(lambda (handler)
-            (edts-log-debug "Calling handler %s for event %s"
-                            handler
-                            event-class)
+            (edts-log-debug "Calling handler %s for event %s" handler class)
             (condition-case ex
-                (funcall handler event-class event-type event-info)
+                (funcall handler node class type info)
               (error (edts-log-error
                       (concat "Calling event handler failed\n"
                               "Handler: %s\n"
@@ -88,10 +84,10 @@ that class."
                               "Event info: %s\n"
                               "Error: %s")
                       handler
-                      event-class
-                      event-info
+                      class
+                      info
                       ex))))
-        (edts-event-handlers event-class))
+        (edts-event-handlers class))
   t)
 
 ;;;;;;;;;;;;;;;;;;;;

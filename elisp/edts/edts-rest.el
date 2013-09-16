@@ -47,7 +47,7 @@
   "Send a post request to RESOURCE with ARGS"
   (edts-rest-request "POST" resource args body))
 
-(defun edts-rest-request (method resource args &optional body)
+(defun edts-rest-request (method resource args &optional body is-retry)
   "Send a request to RESOURCE with ARGS"
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
@@ -60,10 +60,29 @@
       (when buffer
         (with-current-buffer buffer
           (let* ((reply  (edts-rest-parse-http-response))
-                 (status (cdr (assoc 'result reply))))
+                 (status (cdr (assoc 'result reply)))
+                 (proc   (get-buffer-process (current-buffer)))
+                 ;; The url-library's retry-functionality is pretty broken
+                 ;; for synchronous requests. url will try to re-use connections
+                 ;; and sometimes the used connection will have expired, in
+                 ;; which case the request has to be redone with another
+                 ;; connection. The problem is that url issues an async request
+                 ;; with callback and returns even if the original request was
+                 ;; synchronous.
+                 ;;
+                 ;; Retrying here is a workaround for this.
+                 (retry  (and proc
+                              (eq (process-status proc) 'open)
+                              (not reply)
+                              (not is-retry))))
             (edts-log-debug "Reply %s received for request to %s" status url)
+            (when proc
+              (set-process-query-on-exit-flag proc nil))
             (kill-buffer (current-buffer))
-            reply))))))
+            (if (not retry)
+                reply
+              (edts-log-debug "Retrying request")
+              (edts-rest-request method resource args body t))))))))
 
 (defun edts-rest-get-async (resource args callback &optional callback-args)
   "Send a post request to RESOURCE with ARGS"
