@@ -43,8 +43,6 @@
         , handle_info/2
         , terminate/2]).
 
--export([plugin_spec/1]).
-
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
@@ -210,8 +208,7 @@ handle_cast(_Msg, State) ->
 %%------------------------------------------------------------------------------
 handle_info({nodedown, Node, _Info}, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  ShortNode = edts_util:nodename2shortname(Node),
-  edts_event_server:dispatch_event(node_down, [{node, ShortNode}]),
+  edts_event_server:dispatch_event(edts, node_down, [{node, Node}]),
   State = case node_find(Node, State0) of
             false   -> State0;
             #node{} -> node_delete(Node, State0)
@@ -266,12 +263,9 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    PluginDirs = plugin_dirs(),
-    Plugins = plugin_dirs_to_names(PluginDirs),
-    ok = lists:foreach(fun(Dir) ->
-                           edts_dist:load_app(Node, plugin_spec(Dir))
-                       end,
-                       PluginDirs),
+    Plugins = edts_plugin:names(),
+    ok = lists:foreach(fun(Spec) -> edts_dist:load_app(Node, Spec) end,
+                       edts_plugin:specs()),
     PluginRemoteLoad =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
@@ -302,27 +296,6 @@ do_init_node(ProjectName,
                      [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
-
-plugin_dirs() ->
-  case application:get_env(edts, plugin_dir) of
-    undefined -> [];
-    {ok, Dir} ->
-      AbsDir = filename:absname(Dir),
-      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
-      [PluginDir || PluginDir <- PluginDirs,
-                    filelib:is_dir(PluginDir)]
-  end.
-
-
-plugin_dirs_to_names(Dirs) ->
-  [list_to_atom(filename:basename(Dir)) || Dir <- Dirs].
-
-
-plugin_spec(Dir) ->
-  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
-  {ok, [AppSpec]} = file:consult(AppFile),
-  AppSpec.
-
 
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].

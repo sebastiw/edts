@@ -29,7 +29,17 @@
 
 %%%_* Exports ==================================================================
 
--export([behaviour_info/1]).
+-export([behaviour_info/1,
+         dirs/0,
+         names/0,
+         specs/0
+        ]).
+
+%% Callbacks
+-export([edts_server_services/1,
+         event_formatters/1,
+         project_node_modules/1,
+         project_node_services/1]).
 
 %%%_* Defines ==================================================================
 
@@ -39,12 +49,49 @@
 
 behaviour_info(callbacks) ->
   [ {edts_server_services, 0}, %% For future use
+    {event_formatters,     0},
     {project_node_modules, 0},
     {project_node_services, 0}
   ];
 behaviour_info(_) -> undefined.
 
+dirs() ->
+  case application:get_env(edts, plugin_dir) of
+    undefined -> [];
+    {ok, Dir} ->
+      AbsDir = filename:absname(Dir),
+      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
+      [PluginDir || PluginDir <- PluginDirs,
+                    filelib:is_dir(PluginDir)]
+  end.
+
+names() ->
+  [list_to_atom(filename:basename(Dir)) || Dir <- dirs()].
+
+
+specs() ->
+  lists:map(fun do_spec/1, dirs()).
+
+%% Callbacks
+edts_server_services(Plugin) ->
+  Plugin:edts_server_services().
+
+event_formatters(Plugin) ->
+  Plugin:event_formatters().
+
+project_node_modules(Plugin) ->
+  Plugin:project_node_modules().
+
+project_node_services(Plugin) ->
+  Plugin:project_node_services().
+
+
 %%%_* Internal functions =======================================================
+
+do_spec(Dir) ->
+  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  {ok, [AppSpec]} = file:consult(AppFile),
+  AppSpec.
 
 %%%_* Unit tests ===============================================================
 

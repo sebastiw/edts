@@ -68,17 +68,16 @@ node."
   "Hooks to run after a node has gone down. These hooks are called with
 the node-name of the node that has gone down as the argument.")
 
-(defun edts-node-down-event-handler (evt-type evt-info)
-  (let ((node (cdr (assoc 'node evt-info))))
-    (edts-log-info "Node %s down" node)
-    (run-hook-with-args 'edts-node-down-hook node)))
-(edts-event-register-handler 'edts-node-down-event-handler 'node_down)
-
-(defun edts-server-down-event-handler (evt-type evt-info)
-  (edts-log-info "EDTS server down")
-  (run-hooks 'edts-server-down-hook))
-(edts-event-register-handler 'edts-server-down-event-handler 'server_down)
-
+(defun edts-event-handler (evt-class evt-type evt-info)
+  (case evt-type
+    (node_down
+     (let ((node (cdr (assoc 'node evt-info))))
+       (edts-log-info "Node %s down" node)
+       (run-hook-with-args 'edts-node-down-hook node)))
+    (server_down
+     (edts-log-info "EDTS server down")
+     (run-hooks 'edts-server-down-hook))))
+(edts-event-register-handler 'edts-event-handler 'edts)
 
 (defun edts-buffer-node-name ()
   "Print the node sname of the erlang node connected to current

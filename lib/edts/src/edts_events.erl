@@ -1,35 +1,36 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc utility library for edts.
+%%% @doc
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
-%%% This file is part of EDTS.
+%%% This file is part of foo.
 %%%
-%%% EDTS is free software: you can redistribute it and/or modify
-%%% it under the terms of the GNU Lesser General Public License as published by
+%%% foo is free software: you can redistribute it and/or modify
+%%% it under the terms of the GNU General Public License as published by
 %%% the Free Software Foundation, either version 3 of the License, or
 %%% (at your option) any later version.
 %%%
-%%% EDTS is distributed in the hope that it will be useful,
+%%% foo is distributed in the hope that it will be useful,
 %%% but WITHOUT ANY WARRANTY; without even the implied warranty of
 %%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-%%% GNU Lesser General Public License for more details.
+%%% GNU General Public License for more details.
 %%%
-%%% You should have received a copy of the GNU Lesser General Public License
-%%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
+%%% You should have received a copy of the GNU General Public License
+%%% along with foo. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_event).
-
-%%%_* Includes =================================================================
+-module(edts_events).
 
 %%%_* Exports ==================================================================
 
--export([dispatch_event/3]).
+%% API
+-export([behaviour_info/1]).
+
+%%%_* Includes =================================================================
 
 %%%_* Defines ==================================================================
 
@@ -37,13 +38,15 @@
 
 %%%_* API ======================================================================
 
-dispatch_event(Class, Type, Info) ->
-  {ok, Node} = application:get_env(edts, server_node),
-  rpc:call(Node, edts_event_server, dispatch_event, [Class, Type, Info]).
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+-spec behaviour_info(any()) -> [{atom(), non_neg_integer()}] | undefined.
+%%------------------------------------------------------------------------------
+behaviour_info(callbacks) ->
+  [{format_info, 1}].
 
 %%%_* Internal functions =======================================================
-
-%%%_* Unit tests ===============================================================
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

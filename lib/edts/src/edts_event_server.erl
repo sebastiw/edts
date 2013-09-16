@@ -29,11 +29,11 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([dispatch_event/2,
+-export([add_formatter/2,
+         add_formatter/3,
+         formatters/0,
+         dispatch_event/3,
          listen/0,
-         start/0,
-         start/1,
-         start_link/0,
          start_link/1
         ]).
 
@@ -51,46 +51,43 @@
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 
--record(state, {events    = queue:new(),
-                listeners = queue:new()}).
+-record(state,
+        {events     = queue:new() :: queue(),
+         listeners  = queue:new() :: queue(),
+         formatters = []          :: [{class(),           module()}] |
+                                     [{{class(), type()}, module()}]
+               }).
 
 %%%_* Types ====================================================================
 -type state() :: #state{}.
+-type class() :: atom().
+-type type()  :: atom().
 
 %%%_* API ======================================================================
 
-dispatch_event(EventType, EventInfo) ->
-  gen_server:cast(?SERVER, {dispatch_event, {EventType,EventInfo}}).
+dispatch_event(Class, Type, Info) ->
+  gen_server:cast(?SERVER, {dispatch_event, {Class, Type, Info}}).
+
+add_formatter(Class, Formatter) ->
+  gen_server:call(?SERVER, {add_formatter, {Class, Formatter}}).
+
+add_formatter(Class, Type, Formatter) ->
+  gen_server:call(?SERVER, {add_formatter, {{Class, Type}, Formatter}}).
+
+formatters() ->
+  gen_server:call(?SERVER, formatters).
 
 listen() ->
   gen_server:call(?SERVER, listen, infinity).
 
 %% gen_server callbacks.
 %%------------------------------------------------------------------------------
-%% @doc Equivalent to start_link([]).
--spec start_link() -> {ok, pid} | ignore | {error,term()}.
-%%------------------------------------------------------------------------------
-start_link() -> start_link([]).
-
-%%------------------------------------------------------------------------------
 %% @doc Starts the server.
--spec start_link([term()]) -> {ok, pid} | ignore | {error,term()}.
+-spec start_link([{class(), module()} | {{class(), type()}, module()}]) ->
+                    {ok, pid} | ignore | {error,term()}.
 %%------------------------------------------------------------------------------
-start_link(Args) ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
-
-%%------------------------------------------------------------------------------
-%% @doc Equivalent to start([]).
--spec start() -> {ok, pid} | ignore | {error,term()}.
-%%------------------------------------------------------------------------------
-start() -> start([]).
-
-%%------------------------------------------------------------------------------
-%% @doc Starts the server.
--spec start([term()]) -> {ok, pid} | ignore | {error,term()}.
-%%------------------------------------------------------------------------------
-start(Args) ->
-  gen_server:start({local, ?MODULE}, ?MODULE, Args, []).
+start_link(Formatters) ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, [Formatters], []).
 
 %% gen_server callbacks.
 
@@ -101,7 +98,8 @@ start(Args) ->
                       ignore |
                       {stop, term()}.
 %%------------------------------------------------------------------------------
-init(_Args) -> {ok, #state{}}.
+init([Formatters]) ->
+  {ok, #state{formatters = Formatters}}.
 
 %%------------------------------------------------------------------------------
 %% @doc Handle call messages
@@ -113,10 +111,16 @@ init(_Args) -> {ok, #state{}}.
                      {stop, Reason::term(), Reply::term(), state()} |
                      {stop, Reason::term(), state()}.
 %%------------------------------------------------------------------------------
+handle_call(formatters, _From, State) ->
+  {reply, State#state.formatters, State};
+handle_call({add_formatter, {ClassType, _Fmt} = Spec}, _From, State) ->
+  %% ClassType is either Class or {Class, Type}.
+  Formatters = lists:keystore(ClassType, 1, State#state.formatters, Spec),
+  {reply, ok, State#state{formatters = Formatters}};
 handle_call(listen, From, #state{events = Events0} = State0) ->
   case queue:is_empty(Events0) of
     true  ->
-      {noreply, #state{listeners = queue:in(From, State0#state.listeners)}};
+      {noreply, State0#state{listeners = queue:in(From, State0#state.listeners)}};
     false ->
       {{value, Event}, Events} = queue:out(Events0),
       {reply, {ok, Event}, State0#state{events = Events}}
@@ -131,7 +135,9 @@ handle_call(Message, _From, State) ->
                      {noreply, state(), timeout() | hibernate} |
                      {stop, Reason::term(), state()}.
 %%------------------------------------------------------------------------------
-handle_cast({dispatch_event, Event}, #state{listeners = Listeners0} = State0) ->
+handle_cast({dispatch_event, {Class, Type, Info}},
+            #state{listeners = Listeners0} = State0) ->
+  Event = fmt_event(Class, Type, Info, State0#state.formatters),
   State =
     case queue:is_empty(Listeners0) of
       true  -> State0#state{events = queue:in(Event, State0#state.events)};
@@ -172,6 +178,21 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 
 %%%_* Internal functions =======================================================
+
+fmt_event(Class, Type, Info, Formatters) ->
+  [{class, Class},
+   {type,  Type},
+   {info,  fmt_event_info(Class, Type, Info, Formatters)}].
+
+fmt_event_info(Class, Type, Info, Formatters) ->
+  case lists:keyfind({Class, Type}, 1, Formatters) of
+    {_, Fmt} -> Fmt:format_info(Info);
+    false    ->
+      case lists:keyfind(Class, 1, Formatters) of
+        {_, Fmt} -> Fmt:format_info(Info);
+        false    -> Info
+      end
+  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

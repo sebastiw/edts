@@ -24,28 +24,28 @@
 
 (defvar edts-event-handlers nil)
 
-(defun edts-event-register-handler (handler event-type)
-  "Register HANDLER to receive events of type EVENT-TYPE."
-  (let* ((el           (assoc event-type edts-event-handlers))
+(defun edts-event-register-handler (handler event-class)
+  "Register HANDLER to receive events of class EVENT-CLASS."
+  (let* ((el           (assoc event-class edts-event-handlers))
          (handlers     (cdr el))
          (new-handlers (if (member handler handlers)
                            handlers
                          (cons handler handlers))))
-    (setq edts-event-handlers (cons (cons event-type new-handlers)
+    (setq edts-event-handlers (cons (cons event-class new-handlers)
                                     (delq el edts-event-handlers)))))
 
-(defun edts-event-unregister-handler (handler &optional event-type)
+(defun edts-event-unregister-handler (handler &optional event-class)
   "Unregister HANDLER from receiving events. Optional argument
-EVENT-TYPE specifies that handler should only stop receiving events of
-that type."
-  (let ((event-types (if event-type
-                         (list event-type)
+EVENT-CLASS specifies that handler should only stop receiving events of
+that class."
+  (let ((event-classs (if event-class
+                         (list event-class)
                        (mapcar #'car edts-event-handlers))))
     (setq edts-event-handlers
-          (loop for (type . handlers) in edts-event-handlers
-                collect (if (member type event-types)
-                            (cons type (delq handler handlers))
-                          (cons type handlers))))))
+          (loop for (class . handlers) in edts-event-handlers
+                collect (if (member class event-classs)
+                            (cons class (delq handler handlers))
+                          (cons class handlers))))))
 
 (defun edts-event-listen ()
   "Start the event-listening loop."
@@ -56,38 +56,42 @@ that type."
 (defun edts-event-listen-callback (reply)
   "Initialize things needed to detect when a node goes down"
   (if reply
-      (let* ((result     (cdr (assoc 'result reply)))
-             (event      (cdr (assoc 'event (cdr (assoc 'body reply)))))
-             (event-type (intern (cdr (assoc 'type event))))
-             (info       (cdr (assoc 'info event))))
+      (let* ((result      (cdr (assoc 'result reply)))
+             (event       (cdr (assoc 'event (cdr (assoc 'body reply)))))
+             (event-class (intern (cdr (assoc 'class event))))
+             (event-type  (intern (cdr (assoc 'type event))))
+             (info        (cdr (assoc 'info event))))
+        (message "class %s" event-class)
+        (message "type %s" event-type)
+        (message "info %s" info)
         (if (not (string= (car result) "200"))
             (null (edts-log-error "Unexpected reply %s" result))
-          (edts-event-handle event-type info)
+          (edts-event-handle event-class event-type info)
           (edts-event-listen)))
     ;; Assume that the server went down if reply is empty
-    (edts-event-handle 'server_down)))
+    (edts-event-handle 'edts 'server_down)))
 
-(defun edts-event-handlers (event-type)
-  (cdr (assoc event-type edts-event-handlers)))
+(defun edts-event-handlers (event-class)
+  (cdr (assoc event-class edts-event-handlers)))
 
-(defun edts-event-handle (event-type &optional event-info)
+(defun edts-event-handle (event-class event-type &optional event-info)
   (mapc #'(lambda (handler)
             (edts-log-debug "Calling handler %s for event %s"
                             handler
-                            event-type)
+                            event-class)
             (condition-case ex
-                (funcall handler event-type event-info)
+                (funcall handler event-class event-type event-info)
               (error (edts-log-error
                       (concat "Calling event handler failed\n"
                               "Handler: %s\n"
-                              "Event type: %s\n"
+                              "Event class: %s\n"
                               "Event info: %s\n"
                               "Error: %s")
                       handler
-                      event-type
+                      event-class
                       event-info
                       ex))))
-        (edts-event-handlers event-type))
+        (edts-event-handlers event-class))
   t)
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -98,95 +102,95 @@ that type."
       (let ((handlers (copy-sequence edts-event-handlers)))
         ;; Register
         (setq edts-event-handlers nil)
-        (edts-event-register-handler 'dummy-handler 'dummy-type)
+        (edts-event-register-handler 'dummy-handler 'dummy-class)
         (should (equal edts-event-handlers
-                       '((dummy-type dummy-handler))))
+                       '((dummy-class dummy-handler))))
         (setq edts-event-handlers handlers)))
 
   (ert-deftest edts-event-register-twice-test ()
       (let ((handlers (copy-sequence edts-event-handlers)))
         ;; Register
         (setq edts-event-handlers nil)
-        (edts-event-register-handler 'dummy-handler 'dummy-type)
-        (edts-event-register-handler 'dummy-handler 'dummy-type)
+        (edts-event-register-handler 'dummy-handler 'dummy-class)
+        (edts-event-register-handler 'dummy-handler 'dummy-class)
         (should (equal edts-event-handlers
-                       '((dummy-type dummy-handler))))
+                       '((dummy-class dummy-handler))))
         (setq edts-event-handlers handlers)))
 
   (ert-deftest edts-event-unregister-test ()
       (let ((handlers (copy-sequence edts-event-handlers)))
         ;; Register
         (setq edts-event-handlers nil)
-        (edts-event-register-handler 'dummy-handler 'dummy-type)
+        (edts-event-register-handler 'dummy-handler 'dummy-class)
         (should (equal edts-event-handlers
-                       '((dummy-type dummy-handler))))
-        (edts-event-unregister-handler 'dummy-handler 'dummy-type)
-        (should (equal edts-event-handlers '((dummy-type))))
+                       '((dummy-class dummy-handler))))
+        (edts-event-unregister-handler 'dummy-handler 'dummy-class)
+        (should (equal edts-event-handlers '((dummy-class))))
         (setq edts-event-handlers handlers)))
 
-  (ert-deftest edts-event-register-multi-type-test ()
+  (ert-deftest edts-event-register-multi-class-test ()
     (let ((handlers (copy-sequence edts-event-handlers)))
-      ;; Register for two event types
+      ;; Register for two event classs
       (setq edts-event-handlers nil)
-      (edts-event-register-handler 'dummy-handler 'dummy-type)
-      (edts-event-register-handler 'dummy-handler 'dummy-type2)
+      (edts-event-register-handler 'dummy-handler 'dummy-class)
+      (edts-event-register-handler 'dummy-handler 'dummy-class2)
       (should (equal edts-event-handlers
-                     '((dummy-type2 dummy-handler)
-                       (dummy-type dummy-handler))))
+                     '((dummy-class2 dummy-handler)
+                       (dummy-class dummy-handler))))
       (setq edts-event-handlers handlers)))
 
-  (ert-deftest edts-event-unregister-multi-type-test ()
+  (ert-deftest edts-event-unregister-multi-class-test ()
     (let ((handlers (copy-sequence edts-event-handlers)))
-      ;; Register for two event types and unregister for one of them
+      ;; Register for two event classs and unregister for one of them
       (setq edts-event-handlers nil)
-      (edts-event-register-handler 'dummy-handler 'dummy-type)
-      (edts-event-register-handler 'dummy-handler 'dummy-type2)
+      (edts-event-register-handler 'dummy-handler 'dummy-class)
+      (edts-event-register-handler 'dummy-handler 'dummy-class2)
       (should (equal edts-event-handlers
-                     '((dummy-type2 dummy-handler)
-                       (dummy-type dummy-handler))))
-      (edts-event-unregister-handler 'dummy-handler 'dummy-type2)
+                     '((dummy-class2 dummy-handler)
+                       (dummy-class dummy-handler))))
+      (edts-event-unregister-handler 'dummy-handler 'dummy-class2)
       (should (equal edts-event-handlers
-                     '((dummy-type2)
-                       (dummy-type dummy-handler))))
+                     '((dummy-class2)
+                       (dummy-class dummy-handler))))
       (setq edts-event-handlers handlers)))
 
-  (ert-deftest edts-event-unregister-multi-type-test-2 ()
+  (ert-deftest edts-event-unregister-multi-class-test-2 ()
     (let ((handlers (copy-sequence edts-event-handlers)))
-      ;; Register for two event types and unregister for all types
+      ;; Register for two event classs and unregister for all classs
       (setq edts-event-handlers nil)
-      (edts-event-register-handler 'dummy-handler 'dummy-type)
-      (edts-event-register-handler 'dummy-handler 'dummy-type2)
+      (edts-event-register-handler 'dummy-handler 'dummy-class)
+      (edts-event-register-handler 'dummy-handler 'dummy-class2)
       (should (equal edts-event-handlers
-                     '((dummy-type2 dummy-handler)
-                       (dummy-type dummy-handler))))
+                     '((dummy-class2 dummy-handler)
+                       (dummy-class dummy-handler))))
       (edts-event-unregister-handler 'dummy-handler)
       (should (equal edts-event-handlers
-                     '((dummy-type2)
-                       (dummy-type))))
+                     '((dummy-class2)
+                       (dummy-class))))
       (setq edts-event-handlers handlers)))
 
   (ert-deftest edts-event-handlers-test ()
     (let ((handlers (copy-sequence edts-event-handlers)))
-      ;; Register for two event types and unregister for all types
+      ;; Register for two event classs and unregister for all classs
       (setq edts-event-handlers nil)
-      (edts-event-register-handler 'dummy-handler 'dummy-type)
-      (edts-event-register-handler 'dummy-handler2 'dummy-type)
-      (should (equal (edts-event-handlers 'dummy-type)
+      (edts-event-register-handler 'dummy-handler 'dummy-class)
+      (edts-event-register-handler 'dummy-handler2 'dummy-class)
+      (should (equal (edts-event-handlers 'dummy-class)
                      '(dummy-handler2 dummy-handler)))
       (setq edts-event-handlers handlers)))
 
   (ert-deftest edts-event-handle-event-test ()
     (defvar evts)
     (setq evts nil)
-    (defun dummy-handler (evt-type evt) (push evt evts))
-    (defun dummy-handler2 (evt-type evt) (push evt evts))
+    (defun dummy-handler (evt-class evt) (push evt evts))
+    (defun dummy-handler2 (evt-class evt) (push evt evts))
 
     (let ((handlers (copy-sequence edts-event-handlers)))
       (setq edts-event-handlers nil)
-      (edts-event-register-handler 'dummy-handler 'dummy-type)
-      (edts-event-register-handler 'dummy-handler2 'dummy-type)
+      (edts-event-register-handler 'dummy-handler 'dummy-class)
+      (edts-event-register-handler 'dummy-handler2 'dummy-class)
 
-      (edts-event-handle 'dummy-type 'foo)
+      (edts-event-handle 'dummy-class 'foo)
       (should (equal evts '(foo foo)))
       (setq edts-event-handlers handlers))))
 
