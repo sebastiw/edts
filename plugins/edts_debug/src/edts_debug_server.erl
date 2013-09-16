@@ -34,11 +34,6 @@
 %% server API
 -export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
 
-%% Debugger API
--export([step/0,
-         step_out/0,
-         stop_debug/0]).
-
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
@@ -157,13 +152,13 @@ code_change(_OldVsn, State, _Extra) ->
 
 maybe_dispatch_event(Msg) ->
   case dispatch_event_p(Msg) of
-    true  -> dispatch_event(Msg);
+    true  -> edts_event:dispatch_event(edts_debug, event_type(Msg), Msg);
     false -> ok
   end.
 
-dispatch_event_p(Event) ->
-  is_tuple(Event) andalso
-  lists:member(element(1, Event),
+dispatch_event_p(Msg) ->
+  is_tuple(Msg) andalso
+  lists:member(event_type(Msg),
                [interpret,
                 no_interpret,
                 new_process,
@@ -172,40 +167,7 @@ dispatch_event_p(Event) ->
                 delete_break,
                 no_break]).
 
-
-dispatch_event(Msg) ->
-  edts_event:dispatch_event(edts_debug, fmt_event(Msg)).
-
-fmt_event({interpret, Mod}) ->
-  [{type, interpret},
-   {module, Mod}];
-fmt_event({no_interpret, Mod}) ->
-  [{type, no_interpret},
-   {module, Mod}];
-fmt_event({new_process, Pid, Fun, Status, Info}) ->
-  [{type,     new_process},
-   {pid,      edts_util:pid2atom(Pid)},
-   {function, Fun},
-   {status,   Status},
-   {info,     Info}];
-fmt_event({new_status, Pid, Status, Info}) ->
-  [{type,   new_status},
-   {pid,    edts_util:pid2atom(Pid)},
-   {status, Status},
-   {info,   Info}];
-fmt_event({new_break, {{Mod, Line}, Options}}) ->
-  [{type,   new_break},
-   {module, Mod},
-   {line,   Line},
-   {options, Options}];
-fmt_event({delete_break, {Mod, Line}}) ->
-  [{type,   delete_break},
-   {module, Mod},
-   {line,   Line}];
-fmt_event({no_break, Mod}) ->
-  [{type,   delete_break},
-   {module, Mod}].
-
+event_type(Msg) -> element(1, Msg).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

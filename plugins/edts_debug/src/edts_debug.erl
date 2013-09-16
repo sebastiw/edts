@@ -33,6 +33,7 @@
 
 %% Behaviour exports
 -export([edts_server_services/0,
+         event_formatters/0,
          project_node_modules/0,
          project_node_services/0]).
 
@@ -60,6 +61,7 @@
 
 %% Behaviour callbacks
 edts_server_services()  -> [].
+event_formatters()      -> [{edts_debug, edts_events_debug}].
 project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
 
