@@ -86,12 +86,33 @@ of strings.")
   "Hook to run after synchronizing debug information (interpreted
 modules, breakpoints and debugged processes).")
 
-(defun edts-debug-sync ()
-  "Synchronize debug information between EDTS and the Emacs instance."
-  (interactive)
-  (edts-debug-sync-interpreted-alist)
-  (edts-debug-sync-breakpoint-alist)
-  (edts-debug-sync-processes-alist)
+(defun edts-debug-event-handler (node class type info)
+  "Handles erlang-side debugger events"
+  (case type
+    (interpret    (let ((module (cdr (assoc 'module info))))
+                    (edts-log-info "%s is now interpreted on %s" module node))
+                  (edts-debug-sync-interpreted-alist))
+    (no_interpret (let ((module (cdr (assoc 'module info))))
+                    (edts-log-info "%s is no longer interpreted on %s"
+                                   module
+                                   node))
+                  (edts-debug-sync-interpreted-alist))
+    (new_break    (let ((module (cdr (assoc 'module info)))
+                        (line (cdr (assoc 'line info))))
+                    (edts-log-info "breakpoint set on %s:%s on %s"
+                                   module
+                                   line
+                                   node)
+                    (edts-debug-sync-breakpoint-alist)))
+    (delete_break (let ((module (cdr (assoc 'module info)))
+                        (line (cdr (assoc 'line info))))
+                    (edts-log-info "breakpoint unset on %s:%s on %s"
+                                   module
+                                   line
+                                   node)
+                    (edts-debug-sync-breakpoint-alist)))
+    (new_process  (edts-debug-sync-processes-alist))
+    (new_status   (edts-debug-sync-processes-alist)))
   (run-hooks 'edts-debug-after-sync-hook)
   (dolist (buf (buffer-list))
     (with-current-buffer buf
@@ -100,6 +121,7 @@ modules, breakpoints and debugged processes).")
               (module (ferl-get-module)))
           (when (and node module)
             (edts-debug-update-buffer-info node module)))))))
+(edts-event-register-handler 'edts-debug-event-handler 'edts_debug)
 
 (defun edts-debug-sync-interpreted-alist ()
   "Synchronizes `edts-debug-interpreted-alist'."
@@ -206,18 +228,10 @@ other value toggles interpretation, which is the default behaviour."
          (reply     (edts-rest-post resource rest-args))
          (res       (assoc 'result reply)))
     (cond
-     ((equal res '(result "201" "Created"))
-      (let* ((interpreted (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))
-             (fmt (if interpreted
-                      "%s is now interpreted on %s"
-                    "%s is no longer interpreted on %s")))
-        (edts-log-info fmt module node-name)
-        (edts-debug-sync)))
      ((equal res '(result "403" "Forbidden"))
       (null (edts-log-error "%s is not interpretable" module)))
-     (t
-      (null
-       (edts-log-error "Unexpected reply: %s" (cdr res)))))))
+     ((not (equal res '(result "201" "Created")))
+      (null (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
 (defun edts-debug-break (&optional node module line break)
   "Set breakpoint state for LINE in MODULE on NODE according to
@@ -244,12 +258,8 @@ breakpoint existence at LINE, which is the default behaviour."
          (rest-args (list (cons "break" break)))
          (reply     (edts-rest-post resource rest-args))
          (res       (assoc 'result reply)))
-    (if (not (equal res '(result "201" "Created")))
-        (null (edts-log-error "Unexpected reply: %s" (cdr res)))
-      (if (cdr (assoc 'break (cdr (assoc 'body reply))))
-          (edts-log-info "breakpoint set on %s:%s on %s" module line node-name)
-        (edts-log-info "breakpoint unset on %s:%s on %s" module line node-name))
-      (edts-debug-sync))))
+    (unless (equal res '(result "201" "Created"))
+      (null (edts-log-error "Unexpected reply: %s" (cdr res))))))
 
 (defun edts-debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
@@ -349,10 +359,9 @@ one of continue...tbc."
          (args  (list (cons "cmd" (symbol-name command))))
          (reply (edts-rest-post resource args))
          (res   (car (cdr (assoc 'result reply)))))
-    (if (not (equal res "204"))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
-      (edts-debug-sync))))
+    (unless (equal res "204")
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 
 
