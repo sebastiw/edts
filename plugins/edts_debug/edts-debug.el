@@ -52,11 +52,34 @@ request should always be outstanding if we are not already attached.")
   (define-key edts-mode-map "\C-c\C-d\M-b" 'edts-debug-list-breakpoints)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-list-interpreted)
   (define-key edts-mode-map "\C-c\C-d\M-p" 'edts-debug-list-processes)
-  (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook))
+  (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook)
+  (add-hook 'edts-node-down-hook 'edts-debug-node-down-hook)
+  (add-hook 'edts-server-down-hook 'edts-debug-server-down-hook))
 
 (defun edts-debug-after-node-init-hook ()
   "Hook to run after node initialization."
-  t)
+  (edts-debug-sync))
+
+(defun edts-debug-node-down-hook (node)
+  "Hook to run after node initialization."
+  (let ((interpreted (assoc node edts-debug-interpreted-alist))
+        (breakpoints (assoc node edts-debug-breakpoint-alist))
+        (processes   (assoc node edts-debug-processes-alist)))
+    (setq edts-debug-interpreted-alist
+          (delete interpreted edts-debug-interpreted-alist))
+    (setq edts-debug-breakpoint-alist
+          (delete breakpoints edts-debug-breakpoint-alist))
+    (setq edts-debug-processes-alist
+          (delete processes edts-debug-processes-alist))
+    (run-hooks 'edts-debug-after-sync-hook)))
+
+(defun edts-debug-server-down-hook ()
+  "Hook to run after node initialization."
+  (setq edts-debug-interpreted-alist nil)
+  (setq edts-debug-breakpoint-alist nil)
+  (setq edts-debug-processes-alist nil)
+  (run-hooks 'edts-debug-after-sync-hook))
+
 
 (defun edts-debug-buffer-init ()
   "edts-debug buffer-specific initialization."
@@ -86,6 +109,14 @@ of strings.")
   "Hook to run after synchronizing debug information (interpreted
 modules, breakpoints and debugged processes).")
 
+(defun edts-debug-sync ()
+  "Synchronize edts_debug data."
+  (interactive)
+  (edts-debug-sync-interpreted-alist)
+  (edts-debug-sync-breakpoint-alist)
+  (edts-debug-sync-processes-alist)
+  (run-hooks 'edts-debug-after-sync-hook))
+
 (defun edts-debug-event-handler (node class type info)
   "Handles erlang-side debugger events"
   (case type
@@ -113,7 +144,10 @@ modules, breakpoints and debugged processes).")
                     (edts-debug-sync-breakpoint-alist)))
     (new_process  (edts-debug-sync-processes-alist))
     (new_status   (edts-debug-sync-processes-alist)))
-  (run-hooks 'edts-debug-after-sync-hook)
+  (run-hooks 'edts-debug-after-sync-hook))
+(edts-event-register-handler 'edts-debug-event-handler 'edts_debug)
+
+(defun edts-debug-update-buffers ()
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode
@@ -121,7 +155,8 @@ modules, breakpoints and debugged processes).")
               (module (ferl-get-module)))
           (when (and node module)
             (edts-debug-update-buffer-info node module)))))))
-(edts-event-register-handler 'edts-debug-event-handler 'edts_debug)
+(add-hook 'edts-debug-after-sync-hook 'edts-debug-update-buffers)
+
 
 (defun edts-debug-sync-interpreted-alist ()
   "Synchronizes `edts-debug-interpreted-alist'."

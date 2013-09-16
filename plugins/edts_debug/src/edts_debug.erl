@@ -160,7 +160,7 @@ continue(Pid) ->
 -spec ensure_started() -> ok.
 %%------------------------------------------------------------------------------
 ensure_started() ->
-  case dbg_iserver:find() of
+  case whereis(dbg_iserver) of
     undefined -> dbg_iserver:start();
     _         -> ok
   end,

@@ -89,11 +89,11 @@ started_p() -> whereis(?SERVER) =/= undefined.
 %%------------------------------------------------------------------------------
 init([]) ->
   %% TODO Monitor dbg_iserver and restart/subscribe if it goes down.
-  int:subscribe(),
+  ok = int:subscribe(),
   {ok, #state{}}.
 
 handle_call(Msg, _From, State) ->
-  error_logger:error_msg("Unknown call ~p", [Msg]),
+  error_logger:error_msg("~p: Unrecognized call ~p", [?MODULE, Msg]),
   {reply, {error, {unknown_msg, Msg}}, State}.
 
 %%------------------------------------------------------------------------------
@@ -105,7 +105,8 @@ handle_call(Msg, _From, State) ->
                                            {noreply, state(), timeout()} |
                                            {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+  error_logger:error_msg("~p: Unrecognized cast ~p", [?MODULE, Msg]),
   {noreply, State}.
 
 %%------------------------------------------------------------------------------
@@ -121,7 +122,7 @@ handle_info({int, Msg}, State) ->
   maybe_dispatch_event(Msg),
   {noreply, State};
 handle_info(Msg, State) ->
-  error_logger:info_msg("~p: Unexpected message: ~p~n", [?MODULE, Msg]),
+  error_logger:info_msg("~p: Unrecognized message: ~p~n", [?MODULE, Msg]),
   {noreply, State}.
 
 
