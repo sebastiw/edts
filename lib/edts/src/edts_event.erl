@@ -29,7 +29,7 @@
 
 %%%_* Exports ==================================================================
 
--export([dispatch_event/1]).
+-export([dispatch_event/2]).
 
 %%%_* Defines ==================================================================
 
@@ -37,9 +37,10 @@
 
 %%%_* API ======================================================================
 
-dispatch_event(Event) ->
+dispatch_event(EventType, EventInfo) ->
   {ok, Node} = application:get_env(edts, server_node),
-  rpc:call(Node, edts_event_server, dispatch_event, [node(), Event]).
+  rpc:call(Node, edts_event_server, dispatch_event, [EventType, EventInfo]).
+
 %%%_* Internal functions =======================================================
 
 %%%_* Unit tests ===============================================================

@@ -190,4 +190,4 @@ that type."
       (should (equal evts '(foo foo)))
       (setq edts-event-handlers handlers))))
 
-
+(provide 'edts-event)

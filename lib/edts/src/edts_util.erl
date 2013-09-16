@@ -31,6 +31,7 @@
 %%%_* Exports ==================================================================
 
 -export([nodename2shortname/1,
+         pid2atom/1,
          lib_and_app_dirs/0,
          shorten_path/1]).
 
@@ -43,6 +44,10 @@
 nodename2shortname(Nodename) ->
   Str = atom_to_list(Nodename),
   list_to_atom(string:sub_string(Str, 1, string:rchr(Str, $@) -1)).
+
+pid2atom(Pid) ->
+  PidStr0 = pid_to_list(Pid),
+  list_to_atom(string:sub_string(PidStr0, 2, length(PidStr0) - 1)).
 
 lib_and_app_dirs() ->
   ErlLibDir = code:lib_dir(),
