@@ -107,7 +107,6 @@ with EDTS."
                                                             (length mod)))
                                   (setq max-node-len (max max-node-len
                                                           (length node))))))
-          (message "breakpoint alist 2 %s" edts-debug-breakpoint-alist)
           (setq tabulated-list-format
                 (vector
                  `("Node"      ,max-node-len   'string< :pad-right 4)

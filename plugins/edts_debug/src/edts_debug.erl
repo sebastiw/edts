@@ -82,9 +82,15 @@ break(Module, Line, Break) ->
 do_break(Module, Line, toggle) ->
   do_break(Module, Line, not breakpoint_exists_p(Module, Line));
 do_break(Module, Line, true) ->
-  case interpret_module(Module, true) of
-    {error, _} = E -> E;
-    true           ->
+  case module_interpreted_p(Module) of
+    false ->
+      case interpret_module(Module, true) of
+        {error, _} = E -> E;
+        true           ->
+          int:break(Module, Line),
+          true
+      end;
+    true ->
       int:break(Module, Line),
       true
   end;
