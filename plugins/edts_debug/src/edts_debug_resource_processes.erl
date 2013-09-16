@@ -25,6 +25,8 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_processes).
 
+-compile({parse_transform, lager_transform}).
+
 %%%_* Exports ==================================================================
 
 %% API

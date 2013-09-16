@@ -47,8 +47,8 @@
          interpreted_modules/0,
          module_interpretable_p/1,
          module_interpreted_p/1,
-         processes/0,
-         wait_for_break/0]).
+         processes/0]).
+
 
 %%%_* Includes =================================================================
 
@@ -62,6 +62,7 @@
 edts_server_services()  -> [].
 project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -131,6 +132,7 @@ breakpoints(Module) ->
   %% int:all_breaks/1 is broken in OTP < R15.
   [Break || Break = {{M, _},_} <- int:all_breaks(), M =:= Module].
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Orders the debugger to continue execution until it reaches another
@@ -141,6 +143,21 @@ breakpoints(Module) ->
 continue(Pid) ->
   ensure_started(),
   int:continue(Pid).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Ensure that the debug-server is running
+%% @end
+-spec ensure_started() -> ok.
+%%------------------------------------------------------------------------------
+ensure_started() ->
+  case dbg_iserver:find() of
+    undefined -> dbg_iserver:start();
+    _         -> ok
+  end,
+  edts_debug_server:ensure_started().
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -220,14 +237,7 @@ processes() ->
   [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
 
 
-wait_for_break() ->
-  ensure_started(),
-  edts_debug_server:wait_for_break().
-
 %%%_* Internal functions =======================================================
-
-ensure_started() ->
-  edts_debug_server:ensure_started().
 
 %%%_* Unit tests ===============================================================
 

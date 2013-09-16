@@ -35,11 +35,9 @@
 -export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
 
 %% Debugger API
--export([maybe_attach/1,
-         step/0,
+-export([step/0,
          step_out/0,
-         stop_debug/0,
-         wait_for_break/0]).
+         stop_debug/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -51,16 +49,10 @@
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
 
--record(dbg_state, {
-          debugger = undefined   :: undefined | pid(),
-          proc = unattached      :: unattached | pid(),
-          stack = {1, 1}         :: {non_neg_integer(), non_neg_integer()},
-          listeners = []         :: [term()],
-          interpretation = false :: boolean()
-         }).
+-record(state, {}).
 
 %%%_* Types ====================================================================
--type state():: #dbg_state{}.
+-type state():: #state{}.
 
 %%%_* API ======================================================================
 ensure_started() ->
@@ -76,72 +68,6 @@ start() ->
 stop() ->
   ok.
 
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Potentially attach to an interpreter process Pid. Will not
-%% reattach if already attached.
-%% @end
--spec maybe_attach(Pid :: pid()) -> {attached, pid(), pid()}
-                                  | {already_attached, pid(), pid()}.
-%%------------------------------------------------------------------------------
-maybe_attach(Pid) ->
-  case gen_server:call(?SERVER, {attach, Pid}) of
-    {ok, attach, AttPid} ->
-      {attached, AttPid, Pid};
-    {error, already_attached, AttPid} ->
-      {already_attached, AttPid, Pid}
-  end.
-
-
-
-
-
-
-
-
-
-
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Waits for debugging to be triggered by a breakpoint and returns
-%% relevant module and line information.
-%% @end
--spec wait_for_break() -> {ok, {module(), non_neg_integer()}}.
-%%------------------------------------------------------------------------------
-wait_for_break() ->
-  gen_server:call(?SERVER, wait_for_break, infinity).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Orders the debugger to step in execution.
-%% @end
--spec step() -> ok.
-%%------------------------------------------------------------------------------
-step() ->
-  gen_server:call(?SERVER, step, infinity).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Order the debugger to step out of the current function.
-%% @end
--spec step_out() -> ok.
-%%------------------------------------------------------------------------------
-step_out() ->
-  gen_server:call(?SERVER, step_out, infinity).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Stop debugging
-%% @end
--spec stop_debug() -> ok.
-%%------------------------------------------------------------------------------
-stop_debug() ->
-  gen_server:call(?SERVER, stop_debug).
-
 %%------------------------------------------------------------------------------
 %% @doc
 %% Starts the server
@@ -154,9 +80,8 @@ start_link() ->
 
 started_p() -> whereis(?SERVER) =/= undefined.
 
-
-
 %%%_* gen_server callbacks  ====================================================
+
 %%------------------------------------------------------------------------------
 %% @private
 %% @doc
@@ -168,57 +93,13 @@ started_p() -> whereis(?SERVER) =/= undefined.
                       {stop, atom()}.
 %%------------------------------------------------------------------------------
 init([]) ->
-  %% int:auto_attach([break], {?MODULE, maybe_attach, []}),
-  {ok, #dbg_state{}}.
+  %% TODO Monitor dbg_iserver and restart/subscribe if it goes down.
+  int:subscribe(),
+  {ok, #state{}}.
 
-%%------------------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling call messages
-%% @end
-%%
--spec handle_call(term(), {pid(), atom()}, state()) ->
-                     {reply, Reply::term(), state()} |
-                     {reply, Reply::term(), state(), timeout()} |
-                     {noreply, state()} |
-                     {noreply, state(), timeout()} |
-                     {stop, Reason::atom(), term(), state()} |
-                     {stop, Reason::atom(), state()}.
-%%------------------------------------------------------------------------------
-handle_call({attach, Pid}, _From, #dbg_state{proc = unattached} = State) ->
-  register_attached(self()),
-  int:attached(Pid),
-  error_logger:info_msg("Debugger ~p attached to ~p~n", [self(), Pid]),
-  {reply, {ok, attach, self()}, State#dbg_state{proc = Pid}};
-handle_call({attach, Pid}, _From, #dbg_state{debugger=Dbg, proc=Pid} = State) ->
-  {reply, {error, {already_attached, Dbg, Pid}}, State};
-
-handle_call(wait_for_break, From, State) ->
-  Listeners = State#dbg_state.listeners,
-  {noreply, State#dbg_state{listeners = [From|Listeners]}};
-
-handle_call(_Cmd, _From, #dbg_state{proc = unattached} = State) ->
-  {reply, {error, unattached}, State};
-
-handle_call(continue, From, #dbg_state{proc = Pid} = State) ->
-  int:continue(Pid),
-  Listeners = State#dbg_state.listeners,
-  {noreply, State#dbg_state{listeners = [From|Listeners]}};
-
-handle_call(step, From, #dbg_state{proc = Pid} = State) ->
-  int:step(Pid),
-  Listeners = State#dbg_state.listeners,
-  {noreply, State#dbg_state{listeners = [From|Listeners]}};
-
-handle_call(step_out, From, #dbg_state{proc = Pid} = State) ->
-  int:finish(Pid),
-  Listeners = State#dbg_state.listeners,
-  {noreply, State#dbg_state{listeners = [From|Listeners]}};
-
-handle_call(stop_debug, _From, #dbg_state{proc = Pid}) ->
-  exit(Pid, kill),
-  {reply, {ok, finished}, #dbg_state{}}.
-
+handle_call(Msg, _From, State) ->
+  error_logger:error_msg("Unknown call ~p", [Msg]),
+  {reply, {error, {unknown_msg, Msg}}, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -229,11 +110,6 @@ handle_call(stop_debug, _From, #dbg_state{proc = Pid}) ->
                                            {noreply, state(), timeout()} |
                                            {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_cast({register_attached, Pid}, State) ->
-  {noreply, State#dbg_state{debugger = Pid}};
-handle_cast({notify, Info}, #dbg_state{listeners = Listeners} = State) ->
-  notify(Info, Listeners),
-  {noreply, State};
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
@@ -246,37 +122,9 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-%% Hit a breakpoint
-handle_info({Meta, {break_at, Module, Line, _Cur}}, State) ->
-  Bindings = int:meta(Meta, bindings, nostack),
-  File = int:file(Module),
-  notify({break, File, {Module, Line}, Bindings}),
+handle_info({int, Msg}, State) ->
+  maybe_dispatch_event(Msg),
   {noreply, State};
-
-%% Became idle (not executing any code under debugging)
-handle_info({_Meta, idle}, State) ->
-  notify(idle),
-  {noreply, State};
-
-%% Came back from uninterpreted code
-handle_info({_Meta, {re_entry, _, _}}, State) ->
-  {noreply, State};
-
-%% Running code, but not telling anything really relevant
-handle_info({_Meta, running}, State) ->
-  {noreply, State};
-
-%% Something attached to the debugger (most likely ourselves)
-handle_info({_Meta, {attached, _, _, _}}, State) ->
-  {noreply, State};
-
-%% Process under debug terminated
-handle_info({_Meta, {exit_at, _, _Reason, _}}, State) ->
-  {noreply, State};
-
-handle_info({int, _}, State) ->
-  {noreply, State};
-
 handle_info(Msg, State) ->
   error_logger:info_msg("~p: Unexpected message: ~p~n", [?MODULE, Msg]),
   {noreply, State}.
@@ -293,7 +141,6 @@ handle_info(Msg, State) ->
 -spec terminate(Reason::atom(), state()) -> any().
 %%------------------------------------------------------------------------------
 terminate(_Reason, _State) ->
-  int:auto_attach(false),
   ok.
 
 %%------------------------------------------------------------------------------
@@ -306,36 +153,59 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
+%%%_* Internal functions =======================================================
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Notifies all registered debugger clients of a change in debugger state
-%% through Info
-%%
--spec notify(Info :: term()) -> ok.
-%%------------------------------------------------------------------------------
-notify(Info) ->
-  gen_server:cast(?SERVER, {notify, Info}).
+maybe_dispatch_event(Msg) ->
+  case dispatch_event_p(Msg) of
+    true  -> dispatch_event(Msg);
+    false -> ok
+  end.
 
-notify(_, []) ->
-  ok;
-notify(Info, [Client|R]) ->
-  gen_server:reply(Client, {ok, Info}),
-  notify(Info, R).
+dispatch_event_p(Event) ->
+  is_tuple(Event) andalso
+  lists:member(element(1, Event),
+               [interpret,
+                no_interpret,
+                new_process,
+                new_status,
+                new_break,
+                delete_break,
+                no_break]).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% Register in idbg_server as a debugger process attached to Pid.
-%%
--spec register_attached(Pid :: pid()) -> ok.
-%%------------------------------------------------------------------------------
-register_attached(Pid) ->
-  gen_server:cast(?SERVER, {register_attached, Pid}).
 
-%%%_* Unit tests ===============================================================
+dispatch_event(Msg) ->
+  edts_event:dispatch_event(edts_debug, fmt_event(Msg)).
+
+fmt_event({interpret, Mod}) ->
+  [{type, interpret},
+   {module, Mod}];
+fmt_event({no_interpret, Mod}) ->
+  [{type, no_interpret},
+   {module, Mod}];
+fmt_event({new_process, Pid, Fun, Status, Info}) ->
+  [{type,     new_process},
+   {pid,      edts_util:pid2atom(Pid)},
+   {function, Fun},
+   {status,   Status},
+   {info,     Info}];
+fmt_event({new_status, Pid, Status, Info}) ->
+  [{type,   new_status},
+   {pid,    edts_util:pid2atom(Pid)},
+   {status, Status},
+   {info,   Info}];
+fmt_event({new_break, {{Mod, Line}, Options}}) ->
+  [{type,   new_break},
+   {module, Mod},
+   {line,   Line},
+   {options, Options}];
+fmt_event({delete_break, {Mod, Line}}) ->
+  [{type,   delete_break},
+   {module, Mod},
+   {line,   Line}];
+fmt_event({no_break, Mod}) ->
+  [{type,   delete_break},
+   {module, Mod}].
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
