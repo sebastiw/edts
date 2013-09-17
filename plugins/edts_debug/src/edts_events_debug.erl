@@ -45,25 +45,32 @@
 %% @end
 -spec format_info(node()) -> [{atom(), string()}].
 %%------------------------------------------------------------------------------
-format_info({interpret, Mod}) ->
-  [{type, interpret},
+format_info({Type, Mod}) when Type =:= interpret orelse
+                              Type =:= no_interpret ->
+  [{type, Type},
    {module, Mod}];
-format_info({no_interpret, Mod}) ->
-  [{type, no_interpret},
-   {module, Mod}];
-format_info({new_process, Pid, Fun, Status, Info}) ->
+format_info({new_process, {Pid, {Mod, Fun, Args}, Status, Info}}) ->
   [{type,     new_process},
    {pid,      edts_util:pid2atom(Pid)},
+   {module,   Mod},
    {function, Fun},
+   {args,     [lists:flatten(io_lib:format("~w", [A])) || A <- Args]},
    {status,   Status},
-   {info,     Info}];
+   {info,     case is_tuple(Info) of
+                true  -> tuple_to_list(Info);
+                false -> Info
+              end}];
 format_info({new_status, Pid, Status, Info}) ->
   [{type,   new_status},
    {pid,    edts_util:pid2atom(Pid)},
    {status, Status},
-   {info,   Info}];
-format_info({new_break, {{Mod, Line}, Options}}) ->
-  [{type,   new_break},
+   {info,   case is_tuple(Info) of
+              true  -> tuple_to_list(Info);
+              false -> Info
+            end}];
+format_info({Type, {{Mod, Line}, Options}}) when Type =:= new_break orelse
+                                                 Type =:= break_options ->
+  [{type,   Type},
    {module, Mod},
    {line,   Line},
    {options, Options}];
@@ -72,7 +79,7 @@ format_info({delete_break, {Mod, Line}}) ->
    {module, Mod},
    {line,   Line}];
 format_info({no_break, Mod}) ->
-  [{type,   delete_break},
+  [{type,   no_break},
    {module, Mod}].
 
 

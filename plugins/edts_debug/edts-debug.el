@@ -123,30 +123,42 @@ modules, breakpoints and debugged processes).")
 (defun edts-debug-event-handler (node class type info)
   "Handles erlang-side debugger events"
   (case type
-    (interpret    (let ((module (cdr (assoc 'module info))))
-                    (edts-log-info "%s is now interpreted on %s" module node))
-                  (edts-debug-sync-interpreted-alist))
-    (no_interpret (let ((module (cdr (assoc 'module info))))
-                    (edts-log-info "%s is no longer interpreted on %s"
-                                   module
-                                   node))
-                  (edts-debug-sync-interpreted-alist))
-    (new_break    (let ((module (cdr (assoc 'module info)))
-                        (line (cdr (assoc 'line info))))
-                    (edts-log-info "breakpoint set on %s:%s on %s"
-                                   module
-                                   line
-                                   node)
-                    (edts-debug-sync-breakpoint-alist)))
-    (delete_break (let ((module (cdr (assoc 'module info)))
-                        (line (cdr (assoc 'line info))))
-                    (edts-log-info "breakpoint unset on %s:%s on %s"
-                                   module
-                                   line
-                                   node)
-                    (edts-debug-sync-breakpoint-alist)))
-    (new_process  (edts-debug-sync-processes-alist))
-    (new_status   (edts-debug-sync-processes-alist)))
+    (interpret     (let ((module (cdr (assoc 'module info))))
+                     (edts-log-info "%s is now interpreted on %s" module node))
+                   (edts-debug-sync-interpreted-alist))
+    (no_interpret  (let ((module (cdr (assoc 'module info))))
+                     (edts-log-info "%s is no longer interpreted on %s"
+                                    module
+                                    node))
+                   (edts-debug-sync-interpreted-alist))
+    (new_break     (let ((module (cdr (assoc 'module info)))
+                         (line (cdr (assoc 'line info))))
+                     (edts-log-info "breakpoint set on %s:%s on %s"
+                                    module
+                                    line
+                                    node)
+                     (edts-debug-sync-breakpoint-alist)))
+    (delete_break  (let ((module (cdr (assoc 'module info)))
+                         (line (cdr (assoc 'line info))))
+                     (edts-log-info "breakpoint unset on %s:%s on %s"
+                                    module
+                                    line
+                                    node)
+                     (edts-debug-sync-breakpoint-alist)))
+    (break_options (let ((module (cdr (assoc 'module info)))
+                         (line (cdr (assoc 'line info))))
+                     (edts-log-info "breakpoint options updated on %s:%s on %s"
+                                    module
+                                    line
+                                    node)
+                     (edts-debug-sync-breakpoint-alist)))
+    (no_break      (let ((module (cdr (assoc 'module info))))
+                     (edts-log-info "All breakpoints inn %s deleted on %s"
+                                    module
+                                    node)
+                     (edts-debug-sync-breakpoint-alist)))
+    (new_process   (edts-debug-sync-processes-alist))
+    (new_status    (edts-debug-sync-processes-alist)))
   (run-hooks 'edts-debug-after-sync-hook))
 (edts-event-register-handler 'edts-debug-event-handler 'edts_debug)
 
