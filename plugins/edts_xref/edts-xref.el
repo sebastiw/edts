@@ -70,13 +70,6 @@ undefined_function_calls, unexported_functions"
   (add-to-list 'edts-xref-initialized-nodes node-name))
 
 
-(defun edts-debug-buffer-init ()
-  "edts-debug buffer-specific initialization."
-  (add-to-list 'mode-line-buffer-identification
-               '(edts-mode edts-debug-mode-line-info)
-               't))
-
-
 (defun edts-xref-analyze-related ()
   "Runs xref-checks for all live buffers related to current
 buffer either by belonging to the same project or, if current buffer

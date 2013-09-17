@@ -80,17 +80,20 @@ request should always be outstanding if we are not already attached.")
   (setq edts-debug-processes-alist nil)
   (run-hooks 'edts-debug-after-sync-hook))
 
+(defun edts-debug-format-mode-line ()
+  "Formats the edts-debug mode line string for display."
+  (concat (propertize edts-debug-mode-line-string 'face `(:box t)) " "))
 
 (defun edts-debug-buffer-init ()
   "edts-debug buffer-specific initialization."
   (add-to-list 'mode-line-buffer-identification
-               '(edts-mode edts-debug-mode-line-info)
-               't))
+               '(edts-mode (:eval (edts-debug-format-mode-line)))
+               t))
 
-(defvar edts-debug-mode-line-info ""
+(defvar edts-debug-mode-line-string ""
   "The string with edts-debug related information to display in
 the mode-line.")
-(make-variable-buffer-local 'edts-debug-mode-line-info)
+(make-variable-buffer-local 'edts-debug-mode-line-string)
 
 (defvar edts-debug-breakpoint-alist nil
   "Alist with breakpoints for each node. Each value is an alist with one
@@ -216,8 +219,8 @@ modules, breakpoints and debugged processes).")
 
 (defun edts-debug-update-buffer-info (node module)
   (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
-      (setq edts-debug-mode-line-info "Interpreted ")
-    (setq edts-debug-mode-line-info ""))
+      (setq edts-debug-mode-line-string "Interpreted")
+    (setq edts-debug-mode-line-string ""))
   (force-mode-line-update)
 
   (edts-face-remove-overlays '(edts-debug-breakpoint))
