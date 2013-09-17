@@ -30,6 +30,7 @@ undefined_function_calls, unexported_functions"
 
 (defun edts-xref-init ()
   "Initialize edts-debug."
+  (add-to-list 'edts-code-issue-types 'edts-xref)
   ;; Keys
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
