@@ -55,26 +55,34 @@ init([]) ->
 
   WebmConf = [{port,     ?EDTS_PORT},
               {dispatch, dispatch()}],
-  WemachineRouter = {webmachine_router,
-                     {webmachine_router, start_link, []},
-                     permanent, 5000, worker, [webmachine_router]},
-  Webmachine = {webmachine_mochiweb,
-                {webmachine_mochiweb, start, [WebmConf]},
-                permanent, 5000, worker, [webmachine_mochiweb]},
-  Edts = {edts_server,
-          {edts_server, start_link, []},
-          permanent, 5000, worker, [edts_server]},
-  Formatters0 = lists:flatmap(fun edts_plugin:event_formatters/1,
-                              edts_plugin:names()),
-  Formatters = [{{edts, node_down}, edts_events_node_down} | Formatters0],
-  EdtsEvent = {edts_event,
-               {edts_event, start_link, [Formatters]},
-               permanent, 5000, worker, [edts_event]},
-  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine],
+  WemachineRouter = child_spec(webmachine_router),
+  Webmachine      = child_spec(webmachine_mochiweb, [WebmConf]),
+  Edts            = child_spec(edts_server),
+
+
+  Formatters0     = lists:flatmap(fun edts_plugin:event_formatters/1,
+                                  edts_plugin:names()),
+  Formatters      = [{{edts, node_down},
+                      edts_events_node_down} | Formatters0],
+  EdtsEvent       = child_spec(edts_event, [Formatters]),
+
+  PluginServices  = lists:flatmap(fun edts_plugin:edts_server_services/1,
+                                  edts_plugin:names()),
+  PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
+
+  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 
 %%%_* Internal functions =======================================================
+
+child_spec(Name) ->
+  child_spec(Name, []).
+
+child_spec(Name, Args) ->
+  {Name,
+   {Name, start_link, Args},
+   permanent, 5000, worker, [Name]}.
 
 dispatch() ->
   DispatchFile       = filename:join(code:priv_dir(edts), "dispatch.conf"),
