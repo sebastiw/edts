@@ -62,6 +62,7 @@ that class."
              (class  (intern (cdr (assoc 'class event))))
              (type   (intern (cdr (assoc 'type event))))
              (info   (cdr (assoc 'info event))))
+        (edts-log-debug "Received event from %s: %s %s %s" node class type info)
         (if (not (string= (car result) "200"))
             (null (edts-log-error "Unexpected reply %s" result))
           (edts-event-handle node class type info)
