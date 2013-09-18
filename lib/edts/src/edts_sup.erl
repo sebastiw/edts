@@ -56,7 +56,9 @@ init([]) ->
   WebmConf = [{port,     ?EDTS_PORT},
               {dispatch, dispatch()}],
   WemachineRouter = child_spec(webmachine_router),
-  Webmachine      = child_spec(webmachine_mochiweb, [WebmConf]),
+  Webmachine      = {webmachine_mochiweb,
+                     {webmachine_mochiweb, start, [WebmConf]},
+                     permanent, 5000, worker, [webmachine_mochiweb]},
   Edts            = child_spec(edts_server),
 
 
