@@ -30,7 +30,7 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([format_info/1]).
+-export([format_info/3]).
 
 %%%_* Includes =================================================================
 
@@ -43,9 +43,9 @@
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
--spec format_info(node()) -> [{atom(), string()}].
+-spec format_info(edts_events:class(), edts_events:type(), term()) -> term().
 %%------------------------------------------------------------------------------
-format_info([{node, Node}]) ->
+format_info(edts, node_down, [{node, Node}]) ->
   [{node, edts_util:nodename2shortname(Node)}].
 
 %%%_* Internal functiyons ======================================================

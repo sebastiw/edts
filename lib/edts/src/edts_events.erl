@@ -44,7 +44,7 @@
 -spec behaviour_info(any()) -> [{atom(), non_neg_integer()}] | undefined.
 %%------------------------------------------------------------------------------
 behaviour_info(callbacks) ->
-  [{format_info, 1}].
+  [{format_info, 3}].
 
 %%%_* Internal functions =======================================================
 

@@ -200,10 +200,10 @@ fmt_event({Node, Class, Type, Info}, Formatters) ->
 
 fmt_event_info(Class, Type, Info, Formatters) ->
   case lists:keyfind({Class, Type}, 1, Formatters) of
-    {_, Fmt} -> Fmt:format_info(Info);
+    {_, Fmt} -> Fmt:format_info(Class, Type, Info);
     false    ->
       case lists:keyfind(Class, 1, Formatters) of
-        {_, Fmt} -> Fmt:format_info(Info);
+        {_, Fmt} -> Fmt:format_info(Class, Type, Info);
         false    -> Info
       end
   end.
