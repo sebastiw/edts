@@ -19,44 +19,44 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
-(defconst edts-debug-list-processes-buffer
+(defconst edts_debug-list-processes-buffer
   "*EDTS Processes*"
   "Name of buffer where to display the list of processes")
 
-(define-derived-mode edts-debug-list-processes-mode tabulated-list-mode
+(define-derived-mode edts_debug-list-processes-mode tabulated-list-mode
   "Mode for listing processes modules."
   ;; Keybindings
   (define-key
-    edts-debug-list-processes-mode-map
+    edts_debug-list-processes-mode-map
     (kbd "RET")
-    'edts-debug-list-processes-find-processes)
+    'edts_debug-list-processes-find-processes)
   (define-key
-    edts-debug-list-processes-mode-map
+    edts_debug-list-processes-mode-map
     (kbd "<delete>")
-    'edts-debug-list-processes-kill-process)
+    'edts_debug-list-processes-kill-process)
   (define-key
-    edts-debug-list-processes-mode-map
+    edts_debug-list-processes-mode-map
     (kbd "a")
-    'edts-debug-list-processes-attach)
+    'edts_debug-list-processes-attach)
   (define-key
-    edts-debug-list-processes-mode-map
+    edts_debug-list-processes-mode-map
     (kbd "c")
-    'edts-debug-list-processes-continue)
+    'edts_debug-list-processes-continue)
   (setq show-trailing-whitespace nil)
-  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-processes-update)
-  (setq major-mode 'edts-debug-list-processes-mode)
-  (use-local-map edts-debug-list-processes-mode-map))
+  (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-processes-update)
+  (setq major-mode 'edts_debug-list-processes-mode)
+  (use-local-map edts_debug-list-processes-mode-map))
 
-(defun edts-debug-list-processes ()
+(defun edts_debug-list-processes ()
   "Show a listing of all processes on all nodes registered
 with EDTS."
   (interactive)
-  (with-current-buffer (get-buffer-create edts-debug-list-processes-buffer)
-    (edts-debug-list-processes-mode)
-    (edts-debug-list-processes-update)
+  (with-current-buffer (get-buffer-create edts_debug-list-processes-buffer)
+    (edts_debug-list-processes-mode)
+    (edts_debug-list-processes-update)
     (display-buffer (current-buffer))))
 
-(defun edts-debug-list-processes-find-processes ()
+(defun edts_debug-list-processes-find-processes ()
   "Find processes given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
@@ -68,18 +68,28 @@ with EDTS."
     (goto-char (point-min))
     (forward-line (1- line))))
 
-(defun edts-debug-list-processes-continue ()
+(defun edts_debug-list-processes-continue ()
   "Uninterpret module given by list entry under point."
   (interactive)
+  (edts_debug-list-processes--cmd 'continue))
+
+(defun edts_debug-list-processes-attach ()
+  "Uninterpret module given by list entry under point."
+  (interactive)
+  (edts_debug-list-processes--cmd 'attach))
+
+(defun edts_debug-list-processes--cmd (cmd)
+  "Uninterpret module given by list entry under point."
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (pid  (elt entry 1)))
-    (edts-debug-process-continue node pid)))
+    (edts_debug--cmd node pid cmd)))
 
-(defun edts-debug-list-processes-update ()
+
+(defun edts_debug-list-processes-update ()
   "Update the list of processes and reintialize the header line."
-  (when (buffer-live-p (get-buffer edts-debug-list-processes-buffer))
-    (with-current-buffer edts-debug-list-processes-buffer
+  (when (buffer-live-p (get-buffer edts_debug-list-processes-buffer))
+    (with-current-buffer edts_debug-list-processes-buffer
       (let ((max-node-len   4) ;; The length of the header names
             (max-pid-len    3)
             (max-init-len   4)
@@ -92,7 +102,7 @@ with EDTS."
                           (copy-sequence kvs)
                           #'(lambda (el1 el2)
                                   (string< (car el1) (car el2))))))
-          (loop for (node . procs) in (key-sort edts-debug-processes-alist)
+          (loop for (node . procs) in (key-sort edts_debug-processes-alist)
                 do (setq max-node-len (max max-node-len
                                            (length node)))
                 do (loop for proc in procs
@@ -127,8 +137,8 @@ with EDTS."
            (setq tabulated-list-entries (reverse entries))
            (tabulated-list-print))))))
 
-(defun edts-debug--get-module-source (node module)
+(defun edts_debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))
 
 
-(provide 'edts-debug-list-processes-mode)
+(provide 'edts_debug-list-processes-mode)

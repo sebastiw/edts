@@ -19,36 +19,36 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
-(defconst edts-debug-list-breakpoint-buffer
+(defconst edts_debug-list-breakpoint-buffer
   "*EDTS Breakpoints*"
   "Name of buffer where to display the list of breakpoints")
 
-(define-derived-mode edts-debug-list-breakpoint-mode tabulated-list-mode
+(define-derived-mode edts_debug-list-breakpoint-mode tabulated-list-mode
   "Mode for listing breakpoint modules."
   ;; Keybindings
   (define-key
-    edts-debug-list-breakpoint-mode-map
+    edts_debug-list-breakpoint-mode-map
     (kbd "RET")
-    'edts-debug-list-breakpoint-find-breakpoint)
+    'edts_debug-list-breakpoint-find-breakpoint)
   (define-key
-    edts-debug-list-breakpoint-mode-map
+    edts_debug-list-breakpoint-mode-map
     (kbd "<delete>")
-    'edts-debug-list-breakpoint-delete-breakpoint)
-  (setq major-mode 'edts-debug-list-breakpoint-mode)
+    'edts_debug-list-breakpoint-delete-breakpoint)
+  (setq major-mode 'edts_debug-list-breakpoint-mode)
   (setq show-trailing-whitespace nil)
-  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-breakpoint-update)
-  (use-local-map edts-debug-list-breakpoint-mode-map))
+  (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-breakpoint-update)
+  (use-local-map edts_debug-list-breakpoint-mode-map))
 
-(defun edts-debug-list-breakpoints ()
+(defun edts_debug-list-breakpoints ()
   "Show a listing of all breakpoint on all nodes registered
 with EDTS."
   (interactive)
-  (with-current-buffer (get-buffer-create edts-debug-list-breakpoint-buffer)
-    (edts-debug-list-breakpoint-mode)
-    (edts-debug-list-breakpoint-update)
+  (with-current-buffer (get-buffer-create edts_debug-list-breakpoint-buffer)
+    (edts_debug-list-breakpoint-mode)
+    (edts_debug-list-breakpoint-update)
     (display-buffer (current-buffer))))
 
-(defun edts-debug-list-breakpoint-find-breakpoint ()
+(defun edts_debug-list-breakpoint-find-breakpoint ()
   "Find breakpoint given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
@@ -60,19 +60,19 @@ with EDTS."
     (goto-char (point-min))
     (forward-line (1- line))))
 
-(defun edts-debug-list-breakpoint-delete-breakpoint ()
+(defun edts_debug-list-breakpoint-delete-breakpoint ()
   "Uninterpret module given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (mod  (elt entry 1))
          (line (string-to-number (elt entry 2))))
-    (edts-debug-break node mod line nil)))
+    (edts_debug-break node mod line nil)))
 
-(defun edts-debug-list-breakpoint-update ()
+(defun edts_debug-list-breakpoint-update ()
   "Update the list of breakpoints and reintialize the header line."
-  (when (buffer-live-p (get-buffer edts-debug-list-breakpoint-buffer))
-    (with-current-buffer edts-debug-list-breakpoint-buffer
+  (when (buffer-live-p (get-buffer edts_debug-list-breakpoint-buffer))
+    (with-current-buffer edts_debug-list-breakpoint-buffer
       (let ((max-node-len   4) ;; The length of the header names
             (max-module-len 6)
             entries)
@@ -89,7 +89,7 @@ with EDTS."
                            #'(lambda (b1 b2)
                                (< (cdr (assoc 'line b1))
                                   (cdr (assoc 'line b2)))))))
-          (loop for (node . modules) in (key-sort edts-debug-breakpoint-alist)
+          (loop for (node . modules) in (key-sort edts_debug-breakpoint-alist)
                 do (loop for (mod . breakpoints) in (key-sort modules)
                          do (loop for break in (line-sort breakpoints)
                                   for line      = (cdr (assoc 'line      break))
@@ -120,8 +120,8 @@ with EDTS."
           (setq tabulated-list-entries (reverse entries))
           (tabulated-list-print))))))
 
-(defun edts-debug--get-module-source (node module)
+(defun edts_debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))
 
 
-(provide 'edts-debug-list-breakpoint-mode)
+(provide 'edts_debug-list-breakpoint-mode)

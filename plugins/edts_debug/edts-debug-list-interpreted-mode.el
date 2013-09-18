@@ -19,36 +19,36 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
-(defconst edts-debug-list-interpreted-buffer
+(defconst edts_debug-list-interpreted-buffer
   "*EDTS Interpreted Modules*"
   "Name of buffer where to display the list of interpreted modules")
 
-(define-derived-mode edts-debug-list-interpreted-mode tabulated-list-mode
+(define-derived-mode edts_debug-list-interpreted-mode tabulated-list-mode
   "Mode for listing interpreted modules."
   ;; Keybindings
   (define-key
-    edts-debug-list-interpreted-mode-map
+    edts_debug-list-interpreted-mode-map
     (kbd "RET")
-    'edts-debug-list-interpreted-find-module)
+    'edts_debug-list-interpreted-find-module)
   (define-key
-    edts-debug-list-interpreted-mode-map
+    edts_debug-list-interpreted-mode-map
     (kbd "<delete>")
-    'edts-debug-list-interpreted-uninterpret-module)
+    'edts_debug-list-interpreted-uninterpret-module)
   (setq show-trailing-whitespace nil)
-  (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-interpreted-update)
-  (setq major-mode 'edts-debug-list-interpreted-mode)
-  (use-local-map edts-debug-list-interpreted-mode-map))
+  (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-interpreted-update)
+  (setq major-mode 'edts_debug-list-interpreted-mode)
+  (use-local-map edts_debug-list-interpreted-mode-map))
 
-(defun edts-debug-list-interpreted ()
+(defun edts_debug-list-interpreted ()
   "Show a listing of all interpreted modules on all nodes registered
 with EDTS."
   (interactive)
-  (with-current-buffer (get-buffer-create edts-debug-list-interpreted-buffer)
-    (edts-debug-list-interpreted-mode)
-    (edts-debug-list-interpreted-update)
+  (with-current-buffer (get-buffer-create edts_debug-list-interpreted-buffer)
+    (edts_debug-list-interpreted-mode)
+    (edts_debug-list-interpreted-update)
     (display-buffer (current-buffer))))
 
-(defun edts-debug-list-interpreted-find-module ()
+(defun edts_debug-list-interpreted-find-module ()
   "Find module given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
@@ -57,18 +57,18 @@ with EDTS."
          (file (cdr (assoc 'source (edts-get-module-info node mod 'basic)))))
     (edts-find-file-existing file)))
 
-(defun edts-debug-list-interpreted-uninterpret-module ()
+(defun edts_debug-list-interpreted-uninterpret-module ()
   "Uninterpret module given by list entry under point."
   (interactive)
   (let ((entry (tabulated-list-get-entry)))
-    (edts-debug-interpret (elt entry 0) (elt entry 1))))
+    (edts_debug-interpret (elt entry 0) (elt entry 1))))
 
-(defun edts-debug-list-interpreted-update ()
+(defun edts_debug-list-interpreted-update ()
   "Update the list of interpreted modules and reintialize the header line."
-  (when (buffer-live-p (get-buffer edts-debug-list-interpreted-buffer))
-    (with-current-buffer edts-debug-list-interpreted-buffer
+  (when (buffer-live-p (get-buffer edts_debug-list-interpreted-buffer))
+    (with-current-buffer edts_debug-list-interpreted-buffer
       (let ((max-node-len 4) ;; The length of the header name
-            (int-alist (sort edts-debug-interpreted-alist
+            (int-alist (sort edts_debug-interpreted-alist
                              #'(lambda (el1 el2) (string< (car el1)
                                                           (car el2)))))
             entries)
@@ -85,4 +85,4 @@ with EDTS."
         (setq tabulated-list-entries (reverse entries))
         (tabulated-list-print)))))
 
-(provide 'edts-debug-list-interpreted-mode)
+(provide 'edts_debug-list-interpreted-mode)
