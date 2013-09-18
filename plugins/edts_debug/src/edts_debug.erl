@@ -27,7 +27,7 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug).
 
--behaviour(edts_plugin).
+-behaviour(edts_plugins).
 
 %%%_* Exports =================================================================
 

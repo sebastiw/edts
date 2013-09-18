@@ -62,14 +62,14 @@ init([]) ->
   Edts            = child_spec(edts_server),
 
 
-  Formatters0     = lists:flatmap(fun edts_plugin:event_formatters/1,
-                                  edts_plugin:names()),
+  Formatters0     = lists:flatmap(fun edts_plugins:event_formatters/1,
+                                  edts_plugins:names()),
   Formatters      = [{{edts, node_down},
                       edts_events_node_down} | Formatters0],
   EdtsEvent       = child_spec(edts_event, [Formatters]),
 
-  PluginServices  = lists:flatmap(fun edts_plugin:edts_server_services/1,
-                                  edts_plugin:names()),
+  PluginServices  = lists:flatmap(fun edts_plugins:edts_server_services/1,
+                                  edts_plugins:names()),
   PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
 
   Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,

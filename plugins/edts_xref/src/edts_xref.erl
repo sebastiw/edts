@@ -25,7 +25,7 @@
 %%%_* Module declaration =======================================================
 -module(edts_xref).
 
--behaviour(edts_plugin).
+-behaviour(edts_plugins).
 
 %%%_* Exports ==================================================================
 

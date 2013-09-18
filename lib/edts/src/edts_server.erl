@@ -263,9 +263,9 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    Plugins = edts_plugin:names(),
+    Plugins = edts_plugins:names(),
     ok = lists:foreach(fun(Spec) -> edts_dist:load_app(Node, Spec) end,
-                       edts_plugin:specs()),
+                       edts_plugins:specs()),
     PluginRemoteLoad =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
@@ -277,7 +277,7 @@ do_init_node(ProjectName,
                                         edts_eunit_listener,
                                         edts_event,
                                         edts_module_server,
-                                        edts_plugin,
+                                        edts_plugins,
                                         edts_util] ++
                                          PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
