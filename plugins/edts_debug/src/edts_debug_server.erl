@@ -32,11 +32,19 @@
 %%%_* Exports =================================================================
 
 %% server API
--export([ensure_started/0, start/0, started_p/0, stop/0, start_link/0]).
+-export([ensure_started/0,
+         start/0,
+         started_p/0,
+         stop/0,
+         start_link/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([init/1,
+         handle_call/3,
+         handle_cast/2,
+         handle_info/2,
+         terminate/2,
+         code_change/3]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -88,7 +96,9 @@ started_p() -> whereis(?SERVER) =/= undefined.
                       {stop, atom()}.
 %%------------------------------------------------------------------------------
 init([]) ->
-  %% TODO Monitor dbg_iserver and restart/subscribe if it goes down.
+  {ok, Pid} = start_iserver(),
+  erlang:link(Pid),
+  edts_event:dispatch(edts_debug, starting),
   ok = int:subscribe(),
   {ok, #state{}}.
 
@@ -136,7 +146,8 @@ handle_info(Msg, State) ->
 %% @end
 -spec terminate(Reason::atom(), state()) -> any().
 %%------------------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(Reason, _State) ->
+  edts_event:dispatch(edts_debug, terminating, [{reason, Reason}]),
   ok.
 
 %%------------------------------------------------------------------------------
@@ -151,9 +162,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%%_* Internal functions =======================================================
 
+start_iserver() ->
+  case dbg_iserver:find() of
+    undefined -> dbg_iserver:start();
+    Pid       -> {ok, Pid}
+  end.
+
 maybe_dispatch_event(Msg) ->
   case dispatch_event_p(Msg) of
-    true  -> edts_event:dispatch_event(edts_debug, event_type(Msg), Msg);
+    true  -> edts_event:dispatch(edts_debug, event_type(Msg), Msg);
     false -> ok
   end.
 

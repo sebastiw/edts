@@ -47,33 +47,29 @@
 %%------------------------------------------------------------------------------
 format_info(edts_debug, starting, _) ->
   [{type, starting}];
-format_info(edts_debug, Type, Event) when Type =:= interpret orelse
-                                          Type =:= no_interpret orelse
-                                          Type =:= new_process orelse
-                                          Type =:= new_break orelse
-                                          Type =:= delete_break orelse
-                                          Type =:= no_break ->
-  format_int_info(Event).
+format_info(edts_debug, _Type, Event) ->
+  format_info(Event).
 
 
 %%%_* Internal functiyons ======================================================
 
-format_int_info({Type, Mod}) when Type =:= interpret orelse
+format_info({Type, Mod}) when Type =:= interpret orelse
                                   Type =:= no_interpret ->
   [{type, Type},
    {module, Mod}];
-format_int_info({new_process, {Pid, {Mod, Fun, Args}, Status, Info}}) ->
+format_info({new_process, {Pid, {Mod, Fun, Args}, Status, Info}}) ->
   [{type,     new_process},
    {pid,      edts_util:pid2atom(Pid)},
    {module,   Mod},
    {function, Fun},
-   {args,     [lists:flatten(io_lib:format("~w", [A])) || A <- Args]},
+   {args,     [list_to_binary(lists:flatten(io_lib:format("~w", [A]))) ||
+                A <- Args]},
    {status,   Status},
    {info,     case is_tuple(Info) of
                 true  -> tuple_to_list(Info);
                 false -> Info
               end}];
-format_int_info({new_status, Pid, Status, Info}) ->
+format_info({new_status, Pid, Status, Info}) ->
   [{type,   new_status},
    {pid,    edts_util:pid2atom(Pid)},
    {status, Status},
@@ -81,17 +77,17 @@ format_int_info({new_status, Pid, Status, Info}) ->
               true  -> tuple_to_list(Info);
               false -> Info
             end}];
-format_int_info({Type, {{Mod, Line}, Options}}) when Type =:= new_break orelse
+format_info({Type, {{Mod, Line}, Options}}) when Type =:= new_break orelse
                                                      Type =:= break_options ->
   [{type,   Type},
    {module, Mod},
    {line,   Line},
    {options, Options}];
-format_int_info({delete_break, {Mod, Line}}) ->
+format_info({delete_break, {Mod, Line}}) ->
   [{type,   delete_break},
    {module, Mod},
    {line,   Line}];
-format_int_info({no_break, Mod}) ->
+format_info({no_break, Mod}) ->
   [{type,   no_break},
    {module, Mod}].
 

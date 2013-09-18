@@ -52,7 +52,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, orddict:new()}.
 
 allowed_methods(ReqData, Ctx) ->
@@ -75,10 +75,10 @@ allow_missing_post(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
 
 process_post(ReqData, Ctx) ->
-  Node = orddict:fetch(nodename, Ctx),
-  Pid  = orddict:fetch(process, Ctx),
-  Cmd  = orddict:fetch(cmd, Ctx),
-  ok = edts:call(Node, edts_debug, Cmd, [Pid]),
+  Node     = orddict:fetch(nodename, Ctx),
+  Pid      = orddict:fetch(process, Ctx),
+  Cmd      = orddict:fetch(cmd, Ctx),
+  {ok, ok} = edts:call(Node, edts_debug, Cmd, [Pid]),
   {true, ReqData, Ctx}.
 
 
