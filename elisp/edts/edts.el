@@ -292,10 +292,12 @@ for ARITY will give a regexp matching any arity."
     (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
     (setq available (edts-get-nodes t))
     (while (and (> retries 0) (not available))
+      ;; (message "retries %s" retries)
       (setq available (edts-get-nodes t))
-      (sit-for 0.1)
+      (sit-for 0.2)
       (decf retries))
     (when available
+      (edts-log-info "Started EDTS server")
       (edts-event-listen))
     available))
 
@@ -377,6 +379,7 @@ requests.")
           (null (edts-log-error "Node %s failed to start." node-name)))
       ;; Node started, remove it from list of pending nodes and start
       ;; initialization.
+      (edts-log-info "Node %s started" node-name)
       (setq edts--pending-node-startups
             (remove node-name edts--pending-node-startups))
       (edts-init-node-async project-name
@@ -421,7 +424,7 @@ requests.")
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
         (progn
-          (edts-log-debug "Successfuly intialized node %s" node-name)
+          (edts-log-info "Successfuly intialized node %s" node-name)
           (run-hooks 'edts-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))

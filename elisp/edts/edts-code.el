@@ -29,6 +29,11 @@
 (require 'eproject-extras)
 (require 'path-util)
 
+(defvar edts-code-issue-types '(edts-code-compile
+                                edts-code-dialyzer
+                                edts-code-eunit-failed)
+  "List of overlay categories that are considered edts-code-issues")
+
 (defvar edts-code-before-compile-hook
   nil
   "Hooks to run before compilation. Hooks are called with the name of
@@ -272,10 +277,6 @@ non-recursive."
                 (line-number-at-pos)
                 0); Will to look strange, but at least we show the issue.
             )))))
-
-(defun edts-code-issue-types '(edts-code-compile
-                               edts-code-dialyzer
-                               edts-code-eunit-failed))
 
 (defun edts-code-next-issue ()
   "Moves point to the next error in current buffer and prints the error."
