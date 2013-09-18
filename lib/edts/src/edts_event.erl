@@ -200,12 +200,24 @@ fmt_event({Node, Class, Type, Info}, Formatters) ->
 
 fmt_event_info(Class, Type, Info, Formatters) ->
   case lists:keyfind({Class, Type}, 1, Formatters) of
-    {_, Fmt} -> Fmt:format_info(Class, Type, Info);
+    {_, Fmt} -> safe_fmt_event_info(Fmt, Class, Type, Info);
     false    ->
       case lists:keyfind(Class, 1, Formatters) of
-        {_, Fmt} -> Fmt:format_info(Class, Type, Info);
+        {_, Fmt} -> safe_fmt_event_info(Fmt, Class, Type, Info);
         false    -> Info
       end
+  end.
+
+safe_fmt_event_info(Fmt, Class, Type, Info) ->
+  try Fmt:format_info(Class, Type, Info)
+  catch C:E ->
+      edts_log:error("edts_event: Formatter ~p failed with ~p:~p.~n"
+                     "Class: ~p~n"
+                     "Type: ~p~n"
+                     "Info: ~p~n"
+                     "Stactrace: ~p~n",
+                    [C, E, Fmt, Class, Type, Info, erlang:get_stacktrace()]),
+      Info
   end.
 
 %%%_* Emacs ====================================================================

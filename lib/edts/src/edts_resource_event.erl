@@ -25,8 +25,6 @@
 %%%_* Module declaration =======================================================
 -module(edts_resource_event).
 
--compile({parse_transform, lager_transform}).
-
 %%%_* Exports ==================================================================
 
 %% API
@@ -48,7 +46,7 @@
 
 %% Webmachine callbacks
 init(_Config) ->
-  lager:debug("Call to ~p", [?MODULE]),
+  edts_log:debug("Call to ~p", [?MODULE]),
   {ok, []}.
 
 allowed_methods(ReqData, Ctx) ->
@@ -62,8 +60,16 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {ok, Event} = edts_event:listen(),
-  {mochijson2:encode([{event, Event}]), ReqData, Ctx}.
+  try
+    {ok, Event} = edts_event:listen(),
+    {mochijson2:encode([{event, Event}]), ReqData, Ctx}
+  catch
+    C:E ->
+      edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
+                     [C,E, erlang:get_stacktrace()]),
+      to_json(ReqData, Ctx)
+  end.
+
 
 %%%_* Internal functions =======================================================
 
