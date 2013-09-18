@@ -62,7 +62,7 @@ content_types_provided(ReqData, Ctx) ->
 
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {ok, Event} = edts_event_server:listen(),
+  {ok, Event} = edts_event:listen(),
   {mochijson2:encode([{event, Event}]), ReqData, Ctx}.
 
 %%%_* Internal functions =======================================================

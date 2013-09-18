@@ -67,9 +67,9 @@ init([]) ->
   Formatters0 = lists:flatmap(fun edts_plugin:event_formatters/1,
                               edts_plugin:names()),
   Formatters = [{{edts, node_down}, edts_events_node_down} | Formatters0],
-  EdtsEvent = {edts_event_server,
-               {edts_event_server, start_link, [Formatters]},
-               permanent, 5000, worker, [edts_event_server]},
+  EdtsEvent = {edts_event,
+               {edts_event, start_link, [Formatters]},
+               permanent, 5000, worker, [edts_event]},
   Children = [EdtsEvent, Edts, WemachineRouter, Webmachine],
   {ok, { {one_for_one, 5, 10}, Children} }.
 
