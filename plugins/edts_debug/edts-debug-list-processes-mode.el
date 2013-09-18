@@ -36,8 +36,13 @@
     'edts-debug-list-processes-kill-process)
   (define-key
     edts-debug-list-processes-mode-map
+    (kbd "a")
+    'edts-debug-list-processes-attach)
+  (define-key
+    edts-debug-list-processes-mode-map
     (kbd "c")
     'edts-debug-list-processes-continue)
+  (setq show-trailing-whitespace nil)
   (add-hook 'edts-debug-after-sync-hook 'edts-debug-list-processes-update)
   (setq major-mode 'edts-debug-list-processes-mode)
   (use-local-map edts-debug-list-processes-mode-map))
