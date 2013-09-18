@@ -176,13 +176,13 @@ modules, breakpoints and debugged processes).")
 (defun edts_debug-sync-interpreted-alist ()
   "Synchronizes `edts_debug-interpreted-alist'."
   (setq edts_debug-interpreted-alist
-        (loop for node in (edts-get-nodes)
+        (loop for node in (edts_debug-get-nodes)
               collect (cons node (edts_debug-interpreted-modules node)))))
 
 (defun edts_debug-sync-breakpoint-alist ()
   "Synchronizes `edts_debug-breakpoint-alist'."
   (setq edts_debug-breakpoint-alist
-        (loop for node in (edts-get-nodes)
+        (loop for node in (edts_debug-get-nodes)
               for node-breakpoints = (edts_debug-all-breakpoints node)
               when node-breakpoints
               collect (loop
@@ -206,7 +206,7 @@ modules, breakpoints and debugged processes).")
 (defun edts_debug-sync-processes-alist ()
   "Synchronizes `edts_debug-processes-alist'."
   (setq edts_debug-processes-alist
-        (loop for node in (edts-get-nodes)
+        (loop for node in (edts_debug-get-nodes)
               for procs = (edts_debug-all-processes node)
               collect (cons
                        node
@@ -413,6 +413,10 @@ one of continue...tbc."
       (null
        (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
+(defun edts_debug-get-nodes ()
+  "Return a list of all nodes to consider when issuing debugger commands"
+  ;; this is a bit of a hack...
+  (remove "edts" (edts-get-nodes)))
 
 
 (when (member 'ert features)
