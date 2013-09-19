@@ -68,15 +68,18 @@ with EDTS."
     (goto-char (point-min))
     (forward-line (1- line))))
 
+(defun edts_debug-list-processes-attach ()
+  "Uninterpret module given by list entry under point."
+  (interactive)
+  (let* ((entry (tabulated-list-get-entry))
+         (node (elt entry 0))
+         (pid  (elt entry 1)))
+  (edts_debug-attach node pid)))
+
 (defun edts_debug-list-processes-continue ()
   "Uninterpret module given by list entry under point."
   (interactive)
   (edts_debug-list-processes--cmd 'continue))
-
-(defun edts_debug-list-processes-attach ()
-  "Uninterpret module given by list entry under point."
-  (interactive)
-  (edts_debug-list-processes--cmd 'attach))
 
 (defun edts_debug-list-processes--cmd (cmd)
   "Uninterpret module given by list entry under point."
