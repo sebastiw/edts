@@ -65,6 +65,9 @@ request should always be outstanding if we are not already attached.")
 (defvar edts_debug-pid nil
   "The debugged pid")
 
+(defvar edts_debug-overlay-arrow-position nil)
+(add-to-list 'overlay-arrow-variable-list
+             'edts_debug-overlay-arrow-position)
 
 (defun edts_debug-init ()
   "Initialize edts_debug."
@@ -291,7 +294,7 @@ modules, breakpoints and debugged processes).")
          (proc-module (cdr (assoc 'module info)))
          (proc-line   (cdr (assoc 'line info))))
     (when (equal module proc-module)
-      (setq overlay-arrow-position
+      (setq edts_debug-overlay-arrow-position
             (set-marker (make-marker)
                          (ferl-position-at-beginning-of-line proc-line)))
       (edts-face-display-overlay 'edts_debug-process-location-face
