@@ -70,15 +70,15 @@ format_info({new_process, {Pid, {Mod, Fun, Args}, Status, Info}}) ->
                 false -> Info
               end}];
 format_info({new_status, Pid, Status, Info}) ->
+  InfoProps = case Info of
+                {Mod, Line} -> [{module, Mod}, {line, Line}];
+                Reason when is_atom(Reason) -> [{reason, Reason}]
+              end,
   [{type,   new_status},
    {pid,    edts_util:pid2atom(Pid)},
-   {status, Status},
-   {info,   case is_tuple(Info) of
-              true  -> tuple_to_list(Info);
-              false -> Info
-            end}];
+   {status, Status}] ++ InfoProps;
 format_info({Type, {{Mod, Line}, Options}}) when Type =:= new_break orelse
-                                                     Type =:= break_options ->
+                                                 Type =:= break_options ->
   [{type,   Type},
    {module, Mod},
    {line,   Line},

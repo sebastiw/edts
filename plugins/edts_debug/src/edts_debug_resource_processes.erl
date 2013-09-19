@@ -25,8 +25,6 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_processes).
 
--compile({parse_transform, lager_transform}).
-
 %%%_* Exports ==================================================================
 
 %% API
@@ -80,13 +78,17 @@ to_json(ReqData, Ctx) ->
 format_proc({Pid, Init, Status, Info}) ->
   PidStr0 = pid_to_list(Pid),
   PidStr = string:sub_string(PidStr0, 2, length(PidStr0) - 1),
+  ModLine = case Info of
+              {Mod, Line} -> [{module, Mod}, {line, Line}];
+              _           -> []
+            end,
   [{pid, list_to_binary(PidStr)},
    {init, list_to_binary(lists:flatten(io_lib:format("~p", [Init])))},
    {status, Status},
    {info, case Info of
             {} -> list_to_binary("");
             _  -> list_to_binary(lists:flatten(io_lib:format("~p", [Info])))
-          end}].
+          end}] ++ ModLine.
 
 
 
