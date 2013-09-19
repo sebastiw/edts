@@ -21,23 +21,33 @@
 
 (require 'cl)
 
+(require 'edts-debug-mode)
+
 (require 'edts_debug-list-breakpoint-mode)
 (require 'edts_debug-list-interpreted-mode)
 (require 'edts_debug-list-processes-mode)
 
 (defface edts_debug-process-location-face
-  '((((class color) (background dark)) (:background "yellow4"))
-    (((class color) (background light)) (:background "yellow4"))
+  '((((class color) (background dark)) (:background "midnight blue"))
+    (((class color) (background light)) (:background "light blue"))
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
 
 (defface edts_debug-breakpoint-active-face
-  '((((class color) (background dark)) (:background "dark blue"))
-    (((class color) (background light)) (:background "light blue"))
+  '((((class color) (background dark)) (:background "dark slate gray"))
+    (((class color) (background light)) (:background "yellow4")) ;; ?
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
+
+(defface edts_debug-breakpoint-inactive-face
+  '((((class color) (background dark)) (:background "#3f3f3f"))
+    (((class color) (background light)) (:background "yellow4")) ;; ?
+    (t (:bold t)))
+  "Face used for marking warning lines."
+  :group 'edts)
+
 
 (defface edts_debug-breakpoint-inactive-face
   '((((class color) (background dark)) (:background "grey"))
@@ -293,6 +303,7 @@ modules, breakpoints and debugged processes).")
   (let* ((info        (edts_debug-process-info))
          (proc-module (cdr (assoc 'module info)))
          (proc-line   (cdr (assoc 'line info))))
+    (edts-face-remove-overlays '(edts_debug-process-location)))
     (when (equal module proc-module)
       (setq edts_debug-overlay-arrow-position
             (set-marker (make-marker)

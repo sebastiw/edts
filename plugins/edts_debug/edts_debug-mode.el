@@ -39,7 +39,7 @@
   (let* ((info  (edts_debug-process-info))
         (module (cdr (assoc 'module info)))
         (line   (cdr (assoc 'line info))))
-    (edts_debug-mode-find-module module)
+    (edts_debug-mode-find-module module line)
   (unless edts_debug-mode
     (setq edts_debug-mode t)
     (setq edts_debug-mode-pre-frame-configuration (current-frame-configuration))
@@ -53,7 +53,7 @@
   (set-frame-configuration edts_debug-mode-pre-frame-configuration))
 
 
-(defun edts_debug-mode-find-module (module)
+(defun edts_debug-mode-find-module (module &optional line)
   (let* ((module-info (edts-get-module-info edts_debug-node module 'basic))
          (file        (cdr (assoc 'source module-info)))
          (buffer-name (edts_debug-mode-file-buffer-name file)))
@@ -65,9 +65,12 @@
         (setq edts-node-name edts_debug-node)
         (edts_debug-mode)
         (add-to-list 'edts_debug-module-buffers (current-buffer))
-        (switch-to-buffer (current-buffer))
         (edts_debug-update-buffer-breakpoints edts_debug-node module)
-        (edts_debug-update-buffer-process-location module)))))
+        (edts_debug-update-buffer-process-location module)))
+    (switch-to-buffer buffer-name)
+    (when line
+    (ferl-goto-line line)
+    (back-to-indentation))))
 
 (defun edts_debug-mode-file-buffer-name (file)
   (concat "*" (path-util-base-name file) " Debug*"))
