@@ -588,11 +588,16 @@ non-nil, don't report an error if the request fails."
 (defun edts--node-memberp (node nodes)
   (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
 
+(defvar edts-node-name nil
+  "Used to manually set the project node-name to use in a buffer
+that is not part of a project")
+(make-variable-buffer-local 'edts-node-name)
+
 (defun edts-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex
       (eproject-attribute :node-sname)
-    ('error (edts-shell-node-name))))
+    ('error edts-node-name)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests

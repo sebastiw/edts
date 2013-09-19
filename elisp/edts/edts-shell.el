@@ -27,15 +27,6 @@
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
-(defvar edts-shell-node-name nil
-  "The shell's node-name.")
-(make-variable-buffer-local 'edts-shell-node-name)
-
-(defun edts-shell-node-name (&optional shell-buffer)
-  "The shell's node-name."
-  (let ((buffer (or shell-buffer (current-buffer))))
-    (buffer-local-value 'edts-shell-node-name buffer)))
-
 (defvar edts-shell-font-lock-defaults nil
   "Font-lock defaults for current-buffer")
 (make-variable-buffer-local 'edts-shell-font-lock-defaults)
@@ -113,8 +104,7 @@ PWD and running COMMAND."
     (with-current-buffer buffer-name
       (edts-shell-mode 1)
       ;; edts-specifics
-      (setq edts-shell-node-name (or (edts-shell-node-name-from-args args)
-                                     node-name))
+      (setq edts-node-name (or (edts-shell-node-name-from-args args) node-name))
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))))
   (get-buffer buffer-name))
