@@ -45,6 +45,8 @@
 (defconst edts-face-warning-color-dark "#ffc000")
 (defconst edts-face-error-color-light "#ff0000")
 (defconst edts-face-error-color-dark "#ff0000")
+(defconst edts-face-passed-test-color-light "#95e454")
+(defconst edts-face-passed-test-color-dark "#95e454")
 
 (defface edts-face-error-fringe-bitmap
   `((((class color) (background dark))  (:foreground ,edts-face-error-color-dark))
@@ -94,19 +96,15 @@ that we can reset our face remappings.")
 (make-variable-buffer-local 'edts-face-modeline-remap-cookie)
 
 (defface edts-face-passed-test-line
-  '((((class color) (background dark))  (:background "dark olive green"
-                                         :foreground "white"))
-    (((class color) (background light)) (:background "pale green"
-                                         :foreground "black"))
+  `((((class color) (background dark))  (:underline (:color ,edts-face-passed-test-color-dark)))
+    (((class color) (background light)) (:underline (:color ,edts-face-passed-test-color-light)))
     (t (:bold t)))
   "Face used for marking passed test lines."
   :group 'edts)
 
 (defface edts-face-failed-test-line
-  '((((class color) (background dark))  (:background "Firebrick"
-                                         :foreground "white"))
-    (((class color) (background light)) (:background "LightPink1"
-                                         :foreground "black"))
+  `((((class color) (background dark))  (:underline (:color ,edts-face-error-color-dark)))
+    (((class color) (background light)) (:underline (:color ,edts-face-error-color-light)))
     (t (:bold t)))
   "Face used for marking failed test lines."
   :group 'edts)
