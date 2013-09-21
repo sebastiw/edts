@@ -20,36 +20,30 @@
 (defvar edts_debug-mode-pre-frame-configuration nil
   "The frame configuration before entering edts_debug-mode")
 
-(defvar edts_debug-module-buffers nil
-  "List of debugger buffers visiting modules")
+(defvar edts_debug-mode-module nil
+  "The edts_debug buffer's module.")
+(make-variable-buffer-local 'edts-debug-mode-module)
 
-(defvar edts_debug-mode-keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "b") 'edts_debug-toggle-breakpoint)
-    (define-key map (kbd "s") 'edts_debug-step)
-    (define-key map (kbd "o") 'edts_debug-step-out)
-    (define-key map (kbd "c") 'edts_debug-continue)
-    (define-key map (kbd "q") 'edts_debug-mode-quit)
-    map))
-
-(defvar edts_debug-mode nil
-  "non-nil if edts_debug-mode is currently active in any buffers")
+(defvar edts_debug-mode-keymap (make-sparse-keymap))
+(define-key edts_debug-mode-keymap (kbd "b") 'edts_debug-toggle-breakpoint)
+(define-key edts_debug-mode-keymap (kbd "s") 'edts_debug-mode-step-into)
+(define-key edts_debug-mode-keymap (kbd "o") 'edts_debug-mode-step-over)
+(define-key edts_debug-mode-keymap (kbd "c") 'edts_debug-mode-continue)
+(define-key edts_debug-mode-keymap (kbd "q") 'edts_debug-mode-quit)
 
 (defun edts_debug-mode-attach ()
   (let* ((info  (edts_debug-process-info))
         (module (cdr (assoc 'module info)))
         (line   (cdr (assoc 'line info))))
     (edts_debug-mode-find-module module line)
-  (unless edts_debug-mode
-    (setq edts_debug-mode t)
     (setq edts_debug-mode-pre-frame-configuration (current-frame-configuration))
-    (delete-other-windows))))
+    (delete-other-windows)))
 
 (defun edts_debug-mode-quit ()
   (interactive)
-  (dolist (buf edts_debug-module-buffers)
-    (kill-buffer buf))
-  (setq edts_debug-mode nil)
+  (dolist (buf (buffer-list))
+    (when (eq (buffer-local-value 'major-mode buf) 'edts_debug-mode)
+      (kill-buffer buf)))
   (set-frame-configuration edts_debug-mode-pre-frame-configuration))
 
 
@@ -57,18 +51,18 @@
   (let* ((module-info (edts-get-module-info edts_debug-node module 'basic))
          (file        (cdr (assoc 'source module-info)))
          (buffer-name (edts_debug-mode-file-buffer-name file)))
-    (unless (get-buffer buffer-name)
-      (with-current-buffer (get-buffer-create buffer-name)
-        (insert-file-contents file)
-        (setq buffer-file-name file)
-        (set-buffer-modified-p nil)
-        (setq edts-node-name edts_debug-node)
-        (edts_debug-mode)
-        (add-to-list 'edts_debug-module-buffers (current-buffer))
-        (edts_debug-update-buffer-breakpoints edts_debug-node module)
-        (edts_debug-update-buffer-process-location module)))
-    (switch-to-buffer buffer-name)
-    (when line
+    (with-current-buffer (get-buffer-create buffer-name)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert-file-contents file))
+      (setq buffer-file-name file)
+      (set-buffer-modified-p nil)
+      (setq edts-node-name edts_debug-node)
+      (setq edts_debug-mode-module module)
+      (edts_debug-mode)
+      (edts_debug-mode-update-buffer-info))
+  (switch-to-buffer buffer-name)
+  (when line
     (ferl-goto-line line)
     (back-to-indentation))))
 
@@ -81,5 +75,46 @@
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
   (use-local-map edts_debug-mode-keymap))
+
+(defun edts_debug-mode-continue ()
+  "Send a continue-command to the debugged process with `edts_debug-pid'
+on `edts_debug-node'."
+  (interactive)
+  (edts_debug-mode--command 'continue))
+
+(defun edts_debug-mode-finish ()
+  "Send a finish-command to the debugged process with `edts_debug-pid'
+on `edts_debug-node'."
+  (interactive)
+  (edts_debug-mode--command 'finish))
+
+(defun edts_debug-mode-step-into ()
+  "Send a step-into command to the debugged process with `edts_debug-pid'
+on `edts_debug-node'."
+  (interactive)
+  (edts_debug-mode--command 'step_into))
+
+(defun edts_debug-mode-step-over ()
+  "Send a step-over command to the debugged process with `edts_debug-pid'
+on `edts_debug-node'."
+  (interactive)
+  (edts_debug-mode--command 'step_over))
+
+(defun edts_debug-mode--command (cmd)
+  "Send a step-over command to the debugged process with `edts_debug-pid'
+on `edts_debug-node'."
+  (interactive)
+  (edts_debug-command edts_debug-node edts_debug-pid cmd))
+
+(defun edts_debug-mode-update-all-buffers ()
+  (dolist (buf (buffer-list))
+    (when (eq (buffer-local-value 'major-mode buf) 'edts_debug-mode)
+    (with-current-buffer buf
+      (edts_debug-mode-update-buffer-info)))))
+
+(defun edts_debug-mode-update-buffer-info ()
+  "Update buffer info (overlays, mode-line etc."
+  (edts_debug-update-buffer-breakpoints edts_debug-node edts_debug-mode-module)
+  (edts_debug-update-buffer-process-location edts_debug-mode-module))
 
 (provide 'edts_debug-mode)

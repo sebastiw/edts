@@ -255,23 +255,6 @@ modules, breakpoints and debugged processes).")
                        node
                        (cdr (assoc 'processes procs))))))
 
-(defun edts_debug-continue (node pid)
-  "Send a continue-command to PID on NODE."
-  (edts_debug--cmd node pid 'continue))
-
-(defun edts_debug--cmd (node pid cmd)
-  "Send the command CMD to PID on NODE."
-  (let* ((resource  (list "plugins"
-                          "debugger"
-                          "nodes" node
-                          "processes" pid
-                          "command"))
-         (rest-args (list (cons "cmd" (symbol-name cmd))))
-         (reply     (edts-rest-post resource rest-args))
-         (res       (assoc 'result reply)))
-    (unless (equal res '(result "204" "Created"))
-      (null (edts-log-error "Unexpected reply %s" res)))))
-
 (defun edts_debug-update-buffer-mode-line (node module)
   (if (member module (cdr (assoc node edts_debug-interpreted-alist)))
       (setq edts_debug-mode-line-string "Interpreted")
@@ -304,10 +287,11 @@ modules, breakpoints and debugged processes).")
          (proc-module (cdr (assoc 'module info)))
          (proc-line   (cdr (assoc 'line info))))
     (edts-face-remove-overlays '(edts_debug-process-location))
-    (when (equal module proc-module)
+    (if (not (equal module proc-module))
+        (setq edts_debug-overlay-arrow-position)
       (setq edts_debug-overlay-arrow-position
             (set-marker (make-marker)
-                         (ferl-position-at-beginning-of-line proc-line)))
+                        (ferl-position-at-beginning-of-line proc-line)))
       (edts-face-display-overlay 'edts_debug-process-location-face
                                  proc-line
                                  ""
@@ -458,26 +442,26 @@ default to the values associated with current buffer."
 
 (defun edts_debug-continue (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
-  (edts_debug-process-command node-name pid 'continue))
+  (edts_debug-command node-name pid 'continue))
 
 (defun edts_debug-finish (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
   (interactive)
-  (edts_debug-process-command node-name pid 'finish))
+  (edts_debug-command node-name pid 'finish))
 
 (defun edts_debug-step-into (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
   (interactive)
-  (edts_debug-process-command node-name pid 'step_into))
+  (edts_debug-command node-name pid 'step_into))
 
 (defun edts_debug-step-over (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
   (interactive)
-  (edts_debug-process-command node-name pid 'step_over))
+  (edts_debug-command node-name pid 'step_over))
 
 (defun edts_debug-command (node-name pid command)
   "Send COMMAND to the debugged process with PID on NODE. Command is
-one of continue...tbc."
+one of continue, finish, step_into or step_over."
   (let* ((resource (list "plugins"   "debugger"
                          "nodes"     node-name
                          "processes" pid
