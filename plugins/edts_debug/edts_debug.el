@@ -21,7 +21,7 @@
 
 (require 'cl)
 
-(require 'edts-debug-mode)
+(require 'edts_debug-mode)
 
 (require 'edts_debug-list-breakpoint-mode)
 (require 'edts_debug-list-interpreted-mode)
@@ -188,7 +188,7 @@ modules, breakpoints and debugged processes).")
                                     node)
                      (edts_debug-sync-breakpoint-alist)))
     (no_break      (let ((module (cdr (assoc 'module info))))
-                     (edts-log-info "All breakpoints inn %s deleted on %s"
+                     (edts-log-info "All breakpoints in %s deleted on %s"
                                     module
                                     node)
                      (edts_debug-sync-breakpoint-alist)))
@@ -303,7 +303,7 @@ modules, breakpoints and debugged processes).")
   (let* ((info        (edts_debug-process-info))
          (proc-module (cdr (assoc 'module info)))
          (proc-line   (cdr (assoc 'line info))))
-    (edts-face-remove-overlays '(edts_debug-process-location)))
+    (edts-face-remove-overlays '(edts_debug-process-location))
     (when (equal module proc-module)
       (setq edts_debug-overlay-arrow-position
             (set-marker (make-marker)
@@ -456,11 +456,26 @@ default to the values associated with current buffer."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
       (cdr (assoc 'modules (cdr (assoc 'body reply)))))))
 
-(defun edts_debug-process-continue (node-name pid)
+(defun edts_debug-continue (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
-  (edts_debug-process-command 'continue node-name pid))
+  (edts_debug-process-command node-name pid 'continue))
 
-(defun edts_debug-process-command (command node-name pid)
+(defun edts_debug-finish (node-name pid)
+  "Send a continue-command to the debugged process with PID on NODE."
+  (interactive)
+  (edts_debug-process-command node-name pid 'finish))
+
+(defun edts_debug-step-into (node-name pid)
+  "Send a continue-command to the debugged process with PID on NODE."
+  (interactive)
+  (edts_debug-process-command node-name pid 'step_into))
+
+(defun edts_debug-step-over (node-name pid)
+  "Send a continue-command to the debugged process with PID on NODE."
+  (interactive)
+  (edts_debug-process-command node-name pid 'step_over))
+
+(defun edts_debug-command (node-name pid command)
   "Send COMMAND to the debugged process with PID on NODE. Command is
 one of continue...tbc."
   (let* ((resource (list "plugins"   "debugger"
@@ -471,8 +486,7 @@ one of continue...tbc."
          (reply (edts-rest-post resource args))
          (res   (car (cdr (assoc 'result reply)))))
     (unless (equal res "204")
-      (null
-       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+      (null (edts-log-error "Unexpected reply: %s" res)))))
 
 (defun edts_debug-get-nodes ()
   "Return a list of all nodes to consider when issuing debugger commands"

@@ -25,8 +25,6 @@
 %%%_* Module declaration =======================================================
 -module(edts_debug_resource_cmd).
 
--compile({parse_transform, lager_transform}).
-
 %%%_* Exports ==================================================================
 
 %% API
@@ -65,7 +63,10 @@ content_types_accepted(ReqData, Ctx) ->
 malformed_request(ReqData, Ctx) ->
   Validate = [nodename, process, {enum, [{name,    cmd},
                                          {required, true},
-                                         {allowed, [continue]}]}],
+                                         {allowed, [continue,
+                                                    finish,
+                                                    step_into,
+                                                    step_over]}]}],
   edts_resource_lib:validate(ReqData, Ctx, Validate).
 
 resource_exists(ReqData, Ctx) ->

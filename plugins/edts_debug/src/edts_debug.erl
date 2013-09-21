@@ -44,11 +44,14 @@
          breakpoints/1,
          continue/1,
          ensure_started/0,
+         finish/1,
          interpret_module/2,
          interpreted_modules/0,
          module_interpretable_p/1,
          module_interpreted_p/1,
-         processes/0]).
+         processes/0,
+         step_into/1,
+         step_over/1]).
 
 
 %%%_* Includes =================================================================
@@ -166,6 +169,18 @@ ensure_started() ->
   end,
   edts_debug_server:ensure_started().
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to continue execution until termination, without
+%% considering any further breakpoints.
+%% @end
+-spec finish(pid()) -> ok.
+%%------------------------------------------------------------------------------
+finish(Pid) ->
+  ensure_started(),
+  int:finish(Pid).
+
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -229,6 +244,7 @@ module_interpretable_p(Module) ->
     {error, _} -> false
   end.
 
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% Return a list of all non terminated processes known to the debug server.
@@ -243,6 +259,29 @@ module_interpretable_p(Module) ->
 processes() ->
   ensure_started(),
   [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to execute the next expression. If the expression is
+%% a function call, break on the first line of the function.
+%% @end
+-spec step_into(pid()) -> ok.
+%%------------------------------------------------------------------------------
+step_into(Pid) ->
+  ensure_started(),
+  int:step(Pid).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Orders the debugger to execute the next expression. If the expression is
+%% a function call, break when returning from that call.
+%% @end
+-spec step_over(pid()) -> ok.
+%%------------------------------------------------------------------------------
+step_over(Pid) ->
+  ensure_started(),
+  int:next(Pid),
+  ok.
 
 
 %%%_* Internal functions =======================================================

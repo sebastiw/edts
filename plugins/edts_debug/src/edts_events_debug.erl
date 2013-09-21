@@ -72,7 +72,8 @@ format_info({new_process, {Pid, {Mod, Fun, Args}, Status, Info}}) ->
 format_info({new_status, Pid, Status, Info}) ->
   InfoProps = case Info of
                 {Mod, Line} -> [{module, Mod}, {line, Line}];
-                Reason when is_atom(Reason) -> [{reason, Reason}]
+                Reason when is_atom(Reason) -> [{reason, Reason}];
+                {} -> []
               end,
   [{type,   new_status},
    {pid,    edts_util:pid2atom(Pid)},

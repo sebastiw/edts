@@ -42,6 +42,18 @@
     edts_debug-list-processes-mode-map
     (kbd "c")
     'edts_debug-list-processes-continue)
+  (define-key
+    edts_debug-list-processes-mode-map
+    (kbd "f")
+    'edts_debug-list-processes-finish)
+  (define-key
+    edts_debug-list-processes-mode-map
+    (kbd "o")
+    'edts_debug-list-processes-step-over)
+  (define-key
+    edts_debug-list-processes-mode-map
+    (kbd "s")
+    'edts_debug-list-processes-step-into)
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-processes-update)
   (setq major-mode 'edts_debug-list-processes-mode)
@@ -79,14 +91,30 @@ with EDTS."
 (defun edts_debug-list-processes-continue ()
   "Uninterpret module given by list entry under point."
   (interactive)
-  (edts_debug-list-processes--cmd 'continue))
+  (edts_debug-list-processes-command 'continue))
 
-(defun edts_debug-list-processes--cmd (cmd)
+(defun edts_debug-list-processes-finish ()
+  "Uninterpret module given by list entry under point."
+  (interactive)
+  (edts_debug-list-processes-command 'finish))
+
+(defun edts_debug-list-processes-step-into ()
+  "Uninterpret module given by list entry under point."
+  (interactive)
+  (edts_debug-list-processes-command 'step_into))
+
+(defun edts_debug-list-processes-step-over ()
+  "Uninterpret module given by list entry under point."
+  (interactive)
+  (edts_debug-list-processes-command 'step_over))
+
+
+(defun edts_debug-list-processes-command (cmd)
   "Uninterpret module given by list entry under point."
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (pid  (elt entry 1)))
-    (edts_debug--cmd node pid cmd)))
+    (edts_debug-command node pid cmd)))
 
 
 (defun edts_debug-list-processes-update ()
