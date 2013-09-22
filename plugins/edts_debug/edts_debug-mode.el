@@ -23,6 +23,9 @@
 (defvar edts_debug-mode-buffer nil
   "The edts_debug-mode-buffer")
 
+(defvar edts_debug-mode-module nil
+  "The module currently in the `edts_debug-mode-buffer'.")
+
 (defvar edts_debug-mode-keymap (make-sparse-keymap))
 (define-key edts_debug-mode-keymap (kbd "b") 'edts_debug-toggle-breakpoint)
 (define-key edts_debug-mode-keymap (kbd "s") 'edts_debug-mode-step-into)
@@ -51,6 +54,8 @@
   (let ((mod  (edts_debug-process-info edts_debug-node edts_debug-pid 'module))
         (line (edts_debug-process-info edts_debug-node edts_debug-pid 'line)))
     (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
+      (unless (equal mod edts_debug-mode-module)
+        (edts_debug-mode-find-module mod line))
       (with-current-buffer edts_debug-mode-buffer
         (edts_debug-update-buffer-breakpoints edts_debug-node mod)
         (edts_debug-update-buffer-process-location mod line)))))
@@ -86,6 +91,7 @@
     (let ((inhibit-read-only t))
       (erase-buffer)
       (insert-file-contents file))
+    (setq edts_debug-mode-module module)
     (setq buffer-file-name file)
     (set-buffer-modified-p nil)
     (setq edts-node-name edts_debug-node)
