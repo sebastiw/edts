@@ -36,6 +36,11 @@
     'edts_debug-list-breakpoint-delete-breakpoint)
   (setq cursor-type nil)
   (hl-line-mode)
+  (overlay-put hl-line-overlay
+               'before-string
+               (propertize " " 'display (list 'left-fringe
+                                              'right-triangle
+                                              'default)))
   (setq major-mode 'edts_debug-list-breakpoint-mode)
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-breakpoint-update)

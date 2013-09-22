@@ -51,8 +51,9 @@
   (let ((mod  (edts_debug-process-info edts_debug-node edts_debug-pid 'module))
         (line (edts_debug-process-info edts_debug-node edts_debug-pid 'line)))
     (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
-      (edts_debug-update-buffer-breakpoints edts_debug-node mod)
-      (edts_debug-update-buffer-process-location mod line))))
+      (with-current-buffer edts_debug-mode-buffer
+        (edts_debug-update-buffer-breakpoints edts_debug-node mod)
+        (edts_debug-update-buffer-process-location mod line)))))
 (add-hook 'edts_debug-after-sync-hook 'edts_debug-mode-update-buffer-info)
 
 (defun edts_debug-mode-kill-buffer-hook ()

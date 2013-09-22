@@ -82,7 +82,7 @@ request should always be outstanding if we are not already attached.")
 (defun edts_debug-init ()
   "Initialize edts_debug."
   ;; Keys
-  (define-key edts-mode-map "\C-c\C-db"   'edts_debug-break)
+  (define-key edts-mode-map "\C-c\C-db"   'edts_debug-toggle-breakpoint)
   (define-key edts-mode-map "\C-c\C-di"   'edts_debug-interpret)
   (define-key edts-mode-map "\C-c\C-d\M-b" 'edts_debug-list-breakpoints)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts_debug-list-interpreted)
@@ -285,7 +285,6 @@ modules, breakpoints and debugged processes).")
             (not (equal module proc-module)))
         (setq edts_debug-overlay-arrow-position nil)
       (let ((pos (ferl-position-at-beginning-of-line proc-line)))
-        (goto-char pos)
         (setq edts_debug-overlay-arrow-position (set-marker (make-marker) pos))
         (edts-face-display-overlay 'edts_debug-process-location-face
                                    proc-line
@@ -323,16 +322,17 @@ other value toggles interpretation, which is the default behaviour."
      ((not (equal res '(result "201" "Created")))
       (null (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
+(defun edts_debug-toggle-breakpoint ()
+  "Toggle breakpoint on current line."
+  (interactive)
+  (edts_debug-break nil nil nil 'toggle))
+
 (defun edts_debug-break (&optional node module line break)
   "Set breakpoint state for LINE in MODULE on NODE according to
 BREAK. NODE and MODULE default to the values associated with current
 buffer. If BREAK is nil remove any breakpoint; if it is t set a
 breakpoint if one doesn't already exist; any other value toggles
 breakpoint existence at LINE, which is the default behaviour."
-  (interactive (list nil
-                     nil
-                     nil
-                     'toggle))
   (let* ((node-name (or node (edts-node-name)))
          (module    (or module (ferl-get-module)))
          (line      (or line (line-number-at-pos)))

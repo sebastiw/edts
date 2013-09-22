@@ -56,6 +56,11 @@
     'edts_debug-list-processes-step-into)
   (setq cursor-type nil)
   (hl-line-mode)
+  (overlay-put hl-line-overlay
+               'before-string
+               (propertize " " 'display (list 'left-fringe
+                                              'right-triangle
+                                              'default)))
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-processes-update)
   (setq major-mode 'edts_debug-list-processes-mode)
