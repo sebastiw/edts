@@ -34,6 +34,8 @@
     edts_debug-list-interpreted-mode-map
     (kbd "<delete>")
     'edts_debug-list-interpreted-uninterpret-module)
+  (setq cursor-type nil)
+  (hl-line-mode)
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-interpreted-update)
   (setq major-mode 'edts_debug-list-interpreted-mode)
@@ -46,7 +48,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-interpreted-buffer)
     (edts_debug-list-interpreted-mode)
     (edts_debug-list-interpreted-update)
-    (display-buffer (current-buffer))))
+    (switch-to-buffer (current-buffer))))
 
 (defun edts_debug-list-interpreted-find-module ()
   "Find module given by list entry under point."

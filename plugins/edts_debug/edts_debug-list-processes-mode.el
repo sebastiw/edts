@@ -54,6 +54,8 @@
     edts_debug-list-processes-mode-map
     (kbd "s")
     'edts_debug-list-processes-step-into)
+  (setq cursor-type nil)
+  (hl-line-mode)
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-processes-update)
   (setq major-mode 'edts_debug-list-processes-mode)
@@ -66,7 +68,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-processes-buffer)
     (edts_debug-list-processes-mode)
     (edts_debug-list-processes-update)
-    (display-buffer (current-buffer))))
+    (switch-to-buffer (current-buffer))))
 
 (defun edts_debug-list-processes-find-processes ()
   "Find processes given by list entry under point."

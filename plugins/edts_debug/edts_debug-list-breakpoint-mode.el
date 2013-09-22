@@ -34,6 +34,8 @@
     edts_debug-list-breakpoint-mode-map
     (kbd "<delete>")
     'edts_debug-list-breakpoint-delete-breakpoint)
+  (setq cursor-type nil)
+  (hl-line-mode)
   (setq major-mode 'edts_debug-list-breakpoint-mode)
   (setq show-trailing-whitespace nil)
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-breakpoint-update)
@@ -46,7 +48,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-breakpoint-buffer)
     (edts_debug-list-breakpoint-mode)
     (edts_debug-list-breakpoint-update)
-    (display-buffer (current-buffer))))
+    (switch-to-buffer (current-buffer))))
 
 (defun edts_debug-list-breakpoint-find-breakpoint ()
   "Find breakpoint given by list entry under point."
