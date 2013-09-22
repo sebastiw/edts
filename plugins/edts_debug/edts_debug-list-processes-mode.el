@@ -68,7 +68,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-processes-buffer)
     (edts_debug-list-processes-mode)
     (edts_debug-list-processes-update)
-    (switch-to-buffer (current-buffer))))
+    (pop-to-buffer (current-buffer))))
 
 (defun edts_debug-list-processes-find-processes ()
   "Find processes given by list entry under point."

@@ -48,7 +48,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-breakpoint-buffer)
     (edts_debug-list-breakpoint-mode)
     (edts_debug-list-breakpoint-update)
-    (switch-to-buffer (current-buffer))))
+    (pop-to-buffer (current-buffer))))
 
 (defun edts_debug-list-breakpoint-find-breakpoint ()
   "Find breakpoint given by list entry under point."

@@ -48,7 +48,7 @@ with EDTS."
   (with-current-buffer (get-buffer-create edts_debug-list-interpreted-buffer)
     (edts_debug-list-interpreted-mode)
     (edts_debug-list-interpreted-update)
-    (switch-to-buffer (current-buffer))))
+    (pop-to-buffer (current-buffer))))
 
 (defun edts_debug-list-interpreted-find-module ()
   "Find module given by list entry under point."
