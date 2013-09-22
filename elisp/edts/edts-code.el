@@ -68,6 +68,10 @@ issue severity (error, warning, etc).")
     (error       . 903))
   "The overlay priorities for compilation errors and warnings")
 
+(defconst edts-code-issue-fringe-bitmap 'small-rectangle
+  "The bitmap to display in the fringe to indicade an issue on that
+line.")
+
 (defun edts-code-overlay-priority (type)
   "Returns the overlay priority of TYPE. Type can be either a string or
 a symbol."
@@ -224,34 +228,44 @@ non-recursive."
   "Displays overlays for ERRORS in current buffer."
   (mapcar
    #'(lambda (error)
-       (edts-code-display-issue-overlay type 'edts-face-error-line error))
+       (edts-code-display-issue-overlay type
+                                        'edts-face-error-line
+                                        'edts-face-error-fringe-bitmap
+                                        error))
    errors))
 
 (defun edts-code-display-warning-overlays (type warnings)
   "Displays overlays for WARNINGS in current buffer."
   (mapcar
    #'(lambda (warning)
-       (edts-code-display-issue-overlay type 'edts-face-warning-line warning))
+       (edts-code-display-issue-overlay type
+                                        'edts-face-warning-line
+                                        'edts-face-warning-fringe-bitmap
+                                        warning))
    warnings))
 
 (defun edts-code-display-failed-test-overlays (type failed-tests)
   "Displays overlays for FAILED TESTS in current buffer."
   (mapcar
    #'(lambda (failed-test)
-       (edts-code-display-issue-overlay
-        type 'edts-face-failed-test-line failed-test))
+       (edts-code-display-issue-overlay type
+                                        'edts-face-failed-test-line
+                                        'edts-face-error-fringe-bitmap
+                                        failed-test))
    failed-tests))
 
 (defun edts-code-display-passed-test-overlays (type passed-tests)
   "Displays overlays for PASSED TESTS in current buffer."
   (mapcar
    #'(lambda (passed-test)
-       (edts-code-display-issue-overlay
-        type 'edts-face-passed-test-line passed-test))
+       (edts-code-display-issue-overlay type
+                                        'edts-face-passed-test-line
+                                        nil
+                                        passed-test))
    passed-tests))
 
 
-(defun edts-code-display-issue-overlay (type face issue)
+(defun edts-code-display-issue-overlay (type face fringe-face issue)
   "Displays overlay with FACE for ISSUE in current buffer."
   (let* ((line         (edts-code-find-issue-overlay-line issue))
          (issue-type   (cdr (assoc 'type issue)))
@@ -259,9 +273,16 @@ non-recursive."
          (help         (format "line %s, %s: %s" line issue-type desc))
          (overlay-type type)
          (prio         (edts-code-overlay-priority
-                        (cdr (assoc 'type issue)))))
+                        (cdr (assoc 'type issue))))
+         (fringe       (list edts-code-issue-fringe-bitmap fringe-face)))
     (when (integerp line)
-      (edts-face-display-overlay face line help overlay-type prio))))
+      (edts-face-display-overlay face
+                                 line
+                                 help
+                                 overlay-type
+                                 prio
+                                 nil
+                                 fringe))))
 
 (defun edts-code-find-issue-overlay-line (issue)
   "Tries to find where in current buffer to display overlay for `ISSUE'."

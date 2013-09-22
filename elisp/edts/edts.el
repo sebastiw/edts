@@ -218,11 +218,13 @@ in a tooltip."
          (module   (car mfa))
          (function (cadr mfa))
          (arity    (caddr mfa)))
+    (unless (and module function arity)
+      (error "Could not parse MFA at point"))
     (edts-show-tooltip
      (condition-case ex
-        (edts-man-extract-function-entry module function)
-        ('error
-         (edts-extract-doc-from-source module function arity))))))
+         (edts-man-extract-function-entry module function)
+       ('error
+        (edts-extract-doc-from-source module function arity))))))
 
 (defun edts-show-tooltip (text)
   "Show a tooltip using either popup.el or pos-tip.el"

@@ -156,6 +156,17 @@ consider EDTS."
 (defvar edts-mode-hook nil
   "Hooks to run at the end of edts-mode initialization in a buffer.")
 
+(defvar edts-orig-left-margin nil
+  "The original value of a buffer's left-margin width")
+(make-variable-buffer-local 'edts-orig-left-margin)
+
+(defvar edts-inhibit-fringe-markers nil
+  "If non-nil, do not display markers in the fringe for errors etc.")
+
+(defcustom edts-marker-fringe 'left-fringe
+  "Which side to display fringe-markers on. The value must be either
+left-fringe or right-fringe.")
+
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
 

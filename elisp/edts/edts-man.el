@@ -145,6 +145,10 @@ interactively to set up your man-pages instead")
       (goto-char 0)
       (while (re-search-forward re nil t)
         (push (match-string 2) funs))
+      ;; Hack so we don't choke on type specs in the documentation function
+      ;; heads.
+      (setq funs (mapcar #'(lambda (s) (replace-regexp-in-string "::" "=" s))
+                         funs))
       (sort
        ;; each mfa is '(mod fun arity), but we don't want the module part
        (mapcar #'(lambda (mfa) (format "%s/%s"  (cadr mfa) (caddr mfa)))
@@ -188,7 +192,7 @@ interactively to set up your man-pages instead")
   (edts-man-find-module module)
   (let (foundp
         (re (format "^\\s-*\\(\\(%s:\\)?%s\\)(.*)\\s-->" module function)))
-    (while (and (not foundp) (re-search-forward re))
+    (while (and (not foundp) (re-search-forward re nil t))
       (save-excursion
         (goto-char (match-beginning 1))
         (let ((matchp (equal (list function arity)
