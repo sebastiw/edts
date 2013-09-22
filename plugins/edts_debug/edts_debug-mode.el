@@ -38,6 +38,7 @@
         (module (cdr (assoc 'module info)))
         (line   (cdr (assoc 'line info))))
     (edts_debug-mode-find-module module line)
+    (edts_debug-mode-update-buffer-info)
     (setq edts_debug-mode-pre-frame-configuration (current-frame-configuration))
     (delete-other-windows)))
 
@@ -51,10 +52,12 @@
 
 (defun edts_debug-mode-update-buffer-info ()
   "Update buffer info (overlays, mode-line etc."
-  (let ((mod  (edts_debug-process-info edts_debug-node edts_debug-pid 'module))
-        (line (edts_debug-process-info edts_debug-node edts_debug-pid 'line)))
+  (let* ((info   (edts_debug-process-info))
+         (status (cdr (assoc 'status info)))
+         (mod    (cdr (assoc 'module info)))
+         (line   (cdr (assoc 'line   info))))
     (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
-      (unless (equal mod edts_debug-mode-module)
+      (when (and (equal status "break") (equal mod edts_debug-mode-module))
         (edts_debug-mode-find-module mod line))
       (with-current-buffer edts_debug-mode-buffer
         (edts_debug-update-buffer-breakpoints edts_debug-node mod)
@@ -95,7 +98,6 @@
     (setq buffer-file-name file)
     (set-buffer-modified-p nil)
     (setq edts-node-name edts_debug-node)
-    (edts_debug-mode-update-buffer-info)
     (ferl-goto-line line)
     (back-to-indentation)))
 
