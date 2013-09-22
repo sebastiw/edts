@@ -29,21 +29,19 @@
 
 %% API
 %% Webmachine callbacks
--export([ allowed_methods/2
-        , allow_missing_post/2
-        , content_types_accepted/2
-        , init/1
-        , malformed_request/2
-        , process_post/2
-        , resource_exists/2]).
+-export([allowed_methods/2,
+         allow_missing_post/2,
+         %% content_types_accepted/2,
+         init/1,
+         malformed_request/2,
+         process_post/2,
+         resource_exists/2]).
 
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
-
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
@@ -55,10 +53,6 @@ init(_Config) ->
 
 allowed_methods(ReqData, Ctx) ->
   {['POST'], ReqData, Ctx}.
-
-content_types_accepted(ReqData, Ctx) ->
-  Map = [ {"application/json", from_json} ],
-  {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
   Validate = [nodename, process, {enum, [{name,    cmd},
@@ -80,24 +74,13 @@ process_post(ReqData, Ctx) ->
   Pid      = orddict:fetch(process, Ctx),
   Cmd      = orddict:fetch(cmd, Ctx),
   {ok, ok} = edts:call(Node, edts_debug, Cmd, [Pid]),
-  {true, ReqData, Ctx}.
+  Body     = mochijson2:encode([{result, ok}]),
+  {true, wrq:set_resp_body(Body, ReqData), ReqData}.
 
 
 %%%_* Internal functions =======================================================
-
-
 %%%_* Unit tests ===============================================================
-init_test() ->
-  ?assertEqual({ok, orddict:new()}, init(foo)).
-
-allowed_methods_test() ->
-  ?assertEqual({['GET', 'POST'], foo, bar}, allowed_methods(foo, bar)).
-
-content_types_accepted_test() ->
-  ?assertEqual({[ {"application/json", from_json} ], foo, bar},
-               content_types_accepted(foo, bar)).
-
-%%%_* Emacs ============================================================
+%%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2

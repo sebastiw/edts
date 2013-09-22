@@ -193,14 +193,7 @@ modules, breakpoints and debugged processes).")
                                     node)
                      (edts_debug-sync-breakpoint-alist)))
     (new_process   (edts_debug-sync-processes-alist))
-    (new_status    (edts_debug-sync-processes-alist)
-                   ;; (let ((pid         (cdr (assoc 'pid info)))
-                   ;;       (status      (cdr (assoc 'status info)))
-                   ;;       (status-info (cdr (assoc 'info info))))
-                   ;;   (edts_debug-handle-new-process-status pid
-                   ;;                                         status
-                   ;;                                         status-info))))
-                   ))
+    (new_status    (edts_debug-sync-processes-alist)))
   (run-hooks 'edts_debug-after-sync-hook))
 (edts-event-register-handler 'edts_debug-event-handler 'edts_debug)
 
@@ -288,16 +281,16 @@ modules, breakpoints and debugged processes).")
          (proc-line   (cdr (assoc 'line info))))
     (edts-face-remove-overlays '(edts_debug-process-location))
     (if (not (equal module proc-module))
-        (setq edts_debug-overlay-arrow-position)
-      (setq edts_debug-overlay-arrow-position
-            (set-marker (make-marker)
-                        (ferl-position-at-beginning-of-line proc-line)))
-      (edts-face-display-overlay 'edts_debug-process-location-face
-                                 proc-line
-                                 ""
-                                 'edts_debug-process-location
-                                 edts_debug-process-location-face-prio
-                                 t))))
+        (setq edts_debug-overlay-arrow-position nil)
+      (let ((pos (ferl-position-at-beginning-of-line proc-line)))
+        (goto-char pos)
+        (setq edts_debug-overlay-arrow-position (set-marker (make-marker) pos))
+        (edts-face-display-overlay 'edts_debug-process-location-face
+                                   proc-line
+                                   ""
+                                   'edts_debug-process-location
+                                   edts_debug-process-location-face-prio
+                                   t)))))
 
 
 (defun edts_debug-interpret (&optional node module interpret)
@@ -469,7 +462,7 @@ one of continue, finish, step_into or step_over."
          (args  (list (cons "cmd" (symbol-name command))))
          (reply (edts-rest-post resource args))
          (res   (car (cdr (assoc 'result reply)))))
-    (unless (equal res "204")
+    (unless (equal res "200")
       (null (edts-log-error "Unexpected reply: %s" res)))))
 
 (defun edts_debug-get-nodes ()
