@@ -285,6 +285,8 @@ modules, breakpoints and debugged processes).")
             (not (equal module proc-module)))
         (setq edts_debug-overlay-arrow-position nil)
       (let ((pos (ferl-position-at-beginning-of-line proc-line)))
+        (goto-char pos)
+        (back-to-indentation)
         (setq edts_debug-overlay-arrow-position (set-marker (make-marker) pos))
         (edts-face-display-overlay 'edts_debug-process-location-face
                                    proc-line

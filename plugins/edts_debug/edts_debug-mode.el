@@ -57,7 +57,8 @@
          (mod    (cdr (assoc 'module info)))
          (line   (cdr (assoc 'line   info))))
     (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
-      (when (and (equal status "break") (equal mod edts_debug-mode-module))
+      (when (and (equal status "break")
+                 (not (equal mod edts_debug-mode-module)))
         (edts_debug-mode-find-module mod line))
       (with-current-buffer edts_debug-mode-buffer
         (edts_debug-update-buffer-breakpoints edts_debug-node mod)
@@ -74,7 +75,6 @@
   (setq buffer-read-only t)
   (setq mode-name "EDTS-debug")
   (use-local-map edts_debug-mode-keymap)
-  (setq cursor-type nil)
   (hl-line-mode)
   (add-hook 'kill-buffer-hook 'edts_debug-mode-kill-buffer-hook nil t))
 
