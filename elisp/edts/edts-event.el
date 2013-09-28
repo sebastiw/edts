@@ -49,7 +49,11 @@ that class."
 
 (defun edts-event-listen ()
   "Start the event-listening loop."
-  (let ((buf (edts-rest-get-async '("event") nil #'edts-event-listen-callback)))
+  (let ((buf (edts-rest-get-async '("event")
+                                  nil
+                                  #'edts-event-listen-callback
+                                  nil
+                                  t)))
     (when buf
       (set-process-query-on-exit-flag (get-buffer-process buf) nil))))
 
