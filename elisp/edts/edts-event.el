@@ -62,7 +62,7 @@ that class."
   (if reply
       (let* ((result (cdr (assoc 'result reply)))
              (event  (cdr (assoc 'event (cdr (assoc 'body reply)))))
-             (node   (intern (cdr (assoc 'node event))))
+             (node   (cdr (assoc 'node event)))
              (class  (intern (cdr (assoc 'class event))))
              (type   (intern (cdr (assoc 'type event))))
              (info   (cdr (assoc 'info event))))
