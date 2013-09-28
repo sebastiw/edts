@@ -75,25 +75,29 @@ to_json(ReqData, Ctx) ->
   Body        = mochijson2:encode([{processes, Data}]),
   {Body, ReqData, Ctx}.
 
-format_proc({Pid, Init, Status, Info}) ->
+format_proc(Proc) ->
+  orddict:map(fun format/2, Proc).
+
+format(pid, Pid) ->
   PidStr0 = pid_to_list(Pid),
   PidStr = string:sub_string(PidStr0, 2, length(PidStr0) - 1),
-  ModLine = case Info of
-              {Mod, Line} -> [{module, Mod}, {line, Line}];
-              _           -> []
-            end,
-  [{pid, list_to_binary(PidStr)},
-   {init, list_to_binary(lists:flatten(io_lib:format("~p", [Init])))},
-   {status, Status},
-   {info, case Info of
-            {} -> list_to_binary("");
-            _  -> list_to_binary(lists:flatten(io_lib:format("~p", [Info])))
-          end}] ++ ModLine.
-
+  list_to_binary(PidStr);
+format(init, Init) ->
+  term_to_bin_str(Init);
+format(info, Info) ->
+  case Info of
+    {} -> <<>>;
+    _  -> term_to_bin_str(Info)
+  end;
+format(bindings, Bindings) ->
+  [{Var, term_to_bin_str(Val)} || {Var, Val} <- Bindings];
+format(_K, V) ->
+  V.
 
 
 %%%_* Internal functions =======================================================
-
+term_to_bin_str(Term) ->
+  list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
 
 %%%_* Unit tests ===============================================================
 init_test() ->

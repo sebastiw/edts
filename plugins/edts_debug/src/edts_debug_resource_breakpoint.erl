@@ -29,19 +29,20 @@
 
 %% API
 %% Webmachine callbacks
--export([ allow_missing_post/2
-        , allowed_methods/2
-        , content_types_accepted/2
-        , content_types_provided/2
-        , create_path/2
-        , init/1
-        , malformed_request/2
-        , post_is_create/2
-        , resource_exists/2]).
+-export([allow_missing_post/2,
+         allowed_methods/2,
+         content_types_accepted/2,
+         content_types_provided/2,
+         create_path/2,
+         forbidden/2,
+         init/1,
+         malformed_request/2,
+         post_is_create/2,
+         resource_exists/2]).
 
 %% Handlers
--export([ from_json/2
-        , to_json/2 ]).
+-export([ from_json/2,
+          to_json/2 ]).
 
 %%%_* Includes =================================================================
 -include_lib("webmachine/include/webmachine.hrl").
@@ -75,6 +76,13 @@ content_types_provided(ReqData, Ctx) ->
 
 create_path(ReqData, Ctx) ->
   {wrq:path(ReqData), ReqData, Ctx}.
+
+forbidden(ReqData, Ctx) ->
+  Node                = orddict:fetch(nodename, Ctx),
+  Module              = orddict:fetch(module, Ctx),
+  {ok, Interpretable} =
+    edts:call(Node, edts_debug, module_interpretable_p, [Module]),
+  {not Interpretable, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
   Validate =

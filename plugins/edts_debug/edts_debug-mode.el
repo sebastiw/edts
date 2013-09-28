@@ -23,6 +23,9 @@
 (defvar edts_debug-mode-buffer nil
   "The edts_debug-mode-buffer")
 
+(defvar edts_debug-mode-variable-buffer nil
+  "The edts_debug-mode-buffer")
+
 (defvar edts_debug-mode-module nil
   "The module currently in the `edts_debug-mode-buffer'.")
 
@@ -35,17 +38,67 @@
 
 (defun edts_debug-mode-attach ()
   (let* ((info  (edts_debug-process-info))
-        (module (cdr (assoc 'module info)))
-        (line   (cdr (assoc 'line info))))
-    (edts_debug-mode-find-module module line)
+         (module (cdr (assoc 'module info)))
+         (line   (cdr (assoc 'line info))))
+    (unless (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
+      (setq edts_debug-mode-buffer (get-buffer-create "EDTS Debug")))
     (edts_debug-mode-update-buffer-info)
     (setq edts_debug-mode-pre-frame-configuration (current-frame-configuration))
-    (delete-other-windows)))
+    (switch-to-buffer edts_debug-mode-buffer)
+    (delete-other-windows)
+
+    ;; Set up variable bindings buffer
+    (let* ((margin-size (- (window-total-width) (window-width)))
+           (body-size   (* 2 (/ (window-width) 5)))
+           (window-size (+ body-size margin-size)))
+      (split-window nil window-size 'left)
+      (edts_debug-mode-list-variable-bindings))
+
+    ;; Move back to the primary debugger window
+    (select-window (frame-first-window))))
+
+(defun edts_debug-mode-list-variable-bindings ()
+  (switch-to-buffer (get-buffer-create "EDTS Debug Variable Bindings"))
+  (setq edts_debug-mode-variable-buffer (current-buffer))
+  (setq show-trailing-whitespace nil)
+  (edts_debug-mode-update-variable-bindings))
+
+(defun edts_debug-mode-update-variable-bindings ()
+  (let ((buf (get-buffer "EDTS Debug Variable Bindings")))
+    (when buf
+      (with-current-buffer buf
+        (erase-buffer)
+        (let* ((max-var-len 8) ;; The length of the header name
+               (bindings (edts_debug-process-info edts_debug-node
+                                                  edts_debug-pid
+                                                  'bindings))
+               (var-alist (sort (copy-sequence bindings)
+                                #'(lambda (el1 el2) (string< (car el1)
+                                                             (car el2)))))
+               entries)
+          (loop for (var . binding) in var-alist
+                for var-name = (symbol-name var)
+                do (setq max-var-len (max max-var-len (length var-name)))
+                do (push (list nil (vector var-name binding)) entries))
+          (setq tabulated-list-format
+                (vector
+                 `("Variable" ,max-var-len 'string< :pad-right 4)
+                 '("Binding"  0 'string<)))
+          (tabulated-list-init-header)
+          (setq tabulated-list-entries (reverse entries))
+          (tabulated-list-print))))))
 
 (defun edts_debug-mode-quit ()
   (interactive)
+  (edts_debug-detach)
+  (setq edts_debug-mode-module nil)
   (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
-    (kill-buffer edts_debug-mode-buffer))
+    (kill-buffer edts_debug-mode-buffer)
+    (setq edts_debug-mode-buffer nil))
+  (when (and edts_debug-mode-variable-buffer
+             (buffer-live-p edts_debug-mode-variable-buffer))
+    (kill-buffer edts_debug-mode-variable-buffer)
+    (setq edts_debug-mode-buffer nil))
   (when edts_debug-mode-pre-frame-configuration
     (set-frame-configuration edts_debug-mode-pre-frame-configuration)
     (setq edts_debug-mode-pre-frame-configuration nil)))
@@ -56,13 +109,17 @@
          (status (cdr (assoc 'status info)))
          (mod    (cdr (assoc 'module info)))
          (line   (cdr (assoc 'line   info))))
-    (when (and edts_debug-mode-buffer (buffer-live-p edts_debug-mode-buffer))
+    (when (and edts_debug-mode-buffer
+               (buffer-live-p edts_debug-mode-buffer))
       (when (and (equal status "break")
                  (not (equal mod edts_debug-mode-module)))
         (edts_debug-mode-find-module mod line))
       (with-current-buffer edts_debug-mode-buffer
-        (edts_debug-update-buffer-breakpoints edts_debug-node mod)
-        (edts_debug-update-buffer-process-location mod line)))))
+        (edts_debug-update-buffer-breakpoints edts_debug-node
+                                              edts_debug-mode-module)
+        (edts_debug-update-buffer-process-location edts_debug-mode-module
+                                                   line))
+      (edts_debug-mode-update-variable-bindings))))
 (add-hook 'edts_debug-after-sync-hook 'edts_debug-mode-update-buffer-info)
 
 (defun edts_debug-mode-kill-buffer-hook ()
@@ -90,6 +147,11 @@
     (unless (equal buffer-name (buffer-name))
       (rename-buffer buffer-name))
 
+    ;; Modeline
+    (add-to-list 'mode-line-buffer-identification
+               '(:eval (edts_debug-mode-mode-line-info))
+               t)
+
     ;; Setup a bunch of variables
     (let ((inhibit-read-only t))
       (erase-buffer)
@@ -100,6 +162,11 @@
     (setq edts-node-name edts_debug-node)
     (ferl-goto-line line)
     (back-to-indentation)))
+
+(defun edts_debug-mode-mode-line-info ()
+  (format " Pid: %s (%s)"
+          edts_debug-pid
+          (edts_debug-process-info edts_debug-node edts_debug-pid 'status)))
 
 (defun edts_debug-mode-file-buffer-name (file)
   (concat "*" (path-util-base-name file) " Debug*"))

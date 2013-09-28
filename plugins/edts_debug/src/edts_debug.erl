@@ -45,10 +45,12 @@
          continue/1,
          ensure_started/0,
          finish/1,
+         get_bindings/1,
          interpret_module/2,
          interpreted_modules/0,
          module_interpretable_p/1,
          module_interpreted_p/1,
+         process_state/1,
          processes/0,
          step_into/1,
          step_over/1]).
@@ -182,6 +184,27 @@ finish(Pid) ->
   int:finish(Pid),
   ok.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all of Pid's current variable bindings. Unless the process
+%% is in a 'break' state, this will be [].
+%% @end
+-spec get_bindings(pid()) -> [{atom(), term()}].
+%%------------------------------------------------------------------------------
+get_bindings(Pid) ->
+  ensure_started(),
+  case process_state(Pid) of
+    {ok, ProcessState} ->
+      case process_status(ProcessState) of
+        break ->
+          {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
+          int:meta(Meta, bindings, nostack);
+        _ ->
+          []
+      end;
+    {error, _} = Err ->
+      Err
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -246,21 +269,50 @@ module_interpretable_p(Module) ->
     {error, _} -> false
   end.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return the status of Pid if it's known to the the debug server.
+%% @end
+%% @see int:snapshot/0
+-spec process_state(Pid :: pid()) ->
+                       {{Module :: module(), Line :: non_neg_integer()},
+                        Options  :: [term()]}.
+%%------------------------------------------------------------------------------
+process_state(Pid) ->
+  ensure_started(),
+  case lists:keyfind(Pid, 1, int:snapshot()) of
+    false -> {error, not_found};
+    Proc  -> {ok, Proc}
+  end.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Return a list of all non terminated processes known to the debug server.
 %% @end
 %% @see int:snapshot/0
--spec processes() -> [{ { Module :: module()
-                              , Line   :: non_neg_integer()
-                              }
-                            , Options  :: [term()]
-                            }].
+-spec processes() -> [pid()].
 %%------------------------------------------------------------------------------
 processes() ->
   ensure_started(),
-  [Proc || {_, _, Status, _}  = Proc <- int:snapshot(), Status =/= exit].
+  Procs = [P || {_, _, Status, _}  = P <- int:snapshot(), Status =/= exit],
+  [format_process(P) || P <- Procs].
+
+format_process({Pid, Init, Status, Info}) ->
+  orddict:from_list([{pid,      Pid},
+                     {init,     Init},
+                     {status,   Status},
+                     {module,   info_to_module(Info)},
+                     {line,     info_to_line(Info)},
+                     {info,     Info},
+                     {bindings, get_bindings(Pid)}]).
+
+info_to_module({Mod, _Line}) -> Mod;
+info_to_module(_)            -> null.
+
+info_to_line({_Mod, Line}) -> Line;
+info_to_line(_)            -> -1.
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -288,6 +340,8 @@ step_over(Pid) ->
 
 
 %%%_* Internal functions =======================================================
+
+process_status({_Pid, _Fun, Status, _Info}) -> Status.
 
 %%%_* Unit tests ===============================================================
 

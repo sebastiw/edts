@@ -193,9 +193,17 @@ modules, breakpoints and debugged processes).")
                                     node)
                      (edts_debug-sync-breakpoint-alist)))
     (new_process   (edts_debug-sync-processes-alist))
-    (new_status    (edts_debug-sync-processes-alist)))
+    (new_status    (edts_debug-sync-processes-alist)
+                   (edts_debug-handle-new-status node info)))
   (run-hooks 'edts_debug-after-sync-hook))
 (edts-event-register-handler 'edts_debug-event-handler 'edts_debug)
+
+(defun edts_debug-handle-new-status (node info)
+  (let ((pid (cdr (assoc 'pid info))))
+    (when (and (eq (intern (cdr (assoc 'status info))) 'break)
+               (not edts_debug-pid)
+               edts_debug-auto-attach)
+      (edts_debug-attach node pid))))
 
 (defun edts_debug-update-buffers ()
   (dolist (buf (buffer-list))
@@ -203,7 +211,7 @@ modules, breakpoints and debugged processes).")
       (when edts-mode
         (let ((node   (edts-node-name))
               (module (ferl-get-module)))
-          (when (and node module)
+          (when (and node module (not (eq major-mode 'edts_debug-mode)))
             (edts_debug-update-buffer-mode-line node module)
             (edts_debug-update-buffer-breakpoints node module)))))))
 (add-hook 'edts_debug-after-sync-hook 'edts_debug-update-buffers)
@@ -350,8 +358,11 @@ breakpoint existence at LINE, which is the default behaviour."
          (rest-args (list (cons "break" break)))
          (reply     (edts-rest-post resource rest-args))
          (res       (assoc 'result reply)))
-    (unless (equal res '(result "201" "Created"))
-      (null (edts-log-error "Unexpected reply: %s" (cdr res))))))
+    (cond
+     ((equal res '(result "403" "Forbidden"))
+      (null (edts-log-error "%s is not interpretable" module)))
+     ((not (equal res '(result "201" "Created")))
+      (null (edts-log-error "Unexpected reply: %s" (cdr res)))))))
 
 (defun edts_debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
@@ -480,6 +491,10 @@ one of continue, finish, step_into or step_over."
   (setq edts_debug-node node)
   (setq edts_debug-pid pid)
   (edts_debug-mode-attach))
+
+(defun edts_debug-detach ()
+  (setq edts_debug-node nil)
+  (setq edts_debug-pid nil))
 
 (defun edts_debug-process-info (&optional node pid prop)
   (let* ((node  (or node edts_debug-node))
