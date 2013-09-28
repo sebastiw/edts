@@ -84,24 +84,64 @@
               (edts-log-debug "Retrying request")
               (edts-rest-request method resource args body t))))))))
 
-(defun edts-rest-get-async (resource args callback &optional callback-args)
-  "Send a post request to RESOURCE with ARGS"
-  (edts-rest-request-async "GET" resource args callback callback-args))
+(defun edts-rest-get-async (resource
+                            args
+                            callback
+                            &optional
+                            callback-args
+                            force-callback)
+  "Send asynchronous GET request to using METHOD to RESOURCE with ARGS.
+When the request terminates, call CALLBACK with the parsed response and
+CALLBACK-ARGS with the buffer that was current-buffer at the time the
+request was issued as current-buffer. If that buffer was killed and
+FORCE-CALLBACK is non-nil, call the callback anyway inside a
+`with-temp-buffer'."
+  (edts-rest-request-async "GET"
+                           resource
+                           args
+                           callback
+                           callback-args
+                           force-callback))
 
-(defun edts-rest-post-async (resource args callback &optional callback-args)
-  "Send a post request to RESOURCE with ARGS"
-  (edts-rest-request-async "POST" resource args callback callback-args))
+(defun edts-rest-post-async (resource
+                             args
+                             callback
+                             &optional
+                             callback-args
+                             force-callback)
+  "Send asynchronous POST request to using METHOD to RESOURCE with ARGS.
+When the request terminates, call CALLBACK with the parsed response and
+CALLBACK-ARGS with the buffer that was current-buffer at the time the
+request was issued as current-buffer. If that buffer was killed and
+FORCE-CALLBACK is non-nil, call the callback anyway inside a
+`with-temp-buffer'."
+  (edts-rest-request-async "POST"
+                           resource
+                           args
+                           callback
+                           callback-args
+                           force-callback))
 
-(defun edts-rest-request-async (method resource args callback callback-args)
+(defun edts-rest-request-async (method
+                                resource
+                                args
+                                callback
+                                callback-args
+                                force-callback)
   "Send asynchronous request to using METHOD to RESOURCE with ARGS. When
 the request terminates, call CALLBACK with the parsed response and
-CALLBACK-ARGS."
+CALLBACK-ARGS with the buffer that was current-buffer at the time the
+request was issued as current-buffer. If that buffer was killed and
+FORCE-CALLBACK is non-nil, call the callback anyway inside a
+`with-temp-buffer'."
   (let* ((url                       (edts-rest-resource-url resource args))
          (url-request-method        method)
          (url-request-extra-headers (list edts-rest-content-type-hdr))
-         (callback-args             (append
-                                     (list url (current-buffer) callback)
-                                     callback-args)))
+         (callback-args             (list url
+                                          (current-buffer)
+                                          callback
+                                          callback-args
+                                          force-callback)))
     (make-local-variable 'url-show-status)
     (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
@@ -113,14 +153,16 @@ CALLBACK-ARGS."
       (setq url-show-status nil)
       (current-buffer))))
 
-(defun edts-rest-request-callback (events url cb-buf cb &rest cb-args)
+(defun edts-rest-request-callback (events url cb-buf cb cb-args force-cb)
   "Callback for asynchronous http requests."
   (let* ((reply         (edts-rest-parse-http-response))
          (status        (cdr (assoc 'result reply)))
          (reply-buf     (current-buffer)))
     (edts-log-debug "Reply %s received for async request to %s" status url)
     (if (not (buffer-live-p cb-buf))
-        (edts-log-error "Callback buffer %s was killed!" cb-buf)
+        (if force-cb
+            (with-temp-buffer (apply cb reply cb-args))
+          (edts-log-error "Callback buffer %s was killed!" cb-buf))
       (with-current-buffer cb-buf
         (apply cb reply cb-args))
       ;; Workaround for Emacs 23.x that sometimes leaves us in cb-buf even
