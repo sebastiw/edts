@@ -47,12 +47,16 @@
     (switch-to-buffer edts_debug-mode-buffer)
     (delete-other-windows)
 
-    ;; Set up variable bindings buffer
+    ;; Set up variable bindings window
     (let* ((margin-size (- (window-total-width) (window-width)))
            (body-size   (* 2 (/ (window-width) 5)))
            (window-size (+ body-size margin-size)))
       (split-window nil window-size 'left)
       (edts_debug-mode-list-variable-bindings))
+
+    ;; Set up process list window
+    (split-window nil nil 'below)
+    (edts_debug-list-processes)
 
     ;; Move back to the primary debugger window
     (select-window (frame-first-window))))
@@ -61,14 +65,16 @@
   (switch-to-buffer (get-buffer-create "EDTS Debug Variable Bindings"))
   (setq edts_debug-mode-variable-buffer (current-buffer))
   (setq show-trailing-whitespace nil)
-  (edts_debug-mode-update-variable-bindings))
+  (edts_debug-mode-update-variable-bindings)
+  (tabulated-list-mode)
+  a(use-local-map edts_debug-mode-keymap))
 
 (defun edts_debug-mode-update-variable-bindings ()
   (let ((buf (get-buffer "EDTS Debug Variable Bindings")))
     (when buf
       (with-current-buffer buf
-        (erase-buffer)
-        (let* ((max-var-len 8) ;; The length of the header name
+        (let* ((inhibit-read-only t)
+               (max-var-len 8) ;; The length of the header name
                (bindings (edts_debug-process-info edts_debug-node
                                                   edts_debug-pid
                                                   'bindings))
@@ -76,8 +82,10 @@
                                 #'(lambda (el1 el2) (string< (car el1)
                                                              (car el2)))))
                entries)
+          (erase-buffer)
           (loop for (var . binding) in var-alist
-                for var-name = (symbol-name var)
+                for var-name = (propertize (symbol-name var)
+                                           :face 'font-lock-variable-name-face)
                 do (setq max-var-len (max max-var-len (length var-name)))
                 do (push (list nil (vector var-name binding)) entries))
           (setq tabulated-list-format
