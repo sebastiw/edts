@@ -97,6 +97,7 @@ request should always be outstanding if we are not already attached.")
 
 (defun edts_debug-node-down-hook (node)
   "Hook to run after node initialization."
+  (edts_debug-mode-quit)
   (let ((interpreted (assoc node edts_debug-interpreted-alist))
         (breakpoints (assoc node edts_debug-breakpoint-alist))
         (processes   (assoc node edts_debug-processes-alist)))
@@ -110,6 +111,7 @@ request should always be outstanding if we are not already attached.")
 
 (defun edts_debug-server-down-hook ()
   "Hook to run after node initialization."
+  (edts_debug-mode-quit)
   (setq edts_debug-interpreted-alist nil)
   (setq edts_debug-breakpoint-alist nil)
   (setq edts_debug-processes-alist nil)
