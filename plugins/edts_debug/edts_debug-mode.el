@@ -47,19 +47,22 @@
     (switch-to-buffer edts_debug-mode-buffer)
     (delete-other-windows)
 
-    ;; Set up variable bindings window
-    (let* ((margin-size (- (window-total-width) (window-width)))
-           (body-size   (* 2 (/ (window-width) 5)))
-           (window-size (+ body-size margin-size)))
-      (split-window nil window-size 'left)
-      (edts_debug-mode-list-variable-bindings))
+    (let* ((width  (- (frame-width) (round (* (frame-width) 0.4))))
+           (height (/ (frame-height) 3)))
+      ;; Set up variable bindings window
+      (select-window (split-window nil width t))
+      (edts_debug-mode-list-variable-bindings)
 
-    ;; Set up process list window
-    (split-window nil nil 'below)
-    (edts_debug-list-processes)
+      ;; Set up breakpoint list window
+      (select-window (split-window nil height))
+      (edts_debug-list-breakpoints 'switch)
 
-    ;; Move back to the primary debugger window
-    (select-window (frame-first-window))))
+      ;; Set up process list window
+      (select-window (split-window nil height))
+      (edts_debug-list-processes 'switch)
+
+      ;; Move back to the primary debugger window
+      (select-window (frame-first-window)))))
 
 (defun edts_debug-mode-list-variable-bindings ()
   (switch-to-buffer (get-buffer-create "EDTS Debug Variable Bindings"))
@@ -67,13 +70,16 @@
   (setq show-trailing-whitespace nil)
   (edts_debug-mode-update-variable-bindings)
   (tabulated-list-mode)
-  a(use-local-map edts_debug-mode-keymap))
+  (setq truncate-partial-width-windows nil)
+  (use-local-map edts_debug-mode-keymap))
 
 (defun edts_debug-mode-update-variable-bindings ()
   (let ((buf (get-buffer "EDTS Debug Variable Bindings")))
     (when buf
       (with-current-buffer buf
-        (let* ((inhibit-read-only t)
+        (let* ((col-pad 4)
+               (max-col (window-body-width (get-buffer-window buf)))
+               (inhibit-read-only t)
                (max-var-len 8) ;; The length of the header name
                (bindings (edts_debug-process-info edts_debug-node
                                                   edts_debug-pid
@@ -83,14 +89,21 @@
                                                              (car el2)))))
                entries)
           (erase-buffer)
+          ;; Figure out indentation
+          (loop for (var . binding) in var-alist
+                for var-name = (symbol-name var)
+                do (setq max-var-len (max max-var-len (length var-name))))
+
           (loop for (var . binding) in var-alist
                 for var-name = (propertize (symbol-name var)
                                            :face 'font-lock-variable-name-face)
-                do (setq max-var-len (max max-var-len (length var-name)))
-                do (push (list nil (vector var-name binding)) entries))
+                for binding-pp = (edts-pretty-print-term binding
+                                                       (+ max-var-len col-pad)
+                                                       max-col)
+                do (push (list nil (vector var-name binding-pp)) entries))
           (setq tabulated-list-format
                 (vector
-                 `("Variable" ,max-var-len 'string< :pad-right 4)
+                 `("Variable" ,max-var-len 'string< :pad-right ,col-pad)
                  '("Binding"  0 'string<)))
           (tabulated-list-init-header)
           (setq tabulated-list-entries (reverse entries))
@@ -126,9 +139,9 @@
         (edts_debug-update-buffer-breakpoints edts_debug-node
                                               edts_debug-mode-module)
         (edts_debug-update-buffer-process-location edts_debug-mode-module
-                                                   line))
-      (edts_debug-mode-update-variable-bindings))))
+                                                   line)))))
 (add-hook 'edts_debug-after-sync-hook 'edts_debug-mode-update-buffer-info)
+(add-hook 'edts_debug-after-sync-hook 'edts_debug-mode-update-variable-bindings)
 
 (defun edts_debug-mode-kill-buffer-hook ()
   "Hook to run just before the edts_debug-mode buffer is killed."
