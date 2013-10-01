@@ -553,6 +553,19 @@ CALLBACK with the parsed response as the single argument."
      "running dialyzer on %s async on %s" modules node-name)
     (edts-rest-get-async resource args #'edts-async-callback cb-args)))
 
+(defun edts-pretty-print-term (term-str indent max-col)
+  "Pretty-print the term represented by TERM-STR, indenting it INDENT
+spaces and breaking lines at column MAX-COL."
+  (let* ((resource '("pretty_print"))
+         (rest-args `(("string" .   ,term-str)
+                      ("indent" .   ,(number-to-string indent))
+                      ("max_column" ,(number-to-string max-col))))
+         (res         (edts-rest-get resource rest-args )))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'return (cdr (assoc 'body res))))
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 
 (defun edts-async-callback (reply callback expected &rest args)
   "Generic callback-function for handling the reply of rest-requests.
