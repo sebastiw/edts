@@ -77,29 +77,28 @@
   (let ((buf (get-buffer "EDTS Debug Variable Bindings")))
     (when buf
       (with-current-buffer buf
-        (let* ((col-pad 4)
-               (max-col (window-body-width (get-buffer-window buf)))
-               (inhibit-read-only t)
-               (max-var-len 8) ;; The length of the header name
+        (let* ((inhibit-read-only t)
                (bindings (edts_debug-process-info edts_debug-node
                                                   edts_debug-pid
                                                   'bindings))
                (var-alist (sort (copy-sequence bindings)
                                 #'(lambda (el1 el2) (string< (car el1)
                                                              (car el2)))))
+               (col-pad 4)
+               ;; Figure out indentation
+               (max-var-len (apply #'max
+                                   8 ;; The length of the header name
+                                   (loop for (var . binding) in var-alist
+                                         collect (length (symbol-name var)))))
+               (indent  (+ max-var-len col-pad))
+               (max-col (window-body-width (get-buffer-window buf)))
                entries)
           (erase-buffer)
-          ;; Figure out indentation
-          (loop for (var . binding) in var-alist
-                for var-name = (symbol-name var)
-                do (setq max-var-len (max max-var-len (length var-name))))
 
           (loop for (var . binding) in var-alist
                 for var-name = (propertize (symbol-name var)
-                                           :face 'font-lock-variable-name-face)
-                for binding-pp = (edts-pretty-print-term binding
-                                                       (+ max-var-len col-pad)
-                                                       max-col)
+                                           'face 'font-lock-variable-name-face)
+                for binding-pp = (edts-pretty-print-term binding indent max-col)
                 do (push (list nil (vector var-name binding-pp)) entries))
           (setq tabulated-list-format
                 (vector

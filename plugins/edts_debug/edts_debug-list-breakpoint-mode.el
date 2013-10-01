@@ -24,6 +24,7 @@
   "Name of buffer where to display the list of breakpoints")
 
 (define-derived-mode edts_debug-list-breakpoint-mode tabulated-list-mode
+  ""
   "Mode for listing breakpoint modules."
   ;; Keybindings
   (define-key

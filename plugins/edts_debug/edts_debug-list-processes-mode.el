@@ -24,6 +24,7 @@
   "Name of buffer where to display the list of processes")
 
 (define-derived-mode edts_debug-list-processes-mode tabulated-list-mode
+  ""
   "Mode for listing processes modules."
   ;; Keybindings
   (define-key

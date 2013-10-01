@@ -24,6 +24,7 @@
   "Name of buffer where to display the list of interpreted modules")
 
 (define-derived-mode edts_debug-list-interpreted-mode tabulated-list-mode
+  ""
   "Mode for listing interpreted modules."
   ;; Keybindings
   (define-key
