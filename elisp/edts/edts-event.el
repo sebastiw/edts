@@ -183,15 +183,15 @@ that class."
   (ert-deftest edts-event-handle-event-test ()
     (defvar evts)
     (setq evts nil)
-    (defun dummy-handler (evt-class evt) (push evt evts))
-    (defun dummy-handler2 (evt-class evt) (push evt evts))
+    (defun dummy-handler  (node evt-class evt evt-info) (push evt evts))
+    (defun dummy-handler2 (node evt-class evt evt-info) (push evt evts))
 
     (let ((handlers (copy-sequence edts-event-handlers)))
       (setq edts-event-handlers nil)
       (edts-event-register-handler 'dummy-handler 'dummy-class)
       (edts-event-register-handler 'dummy-handler2 'dummy-class)
 
-      (edts-event-handle 'dummy-class 'foo)
+      (edts-event-handle "node" 'dummy-class 'foo nil)
       (should (equal evts '(foo foo)))
       (setq edts-event-handlers handlers))))
 
