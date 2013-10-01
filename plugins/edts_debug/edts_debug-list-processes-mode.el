@@ -66,17 +66,21 @@
   (setq major-mode 'edts_debug-list-processes-mode)
   (use-local-map edts_debug-list-processes-mode-map))
 
-(defun edts_debug-list-processes ()
+(defun edts_debug-list-processes (&optional show)
   "Show a listing of all processes on all nodes registered
-with EDTS."
-  (interactive)
+with EDTS. If optional argument SHOW is nil or omitted, don't display
+process list buffer. If it is pop call `pop-to-buffer', if it is switch
+call `switch-to-buffer'."
+  (interactive '(pop))
   (with-current-buffer (get-buffer-create edts_debug-list-processes-buffer)
     (edts_debug-list-processes-mode)
     (edts_debug-list-processes-update)
-    (pop-to-buffer (current-buffer))))
+    (case show
+      (pop    (pop-to-buffer    (current-buffer)))
+      (switch (switch-to-buffer (current-buffer))))))
 
 (defun edts_debug-list-processes-find-processes ()
-  "Find processes given by list entry under point."
+  "Find process given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
@@ -88,7 +92,7 @@ with EDTS."
     (forward-line (1- line))))
 
 (defun edts_debug-list-processes-attach ()
-  "Uninterpret module given by list entry under point."
+  "Attach to process given by list entry under point."
   (interactive)
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
@@ -96,22 +100,24 @@ with EDTS."
   (edts_debug-attach node pid)))
 
 (defun edts_debug-list-processes-continue ()
-  "Uninterpret module given by list entry under point."
+  "Order process given by list entry under point to continue."
   (interactive)
   (edts_debug-list-processes-command 'continue))
 
 (defun edts_debug-list-processes-finish ()
-  "Uninterpret module given by list entry under point."
+  "Order process given by list entry under point to finish."
   (interactive)
   (edts_debug-list-processes-command 'finish))
 
 (defun edts_debug-list-processes-step-into ()
-  "Uninterpret module given by list entry under point."
+  "Order process given by list entry under point to step into its next
+call."
   (interactive)
   (edts_debug-list-processes-command 'step_into))
 
 (defun edts_debug-list-processes-step-over ()
-  "Uninterpret module given by list entry under point."
+  "Order process given by list entry under point to step over its next
+call."
   (interactive)
   (edts_debug-list-processes-command 'step_over))
 

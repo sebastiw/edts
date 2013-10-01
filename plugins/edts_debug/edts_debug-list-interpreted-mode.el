@@ -46,14 +46,18 @@
   (setq major-mode 'edts_debug-list-interpreted-mode)
   (use-local-map edts_debug-list-interpreted-mode-map))
 
-(defun edts_debug-list-interpreted ()
+(defun edts_debug-list-interpreted (&optional show)
   "Show a listing of all interpreted modules on all nodes registered
-with EDTS."
+with EDTS. If optional argument SHOW is nil or omitted, don't display
+interpreted list buffer. If it is pop call `pop-to-buffer', if it is
+switch call `switch-to-buffer'."
   (interactive)
   (with-current-buffer (get-buffer-create edts_debug-list-interpreted-buffer)
     (edts_debug-list-interpreted-mode)
     (edts_debug-list-interpreted-update)
-    (pop-to-buffer (current-buffer))))
+    (case show
+      (pop    (pop-to-buffer    (current-buffer)))
+      (switch (switch-to-buffer (current-buffer))))))
 
 (defun edts_debug-list-interpreted-find-module ()
   "Find module given by list entry under point."

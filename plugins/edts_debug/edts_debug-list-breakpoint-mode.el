@@ -46,14 +46,18 @@
   (add-hook 'edts_debug-after-sync-hook 'edts_debug-list-breakpoint-update)
   (use-local-map edts_debug-list-breakpoint-mode-map))
 
-(defun edts_debug-list-breakpoints ()
+(defun edts_debug-list-breakpoints (&optional show)
   "Show a listing of all breakpoint on all nodes registered
-with EDTS."
-  (interactive)
+with EDTS. If optional argument SHOW is nil or omitted, don't display
+process list buffer. If it is pop call `pop-to-buffer', if it is switch
+call `switch-to-buffer'."
+  (interactive '(pop))
   (with-current-buffer (get-buffer-create edts_debug-list-breakpoint-buffer)
     (edts_debug-list-breakpoint-mode)
     (edts_debug-list-breakpoint-update)
-    (pop-to-buffer (current-buffer))))
+    (case show
+      (pop    (pop-to-buffer    (current-buffer)))
+      (switch (switch-to-buffer (current-buffer))))))
 
 (defun edts_debug-list-breakpoint-find-breakpoint ()
   "Find breakpoint given by list entry under point."
