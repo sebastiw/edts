@@ -141,45 +141,6 @@ content_types_provided_test() ->
                 , {"text/plain",       to_json} ], foo, bar},
               content_types_provided(foo, bar)).
 
-from_json_test() ->
-  meck:unload(),
-  meck:new(wrq),
-  meck:expect(wrq, set_resp_body, fun(A, _) -> A end),
-  meck:new(edts_debug),
-  meck:expect(edts_debug,
-              interpret_module,
-              fun(_, foo, toggle) -> {ok, true} end),
-
-  Dict1 =
-    orddict:from_list([{nodename, true},
-                       {module, foo},
-                       {interpret, toggle}]),
-  Res = from_json(req_data, Dict1),
-  ?assertMatch({true, _, Dict1}, Res),
-
-  JSON = element(2, Res),
-  ?assertEqual({struct,
-                [{<<"module">>,<<"foo">>},
-                 {<<"interpreted">>,true}]},
-               mochijson2:decode(JSON)),
-  meck:unload().
-
-to_json_test() ->
-  meck:unload(),
-  meck:new(edts_debug),
-  meck:expect(edts_debug, module_interpreted_p, fun(_, foo) -> {ok, true};
-                                                   (_, _)   -> {ok, false}
-                                                end),
-  Dict1 = orddict:from_list([{nodename, true}, {module, foo}]),
-  Res = to_json(req_data, Dict1),
-  ?assertMatch({_, req_data, Dict1}, Res),
-
-  JSON = element(1, Res),
-  ?assertEqual({struct, [{<<"module">>,<<"foo">>},{<<"interpreted">>,true}]},
-               mochijson2:decode(JSON)),
-  meck:unload().
-
-
 %%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t

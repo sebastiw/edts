@@ -112,21 +112,6 @@ content_types_provided_test() ->
                 , {"text/plain",       to_json} ], foo, bar},
               content_types_provided(foo, bar)).
 
-to_json_test() ->
-  meck:unload(),
-  meck:new(edts_debug),
-  meck:expect(edts_debug, interpreted_modules, fun(true) -> {ok, [foo]}
-                                                end),
-  Dict1 = orddict:from_list([{nodename, true}]),
-  Res = to_json(req_data, Dict1),
-  ?assertMatch({_, req_data, Dict1}, Res),
-
-  JSON = element(1, Res),
-  ?assertEqual({struct, [{<<"modules">>,[<<"foo">>]}]},
-               mochijson2:decode(JSON)),
-  meck:unload().
-
-
 %%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t
