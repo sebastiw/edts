@@ -31,6 +31,7 @@
 
 (defvar edts_debug-mode-keymap (make-sparse-keymap))
 (define-key edts_debug-mode-keymap (kbd "b") 'edts_debug-toggle-breakpoint)
+(define-key edts_debug-mode-keymap (kbd "f") 'edts_debug-mode-finish)
 (define-key edts_debug-mode-keymap (kbd "s") 'edts_debug-mode-step-into)
 (define-key edts_debug-mode-keymap (kbd "o") 'edts_debug-mode-step-over)
 (define-key edts_debug-mode-keymap (kbd "c") 'edts_debug-mode-continue)

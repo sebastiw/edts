@@ -29,11 +29,7 @@
   ;; Keybindings
   (define-key
     edts_debug-list-processes-mode-map
-    (kbd "RET")
-    'edts_debug-list-processes-find-processes)
-  (define-key
-    edts_debug-list-processes-mode-map
-    (kbd "<delete>")
+    (kbd "k")
     'edts_debug-list-processes-kill-process)
   (define-key
     edts_debug-list-processes-mode-map
