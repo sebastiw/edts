@@ -496,12 +496,14 @@ auto-save data."
    edts-project-suite
    ;; Setup
    (lambda ()
+     (setq edts-event-inhibit t)
      (edts-test-pre-cleanup-all-buffers)
      (edts-test-setup-project edts-test-project1-directory
                               "test"
                               nil))
    ;; Teardown
    (lambda (setup-config)
+     (setq edts-event-inhibit nil)
      (edts-test-post-cleanup-all-buffers)
      (edts-test-teardown-project edts-test-project1-directory)))
 

@@ -187,6 +187,7 @@ current buffer's project."
    edts_xref-suite
    ;; Setup
    (lambda ()
+     (setq edts-event-inhibit t)
      (edts-test-pre-cleanup-all-buffers)
      (edts-test-setup-project edts-test-project1-directory
                               "test"
@@ -195,6 +196,7 @@ current buffer's project."
 
    ;; Teardown
    (lambda (setup-config)
+     (setq edts-event-inhibit nil)
      (edts-test-teardown-project edts-test-project1-directory)
      (edts-test-post-cleanup-all-buffers)
      (edts-rest-force-sync nil)))

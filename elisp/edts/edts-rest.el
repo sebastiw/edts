@@ -241,10 +241,11 @@ ensure that this is not enforced."
     (ad-deactivate-regexp "edts-rest-test-sync")))
 
 (defadvice edts-rest-request-async (around edts-rest-test-sync (method
-                                                           resource
-                                                           args
-                                                           callback
-                                                           callback-args))
+                                                                resource
+                                                                args
+                                                                callback
+                                                                callback-args
+                                                                force-callback))
   "** Use only for testing **
 
 Wrap a an async request to RESOURCE with ARGS and turn it into a

@@ -517,11 +517,22 @@ one of continue, finish, step_into or step_over."
    edts_debug-suite
    ;; Setup
    (lambda ()
-     (edts-test-setup-project edts-test-project1-directory
-                              "test"
-                              nil))
+     (let ((async-node-init edts-async-node-init))
+       (setq edts-async-node-init nil)
+       (setq edts-event-inhibit t)
+       (edts-rest-force-sync t)
+       (edts-test-pre-cleanup-all-buffers)
+       (edts-test-setup-project edts-test-project1-directory
+                                "test"
+                                nil)
+       `((async-node-init . ,async-node-init))))
+
    ;; Teardown
    (lambda (setup-config)
+     (setq edts-async-node-init (cdr (assoc 'async-node-init setup-config)))
+     (edts-rest-force-sync nil)
+     (setq edts-event-inhibit nil)
+     (edts-test-post-cleanup-all-buffers)
      (edts-test-teardown-project edts-test-project1-directory)))
 
   (edts-test-case edts_debug-suite edts_debug-basic-test ()

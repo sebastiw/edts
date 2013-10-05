@@ -76,6 +76,7 @@ the node-name of the node that has gone down as the argument.")
        (run-hook-with-args 'edts-node-down-hook node)))
     (server_down
      (edts-log-info "EDTS server down")
+     (setq edts--outstanding-node-registration-requests nil)
      (run-hooks 'edts-server-down-hook))))
 (edts-event-register-handler 'edts-event-handler 'edts)
 
@@ -294,7 +295,6 @@ for ARITY will give a regexp matching any arity."
     (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
     (setq available (edts-get-nodes t))
     (while (and (> retries 0) (not available))
-      ;; (message "retries %s" retries)
       (setq available (edts-get-nodes t))
       (sit-for 0.2)
       (decf retries))
@@ -384,19 +384,19 @@ requests.")
       (edts-log-info "Node %s started" node-name)
       (setq edts--pending-node-startups
             (remove node-name edts--pending-node-startups))
-      (edts-init-node-async project-name
-                            node-name
-                            root
-                            libs
-                            app-include-dirs
-                            project-include-dirs))))
+      (edts-init-node project-name
+                      node-name
+                      root
+                      libs
+                      app-include-dirs
+                      project-include-dirs))))
 
-(defun edts-init-node-async (project-name
-                             node-name
-                             root
-                             libs
-                             app-include-dirs
-                             project-include-dirs)
+(defun edts-init-node (project-name
+                       node-name
+                       root
+                       libs
+                       app-include-dirs
+                       project-include-dirs)
   "Register NODE-NAME with the EDTS server asynchronously."
   (unless (member node-name edts--outstanding-node-registration-requests)
     (edts-log-debug "Initializing node %s" node-name)
@@ -414,10 +414,13 @@ requests.")
                            (cons "app_include_dirs"     app-include-dirs)
                            (cons "project_include_dirs" project-include-dirs)))
            (cb-args  (list node-name)))
-      (edts-rest-post-async resource
-                            args
-                            #'edts-init-node-async-callback
-                            cb-args))))
+      (if edts-async-node-init
+          (edts-rest-post-async resource
+                                args
+                                #'edts-init-node-async-callback
+                                cb-args)
+        (let ((reply (edts-rest-post resource args)))
+          (edts-init-node-async-callback reply node-name))))))
 
 (defun edts-init-node-async-callback (reply node-name)
   "Handle the result of an asynchronous node registration."
