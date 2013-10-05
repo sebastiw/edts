@@ -146,9 +146,9 @@ FORCE-CALLBACK is non-nil, call the callback anyway inside a
     (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
-      (if (>= emacs-major-version 24)
-          (url-retrieve url #'edts-rest-request-callback callback-args t)
-        (url-retrieve url #'edts-rest-request-callback callback-args))
+        (if (>= emacs-major-version 24)
+            (url-retrieve url #'edts-rest-request-callback callback-args t)
+          (url-retrieve url #'edts-rest-request-callback callback-args))
       (make-local-variable 'url-show-status)
       (setq url-show-status nil)
       (current-buffer))))
@@ -259,6 +259,23 @@ request completes."
     (apply callback
            (edts-rest-request method resource args)
            callback-args)))
+
+
+(defadvice url-http-end-of-document-sentinel
+  (around edts-rest-end-of-document-sentinel (process why))
+  "Workaround for url-http-end-of-document-sentinel not properly
+propagatin buffer-local variable when retrying a request.
+
+http://debbugs.gnu.org/cgi/bugreport.cgi?bug=14983 will most likely solve
+the issue and make this hack redundant."
+  (let* ((buf (process-buffer process))
+         (url-request-method (buffer-local-value 'url-http-method buf))
+         (url-request-extra-headers
+          (buffer-local-value 'url-http-extra-headers buf))
+         (url-request-data (buffer-local-value 'url-http-data buf)))
+    (message "Sentinel!!!")
+    ad-do-it))
+(ad-activate-regexp "edts-rest-end-of-document-sentinel")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
