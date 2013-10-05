@@ -26,11 +26,13 @@
 -module(edts_util).
 
 %%%_* Includes =================================================================
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
 
 -export([nodename2shortname/1,
+         shortname2nodename/1,
          pid2atom/1,
          lib_and_app_dirs/0,
          shorten_path/1]).
@@ -44,6 +46,10 @@
 nodename2shortname(Nodename) ->
   Str = atom_to_list(Nodename),
   list_to_atom(string:sub_string(Str, 1, string:rchr(Str, $@) -1)).
+
+shortname2nodename(Shortname) ->
+  Str = atom_to_list(node()),
+  list_to_atom(Shortname ++ string:sub_string(Str, string:rchr(Str, $@))).
 
 pid2atom(Pid) ->
   PidStr0 = pid_to_list(Pid),

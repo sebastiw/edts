@@ -50,5 +50,18 @@
     (when (fboundp buf-init-fun)
       (add-hook 'edts-mode-hook buf-init-fun))))
 
+(defun edts-plugin-call (node plugin method &optional args)
+  "Call PLUGIN's rpc method METHOD with ARGS on NODE."
+  (let* ((resource `("plugins" ,(symbol-name plugin) "call"))
+         (body     `((node   . ,node)
+                     (method . ,(symbol-name method))
+                     (params . ,args)
+                     (id     . -1)))
+         (reply      (edts-rest-post resource nil body)))
+    (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
+        (null
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
+      (cdr (assoc 'body reply)))))
+
 
 (provide 'edts-plugin)
