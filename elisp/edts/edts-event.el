@@ -22,7 +22,15 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(defvar edts-event-handlers nil)
+(defvar edts-event-handlers nil
+  "List of handlers for different types of events. This is an alist
+where the keys are the event types (symbols) and each value is a list of
+functions to call for that event type. Each function should take four
+arguments: node (string) event-class (symbol) event-type (symbol) and
+ event-info (alist) ")
+
+(defvar edts-event-inhibit nil
+  "If non-nil, inhibit the event-loop")
 
 (defun edts-event-register-handler (handler event-class)
   "Register HANDLER to receive events of class EVENT-CLASS."
@@ -49,13 +57,14 @@ that class."
 
 (defun edts-event-listen ()
   "Start the event-listening loop."
-  (let ((buf (edts-rest-get-async '("event")
-                                  nil
-                                  #'edts-event-listen-callback
-                                  nil
-                                  t)))
-    (when buf
-      (set-process-query-on-exit-flag (get-buffer-process buf) nil))))
+  (unless edts-event-inhibit
+    (let ((buf (edts-rest-get-async '("event")
+                                    nil
+                                    #'edts-event-listen-callback
+                                    nil
+                                    t)))
+      (when buf
+        (set-process-query-on-exit-flag (get-buffer-process buf) nil)))))
 
 (defun edts-event-listen-callback (reply)
   "Initialize things needed to detect when a node goes down"
