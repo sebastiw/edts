@@ -68,5 +68,29 @@
                             (cdr (assoc 'return body))))
         (cdr (assoc 'return body))))))
 
+(defun edts-plugin-call-async (node plugin method &optional args cb cb-args)
+  "Call PLUGIN's rpc method METHOD with ARGS on NODE asynchronously. Calling
+CB with the result when request terminates."
+  (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
+  (let* ((resource `("nodes"   ,node
+                     "plugins" ,(symbol-name plugin)
+                     ,(symbol-name method))))
+    (edts-rest-post-async resource
+                          args
+                          'edts-plugin-call-async-callback
+                          (list cb cb-args))))
+
+(defun edts-plugin-call-async-callback (reply callback callback-args)
+  (let ((body       (cdr (assoc 'body reply))))
+    (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
+        (prog1 nil
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
+      (if (equal "error" (cdr (assoc 'result body)))
+          (prog1 nil
+            (edts-log-error "Error in plugin call: %s"
+                            (cdr (assoc 'return body))))
+        (apply callback (cdr (assoc 'return body)) callback-args)))))
+
+
 
 (provide 'edts-plugin)
