@@ -23,19 +23,24 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_util).
+-module(edts_plugins).
 
 %%%_* Includes =================================================================
 
--include_lib("eunit/include/eunit.hrl").
-
 %%%_* Exports ==================================================================
 
--export([nodename2shortname/1,
-         shortname2nodename/1,
-         pid2atom/1,
-         lib_and_app_dirs/0,
-         shorten_path/1]).
+-export([behaviour_info/1,
+         dirs/0,
+         names/0,
+         specs/0,
+         to_ret_str/1
+        ]).
+
+%% Callbacks
+-export([edts_server_services/1,
+         event_formatters/1,
+         project_node_modules/1,
+         project_node_services/1]).
 
 %%%_* Defines ==================================================================
 
@@ -43,57 +48,57 @@
 
 %%%_* API ======================================================================
 
-nodename2shortname(Nodename) ->
-  Str = atom_to_list(Nodename),
-  list_to_atom(string:sub_string(Str, 1, string:rchr(Str, $@) -1)).
+behaviour_info(callbacks) ->
+  [ {edts_server_services,  0},
+    {event_formatters,      0},
+    {project_node_modules,  0},
+    {project_node_services, 0}
+    (spec,                  2)
+  ];
+behaviour_info(_) -> undefined.
 
-shortname2nodename(Shortname) ->
-  Str = atom_to_list(node()),
-  list_to_atom(Shortname ++ string:sub_string(Str, string:rchr(Str, $@))).
-
-pid2atom(Pid) ->
-  PidStr0 = pid_to_list(Pid),
-  list_to_atom(string:sub_string(PidStr0, 2, length(PidStr0) - 1)).
-
-lib_and_app_dirs() ->
-  ErlLibDir = code:lib_dir(),
-  lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end,
-                  code:get_path()).
-
-
-shorten_path("") -> "";
-shorten_path(P)  ->
-  case shorten_path(filename:split(P), []) of
-    [Component] -> Component;
-    Components  -> filename:join(Components)
+dirs() ->
+  case application:get_env(edts, plugin_dir) of
+    undefined -> [];
+    {ok, Dir} ->
+      AbsDir = filename:absname(Dir),
+      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
+      [PluginDir || PluginDir <- PluginDirs,
+                    filelib:is_dir(PluginDir)]
   end.
 
-shorten_path([],           [])         -> ["."];
-shorten_path([],           Acc)        -> lists:reverse(Acc);
-shorten_path(["."|T],      Acc)        -> shorten_path(T, Acc);
-shorten_path([".."|T],     [])         -> shorten_path(T, [".."]);
-shorten_path([".."|T], [".."|_] = Acc) -> shorten_path(T, [".."|Acc]);
-shorten_path([".."|T],     Acc)        -> shorten_path(T, tl(Acc));
-shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
+names() ->
+  [list_to_atom(filename:basename(Dir)) || Dir <- dirs()].
 
+
+specs() ->
+  lists:map(fun do_spec/1, dirs()).
+
+to_ret_str(Term) ->
+  list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
+
+%% Callbacks
+edts_server_services(Plugin) ->
+  Plugin:edts_server_services().
+
+event_formatters(Plugin) ->
+  Plugin:event_formatters().
+
+project_node_modules(Plugin) ->
+  Plugin:project_node_modules().
+
+project_node_services(Plugin) ->
+  Plugin:project_node_services().
 
 
 %%%_* Internal functions =======================================================
 
+do_spec(Dir) ->
+  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  {ok, [AppSpec]} = file:consult(AppFile),
+  AppSpec.
 
 %%%_* Unit tests ===============================================================
-
-shorten_path_test_() ->
-  [ ?_assertEqual("", shorten_path("")),
-    ?_assertEqual(".", shorten_path(".")),
-    ?_assertEqual("..", shorten_path("..")),
-    ?_assertEqual("../..", shorten_path("../..")),
-    ?_assertEqual("../ebin", shorten_path("../ebin")),
-    ?_assertEqual("..", shorten_path("../ebin/..")),
-    ?_assertEqual("..", shorten_path("../ebin/./.."))
-  ].
-
-%%%_* Test helpers =============================================================
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

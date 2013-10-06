@@ -41,7 +41,7 @@ integration-tests:
 	-f edts-test-run-suites-batch-and-exit
 
 .PHONY: ert
-ert:
+ert: all
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \

@@ -55,53 +55,43 @@ init([]) ->
 
   WebmConf = [{port,     ?EDTS_PORT},
               {dispatch, dispatch()}],
-  WemachineRouter = {webmachine_router,
-                     {webmachine_router, start_link, []},
-                     permanent, 5000, worker, [webmachine_router]},
-  Webmachine = {webmachine_mochiweb,
-                {webmachine_mochiweb, start, [WebmConf]},
-                permanent, 5000, worker, [webmachine_mochiweb]},
-  Edts = {edts_server,
-          {edts_server, start_link, []},
-          permanent, 5000, worker, [edts_server]},
-  Children = [Edts, WemachineRouter, Webmachine],
+  WemachineRouter = child_spec(webmachine_router),
+  Webmachine      = {webmachine_mochiweb,
+                     {webmachine_mochiweb, start, [WebmConf]},
+                     permanent, 5000, worker, [webmachine_mochiweb]},
+  Edts            = child_spec(edts_server),
+
+
+  Formatters0     = lists:flatmap(fun edts_plugins:event_formatters/1,
+                                  edts_plugins:names()),
+  Formatters      = [{{edts, node_down},
+                      edts_events_node_down} | Formatters0],
+  EdtsEvent       = child_spec(edts_event, [Formatters]),
+
+  PluginServices  = lists:flatmap(fun edts_plugins:edts_server_services/1,
+                                  edts_plugins:names()),
+  PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
+
+  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 
 %%%_* Internal functions =======================================================
 
+child_spec(Name) ->
+  child_spec(Name, []).
+
+child_spec(Name, Args) ->
+  {Name,
+   {Name, start_link, Args},
+   permanent, 5000, worker, [Name]}.
+
 dispatch() ->
   DispatchFile       = filename:join(code:priv_dir(edts), "dispatch.conf"),
   {ok, EDTSDispatch} = file:consult(DispatchFile),
-  PluginDispatch     = plugin_dispatches(),
-  lists:sort(fun dispatch_specificity/2, EDTSDispatch ++ PluginDispatch).
-
-
-plugin_dispatches() ->
-  {ok, PluginDir} = application:get_env(edts, plugin_dir),
-  WildCard = filename:join([PluginDir, "*", "priv", "dispatch.conf"]),
-  Files = filelib:wildcard(WildCard),
-  lists:flatmap(fun plugin_dispatch/1, Files).
-
-
-plugin_dispatch(File) ->
-  {ok, Terms} = file:consult(File),
-  [{["plugins"|Path], Mod, Args} || {Path, Mod, Args} <- Terms].
-
-
-dispatch_specificity({PathA, _, _ } = A, {PathB, _, _ } = B)
-  when length(PathA) =:= length(PathB) ->
-  A > B;
-dispatch_specificity({PathA, _, _ }, {PathB, _, _ }) ->
-  length(PathA) > erlang:length(PathB).
-
+  EDTSDispatch.
 
 %%%_* Unit tests ===============================================================
-dispatch_specificity_test_() ->
-  [ ?_assertNot(dispatch_specificity({[a], 1, 2}, {[a, b], 1, 1})),
-    ?_assert(dispatch_specificity({[a, b], 1, 1}, {[a],1,2})),
-    ?_assertNot(dispatch_specificity({[a, b], 1, 1}, {[a, b], 1, 2}))
-  ].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

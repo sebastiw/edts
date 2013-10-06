@@ -33,8 +33,7 @@
          node_registered_p/1,
          nodes/0,
          start_link/0,
-         start_service/2,
-         wait_for_nodedown/0]).
+         start_service/2]).
 
 %% gen_server callbacks
 -export([ code_change/3
@@ -44,8 +43,6 @@
         , handle_info/2
         , terminate/2]).
 
--export([plugin_spec/1]).
-
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
 
@@ -53,8 +50,7 @@
 -define(SERVER, ?MODULE).
 -record(node, {name :: node()}).
 
--record(state, {nodes         = [] :: edts_node(),
-                nodedown_reqs = [] :: [pid()]}).
+-record(state, {nodes         = [] :: edts_node()}).
 
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
@@ -118,17 +114,6 @@ node_registered_p(Node) ->
 %%------------------------------------------------------------------------------
 nodes() ->
   gen_server:call(?SERVER, nodes, infinity).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Wait for the
-%% @end
-%%
--spec wait_for_nodedown() -> node().
-%%------------------------------------------------------------------------------
-wait_for_nodedown() ->
-  gen_server:call(?SERVER, wait_for_nodedown, infinity).
 
 
 %%%_* gen_server callbacks  ====================================================
@@ -195,8 +180,6 @@ handle_call({node_registered_p, NodeName}, _From, State) ->
             false   -> false
           end,
   {reply, Reply, State};
-handle_call(wait_for_nodedown, From, #state{nodedown_reqs = Reqs} = State) ->
-  {noreply, State#state{nodedown_reqs = [From|Reqs]}};
 handle_call(nodes, _From, #state{nodes = Nodes} = State) ->
   {reply, {ok, [N#node.name || N <- Nodes]}, State};
 handle_call(_Request, _From, State) ->
@@ -223,15 +206,14 @@ handle_cast(_Msg, State) ->
                                       {noreply, state(), Timeout::timeout()} |
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
-handle_info({nodedown, Node, _Info} = Msg, State0) ->
+handle_info({nodedown, Node, _Info}, State0) ->
   edts_log:info("Node down: ~p", [Node]),
-  ok = lists:foreach(fun(Pid) -> gen_server:reply(Pid, Msg) end,
-                     State0#state.nodedown_reqs),
+  edts_event:dispatch(edts, node_down, [{node, Node}]),
   State = case node_find(Node, State0) of
             false   -> State0;
             #node{} -> node_delete(Node, State0)
           end,
-    {noreply, State#state{nodedown_reqs = []}};
+  {noreply, State};
 handle_info(Info, State) ->
   edts_log:debug("Unhandled message: ~p", [Info]),
   {noreply, State}.
@@ -281,12 +263,9 @@ do_init_node(ProjectName,
              AppIncludeDirs,
              ProjectIncludeDirs) ->
   try
-    PluginDirs = plugin_dirs(),
-    Plugins = plugin_dirs_to_names(PluginDirs),
-    ok = lists:foreach(fun(Dir) ->
-                           edts_dist:load_app(Node, plugin_spec(Dir))
-                       end,
-                       PluginDirs),
+    Plugins = edts_plugins:names(),
+    ok = lists:foreach(fun(Spec) -> edts_dist:load_app(Node, Spec) end,
+                       edts_plugins:specs()),
     PluginRemoteLoad =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
@@ -296,12 +275,15 @@ do_init_node(ProjectName,
                                         edts_dialyzer,
                                         edts_eunit,
                                         edts_eunit_listener,
+                                        edts_event,
                                         edts_module_server,
+                                        edts_plugins,
                                         edts_util] ++
                                          PluginRemoteLoad),
     ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
-    AppEnv = [{project_name,         ProjectName},
+    AppEnv = [{server_node,          node()},
+              {project_name,         ProjectName},
               {project_data_dir,     ProjectDir},
               {project_root_dir,     ProjectRoot},
               {app_include_dirs,     AppIncludeDirs},
@@ -314,27 +296,6 @@ do_init_node(ProjectName,
                      [Node, C, E, erlang:get_stacktrace()]),
       E
   end.
-
-plugin_dirs() ->
-  case application:get_env(edts, plugin_dir) of
-    undefined -> [];
-    {ok, Dir} ->
-      AbsDir = filename:absname(Dir),
-      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
-      [PluginDir || PluginDir <- PluginDirs,
-                    filelib:is_dir(PluginDir)]
-  end.
-
-
-plugin_dirs_to_names(Dirs) ->
-  [list_to_atom(filename:basename(Dir)) || Dir <- Dirs].
-
-
-plugin_spec(Dir) ->
-  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
-  {ok, [AppSpec]} = file:consult(AppFile),
-  AppSpec.
-
 
 init_node_env(Node, AppEnv) ->
   [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].

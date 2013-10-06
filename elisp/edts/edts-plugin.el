@@ -40,15 +40,57 @@
 
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
+  (edts-log-info "Initializing plugin %s" plugin-name)
   (add-to-list `load-path (path-util-join edts-plugin-directory plugin-name))
-  (let* ((plugin-elisp-name (replace-regexp-in-string "_" "-" plugin-name))
-         (init-fun          (intern (concat plugin-elisp-name "-init")))
-         (buf-init-fun      (intern (concat plugin-elisp-name "-buffer-init"))))
-    (require (intern plugin-elisp-name) nil t)
+  (let* ((elisp-plugin-name (replace-regexp-in-string "_" "-" plugin-name))
+         (init-fun          (intern (concat elisp-plugin-name "-init")))
+         (buf-init-fun      (intern (concat elisp-plugin-name "-buffer-init"))))
+    (require (intern elisp-plugin-name))
     (when (fboundp init-fun)
       (funcall init-fun))
     (when (fboundp buf-init-fun)
       (add-hook 'edts-mode-hook buf-init-fun))))
+
+(defun edts-plugin-call (node plugin method &optional args)
+  "Call PLUGIN's rpc method METHOD with ARGS on NODE."
+  (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
+  (let* ((resource `("nodes"   ,node
+                     "plugins" ,(symbol-name plugin)
+                     ,(symbol-name method)))
+         (reply      (edts-rest-post resource args))
+         (body       (cdr (assoc 'body reply))))
+    (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
+        (prog1 nil
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
+      (if (equal "error" (cdr (assoc 'result body)))
+          (prog1 nil
+            (edts-log-error "Error in plugin call: %s"
+                            (cdr (assoc 'return body))))
+        (cdr (assoc 'return body))))))
+
+(defun edts-plugin-call-async (node plugin method &optional args cb cb-args)
+  "Call PLUGIN's rpc method METHOD with ARGS on NODE asynchronously. Calling
+CB with the result when request terminates."
+  (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
+  (let* ((resource `("nodes"   ,node
+                     "plugins" ,(symbol-name plugin)
+                     ,(symbol-name method))))
+    (edts-rest-post-async resource
+                          args
+                          'edts-plugin-call-async-callback
+                          (list cb cb-args))))
+
+(defun edts-plugin-call-async-callback (reply callback callback-args)
+  (let ((body       (cdr (assoc 'body reply))))
+    (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
+        (prog1 nil
+         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
+      (if (equal "error" (cdr (assoc 'result body)))
+          (prog1 nil
+            (edts-log-error "Error in plugin call: %s"
+                            (cdr (assoc 'return body))))
+        (apply callback (cdr (assoc 'return body)) callback-args)))))
+
 
 
 (provide 'edts-plugin)

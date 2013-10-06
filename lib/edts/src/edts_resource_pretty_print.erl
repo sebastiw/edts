@@ -23,15 +23,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_node_down).
+-module(edts_resource_pretty_print).
 
 %%%_* Exports ==================================================================
 
 %% API
 %% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1]).
+-export([ allowed_methods/2,
+          content_types_provided/2,
+          malformed_request/2,
+          init/1]).
 
 %% Handlers
 -export([ to_json/2]).
@@ -58,11 +59,32 @@ content_types_provided(ReqData, Ctx) ->
         , {"text/plain",       to_json}],
   {Map, ReqData, Ctx}.
 
+malformed_request(ReqData, Ctx) ->
+  %% try
+    Str    = wrq:get_qs_value("string", ReqData),
+    {ok, AbsTerm, _} = erl_scan:string(Str ++ "."),
+    {ok, Term} = erl_parse:parse_term(AbsTerm),
+
+    Indent = list_to_integer(wrq:get_qs_value("indent", ReqData)),
+    MaxCol = list_to_integer(wrq:get_qs_value("max_column", ReqData)),
+
+    RecF = fun(_A, _N) -> no end,
+    PPString =
+      lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
+    {false, ReqData, orddict:store(return, PPString, Ctx)}.
+  %% catch
+  %%   _:_ -> {true, ReqData, Ctx}
+  %% end.
+
 %% Handlers
 to_json(ReqData, Ctx) ->
-  {nodedown, Node, _Info} = edts_server:wait_for_nodedown(),
-  ShortNode = list_to_binary(edts_util:nodename2shortname(Node)),
-  {mochijson2:encode([{node, ShortNode}]), ReqData, Ctx}.
+  case orddict:find(return, Ctx) of
+    false     -> {[], ReqData, Ctx};
+    {ok, Ret} ->
+      Bin = list_to_binary(Ret),
+      {mochijson2:encode([{return, Bin}]), ReqData, Ctx}
+  end.
+
 
 %%%_* Internal functions =======================================================
 

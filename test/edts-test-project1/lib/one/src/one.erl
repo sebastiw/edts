@@ -10,7 +10,7 @@
 -define(macro_ok, ok).
 
 -spec one(any()) -> string().
-one(Foo) -> lists:keymap(fo, bar, a),
+one(Foo) ->
   case one_two:one_two_fun(a) of
     Foo -> ?macro_ok;
     _   -> error(oo)

@@ -1,35 +1,36 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc utility library for edts.
+%%% @doc
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
-%%% Copyright 2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+%%% Copyright 2012 Thomas Järvstrand <tjarvstrand@gmail.com>
 %%%
-%%% This file is part of EDTS.
+%%% This file is part of foo.
 %%%
-%%% EDTS is free software: you can redistribute it and/or modify
-%%% it under the terms of the GNU Lesser General Public License as published by
+%%% foo is free software: you can redistribute it and/or modify
+%%% it under the terms of the GNU General Public License as published by
 %%% the Free Software Foundation, either version 3 of the License, or
 %%% (at your option) any later version.
 %%%
-%%% EDTS is distributed in the hope that it will be useful,
+%%% foo is distributed in the hope that it will be useful,
 %%% but WITHOUT ANY WARRANTY; without even the implied warranty of
 %%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-%%% GNU Lesser General Public License for more details.
+%%% GNU General Public License for more details.
 %%%
-%%% You should have received a copy of the GNU Lesser General Public License
-%%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
+%%% You should have received a copy of the GNU General Public License
+%%% along with foo. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_plugin).
-
-%%%_* Includes =================================================================
+-module(edts_events).
 
 %%%_* Exports ==================================================================
 
+%% API
 -export([behaviour_info/1]).
+
+%%%_* Includes =================================================================
 
 %%%_* Defines ==================================================================
 
@@ -37,16 +38,15 @@
 
 %%%_* API ======================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+-spec behaviour_info(any()) -> [{atom(), non_neg_integer()}] | undefined.
+%%------------------------------------------------------------------------------
 behaviour_info(callbacks) ->
-  [ {edts_server_services, 0}, %% For future use
-    {project_node_modules, 0},
-    {project_node_services, 0}
-  ];
-behaviour_info(_) -> undefined.
+  [{format_info, 3}].
 
 %%%_* Internal functions =======================================================
-
-%%%_* Unit tests ===============================================================
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

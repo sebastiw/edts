@@ -99,13 +99,16 @@ validate(ReqData0, Ctx0, Keys) ->
   try
     {ReqData, Ctx} = lists:foldl(F, {ReqData0, Ctx0}, Keys),
     {false, ReqData, Ctx}
-  catch throw:{error, Key} = E ->
-      KeyString = case Key of
-                    {_Type, KeyAtom} -> atom_to_list(KeyAtom);
-                    KeyAtom          -> atom_to_list(KeyAtom)
-                  end,
-      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p",
-                     [Key, wrq:get_qs_value(KeyString, ReqData0)]),
+  catch throw:{error, Key0} = E ->
+      Key = case Key0 of
+              Key1          when is_atom(Key1) -> atom_to_list(Key1);
+              {_Type, Key1} when is_atom(Key1) -> Key1;
+              {_Type, Props} ->
+                {ok, N} = tulib_lists:assoc(name, Props),
+                N
+            end,
+      Value = wrq:get_qs_value(atom_to_list(Key), ReqData0),
+      edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p", [Key, Value]),
       {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
 
@@ -156,6 +159,7 @@ term_to_validate(line) ->
 term_to_validate(module)               -> fun module_validate/2;
 term_to_validate(modules)              -> fun modules_validate/2;
 term_to_validate(nodename)             -> fun nodename_validate/2;
+term_to_validate(process)              -> fun process_validate/2;
 term_to_validate(project_name)         ->
   fun(RD, _Ctx) -> string_validate(RD, "project_name") end;
 term_to_validate(project_root)         -> fun project_root_validate/2;
@@ -401,6 +405,19 @@ modules_exists_p(_ReqData, Ctx) ->
 %%------------------------------------------------------------------------------
 nodename_validate(ReqData, _Ctx) ->
   {ok, make_nodename(wrq:path_info(nodename, ReqData))}.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate nodename
+%% @end
+-spec process_validate(wrq:req_data(), orddict:orddict()) -> {ok, pid()}.
+%%------------------------------------------------------------------------------
+process_validate(ReqData, _Ctx) ->
+  ProcessStr = wrq:path_info(process, ReqData),
+  case catch(erlang:list_to_pid("<" ++ ProcessStr ++ ">")) of
+    {'EXIT', {badarg, _}}    -> {error, {badarg, ProcessStr}};
+    Pid when is_pid(Pid) -> {ok, Pid}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

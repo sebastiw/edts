@@ -33,7 +33,8 @@
 -export([free_vars/1,
          free_vars/2,
          parse_expressions/1,
-         parse_forms/1]).
+         parse_forms/1,
+         parse_term/1]).
 
 %%%_* Defines ==================================================================
 
@@ -79,7 +80,8 @@ free_vars(Text, StartLine) ->
 %% @doc
 %% Tokenize and parse String as a sequence of forms.
 %% @end
--spec parse_forms(string()) -> Forms::erl_parse:abstract_form().
+-spec parse_forms(string()) -> {ok, Forms::erl_parse:abstract_form()} |
+                               {error, term()}.
 %%------------------------------------------------------------------------------
 parse_forms(String) -> parse(scan(String)).
 
@@ -87,13 +89,27 @@ parse_forms(String) -> parse(scan(String)).
 %% @doc
 %% Tokenize and parse String as a sequence of expressions.
 %% @end
--spec parse_expressions(string()) -> Forms::erl_parse:abstract_form().
+-spec parse_expressions(string()) -> {ok, Forms::erl_parse:abstract_form()} |
+                                     {error, term()}.
 %%------------------------------------------------------------------------------
 parse_expressions(String) ->
   case erl_parse:parse_exprs(scan(String)) of
     {ok, _}    = Res -> Res;
     {error, _} = Err -> Err
   end.
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Tokenize and parse String as an erlang term
+%% @end
+-spec parse_term(string()) -> {ok, term()}.
+%%------------------------------------------------------------------------------
+parse_term(String) ->
+  {ok, Exprs} = parse_expressions(String),
+  {value, Term, _} = erl_eval:exprs(Exprs, erl_eval:new_bindings()),
+  {ok, Term}.
+
 
 %%%_* Internal functions =======================================================
 

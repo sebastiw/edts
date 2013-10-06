@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'edts-event)
+
 (defcustom edts-erl-command
   (or (executable-find "erl")
       (null
@@ -66,6 +68,17 @@ node."
   "Hooks to run after a node has gone down. These hooks are called with
 the node-name of the node that has gone down as the argument.")
 
+(defun edts-event-handler (node class type info)
+  (case type
+    (node_down
+     (let ((node (cdr (assoc 'node info))))
+       (edts-log-info "Node %s down" node)
+       (run-hook-with-args 'edts-node-down-hook node)))
+    (server_down
+     (edts-log-info "EDTS server down")
+     (setq edts--outstanding-node-registration-requests nil)
+     (run-hooks 'edts-server-down-hook))))
+(edts-event-register-handler 'edts-event-handler 'edts)
 
 (defun edts-buffer-node-name ()
   "Print the node sname of the erlang node connected to current
@@ -283,35 +296,13 @@ for ARITY will give a regexp matching any arity."
     (setq available (edts-get-nodes t))
     (while (and (> retries 0) (not available))
       (setq available (edts-get-nodes t))
-      (sit-for 0.1)
+      (sit-for 0.2)
       (decf retries))
     (when available
-      (edts-node-down-request))
+      (edts-log-info "Started EDTS server")
+      (edts-event-listen))
     available))
 
-
-(defun edts-node-down-request ()
-  (let ((buf (edts-rest-get-async '("nodes" "node_down")
-                                  nil
-                                  #'edts-node-down-request-callback)))
-    (when buf
-      (set-process-query-on-exit-flag (get-buffer-process buf) nil))))
-
-
-(defun edts-node-down-request-callback (reply)
-  "Initialize things needed to detect when a node goes down"
-    (if reply
-        (let* ((result (cdr (assoc 'result reply)))
-               (body   (cdr (assoc 'body reply)))
-               (node   (cdr (assoc 'node body))))
-          (if (not (string= (car result) "200"))
-              (null (edts-log-error "Unexpected reply %s" result))
-            (edts-log-info "Node %s down" node)
-            (run-hook-with-args 'edts-node-down-hook node)
-            (edts-node-down-request)))
-      ;; Assume that the server went down if reply is empty
-      (edts-log-info "EDTS server down")
-      (run-hooks 'edts-server-down-hook)))
 
 (defun edts-ensure-node-not-started (node-name)
   "Signals an error if a node of name NODE-NAME is running on
@@ -390,21 +381,22 @@ requests.")
           (null (edts-log-error "Node %s failed to start." node-name)))
       ;; Node started, remove it from list of pending nodes and start
       ;; initialization.
+      (edts-log-info "Node %s started" node-name)
       (setq edts--pending-node-startups
             (remove node-name edts--pending-node-startups))
-      (edts-init-node-async project-name
-                            node-name
-                            root
-                            libs
-                            app-include-dirs
-                            project-include-dirs))))
+      (edts-init-node project-name
+                      node-name
+                      root
+                      libs
+                      app-include-dirs
+                      project-include-dirs))))
 
-(defun edts-init-node-async (project-name
-                             node-name
-                             root
-                             libs
-                             app-include-dirs
-                             project-include-dirs)
+(defun edts-init-node (project-name
+                       node-name
+                       root
+                       libs
+                       app-include-dirs
+                       project-include-dirs)
   "Register NODE-NAME with the EDTS server asynchronously."
   (unless (member node-name edts--outstanding-node-registration-requests)
     (edts-log-debug "Initializing node %s" node-name)
@@ -422,10 +414,13 @@ requests.")
                            (cons "app_include_dirs"     app-include-dirs)
                            (cons "project_include_dirs" project-include-dirs)))
            (cb-args  (list node-name)))
-      (edts-rest-post-async resource
-                            args
-                            #'edts-init-node-async-callback
-                            cb-args))))
+      (if edts-async-node-init
+          (edts-rest-post-async resource
+                                args
+                                #'edts-init-node-async-callback
+                                cb-args)
+        (let ((reply (edts-rest-post resource args)))
+          (edts-init-node-async-callback reply node-name))))))
 
 (defun edts-init-node-async-callback (reply node-name)
   "Handle the result of an asynchronous node registration."
@@ -434,7 +429,7 @@ requests.")
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
         (progn
-          (edts-log-debug "Successfuly intialized node %s" node-name)
+          (edts-log-info "Successfuly intialized node %s" node-name)
           (run-hooks 'edts-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
@@ -561,6 +556,19 @@ CALLBACK with the parsed response as the single argument."
      "running dialyzer on %s async on %s" modules node-name)
     (edts-rest-get-async resource args #'edts-async-callback cb-args)))
 
+(defun edts-pretty-print-term (term-str indent max-col)
+  "Pretty-print the term represented by TERM-STR, indenting it INDENT
+spaces and breaking lines at column MAX-COL."
+  (let* ((resource '("pretty_print"))
+         (rest-args `(("string" .   ,term-str)
+                      ("indent" .   ,(number-to-string indent))
+                      ("max_column" ,(number-to-string max-col))))
+         (res         (edts-rest-get resource rest-args )))
+    (if (equal (assoc 'result res) '(result "200" "OK"))
+        (cdr (assoc 'return (cdr (assoc 'body res))))
+      (null
+       (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+
 
 (defun edts-async-callback (reply callback expected &rest args)
   "Generic callback-function for handling the reply of rest-requests.
@@ -598,11 +606,16 @@ non-nil, don't report an error if the request fails."
 (defun edts--node-memberp (node nodes)
   (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
 
+(defvar edts-node-name nil
+  "Used to manually set the project node-name to use in a buffer
+that is not part of a project")
+(make-variable-buffer-local 'edts-node-name)
+
 (defun edts-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex
       (eproject-attribute :node-sname)
-    ('error (edts-shell-node-name))))
+    ('error edts-node-name)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests

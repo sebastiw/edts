@@ -29,6 +29,11 @@
 (require 'eproject-extras)
 (require 'path-util)
 
+(defvar edts-code-issue-types '(edts-code-compile
+                                edts-code-dialyzer
+                                edts-code-eunit-failed)
+  "List of overlay categories that are considered edts-code-issues")
+
 (defvar edts-code-before-compile-hook
   nil
   "Hooks to run before compilation. Hooks are called with the name of
@@ -96,7 +101,7 @@ with severity as key and a lists of issues as values"
 (defun edts-code-compile-and-display ()
   "Compiles current buffer on node related the that buffer's project."
   (interactive)
-  (edts-face-remove-overlays '("edts-code-compile"))
+  (edts-face-remove-overlays '(edts-code-compile))
   (let ((module   (ferl-get-module))
         (file     (buffer-file-name)))
     (when module
@@ -111,8 +116,8 @@ with severity as key and a lists of issues as values"
           (warnings (cdr (assoc 'warnings comp-res))))
       (edts-code--set-issues 'edts-code-compile (list 'error   errors
                                                       'warning warnings))
-      (edts-code-display-error-overlays "edts-code-compile" errors)
-      (edts-code-display-warning-overlays "edts-code-compile" warnings)
+      (edts-code-display-error-overlays 'edts-code-compile errors)
+      (edts-code-display-warning-overlays 'edts-code-compile warnings)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status))
       (run-hook-with-args 'edts-code-after-compile-hook (intern result))
       result)))
@@ -135,8 +140,8 @@ buffer's project."
   (interactive '(ok))
   (let ((module (ferl-get-module)))
     (when module
-      (edts-face-remove-overlays '("edts-code-eunit-passed"))
-      (edts-face-remove-overlays '("edts-code-eunit-failed"))
+      (edts-face-remove-overlays '(edts-code-eunit-passed))
+      (edts-face-remove-overlays '(edts-code-eunit-failed))
       (when (not (eq result 'error))
 	(edts-get-module-eunit-async
 	 module #'edts-code-handle-eunit-result)))))
@@ -147,9 +152,9 @@ buffer's project."
           (passed (cdr (assoc 'passed eunit-res))))
       (edts-code--set-issues 'edts-code-eunit (list 'error failed))
       (edts-code-display-passed-test-overlays
-       "edts-code-eunit-passed" passed)
+       'edts-code-eunit-passed passed)
       (edts-code-display-failed-test-overlays
-       "edts-code-eunit-failed" failed)
+       'edts-code-eunit-failed failed)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
 
 (defun edts-code-dialyze-related-hook-fun (result)
@@ -163,7 +168,7 @@ buffer either by belonging to the same project or, if current buffer
 does not belongi to any project, being in the same directory as the
 current buffer's file."
   (interactive)
-  (edts-face-remove-overlays '("edts-code-dialyzer"))
+  (edts-face-remove-overlays '(edts-code-dialyzer))
   (if eproject-mode
       (edts-code-dialyze-project)
     (edts-code-dialyze-no-project)))
@@ -215,7 +220,7 @@ non-recursive."
           (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
           (edts-face-update-buffer-mode-line (edts-code-buffer-status))
           (when warnings
-            (edts-code-display-warning-overlays "edts-code-dialyzer"
+            (edts-code-display-warning-overlays 'edts-code-dialyzer
                                                 warnings)))))))
 
 
@@ -298,10 +303,7 @@ non-recursive."
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
-  (let* ((overlay (edts-face-next-overlay (point) '("edts-code-compile"
-                                                    "edts-code-dialyzer"
-                                                    "edts-code-xref"
-                                                    "edts-code-eunit-failed"))))
+  (let* ((overlay (edts-face-next-overlay (point) edts-code-issue-types)))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))
@@ -312,11 +314,7 @@ non-recursive."
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
-  (let* ((overlay (edts-face-previous-overlay (point)
-                                              '("edts-code-compile"
-                                                "edts-code-dialyzer"
-                                                "edts-code-xref"
-                                                "edts-code-eunit-failed"))))
+  (let* ((overlay (edts-face-previous-overlay (point) edts-code-issue-types)))
     (if overlay
         (progn
           (goto-char (overlay-start overlay))

@@ -155,8 +155,11 @@ Example:
                                (string= (directory-file-name path) "/usr"))))
         (if (string-match "\\(.*\\)/lib/erlang[/]?$" path)
             ;; Match out lib/erlang part if we're in an install directory.
-            (match-string 1 path)
+            (let ((res (match-string 1 path)))
+              (edts-log-debug "edts-project-otp-selector result %s" res)
+              res)
           ;; Do nothing if we're in an otp-repository.
+          (edts-log-debug "edts-project-otp-selector result %s" path)
           path))))
 
 (define-project-type edts-temp (generic)
@@ -239,7 +242,7 @@ Example:
 (defun edts-project-node-refresh ()
   "Asynchronously refresh the state of current buffer's project node"
   (interactive)
-  (edts-init-node-async
+  (edts-init-node
    (eproject-attribute :name)
    (eproject-attribute :node-sname)
    (eproject-root)
@@ -493,12 +496,14 @@ auto-save data."
    edts-project-suite
    ;; Setup
    (lambda ()
+     (setq edts-event-inhibit t)
      (edts-test-pre-cleanup-all-buffers)
      (edts-test-setup-project edts-test-project1-directory
                               "test"
                               nil))
    ;; Teardown
    (lambda (setup-config)
+     (setq edts-event-inhibit nil)
      (edts-test-post-cleanup-all-buffers)
      (edts-test-teardown-project edts-test-project1-directory)))
 
