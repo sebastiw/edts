@@ -72,7 +72,7 @@ event_formatters()      -> [{edts_debug, edts_events_debug}].
 project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
 
-spec(break, 3)                -> [{module,   atom},
+spec(break,                3) -> [{module,   atom},
                                   {line,     integer},
                                   {break,    atom}];
 spec(breakpoints,          0) -> [];
@@ -83,7 +83,7 @@ spec(interpreted_modules,  0) -> [];
 spec(interpret_module,     2) -> [{module,   atom},
                                  {interpret, atom}];
 spec(module_interpreted_p, 1) -> [{module,   atom}];
-spec(processes, 0)            -> [];
+spec(processes,            0) -> [];
 spec(step_into,            1) -> [{pid, pid}];
 spec(step_over,            1) -> [{pid, pid}].
 
