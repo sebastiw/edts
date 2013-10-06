@@ -42,14 +42,14 @@ undefined_function_calls, unexported_functions"
 (defun edts-xref-after-node-init-hook ()
   "Hook to run after node initialization."
   ;; Start the xref server
-  (setq edts-xref-initialized-nodes
-        (remove (edts-node-name) edts-xref-initialized-nodes))
-  (let ((resource  (list "plugins"
-                         "xref"
-                         "nodes" (edts-node-name)))
-        (rest-args '(("start" . "true")))
-        (cb-args   `(edts-xref-server-init-callback 204 ,(edts-node-name))))
-    (edts-rest-post-async resource rest-args #'edts-async-callback cb-args)))
+  (let ((node (edts-node-name)))
+    (setq edts-xref-initialized-nodes (remove node edts-xref-initialized-nodes))
+    (edts-plugin-call-async node
+                            'edts_xref
+                            'start
+                            nil
+                            'edts-xref-server-init-callback
+                            (list node))))
 
 (defun edts-xref-server-down-hook ()
   "Hook to run after the main edts server goes down"
@@ -112,22 +112,18 @@ buffer's project."
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
-  (let* ((node-name (edts-node-name))
-         (resource  (list "plugins" "xref"
-                          "nodes" node-name
-                          "analysis"))
-         (rest-args `(("xref_checks" . ,(mapcar #'symbol-name edts-xref-checks))
-                      ("modules"     . ,modules)))
-         (cb-args   (list #'edts-xref-analysis-callback 200)))
-    (edts-log-debug
-     "fetching xref-analysis of %s async on %s" modules node-name)
-    (edts-rest-get-async resource rest-args #'edts-async-callback cb-args)))
-
+  (let* ((node (edts-node-name))
+         (args `(("xref_checks" . ,(mapcar #'symbol-name edts-xref-checks))
+                 ("modules"     . ,modules))))
+    (edts-log-debug "fetching xref-analysis of %s async on %s" modules node)
+    (edts-plugin-call-async node
+                            'edts_xref
+                            'analyze args
+                            #'edts-xref-analysis-callback)))
 
 (defun edts-xref-analysis-callback (analysis-res)
   (when analysis-res
-    (let* ((all-errors (cdr (assoc 'errors analysis-res)))
-           (err-alist  (edts-code--issue-to-file-map all-errors)))
+    (let* ((err-alist  (edts-code--issue-to-file-map analysis-res)))
       ;; Set the error list in each project-buffer
       (with-each-buffer-in-project (gen-sym) (eproject-root)
         (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
@@ -140,17 +136,10 @@ parsed response as the single argument"
 (defun edts-xref-get-who-calls (module function arity)
   "Fetches a list of all function calling  MODULE:FUNCTION/ARITY on
 current buffer's project node."
-  (let* ((resource (list "plugins" "xref"
-                         "nodes" (edts-node-name)
-                         "modules" module
-                         "functions" function
-                         (number-to-string arity)
-                         "callers"))
-         (res      (edts-rest-get resource nil)))
-    (if (equal (assoc 'result res) '(result "200" "OK"))
-        (cdr (assoc 'body res))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
+  (let ((args (list (cons "module"   module)
+                    (cons "function" function)
+                    (cons "arity"    (number-to-string arity)))))
+    (edts-plugin-call (edts-node-name) 'edts_xref 'who_calls args)))
 
 (defun edts-xref-who-calls ()
   (interactive)

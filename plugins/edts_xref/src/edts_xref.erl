@@ -33,7 +33,12 @@
 -export([edts_server_services/0,
          event_formatters/0,
          project_node_modules/0,
-         project_node_services/0]).
+         project_node_services/0,
+         spec/2]).
+
+-export([analyze/2,
+         start/0,
+         who_calls/3]).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
@@ -47,11 +52,35 @@
 %% EDTS Plugin API
 edts_server_services() -> [].
 event_formatters()     -> [].
-project_node_modules() -> [edts_xref_server].
+project_node_modules() -> [?MODULE, edts_xref_server].
 %% Just the empty list here. We want to start the server asynchronously from
 %% the node-init-hook to avoid a long blocking node initialization.
 project_node_services() -> [].
 
+spec(analyze,   2) -> [{modules,     [atom]},
+                       {xref_checks, [atom]}];
+spec(start,     0) -> [];
+spec(who_calls, 3) -> [{module,   atom},
+                       {function, atom},
+                       {arity,    integer}].
+
+analyze(Modules, Checks) ->
+  Res = edts_xref_server:check_modules(Modules, Checks),
+  [[{type, Type},
+    {file, list_to_binary(File)},
+    {line, Line},
+    {description, list_to_binary(Desc)}] ||
+    {Type, File, Line, Desc} <- Res].
+
+start() -> edts_xref_server:start().
+
+who_calls(Module, Function, Arity) ->
+  Res = edts_xref_server:who_calls(Module, Function, Arity),
+  [[{module,   M},
+    {function, F},
+    {arity,    A},
+    {lines, Lines}] ||
+    {{M, F, A}, Lines} <- Res].
 
 %%%_* INTERNAL functions =======================================================
 
