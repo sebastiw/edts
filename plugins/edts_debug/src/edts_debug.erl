@@ -35,23 +35,25 @@
 -export([edts_server_services/0,
          event_formatters/0,
          project_node_modules/0,
-         project_node_services/0]).
+         project_node_services/0,
+         spec/2]).
 
 
 -export([break/3,
          breakpoint_exists_p/2,
          breakpoints/0,
          breakpoints/1,
-         continue/1,
          ensure_started/0,
-         finish/1,
-         get_bindings/1,
          interpret_module/2,
          interpreted_modules/0,
          module_interpretable_p/1,
          module_interpreted_p/1,
          process_state/1,
          processes/0,
+
+         %% interpreter process commands
+         continue/1,
+         finish/1,
          step_into/1,
          step_over/1]).
 
@@ -69,6 +71,21 @@ edts_server_services()  -> [].
 event_formatters()      -> [{edts_debug, edts_events_debug}].
 project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
+
+spec(break, 3)                -> [{module,   atom},
+                                  {line,     integer},
+                                  {break,    atom}];
+spec(breakpoints,          0) -> [];
+spec(breakpoints,          1) -> [{module,   atom}];
+spec(continue,             1) -> [{pid, pid}];
+spec(finish,               1) -> [{pid, pid}];
+spec(interpreted_modules,  0) -> [];
+spec(interpret_module,     2) -> [{module,   atom},
+                                 {interpret, atom}];
+spec(module_interpreted_p, 1) -> [{module,   atom}];
+spec(processes, 0)            -> [];
+spec(step_into,            1) -> [{pid, pid}];
+spec(step_over,            1) -> [{pid, pid}].
 
 
 %%------------------------------------------------------------------------------
@@ -129,8 +146,14 @@ breakpoint_exists_p(Module, Line) ->
 %%------------------------------------------------------------------------------
 breakpoints() ->
   ensure_started(),
-  int:all_breaks().
-
+  lists:map(fun({{Module, Line}, [Status, Trigger, null, Condition]}) ->
+                [{module,     Module},
+                 {line,      Line},
+                 {status,    Status},
+                 {trigger,   Trigger},
+                 {condition, edts_plugins:to_ret_str(Condition)}]
+            end,
+            int:all_breaks()).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -143,7 +166,8 @@ breakpoints() ->
 breakpoints(Module) ->
   ensure_started(),
   %% int:all_breaks/1 is broken in OTP < R15.
-  [Break || Break = {{M, _},_} <- int:all_breaks(), M =:= Module].
+  lists:filter(fun(B) -> {module, Module} =:= lists:keyfind(module, 1, B) end,
+               breakpoints()).
 
 
 %%------------------------------------------------------------------------------
@@ -189,7 +213,7 @@ finish(Pid) ->
 %% Return a list of all of Pid's current variable bindings. Unless the process
 %% is in a 'break' state, this will be [].
 %% @end
--spec get_bindings(pid()) -> [{atom(), term()}].
+-spec get_bindings(pid()) -> [{atom(), binary()}].
 %%------------------------------------------------------------------------------
 get_bindings(Pid) ->
   ensure_started(),
@@ -198,7 +222,8 @@ get_bindings(Pid) ->
       case process_status(ProcessState) of
         break ->
           {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
-          int:meta(Meta, bindings, nostack);
+          [{B, edts_plugins:to_ret_str(V)} ||
+            {B, V} <- int:meta(Meta, bindings, nostack)];
         _ ->
           []
       end;

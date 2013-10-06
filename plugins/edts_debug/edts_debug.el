@@ -83,7 +83,7 @@ request should always be outstanding if we are not already attached.")
   "Initialize edts_debug."
   ;; Keys
   (define-key edts-mode-map "\C-c\C-db"   'edts_debug-toggle-breakpoint)
-  (define-key edts-mode-map "\C-c\C-di"   'edts_debug-interpret)
+  (define-key edts-mode-map "\C-c\C-di"   'edts_debug-toggle-interpreted)
   (define-key edts-mode-map "\C-c\C-d\M-b" 'edts_debug-list-breakpoints)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts_debug-list-interpreted)
   (define-key edts-mode-map "\C-c\C-d\M-p" 'edts_debug-list-processes)
@@ -306,34 +306,26 @@ modules, breakpoints and debugged processes).")
                                    edts_debug-process-location-face-prio
                                    t)))))
 
+(defun edts_debug-toggle-interpreted ()
+  "Toggle the interpretation state for module in current buffer."
+  (interactive)
+  (edts_debug-interpret nil nil 'toggle))
 
 (defun edts_debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
 NODE and MODULE default to the values associated with current buffer.
 If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
-other value toggles interpretation, which is the default behaviour."
-  (interactive (list
-                nil
-                nil
-                'toggle))
+other value toggles interpretation, which is the default behaviour when
+called interactively."
   (let* ((module    (or module (ferl-get-module)))
-         (node-name (or node (edts-node-name)))
+         (node      (or node (edts-node-name)))
          (interpret (cond
                      ((eq interpret t) "true")
                      ((null interpret) "false")
                      (t                "toggle")))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes" node-name
-                          "modules" module))
-         (rest-args (list (cons "interpret" interpret)))
-         (reply     (edts-rest-post resource rest-args))
-         (res       (assoc 'result reply)))
-    (cond
-     ((equal res '(result "403" "Forbidden"))
-      (null (edts-log-error "%s is not interpretable" module)))
-     ((not (equal res '(result "201" "Created")))
-      (null (edts-log-error "Unexpected reply: %s" (cdr res)))))))
+         (args (list (cons "module"    module)
+                     (cons "interpret" interpret))))
+    (edts-plugin-call node 'edts_debug 'interpret_module args)))
 
 (defun edts_debug-toggle-breakpoint ()
   "Toggle breakpoint on current line."
@@ -346,110 +338,51 @@ BREAK. NODE and MODULE default to the values associated with current
 buffer. If BREAK is nil remove any breakpoint; if it is t set a
 breakpoint if one doesn't already exist; any other value toggles
 breakpoint existence at LINE, which is the default behaviour."
-  (let* ((node-name (or node (edts-node-name)))
-         (module    (or module (ferl-get-module)))
-         (line      (or line (line-number-at-pos)))
-         (break     (cond
-                     ((eq break t) "true")
-                     ((null break) "false")
-                     (t            "toggle")))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes"   node-name
-                          "modules" module
-                          "breakpoints" (number-to-string line)))
-         (rest-args (list (cons "break" break)))
-         (reply     (edts-rest-post resource rest-args))
-         (res       (assoc 'result reply)))
-    (cond
-     ((equal res '(result "403" "Forbidden"))
-      (null (edts-log-error "%s is not interpretable" module)))
-     ((not (equal res '(result "201" "Created")))
-      (null (edts-log-error "Unexpected reply: %s" (cdr res)))))))
+  (let* ((node   (or node (edts-node-name)))
+         (module (or module (ferl-get-module)))
+         (line   (number-to-string (or line (line-number-at-pos))))
+         (break  (cond
+                  ((eq break t) "true")
+                  ((null break) "false")
+                  (t            "toggle")))
+         (args   (list (cons "module" module)
+                       (cons "line"   line)
+                       (cons "break"  break))))
+    (edts-plugin-call node 'edts_debug 'break args)))
 
 (defun edts_debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
 MODULE default to the value associated with current buffer."
-  (let* ((node-name (or node (edts-node-name)))
-         (module    (or module (ferl-get-module)))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes"   node-name
-                          "modules" module
-                          "breakpoints"))
-         (rest-args nil)
-         (reply     (edts-rest-get resource rest-args))
-         (res       (assoc 'result reply)))
-    (if (not (equal res '(result "200" "OK")))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr res)))
-      (cdr (assoc 'body reply)))))
+  (let* ((node   (or node (edts-node-name)))
+         (module (or module (ferl-get-module)))
+         (args   (list (cons "module" module))))
+    (edts-plugin-call node 'edts_debug 'breakpoints args)))
 
 (defun edts_debug-all-breakpoints (&optional node)
   "Return a list of all breakpoint states on NODE. NODE defaults to the
 value associated with current buffer."
-  (let* ((node-name (or node (edts-node-name)))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes"   node-name
-                          "breakpoints"))
-         (rest-args nil)
-         (reply     (edts-rest-get resource rest-args))
-         (res       (assoc 'result reply)))
-    (if (not (equal res '(result "200" "OK")))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr res)))
-      (cdr (assoc 'body reply)))))
+  (let* ((node (or node (edts-node-name))))
+    (edts-plugin-call node 'edts_debug 'breakpoints)))
 
 (defun edts_debug-all-processes (&optional node)
-  "Return a list of all breakpoint states on NODE. NODE defaults to the
+  "Return a list of all processes states on NODE. NODE defaults to the
 value associated with current buffer."
-  (let* ((node-name (or node (edts-node-name)))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes"   node-name
-                          "processes"))
-         (rest-args nil)
-         (reply     (edts-rest-get resource rest-args))
-         (res       (assoc 'result reply)))
-    (if (not (equal res '(result "200" "OK")))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr res)))
-      (cdr (assoc 'body reply)))))
-
+  (let* ((node(or node (edts-node-name))))
+    (edts-plugin-call node 'edts_debug 'processes)))
 
 (defun edts_debug-interpretedp (&optional node module)
   "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
 default to the values associated with current buffer."
-  (let* ((module    (or module (ferl-get-module)))
-         (node-name (or node (edts-node-name)))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes" node-name
-                          "modules" module))
-         (rest-args nil)
-         (reply     (edts-rest-get resource rest-args))
-         (res       (assoc 'result reply)))
-    (if (not (equal res '(result "200" "OK")))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr res)))
-      (cdr (assoc 'interpreted (cdr (assoc 'body reply)))))))
+  (let* ((module (or module (ferl-get-module)))
+         (node   (or node (edts-node-name)))
+         (args   (list (cons "module" module))))
+    (edts-plugin-call node 'edts_debug 'module_interpreted_p args)))
 
 (defun edts_debug-interpreted-modules (&optional node)
   "Return a list of all modules that are interpreted on NODE. NODE
 default to the values associated with current buffer."
-  (let* ((node-name (or node (edts-node-name)))
-         (resource  (list "plugins"
-                          "debugger"
-                          "nodes" node-name
-                          "modules"))
-         (rest-args nil)
-         (reply     (edts-rest-get resource rest-args))
-         (res       (assoc 'result reply)))
-    (if (not (equal res '(result "200" "OK")))
-        (null
-         (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))
-      (cdr (assoc 'modules (cdr (assoc 'body reply)))))))
+  (let* ((node (or node (edts-node-name))))
+    (edts-plugin-call node 'edts_debug 'interpreted_modules)))
 
 (defun edts_debug-continue (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
@@ -470,22 +403,16 @@ default to the values associated with current buffer."
   (interactive)
   (edts_debug-command node-name pid 'step_over))
 
-(defun edts_debug-command (node-name pid command)
+(defun edts_debug-command (node pid command)
   "Send COMMAND to the debugged process with PID on NODE. Command is
 one of continue, finish, step_into or step_over."
-  (let* ((resource (list "plugins"   "debugger"
-                         "nodes"     node-name
-                         "processes" pid
-                         "command"))
-         (args  (list (cons "cmd" (symbol-name command))))
-         (reply (edts-rest-post resource args))
-         (res   (car (cdr (assoc 'result reply)))))
-    (unless (equal res "200")
-      (null (edts-log-error "Unexpected reply: %s" res)))))
+  (let* ((args  (list (cons "pid" pid))))
+    (edts-plugin-call node 'edts_debug command args))
 
 (defun edts_debug-get-nodes ()
   "Return a list of all nodes to consider when issuing debugger commands"
-  ;; this is a bit of a hack...
+  ;; this is a bit of a hack to avoid the debugger running on the main edts
+  ;; server...
   (remove "edts" (edts-get-nodes)))
 
 (defun edts_debug-attach (node pid)
