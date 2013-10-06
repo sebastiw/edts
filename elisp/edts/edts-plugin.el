@@ -52,16 +52,20 @@
 
 (defun edts-plugin-call (node plugin method &optional args)
   "Call PLUGIN's rpc method METHOD with ARGS on NODE."
-  (let* ((resource `("plugins" ,(symbol-name plugin) "call"))
-         (body     `((node   . ,node)
-                     (method . ,(symbol-name method))
-                     (params . ,args)
-                     (id     . -1)))
-         (reply      (edts-rest-post resource nil body)))
+  (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
+  (let* ((resource `("nodes"   ,node
+                     "plugins" ,(symbol-name plugin)
+                     ,(symbol-name method)))
+         (reply      (edts-rest-post resource args))
+         (body       (cdr (assoc 'body reply))))
     (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
-        (null
+        (prog1 nil
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
-      (cdr (assoc 'body reply)))))
+      (if (equal "error" (cdr (assoc 'result body)))
+          (prog1 nil
+            (edts-log-error "Error in plugin call: %s"
+                            (cdr (assoc 'return body))))
+        (cdr (assoc 'return body))))))
 
 
 (provide 'edts-plugin)

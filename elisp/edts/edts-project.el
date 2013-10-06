@@ -242,7 +242,7 @@ Example:
 (defun edts-project-node-refresh ()
   "Asynchronously refresh the state of current buffer's project node"
   (interactive)
-  (edts-init-node-async
+  (edts-init-node
    (eproject-attribute :name)
    (eproject-attribute :node-sname)
    (eproject-root)

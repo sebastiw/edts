@@ -56,18 +56,16 @@ allowed_methods(ReqData, Ctx) ->
 
 malformed_request(ReqData, Ctx0) ->
   try
-    Body = case wrq:req_body(ReqData) of
-             undefined -> throw(badarg);
-             Body0     -> decode(Body0)
-           end,
-    Ctx = [{plugin, ?l2a(wrq:path_info(plugin, ReqData))},
-           {node,   edts_util:shortname2nodename(body_fetch(node, Body))},
-           {method, ?l2a(body_fetch(method, Body))},
-           {params, case body_fetch(params, Body) of
-                      null -> [];
-                      Params -> Params
-                    end},
-           {id,     body_fetch(id,     Body)}],
+    Node    = edts_util:shortname2nodename(wrq:path_info(nodename, ReqData)),
+    Plugin  = ?l2a(wrq:path_info(plugin, ReqData)),
+    Method  = ?l2a((wrq:path_info(method, ReqData))),
+    Params0 = wrq:req_qs(ReqData),
+    Arity   = length(Params0),
+    Params  = convert_params(Params0, Plugin:spec(Method, Arity)),
+    Ctx = [{node,   Node},
+           {plugin, Plugin},
+           {method, Method},
+           {params, Params}],
     {false, ReqData, orddict:from_list(Ctx)}
   catch
     _ -> {true, ReqData, Ctx0}
@@ -89,9 +87,6 @@ resource_exists(ReqData, Ctx) ->
     _ -> {false, ReqData, Ctx}
   end.
 
-assert(_, true)     -> ok;
-assert(Prop, false) -> throw(Prop).
-
 allow_missing_post(ReqData, Ctx) ->
   {false, ReqData, Ctx}.
 
@@ -100,32 +95,47 @@ process_post(ReqData, Ctx) ->
   Plugin    = orddict:fetch(plugin, Ctx),
   Method    = orddict:fetch(method, Ctx),
   Params    = orddict:fetch(params, Ctx),
-  Reply = [{id, orddict:fetch(id, Ctx)}] ++
+  Reply =
     case edts:call(Node, Plugin, Method, Params) of
-      {ok, Ret}  -> [{result, Ret}, {errors, null}];
-      {error, E} -> [{result, null}, {errors, [E]}]
-      end,
+      {ok, Ret}  -> [{result, ok},
+                     {return, convert_return(Ret)}];
+      {error, E} -> [{result, error},
+                     {return, edts_plugins:to_ret_str(E)}]
+    end,
   {true, wrq:set_resp_body(mochijson2:encode(Reply), ReqData), ReqData}.
 
 
 %%%_* Internal functions =======================================================
 
-body_fetch(Prop, Body) ->
-  case tulib_lists:assoc(Prop, Body) of
-    {ok, Val}         -> Val;
-    {error, notfound} -> throw(Prop)
-  end.
+assert(_, true)     -> ok;
+assert(Prop, false) -> throw(Prop).
 
-decode(Obj) ->
-  do_decode(mochijson2:decode(Obj)).
+convert_params(Params, Specs) ->
+  lists:map(fun({Key, Spec}) ->
+                {ok, Val} = tulib_lists:assoc(?a2l(Key), Params),
+                convert_param(Val, Spec)
+            end,
+            Specs).
 
+convert_param(Vs, [T]) -> [convert_param(V, T) || V <- Vs];
+convert_param(V,  pid) -> erlang:list_to_pid("<" ++ V ++ ">");
+convert_param(V,  T)   -> apply(erlang, ?l2a("list_to_" ++ ?a2l(T)), [V]).
 
-do_decode(String) when is_binary(String) -> binary_to_list(String);
-do_decode(Array)  when is_list(Array)    -> [do_decode(El) || El <- Array];
-do_decode({struct, Els})                 ->
-  [{?l2a(?b2l(K)), do_decode(V)} || {K, V} <- Els];
-do_decode(Obj) ->
-  Obj.
+convert_return(Ret) when is_list(Ret) ->
+  IsProp = fun({K, _V}) when is_atom(K) -> true;
+              (_)                      -> false
+           end,
+  case lists:all(IsProp, Ret) of
+    true  -> [{K, convert_return(V)} || {K, V} <- Ret];
+    false -> [convert_return(V) || V <- Ret]
+  end;
+convert_return(Ret) when is_tuple(Ret) -> edts_plugins:to_ret_str(Ret);
+convert_return(Ret) when is_pid(Ret)   ->
+  PidStr0 = pid_to_list(Ret),
+  PidStr = string:sub_string(PidStr0, 2, length(PidStr0) - 1),
+  list_to_binary(PidStr);
+convert_return(Ret) ->
+  Ret.
 
 %%%_* Unit tests ===============================================================
 %%%_* Emacs ====================================================================

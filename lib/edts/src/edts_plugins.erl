@@ -32,7 +32,8 @@
 -export([behaviour_info/1,
          dirs/0,
          names/0,
-         specs/0
+         specs/0,
+         to_ret_str/1
         ]).
 
 %% Callbacks
@@ -71,6 +72,9 @@ names() ->
 
 specs() ->
   lists:map(fun do_spec/1, dirs()).
+
+to_ret_str(Term) ->
+  list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
 
 %% Callbacks
 edts_server_services(Plugin) ->

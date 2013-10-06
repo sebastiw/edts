@@ -67,7 +67,7 @@ that class."
         (set-process-query-on-exit-flag (get-buffer-process buf) nil)))))
 
 (defun edts-event-listen-callback (reply)
-  "Initialize things needed to detect when a node goes down"
+  "Callback to be run when an event is received."
   (if reply
       (let* ((result (cdr (assoc 'result reply)))
              (event  (cdr (assoc 'event (cdr (assoc 'body reply)))))

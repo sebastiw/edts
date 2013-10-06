@@ -251,8 +251,8 @@ ensure that this is not enforced."
 Wrap a an async request to RESOURCE with ARGS and turn it into a
 synchronous request, calling CALLBACK with CALLBACK-ARGS when the
 request completes."
-    (make-local-variable 'url-show-status)
-    (setq url-show-status nil)
+  (make-local-variable 'url-show-status)
+  (setq url-show-status nil)
   (let ((url                       (edts-rest-resource-url resource args))
         (url-request-method        method)
         (url-request-extra-headers (list edts-rest-content-type-hdr)))
@@ -264,7 +264,7 @@ request completes."
 (defadvice url-http-end-of-document-sentinel
   (around edts-rest-end-of-document-sentinel (process why))
   "Workaround for url-http-end-of-document-sentinel not properly
-propagatin buffer-local variable when retrying a request.
+propagating buffer-local variables when retrying a request.
 
 http://debbugs.gnu.org/cgi/bugreport.cgi?bug=14983 will most likely solve
 the issue and make this hack redundant."
@@ -273,7 +273,6 @@ the issue and make this hack redundant."
          (url-request-extra-headers
           (buffer-local-value 'url-http-extra-headers buf))
          (url-request-data (buffer-local-value 'url-http-data buf)))
-    (message "Sentinel!!!")
     ad-do-it))
 (ad-activate-regexp "edts-rest-end-of-document-sentinel")
 
