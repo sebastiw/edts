@@ -42,9 +42,10 @@
   "Do the necessary initialization for PLUGIN."
   (edts-log-info "Initializing plugin %s" plugin-name)
   (add-to-list `load-path (path-util-join edts-plugin-directory plugin-name))
-  (let* ((init-fun          (intern (concat plugin-name "-init")))
-         (buf-init-fun      (intern (concat plugin-name "-buffer-init"))))
-    (require (intern plugin-name))
+  (let* ((elisp-plugin-name (replace-regexp-in-string "_" "-" plugin-name))
+         (init-fun          (intern (concat elisp-plugin-name "-init")))
+         (buf-init-fun      (intern (concat elisp-plugin-name "-buffer-init"))))
+    (require (intern elisp-plugin-name))
     (when (fboundp init-fun)
       (funcall init-fun))
     (when (fboundp buf-init-fun)

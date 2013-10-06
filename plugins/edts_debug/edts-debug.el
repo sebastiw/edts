@@ -21,216 +21,215 @@
 
 (require 'cl)
 
-(require 'edts_debug-mode)
+(require 'edts-debug-mode)
 
-(require 'edts_debug-list-breakpoint-mode)
-(require 'edts_debug-list-interpreted-mode)
-(require 'edts_debug-list-processes-mode)
+(require 'edts-debug-list-breakpoint-mode)
+(require 'edts-debug-list-interpreted-mode)
+(require 'edts-debug-list-processes-mode)
 
-(defface edts_debug-process-location-face
+(defface edts-debug-process-location-face
   '((((class color) (background dark)) (:background "midnight blue"))
     (((class color) (background light)) (:background "light blue"))
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
 
-(defface edts_debug-breakpoint-active-face
+(defface edts-debug-breakpoint-active-face
   '((((class color) (background dark)) (:background "dark slate gray"))
     (((class color) (background light)) (:background "yellow4")) ;; ?
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
 
-(defface edts_debug-breakpoint-inactive-face
+(defface edts-debug-breakpoint-inactive-face
   '((((class color) (background dark)) (:background "#3f3f3f"))
     (((class color) (background light)) (:background "yellow4")) ;; ?
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
 
-
-(defface edts_debug-breakpoint-inactive-face
+(defface edts-debug-breakpoint-inactive-face
   '((((class color) (background dark)) (:background "grey"))
     (((class color) (background light)) (:background "light grey"))
     (t (:bold t)))
   "Face used for marking warning lines."
   :group 'edts)
 
-(defconst edts_debug-breakpoint-face-prio 800
+(defconst edts-debug-breakpoint-face-prio 800
   "Face priority for breakpoints.")
 
-(defconst edts_debug-process-location-face-prio 801
+(defconst edts-debug-process-location-face-prio 801
   "Face priority for breakpoints.")
 
-(defvar edts_debug--interpret-request-buffer nil
+(defvar edts-debug--interpret-request-buffer nil
   "Buffer for requests to attach to the debugged process. One such
 request should always be outstanding if we are not already attached.")
 
-(defcustom edts_debug-auto-attach t
+(defcustom edts-debug-auto-attach t
   "If non-nil, automatically enter debug-mode when a breakpoint is hit.")
 
-(defvar edts_debug-node nil
+(defvar edts-debug-node nil
   "Then node we are debugging on")
 
-(defvar edts_debug-pid nil
+(defvar edts-debug-pid nil
   "The debugged pid")
 
-(defvar edts_debug-overlay-arrow-position nil)
+(defvar edts-debug-overlay-arrow-position nil)
 (add-to-list 'overlay-arrow-variable-list
-             'edts_debug-overlay-arrow-position)
+             'edts-debug-overlay-arrow-position)
 
-(defun edts_debug-init ()
-  "Initialize edts_debug."
+(defun edts-debug-init ()
+  "Initialize edts-debug."
   ;; Keys
-  (define-key edts-mode-map "\C-c\C-db"   'edts_debug-toggle-breakpoint)
-  (define-key edts-mode-map "\C-c\C-di"   'edts_debug-toggle-interpreted)
-  (define-key edts-mode-map "\C-c\C-d\M-b" 'edts_debug-list-breakpoints)
-  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts_debug-list-interpreted)
-  (define-key edts-mode-map "\C-c\C-d\M-p" 'edts_debug-list-processes)
-  (add-hook 'edts-after-node-init-hook 'edts_debug-after-node-init-hook)
-  (add-hook 'edts-node-down-hook 'edts_debug-node-down-hook)
-  (add-hook 'edts-server-down-hook 'edts_debug-server-down-hook))
+  (define-key edts-mode-map "\C-c\C-db"   'edts-debug-toggle-breakpoint)
+  (define-key edts-mode-map "\C-c\C-di"   'edts-debug-toggle-interpreted)
+  (define-key edts-mode-map "\C-c\C-d\M-b" 'edts-debug-list-breakpoints)
+  (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-list-interpreted)
+  (define-key edts-mode-map "\C-c\C-d\M-p" 'edts-debug-list-processes)
+  (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook)
+  (add-hook 'edts-node-down-hook 'edts-debug-node-down-hook)
+  (add-hook 'edts-server-down-hook 'edts-debug-server-down-hook))
 
-(defun edts_debug-after-node-init-hook ()
+(defun edts-debug-after-node-init-hook ()
   "Hook to run after node initialization."
-  (edts_debug-sync))
+  (edts-debug-sync))
 
-(defun edts_debug-node-down-hook (node)
+(defun edts-debug-node-down-hook (node)
   "Hook to run after node initialization."
-  (when (string= node edts_debug-node)
-    (edts_debug-mode-quit))
-  (let ((interpreted (assoc node edts_debug-interpreted-alist))
-        (breakpoints (assoc node edts_debug-breakpoint-alist))
-        (processes   (assoc node edts_debug-processes-alist)))
-    (setq edts_debug-interpreted-alist
-          (delete interpreted edts_debug-interpreted-alist))
-    (setq edts_debug-breakpoint-alist
-          (delete breakpoints edts_debug-breakpoint-alist))
-    (setq edts_debug-processes-alist
-          (delete processes edts_debug-processes-alist))
-    (run-hooks 'edts_debug-after-sync-hook)))
+  (when (string= node edts-debug-node)
+    (edts-debug-mode-quit))
+  (let ((interpreted (assoc node edts-debug-interpreted-alist))
+        (breakpoints (assoc node edts-debug-breakpoint-alist))
+        (processes   (assoc node edts-debug-processes-alist)))
+    (setq edts-debug-interpreted-alist
+          (delete interpreted edts-debug-interpreted-alist))
+    (setq edts-debug-breakpoint-alist
+          (delete breakpoints edts-debug-breakpoint-alist))
+    (setq edts-debug-processes-alist
+          (delete processes edts-debug-processes-alist))
+    (run-hooks 'edts-debug-after-sync-hook)))
 
-(defun edts_debug-server-down-hook ()
+(defun edts-debug-server-down-hook ()
   "Hook to run after node initialization."
-  (edts_debug-mode-quit)
-  (setq edts_debug-interpreted-alist nil)
-  (setq edts_debug-breakpoint-alist nil)
-  (setq edts_debug-processes-alist nil)
-  (run-hooks 'edts_debug-after-sync-hook))
+  (edts-debug-mode-quit)
+  (setq edts-debug-interpreted-alist nil)
+  (setq edts-debug-breakpoint-alist nil)
+  (setq edts-debug-processes-alist nil)
+  (run-hooks 'edts-debug-after-sync-hook))
 
-(defun edts_debug-format-mode-line ()
-  "Formats the edts_debug mode line string for display."
-  (concat (propertize edts_debug-mode-line-string 'face `(:box t)) " "))
+(defun edts-debug-format-mode-line ()
+  "Formats the edts-debug mode line string for display."
+  (concat (propertize edts-debug-mode-line-string 'face `(:box t)) " "))
 
-(defun edts_debug-buffer-init ()
-  "edts_debug buffer-specific initialization."
+(defun edts-debug-buffer-init ()
+  "edts-debug buffer-specific initialization."
   (add-to-list 'mode-line-buffer-identification
-               '(edts-mode (:eval (edts_debug-format-mode-line)))
+               '(edts-mode (:eval (edts-debug-format-mode-line)))
                t))
 
-(defvar edts_debug-mode-line-string ""
-  "The string with edts_debug related information to display in
+(defvar edts-debug-mode-line-string ""
+  "The string with edts-debug related information to display in
 the mode-line.")
-(make-variable-buffer-local 'edts_debug-mode-line-string)
+(make-variable-buffer-local 'edts-debug-mode-line-string)
 
-(defvar edts_debug-breakpoint-alist nil
+(defvar edts-debug-breakpoint-alist nil
   "Alist with breakpoints for each node. Each value is an alist with one
 key for each interpreted module the value of which is a list of
 breakpoints for that module.")
 
-(defvar edts_debug-interpreted-alist nil
+(defvar edts-debug-interpreted-alist nil
   "Alist with interpreted modules for each node. Each value is a list
 of strings.")
 
-(defvar edts_debug-processes-alist nil
+(defvar edts-debug-processes-alist nil
   "Alist with all debugged processes for each node. Each value is a list
 of strings.")
 
-(defvar edts_debug-after-sync-hook nil
+(defvar edts-debug-after-sync-hook nil
   "Hook to run after synchronizing debug information (interpreted
 modules, breakpoints and debugged processes).")
 
-(defun edts_debug-sync ()
-  "Synchronize edts_debug data."
+(defun edts-debug-sync ()
+  "Synchronize edts-debug data."
   (interactive)
-  (edts_debug-sync-interpreted-alist)
-  (edts_debug-sync-breakpoint-alist)
-  (edts_debug-sync-processes-alist)
-  (run-hooks 'edts_debug-after-sync-hook))
+  (edts-debug-sync-interpreted-alist)
+  (edts-debug-sync-breakpoint-alist)
+  (edts-debug-sync-processes-alist)
+  (run-hooks 'edts-debug-after-sync-hook))
 
-(defun edts_debug-event-handler (node class type info)
+(defun edts-debug-event-handler (node class type info)
   "Handles erlang-side debugger events"
   (case type
     (interpret     (let ((module (cdr (assoc 'module info))))
                      (edts-log-info "%s is now interpreted on %s" module node))
-                   (edts_debug-sync-interpreted-alist))
+                   (edts-debug-sync-interpreted-alist))
     (no_interpret  (let ((module (cdr (assoc 'module info))))
                      (edts-log-info "%s is no longer interpreted on %s"
                                     module
                                     node))
-                   (edts_debug-sync-interpreted-alist))
+                   (edts-debug-sync-interpreted-alist))
     (new_break     (let ((module (cdr (assoc 'module info)))
                          (line (cdr (assoc 'line info))))
                      (edts-log-info "breakpoint set on %s:%s on %s"
                                     module
                                     line
                                     node)
-                     (edts_debug-sync-breakpoint-alist)))
+                     (edts-debug-sync-breakpoint-alist)))
     (delete_break  (let ((module (cdr (assoc 'module info)))
                          (line (cdr (assoc 'line info))))
                      (edts-log-info "breakpoint unset on %s:%s on %s"
                                     module
                                     line
                                     node)
-                     (edts_debug-sync-breakpoint-alist)))
+                     (edts-debug-sync-breakpoint-alist)))
     (break_options (let ((module (cdr (assoc 'module info)))
                          (line (cdr (assoc 'line info))))
                      (edts-log-info "breakpoint options updated on %s:%s on %s"
                                     module
                                     line
                                     node)
-                     (edts_debug-sync-breakpoint-alist)))
+                     (edts-debug-sync-breakpoint-alist)))
     (no_break      (let ((module (cdr (assoc 'module info))))
                      (edts-log-info "All breakpoints in %s deleted on %s"
                                     module
                                     node)
-                     (edts_debug-sync-breakpoint-alist)))
-    (new_process   (edts_debug-sync-processes-alist))
-    (new_status    (edts_debug-sync-processes-alist)
-                   (edts_debug-handle-new-status node info)))
-  (run-hooks 'edts_debug-after-sync-hook))
-(edts-event-register-handler 'edts_debug-event-handler 'edts_debug)
+                     (edts-debug-sync-breakpoint-alist)))
+    (new_process   (edts-debug-sync-processes-alist))
+    (new_status    (edts-debug-sync-processes-alist)
+                   (edts-debug-handle-new-status node info)))
+  (run-hooks 'edts-debug-after-sync-hook))
+(edts-event-register-handler 'edts-debug-event-handler 'edts_debug)
 
-(defun edts_debug-handle-new-status (node info)
+(defun edts-debug-handle-new-status (node info)
   (let ((pid (cdr (assoc 'pid info))))
     (when (and (eq (intern (cdr (assoc 'status info))) 'break)
-               (not edts_debug-pid)
-               edts_debug-auto-attach)
-      (edts_debug-attach node pid))))
+               (not edts-debug-pid)
+               edts-debug-auto-attach)
+      (edts-debug-attach node pid))))
 
-(defun edts_debug-update-buffers ()
+(defun edts-debug-update-buffers ()
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode
         (let ((node   (edts-node-name))
               (module (ferl-get-module)))
-          (when (and node module (not (eq major-mode 'edts_debug-mode)))
-            (edts_debug-update-buffer-mode-line node module)
-            (edts_debug-update-buffer-breakpoints node module)))))))
-(add-hook 'edts_debug-after-sync-hook 'edts_debug-update-buffers)
+          (when (and node module (not (eq major-mode 'edts-debug-mode)))
+            (edts-debug-update-buffer-mode-line node module)
+            (edts-debug-update-buffer-breakpoints node module)))))))
+(add-hook 'edts-debug-after-sync-hook 'edts-debug-update-buffers)
 
 
-(defun edts_debug-sync-interpreted-alist ()
-  "Synchronizes `edts_debug-interpreted-alist'."
-  (setq edts_debug-interpreted-alist
-        (loop for node in (edts_debug-get-nodes)
-              collect (cons node (edts_debug-interpreted-modules node)))))
+(defun edts-debug-sync-interpreted-alist ()
+  "Synchronizes `edts-debug-interpreted-alist'."
+  (setq edts-debug-interpreted-alist
+        (loop for node in (edts-debug-get-nodes)
+              collect (cons node (edts-debug-interpreted-modules node)))))
 
-(defun edts_debug-sync-breakpoint-alist ()
-  "Synchronizes `edts_debug-breakpoint-alist'."
-  (setq edts_debug-breakpoint-alist
-        (loop for node in (edts_debug-get-nodes)
-              for node-breakpoints = (edts_debug-all-breakpoints node)
+(defun edts-debug-sync-breakpoint-alist ()
+  "Synchronizes `edts-debug-breakpoint-alist'."
+  (setq edts-debug-breakpoint-alist
+        (loop for node in (edts-debug-get-nodes)
+              for node-breakpoints = (edts-debug-all-breakpoints node)
               when node-breakpoints
               collect (loop
                        for breakpoint in node-breakpoints
@@ -250,68 +249,68 @@ modules, breakpoints and debugged processes).")
                                       (delete old-elt breakpoints)))
                        finally (return (cons node breakpoints))))))
 
-(defun edts_debug-sync-processes-alist ()
-  "Synchronizes `edts_debug-processes-alist'."
-  (setq edts_debug-processes-alist
-        (loop for node in (edts_debug-get-nodes)
-              for procs = (edts_debug-all-processes node)
+(defun edts-debug-sync-processes-alist ()
+  "Synchronizes `edts-debug-processes-alist'."
+  (setq edts-debug-processes-alist
+        (loop for node in (edts-debug-get-nodes)
+              for procs = (edts-debug-all-processes node)
               collect (cons
                        node
                        (cdr (assoc 'processes procs))))))
 
-(defun edts_debug-update-buffer-mode-line (node module)
-  (if (member module (cdr (assoc node edts_debug-interpreted-alist)))
-      (setq edts_debug-mode-line-string "Interpreted")
-    (setq edts_debug-mode-line-string ""))
+(defun edts-debug-update-buffer-mode-line (node module)
+  (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
+      (setq edts-debug-mode-line-string "Interpreted")
+    (setq edts-debug-mode-line-string ""))
   (force-mode-line-update))
 
-(defun edts_debug-update-buffer-breakpoints (node module)
-  (edts-face-remove-overlays '(edts_debug-breakpoint))
+(defun edts-debug-update-buffer-breakpoints (node module)
+  (edts-face-remove-overlays '(edts-debug-breakpoint))
   (let ((breaks (cdr (assoc module
-                            (cdr (assoc node edts_debug-breakpoint-alist))))))
+                            (cdr (assoc node edts-debug-breakpoint-alist))))))
     (loop for break in breaks
         for line      = (cdr (assoc 'line      break))
         for status    = (cdr (assoc 'status    break))
         for trigger   = (cdr (assoc 'trigger   break))
         for condition = (cdr (assoc 'condition break))
         for face      = (if (string= status "active")
-                            'edts_debug-breakpoint-active-face
-                          'edts_debug-breakpoint-inactive-face)
+                            'edts-debug-breakpoint-active-face
+                          'edts-debug-breakpoint-inactive-face)
         for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
         do
         (edts-face-display-overlay face
                                    line
                                    (format fmt status trigger condition)
-                                   'edts_debug-breakpoint
-                                   edts_debug-breakpoint-face-prio
+                                   'edts-debug-breakpoint
+                                   edts-debug-breakpoint-face-prio
                                    t))))
 
-(defun edts_debug-update-buffer-process-location (module line)
-  (edts-face-remove-overlays '(edts_debug-process-location))
-  (let* ((info        (edts_debug-process-info))
+(defun edts-debug-update-buffer-process-location (module line)
+  (edts-face-remove-overlays '(edts-debug-process-location))
+  (let* ((info        (edts-debug-process-info))
          (status      (cdr (assoc 'status info)))
          (proc-module (cdr (assoc 'module info)))
          (proc-line   (cdr (assoc 'line info))))
     (if (or (not (equal status "break"))
             (not (equal module proc-module)))
-        (setq edts_debug-overlay-arrow-position nil)
+        (setq edts-debug-overlay-arrow-position nil)
       (let ((pos (ferl-position-at-beginning-of-line proc-line)))
         (goto-char pos)
         (back-to-indentation)
-        (setq edts_debug-overlay-arrow-position (set-marker (make-marker) pos))
-        (edts-face-display-overlay 'edts_debug-process-location-face
+        (setq edts-debug-overlay-arrow-position (set-marker (make-marker) pos))
+        (edts-face-display-overlay 'edts-debug-process-location-face
                                    proc-line
                                    ""
-                                   'edts_debug-process-location
-                                   edts_debug-process-location-face-prio
+                                   'edts-debug-process-location
+                                   edts-debug-process-location-face-prio
                                    t)))))
 
-(defun edts_debug-toggle-interpreted ()
+(defun edts-debug-toggle-interpreted ()
   "Toggle the interpretation state for module in current buffer."
   (interactive)
-  (edts_debug-interpret nil nil 'toggle))
+  (edts-debug-interpret nil nil 'toggle))
 
-(defun edts_debug-interpret (&optional node module interpret)
+(defun edts-debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
 NODE and MODULE default to the values associated with current buffer.
 If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
@@ -327,12 +326,12 @@ called interactively."
                      (cons "interpret" interpret))))
     (edts-plugin-call node 'edts_debug 'interpret_module args)))
 
-(defun edts_debug-toggle-breakpoint ()
+(defun edts-debug-toggle-breakpoint ()
   "Toggle breakpoint on current line."
   (interactive)
-  (edts_debug-break nil nil nil 'toggle))
+  (edts-debug-break nil nil nil 'toggle))
 
-(defun edts_debug-break (&optional node module line break)
+(defun edts-debug-break (&optional node module line break)
   "Set breakpoint state for LINE in MODULE on NODE according to
 BREAK. NODE and MODULE default to the values associated with current
 buffer. If BREAK is nil remove any breakpoint; if it is t set a
@@ -350,7 +349,7 @@ breakpoint existence at LINE, which is the default behaviour."
                        (cons "break"  break))))
     (edts-plugin-call node 'edts_debug 'break args)))
 
-(defun edts_debug-breakpoints (&optional node module)
+(defun edts-debug-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
 MODULE default to the value associated with current buffer."
   (let* ((node   (or node (edts-node-name)))
@@ -358,19 +357,19 @@ MODULE default to the value associated with current buffer."
          (args   (list (cons "module" module))))
     (edts-plugin-call node 'edts_debug 'breakpoints args)))
 
-(defun edts_debug-all-breakpoints (&optional node)
+(defun edts-debug-all-breakpoints (&optional node)
   "Return a list of all breakpoint states on NODE. NODE defaults to the
 value associated with current buffer."
   (let* ((node (or node (edts-node-name))))
     (edts-plugin-call node 'edts_debug 'breakpoints)))
 
-(defun edts_debug-all-processes (&optional node)
+(defun edts-debug-all-processes (&optional node)
   "Return a list of all processes states on NODE. NODE defaults to the
 value associated with current buffer."
   (let* ((node(or node (edts-node-name))))
     (edts-plugin-call node 'edts_debug 'processes)))
 
-(defun edts_debug-interpretedp (&optional node module)
+(defun edts-debug-interpretedp (&optional node module)
   "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
 default to the values associated with current buffer."
   (let* ((module (or module (ferl-get-module)))
@@ -378,58 +377,58 @@ default to the values associated with current buffer."
          (args   (list (cons "module" module))))
     (edts-plugin-call node 'edts_debug 'module_interpreted_p args)))
 
-(defun edts_debug-interpreted-modules (&optional node)
+(defun edts-debug-interpreted-modules (&optional node)
   "Return a list of all modules that are interpreted on NODE. NODE
 default to the values associated with current buffer."
   (let* ((node (or node (edts-node-name))))
     (edts-plugin-call node 'edts_debug 'interpreted_modules)))
 
-(defun edts_debug-continue (node-name pid)
+(defun edts-debug-continue (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
-  (edts_debug-command node-name pid 'continue))
+  (edts-debug-command node-name pid 'continue))
 
-(defun edts_debug-finish (node-name pid)
-  "Send a continue-command to the debugged process with PID on NODE."
-  (interactive)
-  (edts_debug-command node-name pid 'finish))
-
-(defun edts_debug-step-into (node-name pid)
+(defun edts-debug-finish (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
   (interactive)
-  (edts_debug-command node-name pid 'step_into))
+  (edts-debug-command node-name pid 'finish))
 
-(defun edts_debug-step-over (node-name pid)
+(defun edts-debug-step-into (node-name pid)
   "Send a continue-command to the debugged process with PID on NODE."
   (interactive)
-  (edts_debug-command node-name pid 'step_over))
+  (edts-debug-command node-name pid 'step_into))
 
-(defun edts_debug-command (node pid command)
+(defun edts-debug-step-over (node-name pid)
+  "Send a continue-command to the debugged process with PID on NODE."
+  (interactive)
+  (edts-debug-command node-name pid 'step_over))
+
+(defun edts-debug-command (node pid command)
   "Send COMMAND to the debugged process with PID on NODE. Command is
 one of continue, finish, step_into or step_over."
   (let* ((args  (list (cons "pid" pid))))
-    (edts-plugin-call node 'edts_debug command args))
+    (edts-plugin-call node 'edts_debug command args)))
 
-(defun edts_debug-get-nodes ()
+(defun edts-debug-get-nodes ()
   "Return a list of all nodes to consider when issuing debugger commands"
   ;; this is a bit of a hack to avoid the debugger running on the main edts
   ;; server...
   (remove "edts" (edts-get-nodes)))
 
-(defun edts_debug-attach (node pid)
-  (unless (equal (edts_debug-process-info node pid 'status) "break")
+(defun edts-debug-attach (node pid)
+  (unless (equal (edts-debug-process-info node pid 'status) "break")
     (error "Process %s on %s is not in a 'break' state" pid node))
-  (setq edts_debug-node node)
-  (setq edts_debug-pid pid)
-  (edts_debug-mode-attach))
+  (setq edts-debug-node node)
+  (setq edts-debug-pid pid)
+  (edts-debug-mode-attach))
 
-(defun edts_debug-detach ()
-  (setq edts_debug-node nil)
-  (setq edts_debug-pid nil))
+(defun edts-debug-detach ()
+  (setq edts-debug-node nil)
+  (setq edts-debug-pid nil))
 
-(defun edts_debug-process-info (&optional node pid prop)
-  (let* ((node  (or node edts_debug-node))
-         (pid   (or pid edts_debug-pid))
-         (procs (cdr (assoc node edts_debug-processes-alist)))
+(defun edts-debug-process-info (&optional node pid prop)
+  (let* ((node  (or node edts-debug-node))
+         (pid   (or pid edts-debug-pid))
+         (procs (cdr (assoc node edts-debug-processes-alist)))
          (info  (find-if #'(lambda (p) (string= (cdr (assoc 'pid p)) pid))
                 procs)))
     (if prop
@@ -441,7 +440,7 @@ one of continue, finish, step_into or step_over."
   (require 'edts-test)
   (edts-test-add-suite
    ;; Name
-   edts_debug-suite
+   edts-debug-suite
    ;; Setup
    (lambda ()
      (let ((async-node-init edts-async-node-init))
@@ -462,16 +461,16 @@ one of continue, finish, step_into or step_over."
      (edts-test-post-cleanup-all-buffers)
      (edts-test-teardown-project edts-test-project1-directory)))
 
-  (edts-test-case edts_debug-suite edts_debug-basic-test ()
+  (edts-test-case edts-debug-suite edts-debug-basic-test ()
     "Basic debugger setup test"
     (let ((eproject-prefer-subproject t))
       (find-file (car (edts-test-project1-modules)))
 
-      (should-not (edts_debug-interpretedp))
-      (edts_debug-interpret nil nil 't)
-      (should (edts_debug-interpretedp))
-      (should-not (edts_debug-breakpoints))
-      (edts_debug-break nil nil nil t)
-      (should (eq 1 (length (edts_debug-breakpoints)))))))
+      (should-not (edts-debug-interpretedp))
+      (edts-debug-interpret nil nil 't)
+      (should (edts-debug-interpretedp))
+      (should-not (edts-debug-breakpoints))
+      (edts-debug-break nil nil nil t)
+      (should (eq 1 (length (edts-debug-breakpoints)))))))
 
-(provide 'edts_debug)
+(provide 'edts-debug)
