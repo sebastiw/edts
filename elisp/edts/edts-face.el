@@ -33,13 +33,16 @@
   :group 'edts
   :type 'boolean)
 
-(define-fringe-bitmap 'small-rectangle (vector #b00111110
-                                               #b00111110
-                                               #b00111110
-                                               #b00111110
-                                               #b00111110
-                                               #b00111110
-                                               #b00111110))
+;; define-fringe-bitmap is not defined when built without GUI, only call
+;; if available
+(when (fboundp 'define-fringe-bitmap)
+  (define-fringe-bitmap 'small-rectangle (vector #b00111110
+                                                 #b00111110
+                                                 #b00111110
+                                                 #b00111110
+                                                 #b00111110
+                                                 #b00111110
+                                                 #b00111110)))
 
 (defconst edts-face-warning-color-light "#ffc000")
 (defconst edts-face-warning-color-dark "#ffc000")
