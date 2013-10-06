@@ -89,35 +89,9 @@ child_spec(Name, Args) ->
 dispatch() ->
   DispatchFile       = filename:join(code:priv_dir(edts), "dispatch.conf"),
   {ok, EDTSDispatch} = file:consult(DispatchFile),
-  PluginDispatch     = plugin_dispatches(),
-  lists:sort(fun dispatch_specificity/2, EDTSDispatch ++ PluginDispatch).
-
-
-plugin_dispatches() ->
-  {ok, PluginDir} = application:get_env(edts, plugin_dir),
-  WildCard = filename:join([PluginDir, "*", "priv", "dispatch.conf"]),
-  Files = filelib:wildcard(WildCard),
-  lists:flatmap(fun plugin_dispatch/1, Files).
-
-
-plugin_dispatch(File) ->
-  {ok, Terms} = file:consult(File),
-  [{["plugins"|Path], Mod, Args} || {Path, Mod, Args} <- Terms].
-
-
-dispatch_specificity({PathA, _, _ } = A, {PathB, _, _ } = B)
-  when length(PathA) =:= length(PathB) ->
-  A > B;
-dispatch_specificity({PathA, _, _ }, {PathB, _, _ }) ->
-  length(PathA) > erlang:length(PathB).
-
+  EDTSDispatch.
 
 %%%_* Unit tests ===============================================================
-dispatch_specificity_test_() ->
-  [ ?_assertNot(dispatch_specificity({[a], 1, 2}, {[a, b], 1, 1})),
-    ?_assert(dispatch_specificity({[a, b], 1, 1}, {[a],1,2})),
-    ?_assertNot(dispatch_specificity({[a, b], 1, 1}, {[a, b], 1, 2}))
-  ].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
