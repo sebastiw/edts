@@ -117,7 +117,7 @@ convert_params(Params, Specs) ->
             end,
             Specs).
 
-convert_param(Vs, [T]) -> [convert_param(V, T) || V <- Vs];
+convert_param(Vs, [T]) -> [convert_param(V, T) || V <- string:tokens(Vs, ",")];
 convert_param(V,  pid) -> erlang:list_to_pid("<" ++ V ++ ">");
 convert_param(V,  T)   -> apply(erlang, ?l2a("list_to_" ++ ?a2l(T)), [V]).
 
