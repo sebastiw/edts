@@ -36,13 +36,13 @@
 ;; define-fringe-bitmap is not defined when built without GUI, only call
 ;; if available
 (when (fboundp 'define-fringe-bitmap)
-  (define-fringe-bitmap 'small-rectangle (vector #b00111110
-                                                 #b00111110
-                                                 #b00111110
-                                                 #b00111110
-                                                 #b00111110
-                                                 #b00111110
-                                                 #b00111110)))
+  (define-fringe-bitmap 'small-blip (vector #b00000000
+                                            #b00011100
+                                            #b00111110
+                                            #b00111110
+                                            #b00111110
+                                            #b00011100
+                                            #b00000000)))
 
 (defconst edts-face-warning-color-light "#ffc000")
 (defconst edts-face-warning-color-dark "#ffc000")
@@ -265,3 +265,5 @@ is non-nil."
   (when edts-face-modeline-remap-cookie
     (face-remap-remove-relative edts-face-modeline-remap-cookie)
     (setq edts-face-modeline-remap-cookie nil)))
+
+(provide 'edts-face)

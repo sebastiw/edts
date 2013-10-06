@@ -29,6 +29,8 @@
 (require 'eproject-extras)
 (require 'path-util)
 
+(require 'edts-face)
+
 (defvar edts-code-issue-types '(edts-code-compile
                                 edts-code-dialyzer
                                 edts-code-eunit-failed)
@@ -68,7 +70,10 @@ issue severity (error, warning, etc).")
     (error       . 903))
   "The overlay priorities for compilation errors and warnings")
 
-(defconst edts-code-issue-fringe-bitmap 'small-rectangle
+(defconst edts-code-issue-fringe-bitmap
+  (if (member 'small-blip fringe-bitmaps)
+      'small-blip
+    'filled-square)
   "The bitmap to display in the fringe to indicade an issue on that
 line.")
 
