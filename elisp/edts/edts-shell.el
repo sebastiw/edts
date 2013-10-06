@@ -145,7 +145,6 @@ PWD and running COMMAND."
   ;; keymap is active.
   (make-local-variable 'comint-mode-map)
   (define-key comint-mode-map "\t" 'ignore)
-  (define-key comint-mode-map "RET" 'ignore)
 
   ;; erlang-mode syntax highlighting
   (edts-shell-font-lock-init)
