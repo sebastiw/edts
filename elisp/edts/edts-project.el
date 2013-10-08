@@ -302,7 +302,7 @@ Example:
 FILE."
   (let* ((dir        (path-util-dir-name file))
          (parent-dir (path-util-dir-name dir)))
-    (if (and (string-match "/src[/]?$" dir)
+    (if (and (string-match "/\\(src\\|test\\)[/]?$" dir)
              (file-exists-p (path-util-join parent-dir "ebin")))
         (file-name-as-directory parent-dir)
       (file-name-as-directory dir))))
