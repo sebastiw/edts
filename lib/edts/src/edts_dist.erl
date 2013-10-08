@@ -260,7 +260,7 @@ remote_load_module(Node, Mod, File, Bin) ->
 
 
 remote_compile_module(Node, File) ->
-  case call(Node, compile, file, [File, [debug_info, binary, report]]) of
+  case call(Node, compile, file, [File, [debug_info, binary, report_errors]]) of
     {ok, _, _} = Res -> Res;
     {error, Rsn}     -> erlang:error(Rsn)
   end.
