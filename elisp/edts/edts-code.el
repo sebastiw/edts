@@ -71,9 +71,10 @@ issue severity (error, warning, etc).")
   "The overlay priorities for compilation errors and warnings")
 
 (defconst edts-code-issue-fringe-bitmap
-  (if (member 'small-blip fringe-bitmaps)
-      'small-blip
-    'filled-square)
+  (when (boundp 'fringe-bitmaps)
+    (if (member 'small-blip fringe-bitmaps)
+        'small-blip
+      'filled-square))
   "The bitmap to display in the fringe to indicade an issue on that
 line.")
 
