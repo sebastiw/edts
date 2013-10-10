@@ -254,9 +254,7 @@ modules, breakpoints and debugged processes).")
   (setq edts-debug-processes-alist
         (loop for node in (edts-debug-get-nodes)
               for procs = (edts-debug-all-processes node)
-              collect (cons
-                       node
-                       (cdr (assoc 'processes procs))))))
+              collect (cons node procs))))
 
 (defun edts-debug-update-buffer-mode-line (node module)
   (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
