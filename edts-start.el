@@ -49,8 +49,10 @@
   (require 'erlang))
 
 ;; Add all libs to load-path
-(let ((default-directory edts-lib-directory))
-  (normal-top-level-add-subdirs-to-load-path))
+(loop for  (name dirp . rest)
+      in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
+      when dirp
+      do   (add-to-list 'load-path (path-util-join edts-lib-directory name)))
 
 (defcustom edts-erlang-mode-regexps
   '("^\\.erlang$"
