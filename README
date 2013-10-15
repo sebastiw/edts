@@ -36,9 +36,7 @@ Currently EDTS provides:
 - Auto-highlighting, using auto-highlight-mode
 - Convenient access to Erlang documentation
 - In-buffer running of unit tests
-
-In the works:
-- A nice interface to the erlang debugger
+- A usable interface to the erlang debugger
 
 For more information, hit M-x describe-minor-mode RET edts-mode RET.
 
