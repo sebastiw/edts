@@ -52,8 +52,8 @@ behaviour_info(callbacks) ->
   [ {edts_server_services,  0},
     {event_formatters,      0},
     {project_node_modules,  0},
-    {project_node_services, 0}
-    (spec,                  2)
+    {project_node_services, 0},
+    {spec,                  2}
   ];
 behaviour_info(_) -> undefined.
 
