@@ -320,8 +320,18 @@ localhost."
 (defun edts-node-started-p (name)
   "Syncronously query epmd to see whether it has a node with NAME registered."
   (with-temp-buffer
+    (let* ((pre-epmd-dir (path-util-pop edts-erl-command 2))
+           (epmd (locate-file "epmd"
+                              (list (file-name-directory edts-epmd-command)
+                                    (file-name-directory edts-erl-command)
+                                    (file-name-directory
+                                      (path-util-join pre-epmd-dir
+                                                      (file-name-completion
+                                                        "erts-" pre-epmd-dir)
+                                                      "bin/")))
+                              '(".exe" ""))))
     (call-process edts-epmd-command nil (current-buffer) nil "-names")
-    (member name (edts-epmd-nodenames-from-string (buffer-string)))))
+    (member name (edts-epmd-nodenames-from-string (buffer-string))))))
 
 (defun edts-epmd-nodenames-from-string (string)
   "Convert the epmd reply STRING into a list of nodenames."
