@@ -330,7 +330,7 @@ localhost."
                                                         "erts-" pre-epmd-dir)
                                                       "bin/")))
                               '(".exe" ""))))
-    (call-process edts-epmd-command nil (current-buffer) nil "-names")
+    (call-process epmd nil (current-buffer) nil "-names")
     (member name (edts-epmd-nodenames-from-string (buffer-string))))))
 
 (defun edts-epmd-nodenames-from-string (string)
