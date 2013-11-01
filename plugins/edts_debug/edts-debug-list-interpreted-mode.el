@@ -52,7 +52,7 @@
 with EDTS. If optional argument SHOW is nil or omitted, don't display
 interpreted list buffer. If it is pop call `pop-to-buffer', if it is
 switch call `switch-to-buffer'."
-  (interactive)
+  (interactive '(pop))
   (with-current-buffer (get-buffer-create edts-debug-list-interpreted-buffer)
     (edts-debug-list-interpreted-mode)
     (edts-debug-list-interpreted-update)
