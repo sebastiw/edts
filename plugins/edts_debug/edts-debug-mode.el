@@ -95,12 +95,13 @@
                (max-col (window-body-width (get-buffer-window buf)))
                entries)
           (erase-buffer)
-
-          (loop for (var . binding) in var-alist
+          (loop for (var . bind) in var-alist
                 for var-name = (propertize (symbol-name var)
                                            'face 'font-lock-variable-name-face)
-                for binding-pp = (edts-pretty-print-term binding indent max-col)
-                do (push (list nil (vector var-name binding-pp)) entries))
+                for bind-pp = (or
+                               (edts-pretty-print-term bind indent max-col)
+                               "error in pretty-printing")
+                do (push (list nil (vector var-name bind-pp)) entries))
           (setq tabulated-list-format
                 (vector
                  `("Variable" ,max-var-len 'string< :pad-right ,col-pad)
