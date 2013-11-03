@@ -229,7 +229,7 @@ modules, breakpoints and debugged processes).")
   "Synchronizes `edts-debug-breakpoint-alist'."
   (setq edts-debug-breakpoint-alist
         (loop for node in (edts-debug-get-nodes)
-              for node-breakpoints = (edts-debug-all-breakpoints node)
+              for node-breakpoints = (edts-debug-breakpoints node)
               when node-breakpoints
               collect (loop
                        for breakpoint in node-breakpoints
@@ -347,7 +347,7 @@ breakpoint existence at LINE, which is the default behaviour."
                        (cons "break"  break))))
     (edts-plugin-call node 'edts_debug 'break args)))
 
-(defun edts-debug-breakpoints (&optional node module)
+(defun edts-debug-module-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
 MODULE default to the value associated with current buffer."
   (let* ((node   (or node (edts-node-name)))
@@ -355,7 +355,7 @@ MODULE default to the value associated with current buffer."
          (args   (list (cons "module" module))))
     (edts-plugin-call node 'edts_debug 'breakpoints args)))
 
-(defun edts-debug-all-breakpoints (&optional node)
+(defun edts-debug-breakpoints (&optional node)
   "Return a list of all breakpoint states on NODE. NODE defaults to the
 value associated with current buffer."
   (let* ((node (or node (edts-node-name))))
@@ -467,7 +467,7 @@ one of continue, finish, step_into or step_over."
       (should-not (edts-debug-interpretedp))
       (edts-debug-interpret nil nil 't)
       (should (edts-debug-interpretedp))
-      (should-not (edts-debug-breakpoints))
+      (should-not (edts-debug-module-breakpoints))
       (edts-debug-break nil nil nil t)
       (should (eq 1 (length (edts-debug-breakpoints)))))))
 

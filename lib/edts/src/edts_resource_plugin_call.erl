@@ -97,10 +97,17 @@ process_post(ReqData, Ctx) ->
   Params    = orddict:fetch(params, Ctx),
   Reply =
     case edts:call(Node, Plugin, Method, Params) of
-      {ok, Ret}  -> [{result, ok},
-                     {return, convert_return(Ret)}];
-      {error, E} -> [{result, error},
-                     {return, edts_plugins:to_ret_str(E)}]
+      %% The call terminated badly
+      {error, E}       -> [{result, error},
+                           {return, edts_plugins:to_ret_str(E)}];
+      %% The call returned an error
+      {ok, {error, E}} -> [{result, error},
+                           {return, edts_plugins:to_ret_str(E)}];
+      %% All is well
+      {ok, {ok, Ret}}  -> [{result, ok},
+                           {return, convert_return(Ret)}];
+      {ok, Ret}         -> [{result, ok},
+                            {return, convert_return(Ret)}]
     end,
   {true, wrq:set_resp_body(mochijson2:encode(Reply), ReqData), ReqData}.
 
