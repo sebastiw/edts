@@ -26,14 +26,14 @@
 -module(edts_plugins).
 
 %%%_* Includes =================================================================
-
 %%%_* Exports ==================================================================
 
 -export([behaviour_info/1,
          dirs/0,
          names/0,
          specs/0,
-         to_ret_str/1
+         to_ret_str/1,
+         to_ret_str/3
         ]).
 
 %% Callbacks
@@ -76,6 +76,12 @@ specs() ->
 
 to_ret_str(Term) ->
   list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
+
+to_ret_str(Term, Indent, MaxCol) ->
+  RecF = fun(_A, _N) -> no end,
+  Str = lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
+  list_to_binary(Str).
+
 
 %% Callbacks
 edts_server_services(Plugin) ->

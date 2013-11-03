@@ -39,11 +39,13 @@
          spec/2]).
 
 
--export([break/3,
+-export([bound_variables/1,
+         break/3,
          breakpoint_exists_p/2,
          breakpoints/0,
          breakpoints/1,
          ensure_started/0,
+         get_bindings_pretty/3,
          interpret_module/2,
          interpreted_modules/0,
          module_interpretable_p/1,
@@ -72,6 +74,7 @@ event_formatters()      -> [{edts_debug, edts_events_debug}].
 project_node_modules()  -> [?MODULE, edts_debug_server].
 project_node_services() -> [].
 
+spec(bound_variables,      1) -> [{pid, pid}];
 spec(break,                3) -> [{module,   atom},
                                   {line,     integer},
                                   {break,    atom}];
@@ -79,6 +82,9 @@ spec(breakpoints,          0) -> [];
 spec(breakpoints,          1) -> [{module,   atom}];
 spec(continue,             1) -> [{pid, pid}];
 spec(finish,               1) -> [{pid, pid}];
+spec(get_bindings_pretty,  3) -> [{pid, pid},
+                                  {indent, integer},
+                                  {max_column, integer}];
 spec(interpreted_modules,  0) -> [];
 spec(interpret_module,     2) -> [{module,   atom},
                                  {interpret, atom}];
@@ -210,6 +216,31 @@ finish(Pid) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Return a list of all of Pid's currently bound variables.
+%% @end
+-spec bound_variables(pid()) -> [atom()].
+%%------------------------------------------------------------------------------
+bound_variables(Pid) ->
+  [Var || {Var, _Binding} <- get_bindings(Pid)].
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return a list of all of Pid's current variable bindings pretty printed as
+%% strings with Indent spaces of indentantion and line breaks at MaxColumn
+%% @end
+-spec get_bindings_pretty(pid(), non_neg_integer(), non_neg_integer()) ->
+                             [{atom(), binary()}].
+%%------------------------------------------------------------------------------
+get_bindings_pretty(Pid, Indent, MaxColumn) ->
+  Fun = fun({Binding, Value}) ->
+            {Binding, edts_plugins:to_ret_str(Value, Indent, MaxColumn)}
+        end,
+  lists:sort(lists:map(Fun, get_bindings(Pid))).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Return a list of all of Pid's current variable bindings. Unless the process
 %% is in a 'break' state, this will be [].
 %% @end
@@ -222,8 +253,7 @@ get_bindings(Pid) ->
       case process_status(ProcessState) of
         break ->
           {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
-          [{B, edts_plugins:to_ret_str(V)} ||
-            {B, V} <- int:meta(Meta, bindings, nostack)];
+          int:meta(Meta, bindings, nostack);
         _ ->
           []
       end;
@@ -329,8 +359,7 @@ format_process({Pid, Init, Status, Info}) ->
                      {status,   Status},
                      {module,   info_to_module(Info)},
                      {line,     info_to_line(Info)},
-                     {info,     Info},
-                     {bindings, get_bindings(Pid)}]).
+                     {info,     Info}]).
 
 info_to_module({Mod, _Line}) -> Mod;
 info_to_module(_)            -> null.

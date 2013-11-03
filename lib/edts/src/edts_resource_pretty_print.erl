@@ -60,7 +60,7 @@ content_types_provided(ReqData, Ctx) ->
   {Map, ReqData, Ctx}.
 
 malformed_request(ReqData, Ctx) ->
-  %% try
+  try
     Str    = wrq:get_qs_value("string", ReqData),
     {ok, AbsTerm, _} = erl_scan:string(Str ++ "."),
     {ok, Term} = erl_parse:parse_term(AbsTerm),
@@ -71,10 +71,10 @@ malformed_request(ReqData, Ctx) ->
     RecF = fun(_A, _N) -> no end,
     PPString =
       lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
-    {false, ReqData, orddict:store(return, PPString, Ctx)}.
-  %% catch
-  %%   _:_ -> {true, ReqData, Ctx}
-  %% end.
+    {false, ReqData, orddict:store(return, PPString, Ctx)}
+  catch
+    _:_ -> {true, ReqData, Ctx}
+  end.
 
 %% Handlers
 to_json(ReqData, Ctx) ->

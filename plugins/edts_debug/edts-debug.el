@@ -412,6 +412,23 @@ one of continue, finish, step_into or step_over."
   ;; server...
   (remove "edts" (edts-get-nodes)))
 
+(defun edts-debug-get-bound-variables (node pid)
+  "Return a list of all variables currently in PID's current scope on
+NODE."
+  (edts-plugin-call node 'edts_debug 'bound_variables `(("pid" ,pid))))
+
+
+(defun edts-debug-get-bindings-pretty (node pid indent max-col)
+  "Return a list of all variables (and their values) currently in PID's
+current scope on NODE. Values are pretty-printed with INDENT spaces of
+indentation and lines broken at MAX-COL."
+  (edts-plugin-call node
+                    'edts_debug
+                    'get_bindings_pretty
+                    `(("pid" ,pid)
+                      ("indent" ,(number-to-string indent))
+                      ("max_column" ,(number-to-string max-col)))))
+
 (defun edts-debug-attach (node pid)
   (unless (equal (edts-debug-process-info node pid 'status) "break")
     (error "Process %s on %s is not in a 'break' state" pid node))
