@@ -117,9 +117,11 @@ convert_params(Params, Specs) ->
             end,
             Specs).
 
-convert_param(Vs, [T]) -> [convert_param(V, T) || V <- string:tokens(Vs, ",")];
-convert_param(V,  pid) -> erlang:list_to_pid("<" ++ V ++ ">");
-convert_param(V,  T)   -> apply(erlang, ?l2a("list_to_" ++ ?a2l(T)), [V]).
+convert_param(Vs, [T])    -> [ convert_param(V, T) ||
+                               V <- string:tokens(Vs, ",")];
+convert_param(V,  pid)    -> erlang:list_to_pid("<" ++ V ++ ">");
+convert_param(V,  string) -> V;
+convert_param(V,  T)      -> apply(erlang, ?l2a("list_to_" ++ ?a2l(T)), [V]).
 
 convert_return(Ret) when is_list(Ret) ->
   IsProp = fun({K, _V}) when is_atom(K) -> true;
