@@ -120,15 +120,14 @@ parsed response as the single argument"
                             #'edts-xref-analysis-callback)))
 
 (defun edts-xref-analysis-callback (analysis-res)
-  (when analysis-res
-    (let* ((err-alist  (edts-code--issue-to-file-map analysis-res)))
-      ;; Set the error list in each project-buffer
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
-          (edts-code--set-issues 'edts-xref (list 'error errors))
-          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when errors
-            (edts-code-display-error-overlays 'edts-xref errors)))))))
+  (let* ((err-alist  (edts-code--issue-to-file-map analysis-res)))
+    ;; Set the error list in each project-buffer
+    (with-each-buffer-in-project (gen-sym) (eproject-root)
+      (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
+        (edts-code--set-issues 'edts-xref (list 'error errors))
+        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+        (when errors
+          (edts-code-display-error-overlays 'edts-xref errors))))))
 
 
 (defun edts-xref-get-who-calls (module function arity)
