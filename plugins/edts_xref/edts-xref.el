@@ -62,9 +62,7 @@ undefined_function_calls, unexported_functions"
 
 (defun edts-xref-after-compile-hook (result)
   "Hook to run after compilation of a module."
-  (when (not (eq result 'error))
-    (edts-xref-analyze-related)))
-
+  (edts-xref-analyze-related))
 
 (defun edts-xref-server-init-callback (body node-name)
   "Callback for when the xref server has been initialized."
