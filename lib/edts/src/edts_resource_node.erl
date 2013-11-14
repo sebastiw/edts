@@ -80,15 +80,20 @@ post_is_create(ReqData, Ctx) ->
 
 %% Handlers
 from_json(ReqData, Ctx) ->
-  ok = edts:init_node(orddict:fetch(project_name, Ctx),
-                      orddict:fetch(nodename, Ctx),
-                      orddict:fetch(project_root, Ctx),
-                      orddict:fetch(project_lib_dirs, Ctx),
-                      orddict:fetch(app_include_dirs, Ctx),
-                      orddict:fetch(project_include_dirs, Ctx)),
-  {true, ReqData, Ctx}.
+  case init_node(Ctx) of
+    ok           -> {true, ReqData, Ctx};
+    {error, Err} -> erlang:error(Err)
+  end.
 
 %%%_* Internal functions =======================================================
+
+init_node(Ctx) ->
+  edts:init_node(orddict:fetch(project_name,         Ctx),
+                 orddict:fetch(nodename,             Ctx),
+                 orddict:fetch(project_root,         Ctx),
+                 orddict:fetch(project_lib_dirs,     Ctx),
+                 orddict:fetch(app_include_dirs,     Ctx),
+                 orddict:fetch(project_include_dirs, Ctx)).
 
 %%%_* Unit tests ===============================================================
 

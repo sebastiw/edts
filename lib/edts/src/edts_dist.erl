@@ -207,7 +207,7 @@ remote_load_module(Node, Mod) ->
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
   case filename:find_src(Mod) of
-    {error, Err} -> error(Err);
+    {error, Err}  -> erlang:error({Mod, Err});
     {File, _Opts} ->
       {ok, Mod, Bin} = remote_compile_module(Node, File),
       {module, Mod}  = remote_load_module(Node, Mod, File, Bin)
@@ -260,9 +260,9 @@ remote_load_module(Node, Mod, File, Bin) ->
 
 
 remote_compile_module(Node, File) ->
-  case call(Node, compile, file, [File, [debug_info, binary, report_errors]]) of
-    {ok, _, _} = Res -> Res;
-    {error, Rsn}     -> erlang:error(Rsn)
+  case call(Node, compile, file, [File, [debug_info, binary, return_errors]]) of
+    {ok, _, _} = Res      -> Res;
+    {error, Rsns, _Warns} -> erlang:error({compile_error, {File, Rsns}})
   end.
 
 

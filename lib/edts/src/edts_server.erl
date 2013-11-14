@@ -294,7 +294,7 @@ do_init_node(ProjectName,
     C:E ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
                      [Node, C, E, erlang:get_stacktrace()]),
-      E
+      {error, E}
   end.
 
 init_node_env(Node, AppEnv) ->
@@ -303,8 +303,8 @@ init_node_env(Node, AppEnv) ->
 start_services(_Node, []) -> ok;
 start_services(Node, [Service|Rest]) ->
   case start_service(Node, Service) of
-    ok               -> start_services(Node, Rest);
-    {error, _} = Err -> Err
+    ok           -> start_services(Node, Rest);
+    {error, Err} -> {error, {Service, Err}}
   end.
 
 start_service(Node, Service) ->
