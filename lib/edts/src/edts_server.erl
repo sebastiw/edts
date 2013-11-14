@@ -375,7 +375,7 @@ init_node_test() ->
      handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
-              fun(foo, _) -> error({error, some_error}) end),
+              fun(foo, _) -> error(some_error) end),
   ?assertEqual({reply, {error, some_error}, S1},
                handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
 

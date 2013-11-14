@@ -140,7 +140,7 @@ from_json_test() ->
   meck:unload(),
   meck:new(edts),
   meck:expect(edts, init_node, fun(name, true, r, [], [], []) -> ok;
-                                  (name, _,    _, _,  _,  _)  -> error
+                                  (name, _,    _, _,  _,  _)  -> {error, foo}
                                end),
   Dict1 = orddict:from_list([{project_name, name},
                              {nodename, true},
@@ -156,7 +156,7 @@ from_json_test() ->
                              {project_lib_dirs, []},
                              {app_include_dirs, []},
                              {project_include_dirs, []}]),
-  ?assertError({badmatch, error}, from_json(req_data, Dict2)),
+  ?assertException(error, foo, from_json(req_data, Dict2)),
   meck:unload().
 
 
