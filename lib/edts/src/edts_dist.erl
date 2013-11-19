@@ -210,7 +210,7 @@ remote_load_module(Node, Mod) ->
     {error, Err}  -> erlang:error({Mod, Err});
     {File, _Opts} ->
       {ok, Mod, Bin} = remote_compile_module(Node, File),
-      {module, Mod}  = remote_load_module(Node, Mod, File, Bin)
+      {module, Mod}  = remote_load_module(Node, Mod, Bin)
   end.
 
 
@@ -252,8 +252,9 @@ start_service(Node, Service) ->
 
 
 %%%_* Internal functions =======================================================
-remote_load_module(Node, Mod, File, Bin) ->
-  case call(Node, code, load_binary, [Mod, File, Bin]) of
+remote_load_module(Node, Mod, Bin) ->
+  %% Haha, I feel evil now!
+  case call(Node, code, load_binary, [Mod, preloaded, Bin]) of
     {module, Mod} = Res -> Res;
     {error, Rsn}        -> erlang:error(Rsn)
   end.
