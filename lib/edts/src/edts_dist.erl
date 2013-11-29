@@ -198,8 +198,10 @@ refresh_service(Node, Service) ->
 %% @end
 -spec remote_load_modules(Node::node(), Mods::[module()]) -> ok.
 %%------------------------------------------------------------------------------
-remote_load_modules(Node, Mods) ->
+remote_load_modules(Node, _Mods) when Node =:= node() -> ok;
+remote_load_modules(Node, Mods)                       ->
   lists:foreach(fun(Mod) -> remote_load_module(Node, Mod) end, Mods).
+
 
 remote_load_module(Node, Mod) ->
   %% Compile code on the remote in case it runs an OTP release that is
