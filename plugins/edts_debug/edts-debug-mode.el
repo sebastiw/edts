@@ -97,7 +97,7 @@
                entries)
           (erase-buffer)
           (loop for (var . bind) in bindings
-                for var-name = (propertize var
+                for var-name = (propertize (symbol-name var)
                                            'face
                                            'font-lock-variable-name-face)
                 do (push (list nil (vector var-name bind)) entries))
