@@ -80,7 +80,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
     The name of the project. Defaults to the last component of the project
     root-directory (eg a root set to `~/src/p` would yield `p` as the project name
     if not explicitly set.
-    
+
   - `node-sname`
 
   The erlang sname that the project's erlang node should have. It should contain
@@ -112,8 +112,10 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
   The path to any custom plt on which to base dialyzer analyses on. You only
   have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`
-  or `$HOME/.dialyzer_plt`, in that order) is not appropriate for the project. The
-  plt-file will not be overwritten.
+  or `$HOME/.dialyzer_plt`, in that order) is not appropriate for the project.
+  The plt-file pointed to will not be overwritten, but instead used as a base
+  when building the new plt-file for the project, which will be located in your
+  `edts-data-directory`.
 
   - `app-include-dirs`
 
@@ -154,7 +156,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
                                             :node-sname "my-project-dev")
                                             :lib-dirs '("lib" "test" "hacks"))
     ```
-    
+
 #### Get the Erlang documentation (optional).
   - This is now a guided procedure. Just hit `M-x edts-man-setup RET` and follow
     the instructions.
