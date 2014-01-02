@@ -3,7 +3,7 @@
                       ______    ____| $$ _| $$_     _______
                      /      \  /      $$|   $$ \   /       \
                     |  $$$$$$\|  $$$$$$$ \$$$$$$  |  $$$$$$$
-                    | $$    $$| $$  | $$  | $$ __  \$$    \
+                    | $$    $$| $$  | $$  | $$ __  \$$    \
                     | $$$$$$$$| $$__| $$  | $$|  \ _\$$$$$$\
                      \$$     \ \$$    $$   \$$  $$|       $$
                       \$$$$$$$  \$$$$$$$    \$$$$  \$$$$$$$
@@ -87,13 +87,13 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   only the part before the `@`-sign and defaults to same name as the project.
 
   - `lib-dirs`
-  
+
   A list of paths (relative to the project's root) where the project's code is
-  located. All subdirectories of lib-dirs are assumed to be otp-applications.
+  located. All subdirectories of lib-dirs are assumed to be otp-applications.
   Defaults to `'("lib")`.
 
   - `start-command`
-  
+
   A custom command that EDTS should execute to start the project's Erlang node.
   If this is set, the command must set the node's sname to be the same as the
   value specified in the project's node-sname. The command must also not set the
@@ -101,7 +101,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   Defaults to `erl -sname <node-sname>`.
 
   - `otp-path`
-  
+
   The path to any custom OTP-version to use for the project. You only have to
   set this if the project uses a different OTP-release than the one that comes
   first in your exec-path. The OTP-release's bin-directory will be added to
@@ -109,14 +109,14 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   project node.
 
   - `dialyzer-plt`
-  
+
   The path to any custom plt on which to base dialyzer analyses on. You only
-  have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`                                   
+  have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`
   or `$HOME/.dialyzer_plt`, in that order) is not appropriate for the project. The
   plt-file will not be overwritten.
 
   - `app-include-dirs`
-  
+
   A list of directories to search for include files inside each application. Eg.
   if set to `'("include")`, files in any application's include directory can be
   included with `-include("file.hrl")` instead of `-include("../file.hrl")`. This is
@@ -125,7 +125,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   reasonable value for this property.
 
   - `project-include-dirs`
-  
+
   A list of directories to search for include files inside at the project-level.
   Eg. if set to `'("test/include")`, files in any module can include files from
   `<project-root>/test/include` with just a `-include("file.hrl")`. This is useful
