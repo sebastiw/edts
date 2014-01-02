@@ -38,126 +38,140 @@ Currently EDTS provides:
 - In-buffer running of unit tests
 - A usable interface to the erlang debugger
 
-For more information, hit M-x describe-minor-mode RET edts-mode RET.
+For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
 ## Getting started ##
 
-- Requirements:
+#### Requirements:
   - Emacs 23.3 or later (24.2 recommended)
 
-- First of all, ensure your environment is setup correctly:
+#### First of all, ensure your environment is setup correctly:
   - If you're not using Linux, setup Erlang mode according to the instructions
-    here: http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html.
+    [here](http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html).
   - Make sure your code is compiled with the debug_info option set.
 
-- Get EDTS:
-
+#### Get EDTS:
+```shell
   $git clone git://github.com/tjarvstrand/edts.git
   $cd edts
   $make
+```
 
-- Make sure EDTS is loaded and started in your .emacs:
-
+#### Make sure EDTS is loaded and started in your .emacs:
+```elisp
   (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
+```
 
-- Configure your projects. EDTS projects configured by creating a file called
-  .edts in your project's root. The configuration file is a number of lines,
+#### Configure your projects.
+  EDTS projects configured by creating a file called
+  `.edts` in your project's root. The configuration file is a number of lines,
   where each line is in the format:
-  :<property> <value>
+` :<property> <value> `
 
-  Values that are lists must be prefixed with a single-quote, eg. '("lib"). See
+  Values that are lists must be prefixed with a single-quote, eg. `'("lib")`. See
   example below.
 
   The properties should all be strings, except lib-dirs and app-include-dirs
   which are lists of strings. Valid properties are:
 
-  name
-  The name of the project. Defaults to the last component of the project
-  root-directory (eg a root set to "~/src/p" would yield "p" as the project name
-  if not explicitly set.
+  - `name`
 
-  node-sname
+    The name of the project. Defaults to the last component of the project
+    root-directory (eg a root set to `~/src/p` would yield `p` as the project name
+    if not explicitly set.
+    
+  - `node-sname`
+
   The erlang sname that the project's erlang node should have. It should contain
-  only the part before the @-sign and defaults to same name as the project.
+  only the part before the `@`-sign and defaults to same name as the project.
 
-  lib-dirs
+  - `lib-dirs`
+  
   A list of paths (relative to the project's root) where the project's code is
   located. All subdirectories of lib-dirs are assumed to be otp-applications.
-  Defaults to '("lib").
+  Defaults to `'("lib")`.
 
-  start-command
+  - `start-command`
+  
   A custom command that EDTS should execute to start the project's Erlang node.
   If this is set, the command must set the node's sname to be the same as the
   value specified in the project's node-sname. The command must also not set the
-  erlang cookie to anything other than the default ~/.erlang.cookie.
-  Defaults to "erl -sname <node-sname>".
+  erlang cookie to anything other than the default `~/.erlang.cookie`.
+  Defaults to `erl -sname <node-sname>`.
 
-  otp-path
+  - `otp-path`
+  
   The path to any custom OTP-version to use for the project. You only have to
   set this if the project uses a different OTP-release than the one that comes
-  first in your `exec-path'. The OTP-release's bin-directory will be added to
+  first in your exec-path. The OTP-release's bin-directory will be added to
   the head of the exec-path and the PATH environment variable when starting the
   project node.
 
-  dialyzer-plt
+  - `dialyzer-plt`
+  
   The path to any custom plt on which to base dialyzer analyses on. You only
-  have to set this if the plt in dialyzer's default location ($DIALYZER_PLT
-  or $HOME/.dialyzer_plt, in that order) is not appropriate for the project. The
+  have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`                                   
+  or `$HOME/.dialyzer_plt`, in that order) is not appropriate for the project. The
   plt-file will not be overwritten.
 
-  app-include-dirs
+  - `app-include-dirs`
+  
   A list of directories to search for include files inside each application. Eg.
-  if set to '("include"), files in any application's include directory can be
-  included with -include("file.hrl") instead of -include("../file.hrl"). This is
+  if set to `'("include")`, files in any application's include directory can be
+  included with `-include("file.hrl")` instead of `-include("../file.hrl")`. This is
   useful if you have a build configuration that sets up your paths for you
-  during your normal build process. If set, '("include") is usually the only
+  during your normal build process. If set, `'("include")` is usually the only
   reasonable value for this property.
 
-  project-include-dirs
+  - `project-include-dirs`
+  
   A list of directories to search for include files inside at the project-level.
-  Eg. if set to '("test/include"), files in any module can include files from
-  <project-root>/test/include with just a -include("file.hrl"). This is useful
+  Eg. if set to `'("test/include")`, files in any module can include files from
+  `<project-root>/test/include` with just a `-include("file.hrl")`. This is useful
   if you have a build configuration that sets up your paths for you during your
   normal build process.
-
-  Example configuration:
+##### Example configuration:
+  ```elisp
   :name "awesome_stuff"
   :node-sname "awesome"
   :lib-dirs '("lib" "test")
   :app-include-dirs '("include")
   :project-include-dirs '("test/shared/include")
-
+  ```
   Local modifications to project configurations can be done to project
   configurations in two ways:
   - Edit the project configuration file directly. If you do this in Emacs, the
     project will be automatically re-initialized as soon as you save the .edts-
     file.
-  - Add overrides by calling `edts-project-override' in your .emacs.
-    `edts-project-override' takes a project-root and a plist of configuration
+  - Add overrides by calling `edts-project-override` in your .emacs.
+    `edts-project-override` takes a project-root and a plist of configuration
     values to override.
 
     Example:
+    ```elisp
     (edts-project-override "~/my-project" '(:name "my-project-dev"
                                             :node-sname "my-project-dev")
                                             :lib-dirs '("lib" "test" "hacks"))
-
-- Get the Erlang documentation (optional).
-  - This is now a guided procedure. Just hit M-x edts-man-setup RET and follow
+    ```
+    
+#### Get the Erlang documentation (optional).
+  - This is now a guided procedure. Just hit `M-x edts-man-setup RET` and follow
     the instructions.
 
     NB. Requires an internet connection and the process will make a small change
     to you .emacs-file.
 
+
 That should be all it takes. If it's not, please report any issues on github.
 
 ## Backward compatibility note ##
 
-If you have previously configured EDTS 'the old way' in `edts-projects', you
+If you have previously configured EDTS 'the old way' in `edts-projects`, you
 can still keep this configuration and everything should work as before.
 However, EDTS will conveniently convert your old configuration and create a
-.edts-file in your project root. You can turn off this behaviour by setting
-`edts-project-inhibit-conversion' to a non-nil value.
+`.edts` file in your project root. You can turn off this behaviour by setting
+`edts-project-inhibit-conversion` to a non-nil value.
 
 ## How it works ##
 
@@ -174,8 +188,8 @@ emacs can then communicate with the project node.
 
 EDTS is meant to be a able to replace Distel but only provides part of the most
 commonly used of Distel's features, specifically the equivalents of
-erl-find-module, erl-find-source-under-point, erl-who-calls and
-erl-refactor-subfunction. As far as I know, those are the only Distel features
+`erl-find-module`, `erl-find-source-under-point`, `erl-who-calls` and
+`erl-refactor-subfunction`. As far as I know, those are the only Distel features
 that 98% of people use, but if there is anything from Distel that you are
 missing in EDTS, please let me know.
 
@@ -185,16 +199,15 @@ running both can create some confusion.
 ## Known Issues ##
 
 Some users are experiencing serious performance issues with the auto-completion
-during the first use after startup. This is usually solved by typing C-g a
+during the first use after startup. This is usually solved by typing `C-g` a
 couple (two or three, it seems to vary) of times when Emacs "hangs" the first
 time. It is most likely caused by a bug in the emacs c-code that affects
 the auto-complete package. If you experience these issues, it's recommended to
-switch to emacs 24.2 where the problem is fixed [1], but if the problems
-persist, any help in debugging the issue would be appreciated since I have
-never myself been able to reproduce it.
+switch to emacs 24.2 where the problem is [fixed](https://github.com/auto-complete/auto-complete/issues/153),
+but if the problems persist, any help in debugging the issue would be appreciated
+since I have never myself been able to reproduce it.
 
-When killing some buffers, Emacs 23 decides to move point to (point-max) in a
+When killing some buffers, Emacs 23 decides to move point to `(point-max)` in a
 seemingly completely unrelated buffer. This will sometimes happen as an effect
-of EDTS' after-save-hook. The issue does not exist in Emacs 24.
+of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 
-[1] https://github.com/auto-complete/auto-complete/issues/153
