@@ -82,7 +82,7 @@ malformed_request(ReqData, Ctx0) ->
 
 resource_exists(ReqData, Ctx) ->
   MFArgKeys = {edts_dialyzer, run, [otp_plt, out_plt, modules]},
-  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [modules], MFArgKeys).
+  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
 
 
 to_json(ReqData, Ctx) ->
