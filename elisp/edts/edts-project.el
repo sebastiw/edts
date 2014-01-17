@@ -64,17 +64,17 @@ Example:
       (edts-project-set-attributes exp-root properties))
     (push (cons exp-root properties) edts-project-overrides)))
 
+(defvar edts-project-valid-properties '(:name
+                                        :node-sname
+                                        :lib-dirs
+                                        :start-command
+                                        :otp-path
+                                        :app-include-dirs
+                                        :project-include-dirs))
+
 (defun edts-project--config-prop-p (prop)
   "Return non-nil if PROP is a valid keyword for edts project configurations."
-  (let ((valid '(:name
-                 :node-sname
-                 :lib-dirs
-                 :start-command
-                 :otp-path
-                 :dialyzer-plt
-                 :app-include-dirs
-                 :project-include-dirs)))
-    (member prop valid)))
+  (member prop edts-project-valid-properties))
 
 (defun edts-project--plist-keys (plist)
   "Return all the keys of PLIST."

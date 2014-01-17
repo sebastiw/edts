@@ -25,19 +25,49 @@
 %%%_* Module declaration =======================================================
 -module(edts_dialyzer).
 
-%%%_* Exports ==================================================================
-
-%% API
--export([run/3]).
+-behaviour(edts_plugins).
 
 %%%_* Includes =================================================================
 -include_lib("eunit/include/eunit.hrl").
+
+%%%_* Exports ==================================================================
+
+%% API
+-export([analyze/2, analyze/3]).
+
+%% EDTS plugin API
+-export([edts_server_services/0,
+         event_formatters/0,
+         project_node_modules/0,
+         project_node_services/0,
+         spec/2]).
 
 %%%_* Defines ==================================================================
 
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+%% EDTS Plugin API
+edts_server_services()  -> [].
+event_formatters()      -> [].
+project_node_modules()  -> [ ?MODULE ].
+project_node_services() -> [].
+
+spec(analyze, 2) -> [ {out_plt, string}
+                    , {modules, [atom]}];
+spec(analyze, 3) -> [ {otp_plt, string}
+                    , {out_plt, string}
+                    , {modules, [atom]}].
+
+%%------------------------------------------------------------------------------
+%% @equiv analyze(undefined, OutPlt, Modules)
+-spec analyze(OutPlt ::filename:filename(),
+              Modules::[filename:filename()] | all) -> [term()].
+%%------------------------------------------------------------------------------
+analyze(OutPlt, Modules) ->
+  analyze(undefined, OutPlt, Modules).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -50,15 +80,19 @@
 %% and return warnings for all modules in Modules or for all modules if
 %% Modules =:= 'all'.
 %% @end
--spec run(BasePlt::filename:filename() | undefined,
-          OutPlt ::filename:filename(),
-          Modules::[filename:filename()] | all) -> [term()].
+-spec analyze(BasePlt::filename:filename() | undefined,
+              OutPlt ::filename:filename(),
+              Modules::[filename:filename()] | all) -> [term()].
 %%------------------------------------------------------------------------------
-run(BasePlt, OutPlt, Modules) ->
+analyze(BasePlt, OutPlt, Modules) ->
+  io:fwrite(user, <<"~p ~p ~p: BasePlt = ~p~n">>, [self(), ?MODULE, ?LINE, BasePlt]),
+  io:fwrite(user, <<"~p ~p ~p: OutPlt = ~p~n">>, [self(), ?MODULE, ?LINE, OutPlt]),
+  io:fwrite(user, <<"~p ~p ~p: Modules = ~p~n">>, [self(), ?MODULE, ?LINE, Modules]),
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
   ok = update_plt(BasePlt, OutPlt, LoadedFiles),
   Warnings = get_plt_warnings(OutPlt),
+  io:fwrite(user, <<"~p ~p ~p: Warnings = ~p~n">>, [self(), ?MODULE, ?LINE, Warnings]),
   format_warnings(filter_warnings(Modules, Warnings)).
 
 %%%_* Internal functions =======================================================

@@ -32,7 +32,6 @@
 (require 'edts-face)
 
 (defvar edts-code-issue-types '(edts-code-compile
-                                edts-code-dialyzer
                                 edts-code-eunit-failed)
   "List of overlay categories that are considered edts-code-issues")
 
@@ -57,11 +56,6 @@ current buffer. It is a plist with one entry for each type (compilation,
 xref, eunit, etc). Each entry in turn is an plist with an entry for each
 issue severity (error, warning, etc).")
 (make-variable-buffer-local 'edts-code-buffer-issues)
-
-(defcustom edts-code-inhibit-dialyzer-on-save t
-  "If non-nil, don't run dialyzer analysis on every save."
-  :group 'edts
-  :type 'boolean)
 
 (defconst edts-code-issue-overlay-priorities
   '((passed-test . 900)
@@ -163,44 +157,6 @@ buffer's project."
        'edts-code-eunit-failed failed)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
 
-(defun edts-code-dialyze-related-hook-fun (result)
-  "Runs dialyzer as a hook if `edts-code-inhibit-dialyzer-on-save' is nil"
-  (unless (or edts-code-inhibit-dialyzer-on-save (eq result 'error))
-    (edts-code-dialyze-related)))
-
-(defun edts-code-dialyze-related ()
-  "Runs dialyzer for all live buffers related to current
-buffer either by belonging to the same project or, if current buffer
-does not belongi to any project, being in the same directory as the
-current buffer's file."
-  (interactive)
-  (edts-face-remove-overlays '(edts-code-dialyzer))
-  (if eproject-mode
-      (edts-code-dialyze-project)
-    (edts-code-dialyze-no-project)))
-
-(defun edts-code-dialyze-project ()
-  "Runs dialyzer for all live buffers with its file in current
-buffer's project, on the node related to that project."
-  (let* ((bufs (edts-project-buffer-list (eproject-root) '(ferl-get-module)))
-         (mods (mapcar #'ferl-get-module bufs))
-         (otp-plt (eproject-attribute :dialyzer-plt))
-         (out-plt (path-util-join edts-data-directory
-                                  (concat (eproject-name) ".plt"))))
-    (edts-get-dialyzer-analysis-async
-     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
-
-(defun edts-code-dialyze-no-project ()
-  "Runs dialyzer for all live buffers with its file in current
-buffer's directory, on the node related to that buffer."
-  (let* ((dir      default-directory)
-         (otp-plt  nil)
-         (plt-file (concat (file-name-nondirectory dir) ".plt"))
-         (out-plt  (path-util-join edts-data-directory plt-file))
-         (mods     (edts-code--modules-in-dir dir)))
-    (edts-get-dialyzer-analysis-async
-     mods otp-plt out-plt #'edts-code-handle-dialyze-result)))
-
 (defun edts-code--modules-in-dir (dir)
   "Return a list of all edts buffers visiting a file in DIR,
 non-recursive."
@@ -215,20 +171,6 @@ non-recursive."
              acc)))
      (buffer-list)
      :initial-value nil)))
-
-(defun edts-code-handle-dialyze-result (analysis-res)
-  (when analysis-res
-    (let* ((all-warnings (cdr (assoc 'warnings analysis-res)))
-           (warn-alist  (edts-code--issue-to-file-map all-warnings)))
-      ;; Set the warning list in each project-buffer
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((warnings (cdr (assoc (buffer-file-name) warn-alist))))
-          (edts-code--set-issues 'edts-code-dialyzer (list 'warning warnings))
-          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when warnings
-            (edts-code-display-warning-overlays 'edts-code-dialyzer
-                                                warnings)))))))
-
 
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."
