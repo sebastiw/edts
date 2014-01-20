@@ -55,9 +55,8 @@ buffer's project, on the node related to that project."
                                    (concat (eproject-name) ".plt")))
          (modules  (mapcar #'ferl-get-module bufs))
          (args (list (cons "otp_plt" otp-plt)
-                     (cons "out-plt" out-plt)
-                     (cons "modules" modules)))
-         (b (message "b")))
+                     (cons "out_plt" out-plt)
+                     (cons "modules" modules))))
     (edts-plugin-call-async (edts-node-name)
                             'edts_dialyzer
                             'analyze

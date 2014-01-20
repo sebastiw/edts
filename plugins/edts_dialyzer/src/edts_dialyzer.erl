@@ -85,14 +85,10 @@ analyze(OutPlt, Modules) ->
               Modules::[filename:filename()] | all) -> [term()].
 %%------------------------------------------------------------------------------
 analyze(BasePlt, OutPlt, Modules) ->
-  io:fwrite(user, <<"~p ~p ~p: BasePlt = ~p~n">>, [self(), ?MODULE, ?LINE, BasePlt]),
-  io:fwrite(user, <<"~p ~p ~p: OutPlt = ~p~n">>, [self(), ?MODULE, ?LINE, OutPlt]),
-  io:fwrite(user, <<"~p ~p ~p: Modules = ~p~n">>, [self(), ?MODULE, ?LINE, Modules]),
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
   ok = update_plt(BasePlt, OutPlt, LoadedFiles),
   Warnings = get_plt_warnings(OutPlt),
-  io:fwrite(user, <<"~p ~p ~p: Warnings = ~p~n">>, [self(), ?MODULE, ?LINE, Warnings]),
   format_warnings(filter_warnings(Modules, Warnings)).
 
 %%%_* Internal functions =======================================================
