@@ -46,6 +46,11 @@ current buffer's file."
       (edts-dialyzer-analyze-project)
     (edts-dialyzer-analyze-directory)))
 
+(define-obsolete-function-alias
+  'edts-code-dialyze-related
+  'edts-dialyzer-analyze
+  "2014-01-23")
+
 (defun edts-dialyzer-analyze-project ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's project, on the node related to that project."
