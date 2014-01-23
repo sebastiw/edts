@@ -356,14 +356,15 @@ update_plt_test_() ->
        ]}]}].
 
 non_otp_beam_files_test_() ->
+  Mod = edts_dialyzer_test_module,
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
-  c:l(edts_test_module),
-  [?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, preloaded}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, OtpDir}])),
-   ?_assertEqual([], non_otp_beam_files(OtpDir, [{edts_test_module, "test"}])),
+  c:l(Mod),
+  [?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, preloaded}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, OtpDir}])),
+   ?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, "test"}])),
    ?_assertEqual(["test.beam"],
-                 non_otp_beam_files(OtpDir, [{edts_test_module, "test.beam"}]))
+                 non_otp_beam_files(OtpDir, [{Mod, "test.beam"}]))
   ].
 
 filter_warnings_test_() ->
