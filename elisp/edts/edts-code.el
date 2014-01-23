@@ -41,8 +41,7 @@
 the module to be compiled as the only argument.")
 
 (defvar edts-code-after-compile-hook
-  '(edts-code-eunit
-    edts-code-dialyze-related-hook-fun)
+  '(edts-code-eunit)
   "Hooks to run after compilation finishes. Hooks are called with the
 compilation result as a symbol as the only argument")
 (defvaralias ;; Compatibility
