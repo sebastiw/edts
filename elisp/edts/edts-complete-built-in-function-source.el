@@ -42,6 +42,9 @@
       "binary_to_list/3"
       "binary_to_term/1"
       "binary_to_term/2"
+      "binary_to_integer/1"
+      "binary_to_integer/2"
+      "binary_to_float/1"
       "bit_size/1"
       "bitstring_to_list/1"
       "byte_size/1"
@@ -224,4 +227,3 @@ function."
          (not (equal ?: preceding))
          (string-match erlang-atom-regexp ac-prefix)))
   ('error nil)))
-
