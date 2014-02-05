@@ -33,6 +33,13 @@
 node."
   :group 'edts)
 
+(defcustom edts-epmd-command
+  (or (executable-find "epmd")
+      (path-util-join (path-util-pop edts-erl-command) "epmd"))
+  "Location of the epmd-executable to use when launching the main EDTS-
+node. If epmd is not in the exec-path, edts-erl-command will be used to find it."
+  :group 'edts)
+
 (defconst edts-erl-root
   (and edts-erl-command
        (file-name-directory
@@ -313,8 +320,16 @@ localhost."
 (defun edts-node-started-p (name)
   "Syncronously query epmd to see whether it has a node with NAME registered."
   (with-temp-buffer
-    (let* ((otp-bin-dir (file-truename (path-util-pop edts-erl-command)))
-           (epmd        (path-util-join otp-bin-dir "epmd")))
+    (let* ((pre-epmd-dir (path-util-pop edts-erl-command 2))
+           (epmd (locate-file "epmd"
+                              (list (file-name-directory edts-epmd-command)
+                                    (file-name-directory edts-erl-command)
+                                    (file-name-directory
+                                      (path-util-join pre-epmd-dir
+                                                      (file-name-completion
+                                                        "erts-" pre-epmd-dir)
+                                                      "bin/")))
+                              '(".exe" ""))))
     (call-process epmd nil (current-buffer) nil "-names")
     (member name (edts-epmd-nodenames-from-string (buffer-string))))))
 
