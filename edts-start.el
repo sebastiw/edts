@@ -211,7 +211,7 @@ left-fringe or right-fringe.")
 
   ;; Auto-completion
   (edts-complete-setup)
-  (apply 'run-hooks edts-mode-hook))
+  (run-hooks edts-mode-hook))
 
 (defun edts-teardown ()
   ;; Start with our own stuff
