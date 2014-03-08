@@ -213,3 +213,6 @@ When killing some buffers, Emacs 23 decides to move point to `(point-max)` in a
 seemingly completely unrelated buffer. This will sometimes happen as an effect
 of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 
+If you're using proxy server, you have to make sure that the proxy is not used
+for communicating with EDTS:
+```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
