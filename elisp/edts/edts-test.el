@@ -17,19 +17,19 @@
 ;;
 ;; Test library for edts.
 (require 'em-glob)
-(require 'path-util)
+(require 'f)
 
-(defconst edts-test-directory (path-util-join edts-root-directory "test")
+(defconst edts-test-directory (f-join edts-root-directory "test")
   "Directory where EDTS test files are located")
 
 (defconst edts-test-project1-directory
-  (path-util-join edts-test-directory "edts-test-project1")
+  (f-join edts-test-directory "edts-test-project1")
   "Directory where EDTS edts-test-project1 is located")
 
 (defun edts-test-project1-modules ()
   "Return a list of all modules in edts-test-project1."
   (file-expand-wildcards
-   (path-util-join edts-test-project1-directory "lib" "*" "src" "*.erl")))
+   (f-join edts-test-project1-directory "lib" "*" "src" "*.erl")))
 
 (defun edts-test-cleanup ()
   (edts-log-debug "Doing test cleanup")
@@ -39,14 +39,14 @@
 
 (defun edts-test-setup-project (root name config)
   "Create project with NAME and CONFIG in ROOT."
-  (edts-project-write-config (path-util-join root ".edts")
+  (edts-project-write-config (f-join root ".edts")
                              (append (list :name name) config)))
 
 (defun edts-test-teardown-project (root)
   "Kill all buffers of the project in ROOT and remove its config."
   (with-each-buffer-in-project (buf root)
       (kill-buffer buf))
-  (delete-file (path-util-join root ".edts"))
+  (f-delete (f-join root ".edts"))
   (setf eproject-attributes-alist
           (delete-if (lambda (x) (equal (car x) root))
                      eproject-attributes-alist)))

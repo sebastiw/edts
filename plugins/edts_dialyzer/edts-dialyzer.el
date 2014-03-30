@@ -17,7 +17,7 @@
 ;;
 ;; xref interaction code for EDTS
 
-;; Window configuration to be restored when quitting debug mode
+(require 'f)
 
 (defcustom edts-code-inhibit-dialyzer-on-compile t
   "If non-nil, don't run dialyzer analysis on every save."
@@ -56,7 +56,7 @@ current buffer's file."
 buffer's project, on the node related to that project."
   (let* ((bufs (edts-project-buffer-list (eproject-root) '(ferl-get-module)))
          (otp-plt  (eproject-attribute :dialyzer-plt))
-         (out-plt  (path-util-join edts-data-directory
+         (out-plt  (f-join edts-data-directory
                                    (concat (eproject-name) ".plt")))
          (modules  (mapcar #'ferl-get-module bufs))
          (args (list (cons "otp_plt" otp-plt)
@@ -73,7 +73,7 @@ buffer's project, on the node related to that project."
 buffer's directory, on the node related to that buffer."
   (let* ((plt-file (concat (file-name-nondirectory default-directory) ".plt"))
          (args '(("otp_plt"  nil)
-                 ("out-plt"  (path-util-join edts-data-directory plt-file))
+                 ("out-plt"  (f-join edts-data-directory plt-file))
                  ("modules"  (edts-code--modules-in-dir dir)))))
     (edts-plugin-call-async (edts-node-name)
                             'edts_dialyzer

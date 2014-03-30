@@ -34,7 +34,7 @@
              'eproject--after-change-major-mode-hook)
 
 (require 'eproject-extras)
-(require 'path-util)
+(require 'f)
 
 (setq eproject-prefer-subproject nil)
 (add-to-list 'auto-mode-alist '("\\.edts\\'" . dot-eproject-mode))
@@ -116,13 +116,13 @@ Example:
   "Try to figure out if FILE should be part of an edts-project."
   (edts-project-maybe-create file-name)
   (let* (prev-root
-        (cur-root (path-util-pop file-name))
-        (bestroot  (when (file-exists-p (path-util-join cur-root ".edts"))
+        (cur-root (f-dirname file-name))
+        (bestroot  (when (f-exists? (f-join cur-root ".edts"))
                      cur-root)))
     (while (and cur-root (not (string= prev-root cur-root)))
       (setq prev-root cur-root)
-      (setq cur-root (path-util-pop cur-root))
-      (when (file-exists-p (path-util-join cur-root ".edts"))
+      (setq cur-root (f-dirname cur-root))
+      (when (f-exists? (f-join cur-root ".edts"))
         (setq bestroot cur-root)))
     bestroot))
 
@@ -260,7 +260,7 @@ Example:
     (edts-ensure-server-started)
     (let* ((file (buffer-file-name))
            (root-dir (edts-project--temp-root file))
-           (node-name (path-util-base-name root-dir)))
+           (node-name (f-filename root-dir)))
       (edts-project-set-attribute root-dir :node-sname node-name)
       (if (edts-shell-find-by-path root-dir)
           (edts-project-node-refresh)
@@ -282,7 +282,7 @@ Example:
     (let* ((file (buffer-file-name))
            (root-dir (eproject-root))
            (node-name (format "otp-%s" (eproject-name)))
-           (erl (path-util-join (eproject-root) "bin/erl")))
+           (erl (f-join (eproject-root) "bin" "erl")))
       (edts-project-set-attribute root-dir :node-sname node-name)
       (if (edts-shell-find-by-path root-dir)
           (edts-project-node-refresh)
@@ -303,10 +303,10 @@ Example:
 (defun edts-project--temp-root (file)
   "Find the appropriate root directory for a temporary project for
 FILE."
-  (let* ((dir        (path-util-dir-name file))
-         (parent-dir (path-util-dir-name dir)))
+  (let* ((dir        (f-dirname file))
+         (parent-dir (f-dirname dir)))
     (if (and (string-match "/\\(src\\|test\\)[/]?$" dir)
-             (file-exists-p (path-util-join parent-dir "ebin")))
+             (f-exists? (f-join parent-dir "ebin")))
         (file-name-as-directory parent-dir)
       (file-name-as-directory dir))))
 
@@ -365,10 +365,10 @@ not defined, the first directory in the `exec-path' that contains a file
 named erl."
   (let ((otp-path (eproject-attribute :otp-path)))
     (if otp-path
-        (path-util-join otp-path "bin" :expand t)
+        (f-full (f-join otp-path "bin"))
       (let ((erl (executable-find "erl")))
         (when erl
-          (path-util-dir-name erl))))))
+          (f-dirname erl))))))
 
 (defun edts-project--old-plist-by-root (root)
   "Finds the entry from `edts-projects' whose `root' equals ROOT after
@@ -416,7 +416,7 @@ projects and there is no previous .edts-file."
              (not edts-project-inhibit-conversion))
     (let ((project (edts-project--file-old-project file)))
       (when (and project
-                 (not (file-exists-p (edts-project--config-file project))))
+                 (not (f-exists? (edts-project--config-file project))))
         (edts-project--create project)
         (edts-log-info "Created .edts configuration file for project: %s"
                        (cdr (assoc 'name project)))))))
@@ -424,7 +424,7 @@ projects and there is no previous .edts-file."
 (defun edts-project--file-old-project (file)
   "Return the entry in `edts-projects' that FILE belongs to, if any."
   (find-if
-   #'(lambda (p) (path-util-file-in-dir-p file (cdr (assoc 'root p))))
+   #'(lambda (p) (f-descendant-of? file (cdr (assoc 'root p))))
    edts-projects))
 
 (defun edts-project--create (project)
@@ -452,7 +452,7 @@ projects and there is no previous .edts-file."
 
 (defun edts-project--config-file (project)
   "Return the path to PROJECT's eproject configuration file."
-  (path-util-join (cdr (assoc 'root project)) ".edts"))
+  (f-join (cdr (assoc 'root project)) ".edts"))
 
 (defun edts-project-buffer-list (project-root &optional predicates)
   "Given PROJECT-ROOT, return a list of the corresponding projects open
@@ -514,8 +514,8 @@ auto-save data."
   (edts-test-case edts-project-suite edts-project-basic-test ()
     "Basic project setup test"
     (find-file (car (edts-test-project1-modules)))
-    (should (file-exists-p
-             (path-util-join edts-test-project1-directory ".edts")))
+    (should (f-exists?
+             (f-join edts-test-project1-directory ".edts")))
     (should (string= "test" (eproject-name)))
     (should (get-buffer"*edts*"))
     (should (get-buffer"*test*")))
@@ -527,12 +527,12 @@ are not considered for erl-files."
 
     ;; Assume that .git exists in edts directory (Yes, this is generally a
     ;; stupid idea, but I'm feeling lazy right now).
-    (should (file-exists-p
-             (path-util-join (path-util-pop edts-test-project1-directory 2)
-                             ".git")))
-    (edts-test-setup-project (path-util-join edts-test-project1-directory
-                                             "lib"
-                                             "one")
+    (should (f-exists?
+             (f-join (f-dirname (f-dirname edts-test-project1-directory))
+                     ".git")))
+    (edts-test-setup-project (f-join edts-test-project1-directory
+                                     "lib"
+                                     "one")
                              "test-dep"
                              nil)
 
@@ -544,5 +544,5 @@ are not considered for erl-files."
     ;; `edts-test-project1-directory'/lib/one/src/one.erl, we choose
     ;; `edts-test-project1-directory' as the project root.
     (find-file (car (edts-test-project1-modules)))
-    (should (string= (path-util-normalize edts-test-project1-directory)
-                     (path-util-normalize (eproject-root))))))
+    (should (string= (f-full edts-test-project1-directory)
+                     (f-full (eproject-root))))))

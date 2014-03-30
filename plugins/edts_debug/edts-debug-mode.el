@@ -17,6 +17,8 @@
 ;;
 ;; EDTS Debug mode
 
+(require 'f)
+
 (defvar edts-debug-mode-pre-frame-configuration nil
   "The frame configuration before entering edts-debug-mode")
 
@@ -190,7 +192,7 @@
           (edts-debug-process-info edts-debug-node edts-debug-pid 'status)))
 
 (defun edts-debug-mode-file-buffer-name (file)
-  (concat "*" (path-util-base-name file) " Debug*"))
+  (concat "*" (f-filename file) " Debug*"))
 
 (defun edts-debug-mode-continue ()
   "Send a continue-command to the debugged process with `edts-debug-pid'

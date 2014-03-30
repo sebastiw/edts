@@ -21,9 +21,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
+(require 'f)
 
 (defconst edts-plugin-directory
-  (path-util-join (file-name-directory edts-root-directory) "plugins")
+  (f-join (file-name-directory edts-root-directory) "plugins")
   "Directory where edts plugins are located.")
 (add-to-list 'load-path edts-plugin-directory)
 
@@ -41,11 +42,11 @@
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
   (edts-log-info "Initializing plugin %s" plugin-name)
-  (let* ((plugin-dir        (path-util-join edts-plugin-directory plugin-name))
+  (let* ((plugin-dir        (f-join edts-plugin-directory plugin-name))
          (elisp-plugin-name (replace-regexp-in-string "_" "-" plugin-name))
          (init-fun          (intern (concat elisp-plugin-name "-init")))
          (buf-init-fun      (intern (concat elisp-plugin-name "-buffer-init")))
-         (el-pattern        (path-util-join plugin-dir "*.el"))
+         (el-pattern        (f-join plugin-dir "*.el"))
          (el-files          (file-expand-wildcards el-pattern)))
     (add-to-list `load-path plugin-dir)
     (mapc #'edts-start-load el-files)

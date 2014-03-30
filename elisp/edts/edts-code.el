@@ -27,7 +27,7 @@
 ;; done by Sebastian Weddmark Olsson.
 
 (require 'eproject-extras)
-(require 'path-util)
+(require 'f)
 
 (require 'edts-face)
 
@@ -164,7 +164,7 @@ non-recursive."
      #'(lambda (acc buf)
          (with-current-buffer buf
            (if (and (buffer-live-p buf)
-                    (string= dir (edts-path-util-dir-name (buffer-file-name))))
+                    (string= dir (f-dirname (buffer-file-name))))
                (let ((module (ferl-get-module buf)))
                  (if module
                      (cons module acc)

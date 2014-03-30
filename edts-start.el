@@ -18,11 +18,14 @@
   (file-name-directory (or (locate-library "edts-start") load-file-name))
   "EDTS root directory.")
 
-(add-to-list 'load-path (concat edts-root-directory "elisp/path-util"))
-(require 'path-util)
+(dolist (pkg '(dash s f))
+  (unless (require pkg nil t)
+    (add-to-list 'load-path
+                 (format "%s/elisp/%s" edts-root-directory pkg))
+    (require pkg)))
 
 (defconst edts-code-directory
-  (path-util-join edts-root-directory "elisp" "edts")
+  (f-join edts-root-directory "elisp" "edts")
   "Directory where edts code is located.")
 
 (defcustom edts-data-directory
@@ -33,33 +36,33 @@
   :group 'edts)
 
 (defconst edts-lib-directory
-  (path-util-join edts-root-directory "elisp")
+  (f-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
 
 (defconst edts-plugin-directory
-  (path-util-join edts-root-directory "plugins")
+  (f-join edts-root-directory "plugins")
   "Directory where edts plugins are located.")
 
 (defconst edts-test-directory
-  (path-util-join edts-root-directory "test")
+  (f-join edts-root-directory "test")
   "Directory where edts test data are located.")
 
 (unless (require 'erlang nil 'noerror)
   (add-to-list 'load-path
                (car
                 (file-expand-wildcards
-                 (path-util-join
-                  (path-util-pop (file-truename (executable-find "erl")) 2)
-                           "lib"
-                           "tools*"
-                           "emacs"))))
+                 (f-join
+                  (f-dirname (f-dirname (f-canonical (executable-find "erl"))))
+                  "lib"
+                  "tools*"
+                  "emacs"))))
   (require 'erlang))
 
 ;; Add all libs to load-path
 (loop for  (name dirp . rest)
       in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
       when dirp
-      do   (add-to-list 'load-path (path-util-join edts-lib-directory name)))
+      do   (add-to-list 'load-path (f-join edts-lib-directory name)))
 
 (defcustom edts-erlang-mode-regexps
   '("^\\.erlang$"
@@ -98,7 +101,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
  for  file
  in   (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
  ;; avoid symlinks created as emacs backups
- when (not (file-symlink-p (path-util-join edts-code-directory file)))
+ when (not (file-symlink-p (f-join edts-code-directory file)))
  do   (edts-start-load file))
 
 ;; External
@@ -136,7 +139,7 @@ consider EDTS."
         (file-name (buffer-file-name)))
     ;; dired buffer has no file
     (if (and file-name
-             (string-match re (path-util-base-name file-name)))
+             (string-match re (f-filename file-name)))
         (setq ad-return-value '(edts-otp edts-temp edts generic))
       ad-do-it)))
 (ad-activate-regexp "edts-eproject-types")

@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'f)
+
 (defconst edts-man-download-url "http://www.erlang.org/download"
   "Where to download the erlang documentation from.")
 
@@ -79,9 +81,9 @@ Location of the OTP documentation man-pages."
 
 (defun edts-man--choose-dir (vsn)
   "Query the user for where to store documentation."
-  (let* ((default (path-util-join edts-data-directory "doc"))
+  (let* ((default (f-join edts-data-directory "doc"))
          (query "Where do you want to store the documentation? ")
-         (dir   (path-util-join (read-file-name query default default) vsn)))
+         (dir   (f-join (read-file-name query default default) vsn)))
     (edts-man--ensure-dir dir)
     dir))
 
@@ -222,7 +224,7 @@ interactively to set up your man-pages instead")
   "Get the directory of MAN-PAGE under ROOT."
   (unless edts-man-root
     (error "edts-man not configured, please run `edts-man-setup'"))
-  (path-util-join edts-man-root "man" (concat "man" (int-to-string man-page))))
+  (f-join edts-man-root "man" (concat "man" (int-to-string man-page))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

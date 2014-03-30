@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'f)
+
 (require 'edts-event)
 
 (defcustom edts-erl-command
@@ -37,7 +39,7 @@ node."
   (and edts-erl-command
        (file-name-directory
         (directory-file-name
-         (file-name-directory (file-truename edts-erl-command)))))
+         (file-name-directory (f-canonical edts-erl-command)))))
   "Location of the Erlang root directory")
 
 (defcustom edts-data-directory
@@ -288,7 +290,7 @@ for ARITY will give a regexp matching any arity."
   (interactive)
   (when (edts-node-started-p "edts")
     (error "EDTS: Server already running"))
-  (let* ((pwd (path-util-join (directory-file-name edts-lib-directory) ".."))
+  (let* ((pwd (f-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory edts-erl-command))
          (retries 20)
          available)
@@ -313,8 +315,8 @@ localhost."
 (defun edts-node-started-p (name)
   "Syncronously query epmd to see whether it has a node with NAME registered."
   (with-temp-buffer
-    (let* ((otp-bin-dir (file-truename (path-util-pop edts-erl-command)))
-           (epmd        (path-util-join otp-bin-dir "epmd")))
+    (let* ((otp-bin-dir (f-canonical (f-dirname edts-erl-command)))
+           (epmd        (f-join otp-bin-dir "epmd")))
     (call-process epmd nil (current-buffer) nil "-names")
     (member name (edts-epmd-nodenames-from-string (buffer-string))))))
 

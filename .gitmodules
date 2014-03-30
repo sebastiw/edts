@@ -16,3 +16,9 @@
 [submodule "elisp/f"]
 	path = elisp/f
 	url = https://github.com/rejeep/f.el.git
+[submodule "elisp/dash"]
+	path = elisp/dash
+	url = https://github.com/magnars/dash.el.git
+[submodule "elisp/s"]
+	path = elisp/s
+	url = https://github.com/magnars/s.el.git
