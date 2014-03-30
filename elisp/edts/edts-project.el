@@ -115,15 +115,13 @@ Example:
 (defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
   (edts-project-maybe-create file-name)
-  (let* (prev-root
-        (cur-root (f-dirname file-name))
-        (bestroot  (when (f-exists? (f-join cur-root ".edts"))
-                     cur-root)))
-    (while (and cur-root (not (string= prev-root cur-root)))
-      (setq prev-root cur-root)
-      (setq cur-root (f-dirname cur-root))
-      (when (f-exists? (f-join cur-root ".edts"))
-        (setq bestroot cur-root)))
+  (let* ((base (f-dirname file-name))
+         (bestroot  (when (f-exists? (f-join base ".edts"))
+                      base)))
+    (f-traverse-upwards #'(lambda (p)
+                            (prog1 nil
+                              (when (f-exists? (f-join p ".edts"))
+                                (setq bestroot p)))))
     bestroot))
 
 (define-project-type edts-otp (generic)
@@ -384,7 +382,7 @@ they are both expanded."
   (let ((exp-root (file-name-as-directory (expand-file-name root))))
     (find-if
      #'(lambda (project)
-         (string= (file-name-as-directory
+         (f-same? (file-name-as-directory
                    (expand-file-name
                     (cdr (assoc 'root project))))
                   exp-root))
@@ -462,7 +460,7 @@ buffers, for which all PREDICATES hold true."
        (with-current-buffer buf
          (if (and (buffer-live-p buf)
                   eproject-mode
-                  (string= project-root (eproject-root))
+                  (f-same? project-root (eproject-root))
                   (every #'(lambda (pred) (funcall pred)) predicates))
              (cons buf acc)
            acc)))
