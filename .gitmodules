@@ -16,3 +16,6 @@
 [submodule "elisp/pos-tip"]
 	path = elisp/pos-tip
 	url = git://github.com/tjarvstrand/pos-tip.git
+[submodule "elisp/f"]
+	path = elisp/f
+	url = https://github.com/rejeep/f.el.git
