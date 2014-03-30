@@ -89,13 +89,17 @@
   "Font lock keyword highlighting Erlang variables.
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
+(defun edts-start-load (file)
+  "Load file"
+  (load file nil edts-start-inhibit-load-msgs))
+
 ;; EDTS
 (loop
  for  file
  in   (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
  ;; avoid symlinks created as emacs backups
  when (not (file-symlink-p (path-util-join edts-code-directory file)))
- do   (load file nil edts-start-inhibit-load-msgs))
+ do   (edts-start-load file))
 
 ;; External
 (require 'auto-highlight-symbol)
