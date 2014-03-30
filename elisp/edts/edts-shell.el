@@ -115,8 +115,7 @@ PWD and running COMMAND."
   :group edts
   :require erlang-mode
   (if edts-shell-mode
-      (edts-shell-mode-setup)
-      (edts-shell-mode-teardown)))
+      (edts-shell-mode-setup)))
 
 (defun edts-shell-mode-setup ()
   ;; generic stuff
@@ -242,13 +241,13 @@ respectively so we can use them later when fontifying user input."
          (font-lock-default-fontify-region start temp-end loudly))
         (otherwise
          (setq temp-end (edts-shell--non-output-end start end))
-         (edts-shell--fontify-non-output-region start temp-end)))
+         (edts-shell--fontify-non-output-region start temp-end loudly)))
       (setq start (1+ temp-end)))))
 
 (defun edts-shell-output-end (start bound)
   "Return the last position of the output field starting at START,
 bounded by BOUND."
-  (or (text-property-not-all start bound 'field 'output) end))
+  (or (text-property-not-all start bound 'field 'output) bound))
 
 (defun edts-shell--non-output-end (start bound)
   "Return the last position of the non-output field starting at START,
@@ -258,7 +257,7 @@ bounded by BOUND."
         (1- output-start)
       bound)))
 
-(defun edts-shell--fontify-non-output-region (start end)
+(defun edts-shell--fontify-non-output-region (start end loudly)
   (let ((font-lock-defaults edts-shell-font-lock-defaults)
         (font-lock-keywords edts-shell-font-lock-keywords))
     (with-syntax-table erlang-mode-syntax-table

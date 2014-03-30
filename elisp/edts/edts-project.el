@@ -47,6 +47,9 @@
 (defvar edts-project-overrides nil
   "Local overrides for project configurations")
 
+(defconst edts-projects nil
+  "Deprecated, see README for how to configure EDTS projects.")
+
 (defun edts-project-override (root properties)
   "Add overrides for in ROOT. PROPERTIES is a plist with the properties
 to set, and their new values.
@@ -201,7 +204,7 @@ Example:
     (edts-ensure-server-started)
     (let ((root (eproject-root)))
 
-      (when (boundp 'edts-projects)
+      (when (and (boundp 'edts-projects) edts-projects)
         ;; -- Backward compatibility code --
         ;; Override the configuration of the current buffer's eproject with the
         ;; values from the corresponding entry in `edts-projects'.

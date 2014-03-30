@@ -95,16 +95,14 @@ buffer's directory, on the node related to that buffer."
   (edts-code--modules-in-dir default-directory))
 
 
-(defun edts-code-xref-analyze ()
+(defun edts-xref-analyze ()
   "Runs xref-checks for current buffer on the node related to that
 buffer's project."
   (interactive)
   (let ((module (ferl-get-module)))
     (when module
       (edts-face-remove-overlays '(edts-xref))
-      (edts-xref-module-analysis-async
-       (list module) edts-xref-checks
-       #'edts-xref-analysis-callback))))
+      (edts-xref-module-analysis-async (list module)))))
 
 (defun edts-xref-module-analysis-async (modules)
   "Run xref-checks on MODULE on the node associated with current buffer,

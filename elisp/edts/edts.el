@@ -329,7 +329,8 @@ localhost."
     names))
 
 (defcustom edts-async-node-init t
-  "Whether or not node initialization should be synchronous")
+  "Whether or not node initialization should be synchronous"
+  :group 'edts)
 
 (defvar edts--pending-node-startups nil
   "List of nodes that we are waiting on to get ready for registration.")
@@ -398,15 +399,15 @@ requests.")
                        app-include-dirs
                        project-include-dirs)
   "Register NODE-NAME with the EDTS server asynchronously."
+  (interactive (list (eproject-attribute :name)
+                     (edts-node-name)
+                     (eproject-attribute :root)
+                     (eproject-attribute :lib-dirs)
+                     (eproject-attribute :app-include-dirs)
+                     (eproject-attribute :project-include-dirs)))
   (unless (member node-name edts--outstanding-node-registration-requests)
     (edts-log-debug "Initializing node %s" node-name)
     (add-to-list 'edts--outstanding-node-registration-requests node-name)
-    (interactive (list (eproject-attribute :name)
-                       (edts-node-name)
-                       (eproject-attribute :root)
-                       (eproject-attribute :lib-dirs)
-                       (eproject-attribute :app-include-dirs)
-                       (eproject-attribute :project-include-dirs)))
     (let* ((resource (list "nodes" node-name))
            (args     (list (cons "project_name"         project-name)
                            (cons "project_root"         root)
@@ -590,7 +591,7 @@ non-nil, don't report an error if the request fails."
                               (cdr (assoc 'result res))))))))
 
 (defun edts--node-memberp (node nodes)
-  (some #'(lambda (reg-node) (string-match (concat node "@") reg-node))))
+  (some #'(lambda (reg-node) (string-match (concat node "@") reg-node)) nodes))
 
 (defvar edts-node-name nil
   "Used to manually set the project node-name to use in a buffer

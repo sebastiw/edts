@@ -21,12 +21,6 @@
 
 (require 'cl)
 
-(require 'edts-debug-mode)
-
-(require 'edts-debug-list-breakpoint-mode)
-(require 'edts-debug-list-interpreted-mode)
-(require 'edts-debug-list-processes-mode)
-
 (defface edts-debug-process-location-face
   '((((class color) (background dark)) (:background "midnight blue"))
     (((class color) (background light)) (:background "light blue"))
@@ -66,7 +60,8 @@
 request should always be outstanding if we are not already attached.")
 
 (defcustom edts-debug-auto-attach t
-  "If non-nil, automatically enter debug-mode when a breakpoint is hit.")
+  "If non-nil, automatically enter debug-mode when a breakpoint is hit."
+  :group 'edts)
 
 (defvar edts-debug-node nil
   "Then node we are debugging on")

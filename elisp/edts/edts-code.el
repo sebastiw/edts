@@ -164,9 +164,11 @@ non-recursive."
      #'(lambda (acc buf)
          (with-current-buffer buf
            (if (and (buffer-live-p buf)
-                    (string= dir (path-util-dir-name (buffer-file-name)))
-                    (ferl-get-module buf))
-               (cons module acc)
+                    (string= dir (edts-path-util-dir-name (buffer-file-name))))
+               (let ((module (ferl-get-module buf)))
+                 (if module
+                     (cons module acc)
+                   acc))
              acc)))
      (buffer-list)
      :initial-value nil)))

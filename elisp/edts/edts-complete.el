@@ -112,7 +112,8 @@ character before that."
     edts-complete-module-source
     edts-complete-macro-source
     edts-complete-record-source)
-  "Sources that EDTS uses for auto-completion.")
+  "Sources that EDTS uses for auto-completion."
+  :group 'edts)
 
 (defcustom edts-complete-shell-sources
   '(edts-complete-keyword-source
@@ -120,7 +121,8 @@ character before that."
     edts-complete-built-in-function-source
     edts-complete-module-source)
   "Sources that EDTS uses for auto-completion in shell (comint)
-buffers.")
+buffers."
+  :group 'edts)
 
 (defun edts-complete-setup (&optional sources)
   "Set edts completion defaults local to current buffer."

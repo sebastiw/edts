@@ -25,6 +25,13 @@
   (path-util-join edts-root-directory "elisp" "edts")
   "Directory where edts code is located.")
 
+(defcustom edts-data-directory
+  (if (boundp 'user-emacs-directory)
+      (expand-file-name (concat user-emacs-directory "/edts"))
+    (expand-file-name "~/.emacs.d"))
+  "Where EDTS should save its data."
+  :group 'edts)
+
 (defconst edts-lib-directory
   (path-util-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
@@ -65,7 +72,8 @@
     "\\.eterm$"
     "\\.script$"
     "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode.")
+  "Additional extensions for which to auto-activate erlang-mode."
+  :group 'edts)
 
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
@@ -165,7 +173,8 @@ consider EDTS."
 
 (defcustom edts-marker-fringe 'left-fringe
   "Which side to display fringe-markers on. The value must be either
-left-fringe or right-fringe.")
+left-fringe or right-fringe."
+  :group 'edts)
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
