@@ -10,9 +10,6 @@
 [submodule "elisp/eproject"]
 	path = elisp/eproject
 	url = git://github.com/jrockway/eproject.git
-[submodule "elisp/path-util"]
-	path = elisp/path-util
-	url = git://github.com/tjarvstrand/path-util.git
 [submodule "elisp/pos-tip"]
 	path = elisp/pos-tip
 	url = git://github.com/tjarvstrand/pos-tip.git
