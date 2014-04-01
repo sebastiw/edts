@@ -162,58 +162,5 @@ current buffer's project."
   (edts-log-info "Re-doing last edts-who-calls")
   (edts-navigate-function-popup edts-xref--last-who-calls-result))
 
-
-(when (member 'ert features)
-
-  (require 'edts-test)
-  (edts-test-add-suite
-   ;; Name
-   edts-xref-suite
-   ;; Setup
-   (lambda ()
-     (setq edts-event-inhibit t)
-     (edts-test-pre-cleanup-all-buffers)
-     (edts-test-setup-project edts-test-project1-directory
-                              "test"
-                              nil)
-     (edts-rest-force-sync t))
-
-   ;; Teardown
-   (lambda (setup-config)
-     (setq edts-event-inhibit nil)
-     (edts-test-teardown-project edts-test-project1-directory)
-     (edts-test-post-cleanup-all-buffers)
-     (edts-rest-force-sync nil)))
-
-  (edts-test-case edts-xref-suite edts-xref-analysis-test ()
-    "Basic xref analysis setup test"
-    (flet ((edts-node-down-request () nil))
-      (let ((edts-async-node-init nil))
-        (find-file (car (edts-test-project1-modules)))
-        (edts-xref-module-analysis-async '("one"))
-        (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
-                                  'error)))
-          (should (equal (length errors) 1))
-          (should (equal (cdr (assoc 'line (car errors))) 24))
-          (should (string= (cdr (assoc 'type (car errors))) "error"))
-          (should (string= (cdr (assoc 'file (car errors)))
-                           (file-truename (buffer-file-name))))))))
-
-  (edts-test-case edts-xref-suite edts-xref-who-calls-test ()
-    "Basic project setup test"
-    (flet ((edts-node-down-request () nil))
-      (let ((edts-async-node-init nil))
-        (find-file (car (edts-test-project1-modules)))
-        (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
-               (caller   (car callers))
-               (module   (cdr (assoc 'module caller)))
-               (function (cdr (assoc 'function caller)))
-               (arity    (cdr (assoc 'arity caller)))
-               (lines    (cdr (assoc 'lines caller))))
-          (should (equal (length callers) 1))
-          (should (equal module "one"))
-          (should (equal function "one"))
-          (should (equal arity 1)))))))
-
-  (provide 'edts-xref)
+(provide 'edts-xref)
 

@@ -17,8 +17,6 @@
 ;;
 ;; Debugger interaction code for EDTS
 
-;; Window configuration to be restored when quitting debug mode
-
 (require 'cl)
 
 (defface edts-debug-process-location-face
@@ -444,43 +442,5 @@ indentation and lines broken at MAX-COL."
     (if prop
         (cdr (assoc prop info))
       info)))
-
-(when (member 'ert features)
-
-  (require 'edts-test)
-  (edts-test-add-suite
-   ;; Name
-   edts-debug-suite
-   ;; Setup
-   (lambda ()
-     (let ((async-node-init edts-async-node-init))
-       (setq edts-async-node-init nil)
-       (setq edts-event-inhibit t)
-       (edts-rest-force-sync t)
-       (edts-test-pre-cleanup-all-buffers)
-       (edts-test-setup-project edts-test-project1-directory
-                                "test"
-                                nil)
-       `((async-node-init . ,async-node-init))))
-
-   ;; Teardown
-   (lambda (setup-config)
-     (setq edts-async-node-init (cdr (assoc 'async-node-init setup-config)))
-     (edts-rest-force-sync nil)
-     (setq edts-event-inhibit nil)
-     (edts-test-post-cleanup-all-buffers)
-     (edts-test-teardown-project edts-test-project1-directory)))
-
-  (edts-test-case edts-debug-suite edts-debug-basic-test ()
-    "Basic debugger setup test"
-    (let ((eproject-prefer-subproject t))
-      (find-file (car (edts-test-project1-modules)))
-
-      (should-not (edts-debug-interpretedp))
-      (edts-debug-interpret nil nil 't)
-      (should (edts-debug-interpretedp))
-      (should-not (edts-debug-module-breakpoints))
-      (edts-debug-break nil nil nil t)
-      (should (eq 1 (length (edts-debug-breakpoints)))))))
 
 (provide 'edts-debug)

@@ -299,21 +299,3 @@ default directory if it exists, otherwise nil."
         (when (string= path (cdr (assoc 'default-directory (cdar shells))))
           (return (get-buffer (caar shells))))
           (pop shells)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Unit tests
-
-(when (featurep 'ert)
-  (ert-deftest edts-shell-make-comint-buffer-test ()
-    (let ((buffer (edts-shell-make-comint-buffer
-                   "edts-test"
-                   "edts-test"
-                   "."
-                   '("erl"))))
-      (should (bufferp buffer))
-      (should (string= "edts-test" (buffer-name buffer)))
-      (should (string-match "erl\\(<[0-9]*>\\)?"
-                            (process-name (get-buffer-process buffer))))
-      (set-process-query-on-exit-flag (get-buffer-process buffer) nil)
-      (kill-process (get-buffer-process buffer))
-      (kill-buffer buffer))))
