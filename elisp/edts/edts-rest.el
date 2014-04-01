@@ -261,7 +261,7 @@ request completes."
     (apply callback
            (edts-rest-request method resource args)
            callback-args)))
-
+(edts-rest-force-sync nil)
 
 (defadvice url-http-end-of-document-sentinel
   (around edts-rest-end-of-document-sentinel (process why))
