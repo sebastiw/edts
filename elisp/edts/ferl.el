@@ -25,6 +25,58 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
+(defun ferl-point-inside-quotes ()
+  "Returns 'double if point is inside double quotes, 'single if point is inside
+single quotes and 'none otherwise. Relies on font-lock-string-face to work."
+  (if (not (equal 'font-lock-string-face (get-text-property (point) 'face)))
+      'none
+      (save-excursion
+          (when (re-search-backward "\\([^\\]\\|^\\)\\(['\"]\\)" nil t)
+            (let* ((start (match-beginning 2))
+                   (char (char-after start))
+                   (string-face-p (equal 'font-lock-string-face
+                                         (get-text-property (1- start) 'face))))
+           (cond
+            ; we're inside a double quoted string if either:
+            ; we hit a " and the preceding char is not string
+            ; fontified.
+            ((and (equal ?\" char) (not string-face-p)) 'double-quoted)
+            ; or we hit a ' and the preceding char is still string
+            ; fontified
+            ((and (equal ?' char) string-face-p)              'double-quoted)
+            ; we're inside a single quoted string if either:
+            ; we hit a ' and the preceding char is not string
+            ; fontified.
+            ((and (equal ?' char) (not string-face-p))        'single-quoted)
+            ; or we hit a " and the preceding char is still string
+            ; fontified
+            ((and (equal ?\" char) string-face-p)             'single-quoted)
+            ; Otherwise we're not inside quotes
+            ('otherwise                                       'none)))))))
+
+
+(defun ferl-single-quote-terminate (str)
+  "Removes any single quotes at start and end of `str' and adds one at the end
+if not already present"
+  (when      (string-match "^'" str) (setq str (substring str 1)))
+  (when (not (string-match "'$" str)) (setq str (concat str "'")))
+  str)
+
+(defun ferl-symbol-at (&optional pos)
+  "Returns the symbol at `pos', if any, otherwise nil."
+  (save-excursion
+    (when pos (goto-char pos))
+    (thing-at-point 'symbol)))
+
+(defun ferl-term-preceding-char (&optional point)
+  "Returns the character preceding symbol, or if that is a single-quote, the
+character before that."
+  (let* ((char  (char-before (or point ac-point))))
+    (if (equal ?' char)
+        (char-before (- ac-point 1))
+        char)))
+
+
 (defun ferl-goto-line (line)
   "Non-interactive version of goto-line."
   (goto-char (point-min))

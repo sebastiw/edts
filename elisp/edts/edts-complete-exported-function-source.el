@@ -51,17 +51,17 @@
   "Initializes the list of exported function completions."
   (let ((point (or ac-point (point))))
     (when (edts-complete-exported-function-p point)
-      (case (edts-complete-point-inside-quotes)
+      (case (ferl-point-inside-quotes)
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing exported function completions")
-         (let* ((module  (symbol-at (- point 1)))
+         (let* ((module  (ferl-symbol-at (- point 1)))
                 (exports (edts-get-module-exports module t)))
            (setq edts-complete-exported-function-candidates
                  (mapcar #'edts-function-to-string exports))))))))
 
 (defun edts-complete-exported-function-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-exported-function-candidates))
     ('none          (edts-complete-normal-exported-function-candidates))))
@@ -77,12 +77,12 @@
   "Produces the completion for single-qoted erlang modules, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-module-candidates)))
 
 (defun edts-complete-exported-function-doc (candidate)
   "Find the documentation for CANDIDATE."
-  (let* ((module   (symbol-at (- ac-point 1)))
+  (let* ((module   (ferl-symbol-at (- ac-point 1)))
          (split    (split-string candidate "/"))
          (function (car split))
          (arity    (string-to-number (cadr split))))
@@ -106,7 +106,8 @@ an exported function."
   (condition-case ex
       (let ((case-fold-search nil))
         (and
-         (equal ?: (edts-complete-term-preceding-char point))
-         (string-match erlang-atom-regexp (symbol-at (- point 1)))))
+         (equal ?: (ferl-term-preceding-char point))
+         (string-match erlang-atom-regexp (ferl-symbol-at (- point 1)))))
       ('error nil)))
 
+(provide 'edts-complete-exported-function-source)

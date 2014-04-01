@@ -37,7 +37,7 @@
 ;; Candidate functions
 
 (defun edts-complete-keyword-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-keyword-candidates))
     ('none          (edts-complete-normal-keyword-candidates))))
@@ -54,7 +54,7 @@
   "Produces the completion for single-qoted erlang bifs, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-keyword-candidates)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -65,8 +65,10 @@ candidates, except we single-quote-terminate candidates."
   "Returns non-nil if the current `ac-prefix' can be completed with a keyword
 function."
   (condition-case ex
-  (let ((preceding (edts-complete-term-preceding-char)))
+  (let ((preceding (ferl-term-preceding-char)))
     (and
      (not (member preceding '(?? ?# ?:)))
      (string-match erlang-atom-regexp ac-prefix)))
   ('error nil)))
+
+(provide 'edts-complete-keyword-source)

@@ -44,7 +44,7 @@
 (add-hook 'after-save-hook #'(lambda () (setq edts-complete-module-cache nil)))
 
 (defun edts-complete-module-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-module-candidates))
     ('none          (edts-complete-normal-module-candidates))))
@@ -63,7 +63,7 @@
   "Produces the completion for single-qoted erlang modules, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-module-candidates)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,10 +73,12 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-module-p ()
   "Returns non-nil if the current `ac-prefix' can be completed with a module."
   (condition-case ex
-      (let ((preceding (edts-complete-term-preceding-char)))
+      (let ((preceding (ferl-term-preceding-char)))
         (and
          (not (equal ?? preceding))
          (not (equal ?# preceding))
          (not (equal ?: preceding))
          (string-match erlang-atom-regexp ac-prefix)))
   ('error nil)))
+
+(provide 'edts-complete-module-source)

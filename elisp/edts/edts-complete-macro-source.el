@@ -46,7 +46,7 @@
 (add-hook 'after-save-hook #'(lambda () (setq edts-complete-macro-cache nil)))
 
 (defun edts-complete-macro-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-macro-candidates))
     ('none          (edts-complete-normal-macro-candidates))))
@@ -65,7 +65,7 @@
   "Produces the completion for single-qoted erlang bifs, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-macro-candidates)))
 
 (defun edts-complete-macro-doc (candidate)
@@ -87,8 +87,10 @@ POINT or current could be completed with an macro."
 function."
   (condition-case ex
       (and
-       (equal ?? (edts-complete-term-preceding-char point))
+       (equal ?? (ferl-term-preceding-char point))
        (or (not ac-prefix) (string= "" ac-prefix)
            (string-match "\\(\\('.*\\)\\|\\([a-zA-Z_][a-zA-Z1-9_@]*\\)\\)"
                          ac-prefix)))
     ('error nil)))
+
+(provide 'edts-complete-macro-source)

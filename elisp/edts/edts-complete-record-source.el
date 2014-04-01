@@ -50,7 +50,7 @@
 (defun edts-complete-record-init ()
   "Initialize record completions."
   (when (edts-complete-record-p ac-point)
-    (case (edts-complete-point-inside-quotes)
+    (case (ferl-point-inside-quotes)
       ('double-quoted nil) ; Don't complete inside strings
       (otherwise
        (edts-log-debug "Initializing record completions")
@@ -62,7 +62,7 @@
            (setq edts-complete-record-candidates candidates)))))))
 
 (defun edts-complete-record-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-record-candidates))
     ('none          (edts-complete-normal-record-candidates))))
@@ -78,7 +78,7 @@
   "Produces the completion for single-qoted erlang bifs, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-record-candidates)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -97,8 +97,9 @@ POINT or current could be completed with an record."
 function."
   (condition-case ex
       (and
-       (equal ?# (edts-complete-term-preceding-char point))
+       (equal ?# (ferl-term-preceding-char point))
        (or (not ac-prefix) (string= "" ac-prefix)
            (string-match erlang-atom-regexp ac-prefix)))
     ('error nil)))
 
+(provide 'edts-complete-record-source)

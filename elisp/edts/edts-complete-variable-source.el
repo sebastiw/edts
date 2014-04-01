@@ -52,7 +52,7 @@
           (edts-complete-find-variable-candidates))))
 
 (defun edts-complete-variable-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('single-quoted nil) ; No single-quoted variables
     ('none          (edts-complete-normal-variable-candidates))))
@@ -85,10 +85,11 @@ mentioned in current function, before current point."
 variable."
   (condition-case ex
       (let ((case-fold-search nil)
-            (preceding        (edts-complete-term-preceding-char)))
+            (preceding        (ferl-term-preceding-char)))
         (and
          (not (equal ?? preceding))
          (not (equal ?# preceding))
          (string-match erlang-variable-regexp ac-prefix)))
     ('error nil)))
 
+(provide 'edts-complete-variable-source)

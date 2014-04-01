@@ -47,7 +47,7 @@
 (defun edts-complete-local-function-init ()
     "Initialize local function completions."
     (when (edts-complete-local-function-p)
-      (case (edts-complete-point-inside-quotes)
+      (case (ferl-point-inside-quotes)
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing local function completions")
@@ -55,7 +55,7 @@
                (mapcar #'car (ferl-local-functions)))))))
 
 (defun edts-complete-local-function-candidates ()
-  (case (edts-complete-point-inside-quotes)
+  (case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-local-function-candidates))
     ('none          (edts-complete-normal-local-function-candidates))))
@@ -71,7 +71,7 @@
   "Produces the completion for single-qoted erlang terms, Same as normal
 candidates, except we single-quote-terminate candidates."
   (mapcar
-   #'edts-complete-single-quote-terminate
+   #'ferl-single-quote-terminate
    (edts-complete-normal-local-function-candidates)))
 
 (defun edts-complete-local-function-doc (candidate)
@@ -93,7 +93,7 @@ candidates, except we single-quote-terminate candidates."
   "Returns non-nil if the current `ac-prefix' can be completed with a local
 function."
   (condition-case ex
-      (let ((preceding (edts-complete-term-preceding-char)))
+      (let ((preceding (ferl-term-preceding-char)))
         (and
          (not (equal ?? preceding))
          (not (equal ?# preceding))
