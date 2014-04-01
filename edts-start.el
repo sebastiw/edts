@@ -103,7 +103,9 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
  for  file
  in   (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
  ;; avoid symlinks created as emacs backups
- when (not (file-symlink-p (f-join edts-code-directory file)))
+ when (and (not (file-symlink-p (f-join edts-code-directory file)))
+           (or  (member 'ert features)
+                (not (string-match ".*-test" (f-base file)))))
  do   (edts-start-load file))
 
 ;; External
