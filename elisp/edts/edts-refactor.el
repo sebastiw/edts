@@ -84,3 +84,5 @@ variables."
     (while (re-search-forward "\\?[A-Za-z_]+" nil t)
       (replace-match "deadmacro" t))
     (buffer-string)))
+
+(provide 'edts-refactor)

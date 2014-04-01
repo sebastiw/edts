@@ -299,3 +299,5 @@ default directory if it exists, otherwise nil."
         (when (string= path (cdr (assoc 'default-directory (cdar shells))))
           (return (get-buffer (caar shells))))
           (pop shells)))))
+
+(provide 'edts-shell)

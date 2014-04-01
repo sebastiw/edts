@@ -103,3 +103,4 @@ function."
          (string-match erlang-atom-regexp ac-prefix)))
     ('error nil)))
 
+(provide 'edts-complete-local-function-source)

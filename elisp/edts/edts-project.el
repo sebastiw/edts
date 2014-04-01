@@ -485,3 +485,5 @@ auto-save data."
   (when (y-or-n-p (format "Revert all buffers in %s" (eproject-name)))
     (with-each-buffer-in-project (gensym) (eproject-root)
       (revert-buffer t t t))))
+
+(provide 'edts-project)

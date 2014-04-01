@@ -135,5 +135,4 @@ call `switch-to-buffer'."
 (defun edts-debug--get-module-source (node module)
   (cdr (assoc 'source (edts-get-module-info node module 'basic))))
 
-
 (provide 'edts-debug-list-breakpoint-mode)

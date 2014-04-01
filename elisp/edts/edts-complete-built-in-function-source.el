@@ -227,3 +227,5 @@ function."
          (not (equal ?: preceding))
          (string-match erlang-atom-regexp ac-prefix)))
   ('error nil)))
+
+(provide 'edts-complete-built-in-function-source)

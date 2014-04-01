@@ -89,3 +89,4 @@ function."
      (string-match erlang-atom-regexp ac-prefix)))
   ('error nil)))
 
+(provide 'edts-complete-imported-function-source)

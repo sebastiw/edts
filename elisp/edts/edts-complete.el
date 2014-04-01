@@ -104,3 +104,4 @@ non-nil."
   (unless edts-complete-inhibit
     (auto-complete-mode arg)))
 
+(provide 'edts-complete)

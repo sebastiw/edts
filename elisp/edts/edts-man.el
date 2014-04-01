@@ -229,3 +229,5 @@ interactively to set up your man-pages instead")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Unit tests
+
+(provide 'edts-man)

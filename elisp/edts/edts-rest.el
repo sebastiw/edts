@@ -289,3 +289,4 @@ the issue and make this hack redundant."
     (should (equal "foo=bar,baz"
             (edts-rest-encode-arg '("foo" . ("bar" "baz")))))))
 
+(provide 'edts-rest)

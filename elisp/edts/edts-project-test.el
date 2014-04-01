@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'edts-test)
+
 (edts-test-add-suite
  ;; Name
  edts-project-suite

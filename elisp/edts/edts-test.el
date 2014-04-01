@@ -165,6 +165,4 @@
           (funcall (cadr suite) setup-res))
         test-res))))
 
-
-
 (provide 'edts-test)

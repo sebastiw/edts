@@ -20,6 +20,7 @@
 ;; Window configuration to be restored when quitting debug mode
 
 (require 'edts-test)
+
 (edts-test-add-suite
  ;; Name
  edts-debug-suite

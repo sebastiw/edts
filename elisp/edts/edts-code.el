@@ -269,3 +269,5 @@ non-recursive."
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
         (error "EDTS: no more issues found"))))
+
+(provide 'edts-code)

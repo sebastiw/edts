@@ -76,3 +76,4 @@
   "Convert an edts-log log-level symbol to a number for comparison."
   (cdr (assoc level edts-log-levels)))
 
+(provide 'edts-log)

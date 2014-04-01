@@ -211,7 +211,6 @@ modules, breakpoints and debugged processes).")
             (edts-debug-update-buffer-breakpoints node module)))))))
 (add-hook 'edts-debug-after-sync-hook 'edts-debug-update-buffers)
 
-
 (defun edts-debug-sync-interpreted-alist ()
   "Synchronizes `edts-debug-interpreted-alist'."
   (setq edts-debug-interpreted-alist

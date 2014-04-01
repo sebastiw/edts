@@ -75,3 +75,4 @@ START and END."
        " "
        (buffer-substring (match-beginning 1) (match-end 1))))))
 
+(provide 'edts-doc)

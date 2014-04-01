@@ -100,6 +100,4 @@ CB with the result when request terminates."
                             (cdr (assoc 'return body))))
         (apply callback (cdr (assoc 'return body)) callback-args)))))
 
-
-
 (provide 'edts-plugin)
