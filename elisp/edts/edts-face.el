@@ -28,6 +28,15 @@
 (require 'face-remap)
 ;; Faces for highlighting
 
+(defcustom edts-face-inhibit-fringe-markers nil
+  "If non-nil, do not display markers in the fringe for errors etc."
+  :group 'edts)
+
+(defcustom edts-face-marker-fringe 'left-fringe
+  "Which side to display fringe-markers on. The value must be either
+left-fringe or right-fringe."
+  :group 'edts)
+
 (defcustom edts-face-inhibit-mode-line-updates nil
   "If non-nil, don't make any changes to the mode-line appearance."
   :group 'edts
@@ -188,16 +197,17 @@ the highest priority any edts overlay at new point if any."
              (beg (if fill-line pos (ferl-first-char-on-line-at pos)))
              (end (if fill-line (ferl-position-at-end-of-line line)
                     (ferl-last-char-on-line-at  pos)))
-             (overlay (make-overlay beg end nil t (not fill-line))))
+             (overlay (make-overlay beg end nil t (not fill-line)))
+             (display-prop (cons edts-face-marker-fringe fringe)))
         (overlay-put overlay 'edts-face-overlay t)
         (overlay-put overlay 'face face)
         (overlay-put overlay 'help-echo desc)
         (overlay-put overlay 'edts-face-overlay-type type)
         (overlay-put overlay 'priority prio)
-        (when (and (not edts-inhibit-fringe-markers) fringe)
+        (when (and (not edts-face-inhibit-fringe-markers) fringe)
           (overlay-put overlay
                        'before-string
-                       (propertize " " 'display (cons edts-marker-fringe fringe))))
+                       (propertize " " 'display display-prop)))
         overlay))))
 
 (defun edts-face-remove-overlays (&optional types)

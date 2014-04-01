@@ -128,24 +128,13 @@ consider EDTS."
       ad-do-it)))
 (ad-activate-regexp "edts-eproject-types")
 
-
 (defgroup edts nil
   "Erlang development tools"
   :group 'convenience
   :prefix "edts-")
 
-
-(defvar edts-orig-left-margin nil
-  "The original value of a buffer's left-margin width")
-(make-variable-buffer-local 'edts-orig-left-margin)
-
-(defvar edts-inhibit-fringe-markers nil
-  "If non-nil, do not display markers in the fringe for errors etc.")
-
-(defcustom edts-marker-fringe 'left-fringe
-  "Which side to display fringe-markers on. The value must be either
-left-fringe or right-fringe."
-  :group 'edts)
+(defalias 'edts-inhibit-fringe-markers 'edts-face-inhibit-fringe-markers)
+(defalias 'edts-marker-fringe 'edts-face-marker-fringe)
 
 (defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."
