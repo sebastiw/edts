@@ -19,6 +19,10 @@
 
 (require 'f)
 
+(require 'edts-code)
+(require 'edts-plugin)
+(require 'edts-project)
+
 (defcustom edts-code-inhibit-dialyzer-on-compile t
   "If non-nil, don't run dialyzer analysis on every save."
   :group 'edts

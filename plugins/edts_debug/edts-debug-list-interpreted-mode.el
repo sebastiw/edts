@@ -17,7 +17,8 @@
 ;;
 ;; Mode for listing interpreted modules.
 
-;; Window configuration to be restored when quitting debug mode
+(require 'edts-debug)
+(require 'edts-navigate)
 
 (defconst edts-debug-list-interpreted-buffer
   "*EDTS Interpreted Modules*"

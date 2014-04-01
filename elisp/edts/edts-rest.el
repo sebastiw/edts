@@ -30,6 +30,8 @@
 (require 'url)
 (require 'json)
 
+(require 'edts-log)
+
 (defconst edts-rest-host "0"
   "The host where the edts erlang node is running.")
 

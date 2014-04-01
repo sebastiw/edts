@@ -24,6 +24,8 @@
 
 (require 'auto-complete)
 
+(require 'edts-log)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 

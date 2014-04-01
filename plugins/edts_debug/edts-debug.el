@@ -19,6 +19,10 @@
 
 (require 'cl)
 
+(require 'edts-log)
+(require 'edts-mode)
+(require 'edts-plugin)
+
 (defface edts-debug-process-location-face
   '((((class color) (background dark)) (:background "midnight blue"))
     (((class color) (background light)) (:background "light blue"))

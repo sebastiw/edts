@@ -26,10 +26,12 @@
 ;; All code for compilation and in-buffer highlighting is a rewrite of work
 ;; done by Sebastian Weddmark Olsson.
 
+(require 'dash)
 (require 'eproject-extras)
 (require 'f)
 
 (require 'edts-face)
+(require 'ferl)
 
 (defvar edts-code-issue-types '(edts-code-compile
                                 edts-code-eunit-failed)

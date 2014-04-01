@@ -21,6 +21,7 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
+(require 'edts-rest)
 
 (defvar edts-event-handlers nil
   "List of handlers for different types of events. This is an alist

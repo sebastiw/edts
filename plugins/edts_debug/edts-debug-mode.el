@@ -19,6 +19,12 @@
 
 (require 'f)
 
+(require 'edts)
+(require 'edts-debug)
+(require 'edts-debug-list-breakpoint-mode)
+(require 'edts-debug-list-interpreted-mode)
+(require 'edts-debug-list-processes-mode)
+
 (defvar edts-debug-mode-pre-frame-configuration nil
   "The frame configuration before entering edts-debug-mode")
 

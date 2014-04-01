@@ -19,6 +19,8 @@
 (require 'em-glob)
 (require 'f)
 
+(require 'edts-project)
+
 (defconst edts-test-directory (f-join edts-root-directory "test")
   "Directory where EDTS test files are located")
 

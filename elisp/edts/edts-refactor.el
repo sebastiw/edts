@@ -26,6 +26,8 @@
 ;; projects and communicate with the correct nodes.
 ;;
 
+(require 'edts)
+
 ;; Originally from distel
 (defun edts-refactor-extract-function (name start end)
   "Refactor the expression(s) in the region as a function.

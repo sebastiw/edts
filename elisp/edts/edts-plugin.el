@@ -23,6 +23,8 @@
 ;; Paths
 (require 'f)
 
+(require 'edts-rest)
+
 (defconst edts-plugin-directory
   (f-join (file-name-directory edts-root-directory) "plugins")
   "Directory where edts plugins are located.")

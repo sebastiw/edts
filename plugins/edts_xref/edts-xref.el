@@ -17,7 +17,12 @@
 ;;
 ;; xref interaction code for EDTS
 
-;; Window configuration to be restored when quitting debug mode
+(require 'edts)
+(require 'edts-code)
+(require 'edts-face)
+(require 'edts-log)
+(require 'edts-navigate)
+(require 'edts-plugin)
 
 
 (defcustom edts-xref-checks '(undefined_function_calls)

@@ -26,6 +26,9 @@
 (require 'auto-complete)
 (require 'ferl)
 
+(require 'edts-log)
+(require 'edts-man)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 

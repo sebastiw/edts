@@ -17,7 +17,8 @@
 ;;
 ;; Mode for listing processess.
 
-;; Window configuration to be restored when quitting debug mode
+(require 'edts-debug)
+(require 'edts-navigate)
 
 (defconst edts-debug-list-processes-buffer
   "*EDTS Processes*"

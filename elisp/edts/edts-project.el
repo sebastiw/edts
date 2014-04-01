@@ -23,7 +23,11 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'cl)
+(require 'f)
 (require 'eproject)
+(require 'eproject-extras)
+
+(require 'edts-shell)
 
 ;; Prevent project-file-visit-hooks from being run several times every
 ;; time a file is opened or reverted.

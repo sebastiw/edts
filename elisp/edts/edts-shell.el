@@ -24,6 +24,8 @@
 
 (require 'cl)
 
+(require 'edts-complete)
+
 (defvar edts-shell-next-shell-id 0
   "The id to give the next edts-erl shell started.")
 
