@@ -26,19 +26,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EDTS mode
-(defcustom edts-erlang-mode-regexps
-  '("^\\.erlang$"
-    "\\.app$"
-    "\\.app.src$"
-    "\\.config$"
-    "\\.erl$"
-    "\\.es$"
-    "\\.escript$"
-    "\\.eterm$"
-    "\\.script$"
-    "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode."
-  :group 'edts)
 
 (defvar edts-mode-map
   (let ((map (make-sparse-keymap)))

@@ -66,6 +66,23 @@
       when dirp
       do   (add-to-list 'load-path (f-join edts-lib-directory name)))
 
+(defcustom edts-erlang-mode-regexps
+  '("^\\.erlang$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.config$"
+    "\\.erl$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.script$"
+    "\\.yaws$")
+  "Additional extensions for which to auto-activate erlang-mode."
+  :group 'edts)
+
+(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
+      edts-erlang-mode-regexps)
+
 ;; workaround to get proper variable highlighting in the shell.
 (defvar erlang-font-lock-keywords-vars
   (list
