@@ -21,7 +21,9 @@
 (dolist (pkg '(dash s f))
   (unless (require pkg nil t)
     (add-to-list 'load-path
-                 (format "%s/elisp/%s" edts-root-directory pkg))
+                 (format "%s/elisp/%s"
+                         (directory-file-name edts-root-directory)
+                         pkg))
     (require pkg)))
 
 (defconst edts-code-directory
