@@ -14,40 +14,44 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(defconst edts-root-directory
-  (file-name-directory (or (locate-library "edts-start") load-file-name))
-  "EDTS root directory.")
 
-(dolist (pkg '(dash s f))
-  (unless (require pkg nil t)
-    (add-to-list 'load-path
-                 (format "%s/elisp/%s"
-                         (directory-file-name edts-root-directory)
-                         pkg))
-    (require pkg)))
+(eval-and-compile
+  (defconst edts-root-directory
+    (file-name-directory (or (locate-library "edts-start")
+                             load-file-name
+                             default-directory))
+    "EDTS root directory.")
 
-(defconst edts-code-directory
-  (f-join edts-root-directory "elisp" "edts")
-  "Directory where edts code is located.")
+  (dolist (pkg '(dash s f))
+    (unless (require pkg nil t)
+      (add-to-list 'load-path
+                   (format "%s/elisp/%s"
+                           (directory-file-name edts-root-directory)
+                           pkg))
+      (require pkg)))
 
-(defcustom edts-data-directory
-  (if (boundp 'user-emacs-directory)
-      (expand-file-name (concat user-emacs-directory "/edts"))
-    (expand-file-name "~/.emacs.d"))
-  "Where EDTS should save its data."
-  :group 'edts)
+  (defconst edts-code-directory
+    (f-join edts-root-directory "elisp" "edts")
+    "Directory where edts code is located.")
 
-(defconst edts-lib-directory
-  (f-join edts-root-directory "elisp")
-  "Directory where edts libraries are located.")
+  (defcustom edts-data-directory
+    (if (boundp 'user-emacs-directory)
+        (expand-file-name (concat user-emacs-directory "/edts"))
+      (expand-file-name "~/.emacs.d"))
+    "Where EDTS should save its data."
+    :group 'edts)
 
-(defconst edts-plugin-directory
-  (f-join edts-root-directory "plugins")
-  "Directory where edts plugins are located.")
+  (defconst edts-lib-directory
+    (f-join edts-root-directory "elisp")
+    "Directory where edts libraries are located.")
 
-(defconst edts-test-directory
-  (f-join edts-root-directory "test")
-  "Directory where edts test data are located.")
+  (defconst edts-plugin-directory
+    (f-join edts-root-directory "plugins")
+    "Directory where edts plugins are located.")
+
+  (defconst edts-test-directory
+    (f-join edts-root-directory "test")
+    "Directory where edts test data are located."))
 
 (unless (require 'erlang nil 'noerror)
   (add-to-list 'load-path
