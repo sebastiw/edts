@@ -26,16 +26,6 @@
 (require 'pos-tip)
 (require 'ferl)
 
-(load "edts-complete-variable-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-local-function-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-imported-function-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-built-in-function-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-exported-function-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-module-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-macro-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-record-source" nil edts-start-inhibit-load-msgs)
-(load "edts-complete-keyword-source" nil edts-start-inhibit-load-msgs)
-
 (defcustom edts-complete-inhibit nil
   "Inhibit EDTS' auto-completion"
   :type  'boolean
@@ -103,5 +93,15 @@ buffers."
 non-nil."
   (unless edts-complete-inhibit
     (auto-complete-mode arg)))
+
+(require 'edts-complete-variable-source)
+(require 'edts-complete-local-function-source)
+(require 'edts-complete-imported-function-source)
+(require 'edts-complete-built-in-function-source)
+(require 'edts-complete-exported-function-source)
+(require 'edts-complete-module-source)
+(require 'edts-complete-macro-source)
+(require 'edts-complete-record-source)
+(require 'edts-complete-keyword-source)
 
 (provide 'edts-complete)
