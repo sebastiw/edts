@@ -77,7 +77,7 @@
   (when (and (boundp 'show-paren-priority)
              (< show-paren-priority edts-code-issue-overlay-max-priority))
     (make-local-variable 'show-paren-priority)
-    (setq show-paren-priority (1+ edts-code-issue-overlay-max-priority))))
+    (setq show-paren-priority (1+ edts-code-issue-overlay-max-priority)))
 
   ;; Auto-completion
   (edts-complete-setup)
