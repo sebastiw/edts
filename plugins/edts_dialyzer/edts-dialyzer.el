@@ -78,7 +78,7 @@ buffer's directory, on the node related to that buffer."
   (let* ((plt-file (concat (file-name-nondirectory default-directory) ".plt"))
          (args '(("otp_plt"  nil)
                  ("out-plt"  (f-join edts-data-directory plt-file))
-                 ("modules"  (edts-code--modules-in-dir dir)))))
+                 ("modules"  (edts-code-directory-open-modules default-directory)))))
     (edts-plugin-call-async (edts-node-name)
                             'edts_dialyzer
                             'analyze

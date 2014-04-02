@@ -158,22 +158,24 @@ buffer's project."
        'edts-code-eunit-failed failed)
       (edts-face-update-buffer-mode-line (edts-code-buffer-status)))))
 
-(defun edts-code--modules-in-dir (dir)
-  "Return a list of all edts buffers visiting a file in DIR,
+(defun edts-code-directory-open-modules (dir)
+  "Return a list of all modules in DIR being visited, non-recursive."
+  (mapcar 'ferl-get-module (edts-code-directory-module-buffers dir)))
+
+(defun edts-code-directory-module-buffers (dir)
+  "Return a list of all edts buffers visiting an erlang module in DIR,
 non-recursive."
   (let ((dir (directory-file-name dir)))
-    (reduce
-     #'(lambda (acc buf)
-         (with-current-buffer buf
-           (if (and (buffer-live-p buf)
-                    (string= dir (f-dirname (buffer-file-name))))
-               (let ((module (ferl-get-module buf)))
-                 (if module
-                     (cons module acc)
-                   acc))
-             acc)))
-     (buffer-list)
-     :initial-value nil)))
+    (--reduce-from
+     (with-current-buffer it
+       (if (and (buffer-live-p it)
+                (buffer-file-name)
+                (string= dir (f-dirname (buffer-file-name)))
+                (ferl-get-module it))
+           (cons it acc)
+         acc))
+     nil
+     (buffer-list))))
 
 (defun edts-code-display-error-overlays (type errors)
   "Displays overlays for ERRORS in current buffer."

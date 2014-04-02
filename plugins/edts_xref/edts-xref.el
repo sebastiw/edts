@@ -96,8 +96,8 @@ current buffer's file."
   "Runs xref-checks for all live buffers with its file in current
 buffer's directory, on the node related to that buffer."
   (mapc
-   #'(lambda (buf) (with-current-buffer buf (edts-xref-analyze))))
-  (edts-code--modules-in-dir default-directory))
+   #'(lambda (buf) (with-current-buffer buf (edts-xref-analyze)))
+  (edts-code-directory-module-buffers default-directory)))
 
 
 (defun edts-xref-analyze ()
