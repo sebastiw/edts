@@ -9,9 +9,6 @@
 (require 'woman)
 (require 'ert nil 'noerror)
 
-(defvar edts-start-inhibit-load-msgs t
-  "If non-nil, don't print messages when loading edts-packages.")
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
 

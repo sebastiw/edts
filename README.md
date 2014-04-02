@@ -141,8 +141,8 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   :app-include-dirs '("include")
   :project-include-dirs '("test/shared/include")
   ```
-  Local modifications to project configurations can be done to project
-  configurations in two ways:
+  Local modifications to project configurations - useful when working on more
+  than one checkout of the same project - can be done in two ways:
   - Edit the project configuration file directly. If you do this in Emacs, the
     project will be automatically re-initialized as soon as you save the .edts-
     file.
