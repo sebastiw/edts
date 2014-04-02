@@ -61,7 +61,6 @@
          (buf-init-fun      (intern (concat elisp-plugin-name "-buffer-init")))
          (el-pattern        (f-join plugin-dir "*.el"))
          (el-files          (file-expand-wildcards el-pattern)))
-    (add-to-list `load-path plugin-dir)
     (mapc #'(lambda (f)
               (when (not (string-match ".*-test" (f-base f)))
                 (require (intern (f-base f)))))

@@ -75,6 +75,7 @@
 (mapc #'(lambda (p) (add-to-list 'load-path
                                  (f-join edts-plugin-directory p)))
       (edts-plugin-names))
+(require 'edts)
 
 (defcustom edts-erlang-mode-regexps
   '("^\\.erlang$"
@@ -106,19 +107,6 @@
     1 'font-lock-variable-name-face nil))
   "Font lock keyword highlighting Erlang variables.
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
-
-(defun edts-start-load (file)
-  "Load file"
-  (load file nil edts-start-inhibit-load-msgs))
-
-;; EDTS
-(loop
- for  file
- in   (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
- ;; avoid symlinks created as emacs backups
- when (and (not (file-symlink-p (f-join edts-code-directory file)))
-           (not (string-match ".*-test" (f-base file))))
- do   (edts-start-load file))
 
 ;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
 ;;
