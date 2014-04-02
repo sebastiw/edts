@@ -22,7 +22,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(require 'cl)
+(require 'dash)
 (require 'ring)
 (require 'thingatpt)
 
@@ -137,9 +137,9 @@ directive."
          (mark (copy-marker (point-marker))) ;; Add us to the history list
          (includes (edts-navigate-get-includes))
          (module (or (ferl-get-module) edts-navigate-originating-module))
-         (file (find-if #'(lambda(x) (string=
-                                      (file-name-nondirectory headerfile)
-                                      (file-name-nondirectory x)))
+         (file (-first #'(lambda(x) (string=
+                                     (file-name-nondirectory headerfile)
+                                     (file-name-nondirectory x)))
                         includes)))
     (if (not file)
         (null (error "No header filename at point"))
@@ -166,8 +166,8 @@ directive."
 
 (defun edts-nav-find-record (rec-name records)
   "find record-struct with REC-NAME in RECORDS."
-  (find-if #'(lambda (rec)(string= rec-name (cdr (assoc 'record rec))))
-           records))
+  (-first #'(lambda (rec)(string= rec-name (cdr (assoc 'record rec))))
+          records))
 
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
@@ -240,8 +240,9 @@ When FUNCTION is specified, the point is moved to its start."
                   (ferl-goto-line line))
                  ((string= line "is_bif") ;; Function is a bif
                   (edts-log-error "%s:%s/%s is a bif" module function arity))
-                 (edts-log-error ;; Some unknown error
-                  "Function %s:%s/%s not found" module function arity)))
+                 (t
+                  (edts-log-error ;; Some unknown error
+                   "Function %s:%s/%s not found" module function arity))))
             (edts-log-error
               "Function %s:%s/%s not found" module function arity))))))
 
