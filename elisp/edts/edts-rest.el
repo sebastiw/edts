@@ -26,7 +26,6 @@
 ;; projects and communicate with the correct nodes.
 ;;
 
-(require 'cl)
 (require 'url)
 (require 'json)
 
