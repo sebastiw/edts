@@ -65,6 +65,10 @@ issue severity (error, warning, etc).")
     (error       . 903))
   "The overlay priorities for compilation errors and warnings")
 
+(defconst edts-code-issue-overlay-max-priority
+  (apply #'max (mapcar #'cdr edts-code-issue-overlay-priorities))
+  "The highest overlay priority for edts-code issues.")
+
 (defconst edts-code-issue-fringe-bitmap
   (when (boundp 'fringe-bitmaps)
     (if (member 'small-blip fringe-bitmaps)

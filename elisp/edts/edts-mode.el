@@ -74,8 +74,10 @@
       (setq window-persistent-parameters '((edts-find-history-ring . t))))
 
   ;; Ensure matching parentheses are visible above edts-faces.
-  (when (boundp 'show-paren-priority)
-    (make-local-variable 'show-paren-priority))
+  (when (and (boundp 'show-paren-priority)
+             (< show-paren-priority edts-code-issue-overlay-max-priority))
+    (make-local-variable 'show-paren-priority)
+    (setq show-paren-priority (1+ edts-code-issue-overlay-max-priority))))
 
   ;; Auto-completion
   (edts-complete-setup)
