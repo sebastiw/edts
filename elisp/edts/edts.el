@@ -53,12 +53,6 @@ node."
          (file-name-directory (f-canonical edts-erl-command)))))
   "Location of the Erlang root directory")
 
-(defcustom edts-data-directory
-  (if (boundp 'user-emacs-directory)
-      (expand-file-name (concat user-emacs-directory "/edts"))
-      (expand-file-name "~/.emacs.d"))
-  "Where EDTS should save its data.")
-
 (defvar edts-find-macro-regexp
   "\\(\\(\\('.*'\\)\\|\\([a-zA-Z0-9_@]*\\)\\)[\\s-]*\\((.*)\\)?\\)"
   "Regexp describing a macro name")
@@ -602,9 +596,6 @@ non-nil, don't report an error if the request fails."
       (unless no-error
         (null (edts-log-error "Unexpected reply: %s"
                               (cdr (assoc 'result res))))))))
-
-(defun edts--node-memberp (node nodes)
-  (some #'(lambda (reg-node) (string-match (concat node "@") reg-node)) nodes))
 
 (defvar edts-node-name nil
   "Used to manually set the project node-name to use in a buffer
