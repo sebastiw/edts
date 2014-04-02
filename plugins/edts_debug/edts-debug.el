@@ -17,7 +17,7 @@
 ;;
 ;; Debugger interaction code for EDTS
 
-(require 'cl)
+(require 'dash)
 
 (require 'edts-log)
 (require 'edts-mode)
@@ -75,6 +75,10 @@ request should always be outstanding if we are not already attached.")
 (add-to-list 'overlay-arrow-variable-list
              'edts-debug-overlay-arrow-position)
 
+(defvar edts-debug-attach-function nil
+  "Function called to attach to a debugged process. Set by
+`edts-debug-mode'.")
+
 (defun edts-debug-init ()
   "Initialize edts-debug."
   ;; Keys
@@ -92,9 +96,7 @@ request should always be outstanding if we are not already attached.")
   (edts-debug-sync))
 
 (defun edts-debug-node-down-hook (node)
-  "Hook to run after node initialization."
-  (when (string= node edts-debug-node)
-    (edts-debug-mode-quit))
+  "Hook to run after node goes down."
   (let ((interpreted (assoc node edts-debug-interpreted-alist))
         (breakpoints (assoc node edts-debug-breakpoint-alist))
         (processes   (assoc node edts-debug-processes-alist)))
@@ -107,8 +109,7 @@ request should always be outstanding if we are not already attached.")
     (run-hooks 'edts-debug-after-sync-hook)))
 
 (defun edts-debug-server-down-hook ()
-  "Hook to run after node initialization."
-  (edts-debug-mode-quit)
+  "Hook to run after main server goes down."
   (setq edts-debug-interpreted-alist nil)
   (setq edts-debug-breakpoint-alist nil)
   (setq edts-debug-processes-alist nil)
@@ -203,6 +204,13 @@ modules, breakpoints and debugged processes).")
                (not edts-debug-pid)
                edts-debug-auto-attach)
       (edts-debug-attach node pid))))
+
+(defun edts-debug-attach (node pid)
+  (unless (equal (edts-debug-process-info node pid 'status) "break")
+    (error "Process %s on %s is not in a 'break' state" pid node))
+  (setq edts-debug-node node)
+  (setq edts-debug-pid pid)
+  (funcall edts-debug-attach-function))
 
 (defun edts-debug-update-buffers ()
   (dolist (buf (buffer-list))
@@ -425,13 +433,6 @@ indentation and lines broken at MAX-COL."
                       ("indent" ,(number-to-string indent))
                       ("max_column" ,(number-to-string max-col)))))
 
-(defun edts-debug-attach (node pid)
-  (unless (equal (edts-debug-process-info node pid 'status) "break")
-    (error "Process %s on %s is not in a 'break' state" pid node))
-  (setq edts-debug-node node)
-  (setq edts-debug-pid pid)
-  (edts-debug-mode-attach))
-
 (defun edts-debug-detach ()
   (setq edts-debug-node nil)
   (setq edts-debug-pid nil))
@@ -440,7 +441,7 @@ indentation and lines broken at MAX-COL."
   (let* ((node  (or node edts-debug-node))
          (pid   (or pid edts-debug-pid))
          (procs (cdr (assoc node edts-debug-processes-alist)))
-         (info  (find-if #'(lambda (p) (string= (cdr (assoc 'pid p)) pid))
+         (info  (-first #'(lambda (p) (string= (cdr (assoc 'pid p)) pid))
                 procs)))
     (if prop
         (cdr (assoc prop info))
