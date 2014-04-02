@@ -1,4 +1,4 @@
-;; Copyright 2012 João Neves <sevenjp@gmail.com>
+;; Copyright 2013-2014 Thomas Järvstrand <tjarvstrand@gmail.com>
 ;;
 ;; This file is part of EDTS.
 ;;
@@ -16,6 +16,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
 ;; Test library for edts.
+(require 'ert)
 (require 'em-glob)
 (require 'f)
 
@@ -134,8 +135,10 @@
       (kill-emacs 2))))
 
 (defun edts-test-run-suite (ert-fun suite-name)
-  (let* ((suite (cdr (assoc suite-name edts-test-suite-alist))))
+  (let* ((suite-name (car (assoc suite-name edts-test-suite-alist)))
+         (suite      (cdr (assoc suite-name edts-test-suite-alist))))
     (when suite
+      (edts-log-info "Running test suite: %s" suite-name)
       (let ((setup-res (when (car suite) (funcall (car suite))))
             (test-res  (funcall ert-fun (list 'tag suite-name))))
         (when (cadr suite)

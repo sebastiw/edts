@@ -41,6 +41,17 @@
   "Initialize available plugins."
   (mapc #'edts-plugin-init (edts-plugin-names)))
 
+(defun edts-plugin-load-tests ()
+  "Load test-files for all plugins."
+  (mapc #'edts-plugin--load-plugin-tests (edts-plugin-names)))
+
+(defun edts-plugin--load-plugin-tests (plugin)
+  "Load test-files for all plugins."
+  (let* ((plugin-dir        (f-join edts-plugin-directory plugin))
+         (elisp-plugin-name (replace-regexp-in-string "_" "-" plugin))
+         (el-pattern        (f-join plugin-dir "*-test.el")))
+    (mapc #'load (file-expand-wildcards el-pattern))))
+
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
   (edts-log-info "Initializing plugin %s" plugin-name)
@@ -52,11 +63,9 @@
          (el-files          (file-expand-wildcards el-pattern)))
     (add-to-list `load-path plugin-dir)
     (mapc #'(lambda (f)
-              (when (or  (member 'ert features)
-                         (not (string-match ".*-test" (f-base f))))
-                (edts-start-load f)))
+              (when (not (string-match ".*-test" (f-base f)))
+                (require (intern (f-base f)))))
           el-files)
-    (require (intern elisp-plugin-name))
     (when (fboundp init-fun)
       (funcall init-fun))
     (when (fboundp buf-init-fun)

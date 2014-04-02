@@ -66,6 +66,12 @@
       when dirp
       do   (add-to-list 'load-path (f-join edts-lib-directory name)))
 
+;; Add plugins to load-path
+(require 'edts-plugin)
+(mapc #'(lambda (p) (add-to-list 'load-path
+                                 (f-join edts-plugin-directory p)))
+      (edts-plugin-names))
+
 (defcustom edts-erlang-mode-regexps
   '("^\\.erlang$"
     "\\.app$"
@@ -107,8 +113,7 @@ Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
  in   (sort (directory-files edts-code-directory nil "\\.el$") #'string<)
  ;; avoid symlinks created as emacs backups
  when (and (not (file-symlink-p (f-join edts-code-directory file)))
-           (or  (member 'ert features)
-                (not (string-match ".*-test" (f-base file)))))
+           (not (string-match ".*-test" (f-base file))))
  do   (edts-start-load file))
 
 ;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
@@ -146,6 +151,16 @@ consider EDTS."
     (byte-compile-disable-warning 'cl-functions)
     (mapc #'byte-compile-file files)
     t))
+
+(defun edts-start-load-tests ()
+  "Load all test-files."
+  (loop
+   for  file
+   in   (directory-files edts-code-directory nil "-test\\.el$")
+   ;; avoid symlinks created as emacs backups
+   when (not (file-symlink-p (f-join edts-code-directory file)))
+   do   (edts-start-load file))
+  (edts-plugin-load-tests))
 
 ;; Global setup
 (edts-plugin-init-all)
