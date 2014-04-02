@@ -19,6 +19,7 @@
 
 (require 'dash)
 
+(require 'edts-event)
 (require 'edts-log)
 (require 'edts-mode)
 (require 'edts-plugin)
