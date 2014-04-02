@@ -237,8 +237,8 @@ on `edts-debug-node'."
     (edts-debug-mode-quit)))
 (add-hook 'edts-node-down-hook 'edts-debug-mode-node-down-hook)
 
-(defun edts-debug-mode-server-down-hook (node)
-  "Node-down hook for edts-debug-mode."
+(defun edts-debug-mode-server-down-hook ()
+  "Server-down hook for edts-debug-mode."
   (edts-debug-mode-quit))
 (add-hook 'edts-server-down-hook 'edts-debug-mode-server-down-hook)
 
