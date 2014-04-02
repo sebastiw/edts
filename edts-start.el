@@ -151,7 +151,7 @@ consider EDTS."
    in   (directory-files edts-code-directory nil "-test\\.el$")
    ;; avoid symlinks created as emacs backups
    when (not (file-symlink-p (f-join edts-code-directory file)))
-   do   (edts-start-load file))
+   do   (load file))
   (edts-plugin-load-tests))
 
 ;; Global setup
