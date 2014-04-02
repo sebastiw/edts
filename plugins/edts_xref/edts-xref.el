@@ -126,12 +126,12 @@ parsed response as the single argument"
   (let* ((err-alist  (edts-code--issue-to-file-map analysis-res)))
     ;; Set the error list in each project-buffer
     (with-each-buffer-in-project (gen-sym) (eproject-root)
-      (let* ((file-name (or (buffer-file-name) default-directory))
-             (errors (cdr (assoc (file-truename file-name) err-alist))))
-        (edts-code--set-issues 'edts-xref (list 'error errors))
-        (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-        (when errors
-          (edts-code-display-error-overlays 'edts-xref errors))))))
+      (when (buffer-file-name)
+        (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
+          (edts-code--set-issues 'edts-xref (list 'error errors))
+          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+          (when errors
+            (edts-code-display-error-overlays 'edts-xref errors)))))))
 
 
 (defun edts-xref-get-who-calls (module function arity)
