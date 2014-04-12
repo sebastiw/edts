@@ -9,8 +9,6 @@
 (require 'woman)
 (require 'ert nil 'noerror)
 
-(message "load-path %s" load-path)
-
 (require 'edts-autoloads)
 
 (defun edts-byte-compile ()
