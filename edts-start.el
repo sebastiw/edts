@@ -9,33 +9,9 @@
 (require 'woman)
 (require 'ert nil 'noerror)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Paths
+(message "load-path %s" load-path)
 
-(dolist (pkg '(dash s f))
-    (unless (require pkg nil t)
-      (add-to-list 'load-path
-                   (format "%s/elisp/%s"
-                           (directory-file-name edts-root-directory)
-                           pkg))
-      (require pkg)))
-
-(unless (require 'erlang nil 'noerror)
-  (add-to-list 'load-path
-               (car
-                (file-expand-wildcards
-                 (f-join
-                  (f-dirname (f-dirname (f-canonical (executable-find "erl"))))
-                  "lib"
-                  "tools*"
-                  "emacs"))))
-  (require 'erlang))
-
-;; Add all libs to load-path
-(loop for  (name dirp . rest)
-      in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
-      when dirp
-      do   (add-to-list 'load-path (f-join edts-lib-directory name)))
+(require 'edts-autoloads)
 
 (defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."
