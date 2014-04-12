@@ -36,6 +36,7 @@ $(PLUGINS:%=clean-%):
 integration-tests:
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
+	--eval "(add-to-list 'load-path  \"${PWD}\")" \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \
 	--eval "(edts-start-load-tests)" \
@@ -45,6 +46,7 @@ integration-tests:
 ert: all
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
+	--eval "(add-to-list 'load-path  \"${PWD}\")" \
 	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
 	-l edts-start.el \
 	--eval "(edts-start-load-tests)" \
