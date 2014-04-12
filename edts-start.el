@@ -105,23 +105,6 @@
   "Font lock keyword highlighting Erlang variables.
 Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
 
-;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
-;;
-;; To avoid weird eproject types like generic-git interfering with us
-;; make sure we only consider edts project types.
-(defadvice eproject--all-types (around edts-eproject-types)
-  "Ignore irrelevant eproject types for files where we should really only
-consider EDTS."
-  (let ((re (eproject--combine-regexps
-             (cons "^\\.edts$" edts-erlang-mode-regexps)))
-        (file-name (buffer-file-name)))
-    ;; dired buffer has no file
-    (if (and file-name
-             (string-match re (f-filename file-name)))
-        (setq ad-return-value '(edts-otp edts-temp edts generic))
-      ad-do-it)))
-(ad-activate-regexp "edts-eproject-types")
-
 (defgroup edts nil
   "Erlang development tools"
   :group 'convenience

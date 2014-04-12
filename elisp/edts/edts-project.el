@@ -40,6 +40,23 @@
 
 (add-to-list 'auto-mode-alist '("\\.edts\\'" . dot-eproject-mode))
 
+;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
+;;
+;; To avoid weird eproject types like generic-git interfering with us
+;; make sure we only consider edts project types.
+(defadvice eproject--all-types (around edts-eproject-types)
+  "Ignore irrelevant eproject types for files where we should really only
+consider EDTS."
+  (let ((re (eproject--combine-regexps
+             (cons "^\\.edts$" edts-erlang-mode-regexps)))
+        (file-name (buffer-file-name)))
+    ;; dired buffer has no file
+    (if (and file-name
+             (string-match re (f-filename file-name)))
+        (setq ad-return-value '(edts-otp edts-temp edts generic))
+      ad-do-it)))
+(ad-activate-regexp "edts-eproject-types")
+
 (defcustom edts-project-inhibit-conversion nil
   "If non-nil, don't convert old-style projects into .edts-files."
   :group 'edts
