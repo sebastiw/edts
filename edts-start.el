@@ -74,44 +74,8 @@
       (edts-plugin-names))
 (require 'edts)
 
-(defcustom edts-erlang-mode-regexps
-  '("^\\.erlang$"
-    "\\.app$"
-    "\\.app.src$"
-    "\\.config$"
-    "\\.erl$"
-    "\\.es$"
-    "\\.escript$"
-    "\\.eterm$"
-    "\\.script$"
-    "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode."
-  :group 'edts)
-
 (mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
       edts-erlang-mode-regexps)
-
-;; workaround to get proper variable highlighting in the shell.
-(defvar erlang-font-lock-keywords-vars
-  (list
-   (list
-    #'(lambda (max)
-        (block nil
-          (while (re-search-forward erlang-variable-regexp max 'move-point)
-            ;; no numerical constants
-            (unless (eq ?# (char-before (match-beginning 0)))
-              (return (match-string 0))))))
-    1 'font-lock-variable-name-face nil))
-  "Font lock keyword highlighting Erlang variables.
-Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
-
-(defgroup edts nil
-  "Erlang development tools"
-  :group 'convenience
-  :prefix "edts-")
-
-(defalias 'edts-inhibit-fringe-markers 'edts-face-inhibit-fringe-markers)
-(defalias 'edts-marker-fringe 'edts-face-marker-fringe)
 
 (defun edts-byte-compile ()
   "Byte-compile all elisp packages part of EDTS."
