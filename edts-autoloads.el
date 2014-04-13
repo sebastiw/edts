@@ -1,6 +1,8 @@
 ;;; edts-autoloads.el ---
 ;;
 ;;; Code:
+(require 'f)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
 
@@ -9,27 +11,6 @@
                            load-file-name
                            default-directory))
   "EDTS root directory.")
-
-(dolist (pkg '(dash s f))
-    (unless (require pkg nil t)
-      (add-to-list 'load-path
-                   (format "%s/elisp/%s"
-                           (directory-file-name edts-root-directory)
-                           pkg))
-      (require pkg)))
-
-(require 'f)
-
-(unless (require 'erlang nil 'noerror)
-  (add-to-list 'load-path
-               (car
-                (file-expand-wildcards
-                 (f-join
-                  (f-dirname (f-dirname (f-canonical (executable-find "erl"))))
-                  "lib"
-                  "tools*"
-                  "emacs"))))
-  (require 'erlang))
 
 (defconst edts-code-directory
   (f-join edts-root-directory "elisp" "edts")
@@ -53,12 +34,6 @@
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
   "Directory where edts test data are located.")
-
-;; Add all libs to load-path
-(loop for  (name dirp . rest)
-      in   (directory-files-and-attributes edts-lib-directory nil "^[^.]")
-      when dirp
-      do   (add-to-list 'load-path (f-join edts-lib-directory name)))
 
 (add-to-list 'load-path edts-code-directory)
 (require 'edts-plugin)

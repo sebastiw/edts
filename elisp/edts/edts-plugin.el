@@ -21,8 +21,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
+(require 'cl)
 (require 'f)
 
+(require 'edts)
 (require 'edts-rest)
 
 (defconst edts-plugin-directory

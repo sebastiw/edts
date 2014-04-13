@@ -36,20 +36,20 @@ $(PLUGINS:%=clean-%):
 integration-tests:
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
+	--eval "(setq edts-inhibit-package-check t)" \
 	--eval "(add-to-list 'load-path  \"${PWD}\")" \
-	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
+	-l test/load-tests.el \
 	-l edts-start.el \
-	--eval "(edts-start-load-tests)" \
 	-f edts-test-run-suites-batch-and-exit
 
 .PHONY: ert
-ert: all
+ert:
 	$(MAKE) -C test/edts-test-project1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
+	--eval "(setq edts-inhibit-package-check t)" \
 	--eval "(add-to-list 'load-path  \"${PWD}\")" \
-	--eval "(add-to-list 'load-path  \"${PWD}/elisp/ert\")" \
+	-l test/load-tests.el \
 	-l edts-start.el \
-	--eval "(edts-start-load-tests)" \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test

@@ -33,7 +33,6 @@
 (require 'edts-log)
 (require 'edts-man)
 (require 'edts-mode)
-(require 'edts-plugin)
 (require 'edts-project)
 (require 'edts-rest)
 (require 'edts-shell)
