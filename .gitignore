@@ -2,6 +2,7 @@
 .eunit
 deps
 ebin
+elisp/erlang-mode
 elisp/ert
 lib/lager
 lib/mochiweb

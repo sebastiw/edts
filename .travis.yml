@@ -7,8 +7,9 @@ before_install:
  - sudo apt-key add ./test/ubuntu_extras_pub_key
  - sudo add-apt-repository -y ppa:cassou/emacs
  - sudo apt-get update -qq
- - sudo apt-get install -y -qq ${EMACS} erlang-mode erlang-debugger
- - ./test/install-ert.sh
+ - sudo apt-get install -y -qq ${EMACS} erlang-debugger
+ - bash test/install-erlang-mode.sh
+ - bash test/install-ert.sh
 env:
  - EMACS=emacs23
  - EMACS=emacs24
