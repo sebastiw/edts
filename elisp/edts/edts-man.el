@@ -99,7 +99,7 @@ Location of the OTP documentation man-pages."
   (with-current-buffer (url-retrieve-synchronously edts-man-download-url)
     (goto-char (point-min))
     (let ((case-fold-search t)
-          (re "<a href=\".*/\\(otp_doc_man_\\(r[0-9]+[a-z]-?[0-9]*\\)\\..*\\)\">")
+          (re "<a href=\".*/\\(otp_doc_man_\\([-0-9A-Za-z_.]+\\)\\..*\\)\">")
           vsn-urls)
       (while (< (point) (point-max))
         (re-search-forward re nil 'move-point)
