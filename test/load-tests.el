@@ -18,12 +18,11 @@
 ;; Test loading library for edts.
 
 (let ((edts-dir (file-name-directory
-                 (file-name-directory
                   (directory-file-name
-                   (file-name-directory load-file-name))))))
+                   (file-name-directory load-file-name)))))
   (add-to-list 'load-path edts-dir)
 
-  (let ((default-directory (concat edts-dir "/elisp")))
+  (let ((default-directory (expand-file-name "elisp" edts-dir)))
     (normal-top-level-add-subdirs-to-load-path))
   (require 'f)
   (require 'edts-autoloads)

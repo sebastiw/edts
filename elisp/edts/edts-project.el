@@ -348,7 +348,8 @@ FILE."
   "Build up the exec-path to use when starting the project-node of PROJECT."
   (let ((otp-path (eproject-attribute :otp-path)))
     (if otp-path
-        (cons (concat otp-path "/bin") exec-path) ;; put otp-path first in path
+        ;; put otp-path first in path
+        (cons (file-name-expand "bin" otp-path) exec-path)
       exec-path)))
 
 (defun edts-project-build-env ()

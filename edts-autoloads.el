@@ -18,7 +18,7 @@
 
 (defcustom edts-data-directory
   (if (boundp 'user-emacs-directory)
-      (expand-file-name (concat user-emacs-directory "/edts"))
+      (expand-file-name "edts" user-emacs-directory)
     (expand-file-name "~/.emacs.d"))
   "Where EDTS should save its data."
   :group 'edts)
