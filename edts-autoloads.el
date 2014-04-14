@@ -11,8 +11,11 @@
                            default-directory))
   "EDTS root directory.")
 
-(let ((default-directory (expand-file-name "elisp" edts-root-directory)))
-    (normal-top-level-add-subdirs-to-load-path))
+(dolist (file
+         (directory-files
+          (expand-file-name "elisp" edts-root-directory) t "^[^.]"))
+  (when (file-directory-p file)
+    (add-to-list 'load-path file)))
 
 (require 'f)
 
