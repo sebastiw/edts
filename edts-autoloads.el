@@ -1,7 +1,6 @@
 ;;; edts-autoloads.el ---
 ;;
 ;;; Code:
-(require 'f)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
@@ -11,6 +10,11 @@
                            load-file-name
                            default-directory))
   "EDTS root directory.")
+
+(let ((default-directory (expand-file-name "elisp" edts-root-directory)))
+    (normal-top-level-add-subdirs-to-load-path))
+
+(require 'f)
 
 (defconst edts-code-directory
   (f-join edts-root-directory "elisp" "edts")
