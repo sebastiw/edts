@@ -349,7 +349,7 @@ FILE."
   (let ((otp-path (eproject-attribute :otp-path)))
     (if otp-path
         ;; put otp-path first in path
-        (cons (file-name-expand "bin" otp-path) exec-path)
+        (cons (expand-file-name "bin" otp-path) exec-path)
       exec-path)))
 
 (defun edts-project-build-env ()
