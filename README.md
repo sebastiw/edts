@@ -54,6 +54,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 ```shell
   $git clone git://github.com/tjarvstrand/edts.git
   $cd edts
+  $git submodule update --init
   $make
 ```
 
