@@ -43,11 +43,17 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 ## Getting started ##
 
 #### Requirements:
-  - Emacs 23.3 or later (24.2 recommended)
+  - Emacs 23.3 or later (24.2 or higher recommended)
 
 #### First of all, ensure your environment is setup correctly:
-  - If you're not using Linux, setup Erlang mode according to the instructions
-    [here](http://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html).
+  - If you're using Emacs 23, set up package.el according to the instructions
+on [Emacs Wiki](http://www.emacswiki.org/emacs/ELPA).
+  - You will need make and Erlang installed or the package installation will
+fail.
+  - You will also need both elpa and melpa package repositories added to your
+sources:
+    - ```(add-to-list 'package-archives '("elpa" . "http://elpa.gnu.org/packages/"))```
+    - ```(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))```
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:
@@ -59,7 +65,6 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
 #### Make sure EDTS is loaded and started in your .emacs:
 ```elisp
-  (add-to-list 'load-path "<path-to-edts-repo>")
   (require 'edts-start)
 ```
 
