@@ -22,6 +22,6 @@
   (when (y-or-n-p "Do you want to disable package check now?")
     (customize-save-variable 'edts-inhibit-package-check t)))
 
-(require 'edts)
+(require 'edts-mode)
 
 (provide 'edts-start)
