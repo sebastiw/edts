@@ -38,7 +38,6 @@ undefined_function_calls, unexported_functions"
   "Initialize edts-debug."
   (add-to-list 'edts-code-issue-types 'edts-xref)
   ;; Keys
-  (message "############# foooo")
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
   (add-to-list 'edts-project-valid-properties :xref-file-whitelist)
