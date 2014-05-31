@@ -65,7 +65,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 ```
 
 #### Configure your projects.
-  EDTS projects configured by creating a file called
+  EDTS projects are configured by creating a file called
   `.edts` in your project's root. The configuration file is a number of lines,
   where each line is in the format:
 ` :<property> <value> `
@@ -73,27 +73,26 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   Values that are lists must be prefixed with a single-quote, eg. `'("lib")`. See
   example below.
 
-  The properties should all be strings, except lib-dirs and app-include-dirs
-  which are lists of strings. Valid properties are:
+  Valid properties are:
 
-  - `name`
+  - `name <string>`
 
     The name of the project. Defaults to the last component of the project
     root-directory (eg a root set to `~/src/p` would yield `p` as the project name
     if not explicitly set.
 
-  - `node-sname`
+  - `node-sname <string>`
 
   The erlang sname that the project's erlang node should have. It should contain
   only the part before the `@`-sign and defaults to same name as the project.
 
-  - `lib-dirs`
+  - `lib-dirs <string>`
 
   A list of paths (relative to the project's root) where the project's code is
   located. All subdirectories of lib-dirs are assumed to be otp-applications.
   Defaults to `'("lib")`.
 
-  - `start-command`
+  - `start-command <string>`
 
   A custom command that EDTS should execute to start the project's Erlang node.
   If this is set, the command must set the node's sname to be the same as the
@@ -101,7 +100,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   erlang cookie to anything other than the default `~/.erlang.cookie`.
   Defaults to `erl -sname <node-sname>`.
 
-  - `otp-path`
+  - `otp-path <string>`
 
   The path to any custom OTP-version to use for the project. You only have to
   set this if the project uses a different OTP-release than the one that comes
@@ -109,7 +108,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   the head of the exec-path and the PATH environment variable when starting the
   project node.
 
-  - `dialyzer-plt`
+  - `dialyzer-plt <string>`
 
   The path to any custom plt on which to base dialyzer analyses on. You only
   have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`
@@ -118,7 +117,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   when building the new plt-file for the project, which will be located in your
   `edts-data-directory`.
 
-  - `app-include-dirs`
+  - `app-include-dirs <list of strings>`
 
   A list of directories to search for include files inside each application. Eg.
   if set to `'("include")`, files in any application's include directory can be
@@ -127,7 +126,7 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   during your normal build process. If set, `'("include")` is usually the only
   reasonable value for this property.
 
-  - `project-include-dirs`
+  - `project-include-dirs <list of strings>`
 
   A list of directories to search for include files inside at the project-level.
   Eg. if set to `'("test/include")`, files in any module can include files from
@@ -135,13 +134,13 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   if you have a build configuration that sets up your paths for you during your
   normal build process.
 
- - `xref-error-whitelist`
+ - `xref-error-whitelist <list of strings>`
 
  A list of regular expressions that will be applied as a whitelist to xref error
  descriptions. Useful if you are using external libraries (such as Quickcheck)
  for which you don't have access to binaries compiled with debug_info.
 
- - `xref-file-whitelist`
+ - `xref-file-whitelist <list of strings>`
 
  Same as `xref-error-whitelist`, but the regular expressions  will be applied to
  the path of file the file where the errors occur rather than the description of
