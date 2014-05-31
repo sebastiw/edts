@@ -22,18 +22,6 @@
   (when (y-or-n-p "Do you want to disable package check now?")
     (customize-save-variable 'edts-inhibit-package-check t)))
 
-(eval-when-compile
-  (unless load-file-name
-    (let ((default-directory edts-root-directory)
-          (buf  "*EDTS compile*"))
-      (pop-to-buffer (get-buffer-create buf))
-      (goto-char (point-max))
-      (if (= (call-process "make" nil t t "libs") 0)
-          (quit-window)
-        (error (format (concat "Failed to compile EDTS libraries. "
-                               "See %s for details.")
-                       buf))))))
-
-(require 'edts-autoloads)
+(require 'edts)
 
 (provide 'edts-start)
