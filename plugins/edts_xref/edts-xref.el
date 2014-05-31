@@ -38,8 +38,11 @@ undefined_function_calls, unexported_functions"
   "Initialize edts-debug."
   (add-to-list 'edts-code-issue-types 'edts-xref)
   ;; Keys
+  (message "############# foooo")
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
+  (add-to-list 'edts-project-valid-properties :xref-file-whitelist)
+  (add-to-list 'edts-project-valid-properties :xref-error-whitelist)
   (add-hook 'edts-api-server-down-hook 'edts-xref-server-down-hook)
   (add-hook 'edts-code-after-compile-hook 'edts-xref-after-compile-hook)
   (add-hook 'edts-api-after-node-init-hook 'edts-xref-after-node-init-hook)
@@ -124,15 +127,33 @@ parsed response as the single argument"
                             #'edts-xref-analysis-callback)))
 
 (defun edts-xref-analysis-callback (analysis-res)
-  (let* ((err-alist  (edts-code--issue-to-file-map analysis-res)))
+  (let ((err-alist (edts-xref-apply-whitelists
+                    (edts-code--issue-to-file-map analysis-res))))
     ;; Set the error list in each project-buffer
     (with-each-buffer-in-project (gen-sym) (eproject-root)
       (when (buffer-file-name)
-        (let ((errors (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
-          (edts-code--set-issues 'edts-xref (list 'error errors))
+        (let ((errs (cdr (assoc (file-truename (buffer-file-name)) err-alist))))
+          (edts-code--set-issues 'edts-xref (list 'error errs))
           (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when errors
-            (edts-code-display-error-overlays 'edts-xref errors)))))))
+          (when errs
+            (edts-code-display-error-overlays 'edts-xref errs)))))))
+
+(defun edts-xref-apply-whitelists (errs)
+  (-filter #'(lambda (err)
+               (and
+                (not (edts-xref--desc-whitelisted-p err))
+                (not (edts-xref--file-whitelisted-p err))))
+           errs))
+
+(defun edts-xref--desc-whitelisted-p (err)
+  (let ((desc (cdr (assoc 'description (cadr err))))
+        (regexps (eproject-attribute :xref-error-whitelist)))
+    (-any? (lambda (re) (string-match re desc)) regexps)))
+
+(defun edts-xref--file-whitelisted-p (err)
+  (let ((file (car err))
+        (regexps (eproject-attribute :xref-file-whitelist)))
+    (-any? (lambda (re) (string-match re file)) regexps)))
 
 
 (defun edts-xref-get-who-calls (module function arity)
