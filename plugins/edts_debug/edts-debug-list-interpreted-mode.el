@@ -17,6 +17,7 @@
 ;;
 ;; Mode for listing interpreted modules.
 
+(require 'edts-api)
 (require 'edts-debug)
 (require 'edts-navigate)
 
@@ -67,7 +68,7 @@ switch call `switch-to-buffer'."
   (let* ((entry (tabulated-list-get-entry))
          (node (elt entry 0))
          (mod  (elt entry 1))
-         (file (cdr (assoc 'source (edts-get-module-info node mod 'basic)))))
+         (file (cdr (assoc 'source (edts-api-get-module-info node mod 'basic)))))
     (edts-find-file-existing file)))
 
 (defun edts-debug-list-interpreted-uninterpret-module ()

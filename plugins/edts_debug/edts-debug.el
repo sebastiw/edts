@@ -19,9 +19,9 @@
 
 (require 'dash)
 
+(require 'edts-api)
 (require 'edts-event)
 (require 'edts-log)
-(require 'edts-mode)
 (require 'edts-plugin)
 
 (defface edts-debug-process-location-face
@@ -88,9 +88,9 @@ request should always be outstanding if we are not already attached.")
   (define-key edts-mode-map "\C-c\C-d\M-b" 'edts-debug-list-breakpoints)
   (define-key edts-mode-map "\C-c\C-d\M-i" 'edts-debug-list-interpreted)
   (define-key edts-mode-map "\C-c\C-d\M-p" 'edts-debug-list-processes)
-  (add-hook 'edts-after-node-init-hook 'edts-debug-after-node-init-hook)
-  (add-hook 'edts-node-down-hook 'edts-debug-node-down-hook)
-  (add-hook 'edts-server-down-hook 'edts-debug-server-down-hook))
+  (add-hook 'edts-api-after-node-init-hook 'edts-debug-after-node-init-hook)
+  (add-hook 'edts-api-node-down-hook 'edts-debug-node-down-hook)
+  (add-hook 'edts-api-server-down-hook 'edts-debug-server-down-hook))
 
 (defun edts-debug-after-node-init-hook ()
   "Hook to run after node initialization."
@@ -217,7 +217,7 @@ modules, breakpoints and debugged processes).")
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when edts-mode
-        (let ((node   (edts-node-name))
+        (let ((node   (edts-api-node-name))
               (module (ferl-get-module)))
           (when (and node module (not (eq major-mode 'edts-debug-mode)))
             (edts-debug-update-buffer-mode-line node module)
@@ -320,7 +320,7 @@ If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
 other value toggles interpretation, which is the default behaviour when
 called interactively."
   (let* ((module    (or module (ferl-get-module)))
-         (node      (or node (edts-node-name)))
+         (node      (or node (edts-api-node-name)))
          (interpret (cond
                      ((eq interpret t) "true")
                      ((null interpret) "false")
@@ -340,7 +340,7 @@ BREAK. NODE and MODULE default to the values associated with current
 buffer. If BREAK is nil remove any breakpoint; if it is t set a
 breakpoint if one doesn't already exist; any other value toggles
 breakpoint existence at LINE, which is the default behaviour."
-  (let* ((node   (or node (edts-node-name)))
+  (let* ((node   (or node (edts-api-node-name)))
          (module (or module (ferl-get-module)))
          (line   (number-to-string (or line (line-number-at-pos))))
          (break  (cond
@@ -355,7 +355,7 @@ breakpoint existence at LINE, which is the default behaviour."
 (defun edts-debug-module-breakpoints (&optional node module)
   "Return a list of all breakpoint states in module on NODE. NODE and
 MODULE default to the value associated with current buffer."
-  (let* ((node   (or node (edts-node-name)))
+  (let* ((node   (or node (edts-api-node-name)))
          (module (or module (ferl-get-module)))
          (args   (list (cons "module" module))))
     (edts-plugin-call node 'edts_debug 'breakpoints args)))
@@ -363,27 +363,27 @@ MODULE default to the value associated with current buffer."
 (defun edts-debug-breakpoints (&optional node)
   "Return a list of all breakpoint states on NODE. NODE defaults to the
 value associated with current buffer."
-  (let* ((node (or node (edts-node-name))))
+  (let* ((node (or node (edts-api-node-name))))
     (edts-plugin-call node 'edts_debug 'breakpoints)))
 
 (defun edts-debug-all-processes (&optional node)
   "Return a list of all processes states on NODE. NODE defaults to the
 value associated with current buffer."
-  (let* ((node(or node (edts-node-name))))
+  (let* ((node(or node (edts-api-node-name))))
     (edts-plugin-call node 'edts_debug 'processes)))
 
 (defun edts-debug-interpretedp (&optional node module)
   "Return non-nil if MODULE is interpreted on NODE. NODE and MODULE
 default to the values associated with current buffer."
   (let* ((module (or module (ferl-get-module)))
-         (node   (or node (edts-node-name)))
+         (node   (or node (edts-api-node-name)))
          (args   (list (cons "module" module))))
     (edts-plugin-call node 'edts_debug 'module_interpreted_p args)))
 
 (defun edts-debug-interpreted-modules (&optional node)
   "Return a list of all modules that are interpreted on NODE. NODE
 default to the values associated with current buffer."
-  (let* ((node (or node (edts-node-name))))
+  (let* ((node (or node (edts-api-node-name))))
     (edts-plugin-call node 'edts_debug 'interpreted_modules)))
 
 (defun edts-debug-continue (node-name pid)
@@ -415,7 +415,7 @@ one of continue, finish, step_into or step_over."
   "Return a list of all nodes to consider when issuing debugger commands"
   ;; this is a bit of a hack to avoid the debugger running on the main edts
   ;; server...
-  (remove "edts" (edts-get-nodes)))
+  (remove "edts" (edts-api-get-nodes)))
 
 (defun edts-debug-get-bound-variables (node pid)
   "Return a list of all variables currently in PID's current scope on

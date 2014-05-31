@@ -56,7 +56,7 @@
       (otherwise
        (edts-log-debug "Initializing record completions")
        (flet ((rec-name (rec) (cdr (assoc 'record rec))))
-         (let* ((rec-structs (edts-get-detailed-module-info
+         (let* ((rec-structs (edts-api-get-detailed-module-info
                               (ferl-get-module)))
                 (candidates
                  (mapcar #'rec-name (cdr (assoc 'records rec-structs)))))

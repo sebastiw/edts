@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'f)
+(require 'woman)
 
 (defconst edts-man-download-url "http://www.erlang.org/download"
   "Where to download the erlang documentation from.")

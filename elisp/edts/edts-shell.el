@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'edts)
+(require 'edts-api)
 (require 'edts-complete)
 
 (defvar edts-shell-next-shell-id 0
@@ -66,7 +68,7 @@ the erlang process."
 (defun edts-shell (&optional pwd switch-to)
   "Start an interactive erlang shell."
   (interactive '(nil t))
-  (edts-ensure-server-started)
+  (edts-api-ensure-server-started)
   (let*((buffer-name (format "*edts[%s]*" edts-shell-next-shell-id))
         (node-name   (format "edts-%s" edts-shell-next-shell-id))
         (command     (list edts-erl-command "-sname" node-name))
@@ -77,7 +79,7 @@ the erlang process."
                    node-name
                    root
                    command)))
-      (edts-init-node-when-ready node-name node-name root nil)
+      (edts-api-init-node-when-ready node-name node-name root nil)
       (when switch-to (switch-to-buffer buffer))
       buffer)))
 
@@ -104,7 +106,8 @@ PWD and running COMMAND."
     (with-current-buffer buffer-name
       (edts-shell-mode 1)
       ;; edts-specifics
-      (setq edts-node-name (or (edts-shell-node-name-from-args args) node-name))
+      (setq edts-api-node-name
+            (or (edts-shell-node-name-from-args args) node-name))
       (add-to-list
        'edts-shell-list `(,(buffer-name) . ((default-directory . ,pwd))))))
   (get-buffer buffer-name))

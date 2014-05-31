@@ -19,6 +19,7 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
+(require 'edts-api)
 (require 'edts-debug)
 (require 'edts-navigate)
 
@@ -70,7 +71,7 @@ call `switch-to-buffer'."
          (node (elt entry 0))
          (mod  (elt entry 1))
          (line (string-to-number (elt entry 2)))
-         (file (cdr (assoc 'source (edts-get-module-info node mod 'basic)))))
+         (file (cdr (assoc 'source (edts-api-get-module-info node mod 'basic)))))
     (edts-find-file-existing file)
     (goto-char (point-min))
     (forward-line (1- line))))
@@ -136,6 +137,6 @@ call `switch-to-buffer'."
           (tabulated-list-print))))))
 
 (defun edts-debug--get-module-source (node module)
-  (cdr (assoc 'source (edts-get-module-info node module 'basic))))
+  (cdr (assoc 'source (edts-api-get-module-info node module 'basic))))
 
 (provide 'edts-debug-list-breakpoint-mode)

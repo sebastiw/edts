@@ -26,6 +26,8 @@
 (require 'auto-complete)
 (require 'ferl)
 
+(require 'edts-api)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source
 
@@ -57,7 +59,8 @@
     (edts-log-debug "completing macros")
     (let ((completions
            (or edts-complete-macro-cache
-               (setq edts-complete-macro-cache (edts-find-module-macros)))))
+               (setq edts-complete-macro-cache
+                     (edts-complete-find-module-macros)))))
       (edts-log-debug "completing macros done")
       (mapcar #'car completions))))
 
@@ -71,6 +74,53 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-macro-doc (candidate)
   "Find the documentation for CANDIDATE."
   (cdr (assoc candidate edts-complete-macro-cache)))
+
+(defun edts-complete-find-module-macros ()
+  (let* ((files  (cons (buffer-file-name) (edts-api-get-includes)))
+         (macros   (apply #'append
+                          (mapcar #'edts-complete-get-file-macros files)))
+         (parsed  (edts-complete-parse-macros macros)))
+    parsed))
+
+(defun edts-complete-parse-macros (raw-macros)
+  (when raw-macros
+    (let* (;; Raw macro strings: '("MACRO1" "MACRO2(ARG21,..., ARG2X)")
+           (arity-macros (mapcar #'(lambda (m) (cdr (assoc 'string m)))
+                                 raw-macros))
+           ;; (("MACRO1" 0) ("MACRO2" X))
+           (arity-macro-strings (mapcar #'(lambda (m)
+                                            (cons (cdr (assoc 'function m))
+                                                  (cdr (assoc 'arity    m))))
+                                        (edts-api-get-mfas arity-macros))))
+      (loop for raw-m in raw-macros collect
+            (let* ((name      (cdr (assoc 'name raw-m)))
+                   (args      (cdr (assoc 'args raw-m)))
+                   (value     (cdr (assoc 'value raw-m)))
+                   (raw-str   (cdr (assoc 'string raw-m)))
+                   (arity     (cdr (assoc-string name arity-macro-strings)))
+                   (arity-str (format "%s/%s" name arity))
+                   (doc       (format "%s -> %s" raw-str value)))
+              (cons arity-str doc))))))
+
+(defun edts-complete-parse-get-file-macros (file-name)
+  (with-temp-buffer
+    (insert-file-contents file-name)
+    (edts-complete-get-macros)))
+
+(defun edts-complete-get-macros ()
+  (save-excursion
+    (save-match-data
+      (goto-char (point-min))
+      (let ((macros nil))
+        (while (re-search-forward edts-find-macro-definition-regexp nil t)
+            (push
+             `((string . ,(match-string-no-properties 1))
+               (name   . ,(match-string-no-properties 2))
+               (args   . ,(match-string-no-properties 5))
+               (value  . ,(match-string-no-properties 6)))
+             macros)
+            (goto-char (match-end 0)))
+        macros))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conditions

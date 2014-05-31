@@ -27,7 +27,28 @@
 (require 'f)
 (require 'dash)
 
+(require 'edts-api)
 (require 'edts-shell)
+
+;; HACKWARNING!! Avert your eyes lest you spend the rest ef your days in agony
+;;
+;; To avoid weird eproject types like generic-git interfering with us
+;; make sure we only consider edts project types.
+(defadvice eproject--all-types (around edts-eproject-types)
+  "Ignore irrelevant eproject types for files where we should really only
+consider EDTS."
+  (let ((re (eproject--combine-regexps
+             (cons "^\\.edts$"
+                   (mapcar 'car (-filter
+                                 (lambda (e) (eq 'erlang-mode (cdr e)))
+                                 auto-mode-alist)))))
+        (file-name (buffer-file-name)))
+    ;; dired buffer has no file
+    (if (and file-name
+             (string-match re (f-filename file-name)))
+        (setq ad-return-value '(edts-otp edts-temp edts generic))
+      ad-do-it)))
+(ad-activate-regexp "edts-eproject-types")
 
 ;; Prevent project-file-visit-hooks from being run several times every
 ;; time a file is opened or reverted.
@@ -200,7 +221,7 @@ Example:
   (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
     (edts-log-debug "Initializing project for %s" (current-buffer))
-    (edts-ensure-server-started)
+    (edts-api-ensure-server-started)
     (let ((root (eproject-root)))
 
       (when (and (boundp 'edts-projects) edts-projects)
@@ -228,7 +249,7 @@ Example:
 
       ;; Make necessary initializations if opened file is relevant to its
       ;; project.
-      (if (edts-node-registeredp (eproject-attribute :node-sname))
+      (if (edts-api-node-registeredp (eproject-attribute :node-sname))
           (edts-project-node-refresh)
         (edts-project-node-init)))))
 (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
@@ -236,7 +257,7 @@ Example:
 (defun edts-project-node-init ()
   (interactive)
   ;; Ensure project node is started
-  (unless (edts-node-started-p (eproject-attribute :node-sname))
+  (unless (edts-api-node-started-p (eproject-attribute :node-sname))
     (edts-project-start-node))
   ;; Register it with the EDTS node
   (edts-project--register-project-node))
@@ -244,7 +265,7 @@ Example:
 (defun edts-project-node-refresh ()
   "Asynchronously refresh the state of current buffer's project node"
   (interactive)
-  (edts-init-node
+  (edts-api-init-node
    (eproject-attribute :name)
    (eproject-attribute :node-sname)
    (eproject-root)
@@ -256,7 +277,7 @@ Example:
   "Sets up values for a temporary project when visiting a non-project module."
   (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
-    (edts-ensure-server-started)
+    (edts-api-ensure-server-started)
     (let* ((file (buffer-file-name))
            (root-dir (edts-project--temp-root file))
            (node-name (f-filename root-dir)))
@@ -270,14 +291,14 @@ Example:
          node-name ; node-name
          root-dir ; pwd
          (list "erl" "-sname" node-name)) ; command
-        (edts-init-node-when-ready node-name node-name root-dir nil)))))
+        (edts-api-init-node-when-ready node-name node-name root-dir nil)))))
 (add-hook 'edts-temp-project-file-visit-hook 'edts-project-init-temp)
 
 (defun edts-project-init-otp ()
   "Sets up values for a temporary project when visiting an otp-module."
   (edts-log-debug "Project type is: %s" (eproject-type))
   (when (edts-project--run-init-p)
-    (edts-ensure-server-started)
+    (edts-api-ensure-server-started)
     (let* ((file (buffer-file-name))
            (root-dir (eproject-root))
            (node-name (format "otp-%s" (eproject-name)))
@@ -291,7 +312,7 @@ Example:
          node-name ; node-name
          root-dir ; pwd
          (list erl "-sname" node-name)) ; command
-        (edts-init-node-when-ready node-name node-name root-dir nil)))))
+        (edts-api-init-node-when-ready node-name node-name root-dir nil)))))
 (add-hook 'edts-otp-project-file-visit-hook 'edts-project-init-otp)
 
 (defun edts-project--run-init-p ()
@@ -327,16 +348,16 @@ FILE."
          (exec-path (edts-project-build-exec-path))
          (process-environment (edts-project-build-env))
          (node (eproject-attribute :node-sname)))
-    (edts-ensure-node-not-started node)
+    (edts-api-ensure-node-not-started node)
     (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
     (get-buffer buffer-name)))
 
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
-  (if (edts-node-registeredp (eproject-attribute :node-sname))
+  (if (edts-api-node-registeredp (eproject-attribute :node-sname))
       (edts-log-info "Re-initializing node for project %s" (eproject-name))
     (edts-log-info "Initializing node for project %s" (eproject-name)))
-  (edts-init-node-when-ready
+  (edts-api-init-node-when-ready
    (eproject-attribute :name)
    (eproject-attribute :node-sname)
    (eproject-root)

@@ -20,6 +20,7 @@
 (require 'f)
 
 (require 'edts)
+(require 'edts-api)
 (require 'edts-debug)
 (require 'edts-debug-list-breakpoint-mode)
 (require 'edts-debug-list-interpreted-mode)
@@ -166,7 +167,7 @@
   (add-hook 'kill-buffer-hook 'edts-debug-mode-kill-buffer-hook nil t))
 
 (defun edts-debug-mode-find-module (module line)
-  (let* ((module-info (edts-get-module-info edts-debug-node module 'basic))
+  (let* ((module-info (edts-api-get-module-info edts-debug-node module 'basic))
          (file        (cdr (assoc 'source module-info)))
          (buffer-name        (edts-debug-mode-file-buffer-name file)))
     ;; Make sure buffer is created and has the right name.
@@ -189,7 +190,7 @@
     (setq edts-debug-mode-module module)
     (setq buffer-file-name file)
     (set-buffer-modified-p nil)
-    (setq edts-node-name edts-debug-node)
+    (setq edts-api-node-name edts-debug-node)
     (ferl-goto-line line)
     (back-to-indentation)))
 
@@ -235,11 +236,11 @@ on `edts-debug-node'."
   "Node-down hook for edts-debug."
   (when (string= node edts-debug-node)
     (edts-debug-mode-quit)))
-(add-hook 'edts-node-down-hook 'edts-debug-mode-node-down-hook)
+(add-hook 'edts-api-node-down-hook 'edts-debug-mode-node-down-hook)
 
 (defun edts-debug-mode-server-down-hook ()
   "Server-down hook for edts-debug-mode."
   (edts-debug-mode-quit))
-(add-hook 'edts-server-down-hook 'edts-debug-mode-server-down-hook)
+(add-hook 'edts-api-server-down-hook 'edts-debug-mode-server-down-hook)
 
 (provide 'edts-debug-mode)

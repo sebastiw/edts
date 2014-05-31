@@ -18,6 +18,7 @@
 ;; xref interaction code for EDTS
 
 (require 'edts)
+(require 'edts-api)
 (require 'edts-code)
 (require 'edts-face)
 (require 'edts-log)
@@ -39,15 +40,15 @@ undefined_function_calls, unexported_functions"
   ;; Keys
   (define-key edts-mode-map "\C-c\C-dw" 'edts-xref-who-calls)
   (define-key edts-mode-map "\C-c\C-dW" 'edts-xref-last-who-calls)
-  (add-hook 'edts-server-down-hook 'edts-xref-server-down-hook)
+  (add-hook 'edts-api-server-down-hook 'edts-xref-server-down-hook)
   (add-hook 'edts-code-after-compile-hook 'edts-xref-after-compile-hook)
-  (add-hook 'edts-after-node-init-hook 'edts-xref-after-node-init-hook)
-  (add-hook 'edts-node-down-hook 'edts-xref-node-down-hook))
+  (add-hook 'edts-api-after-node-init-hook 'edts-xref-after-node-init-hook)
+  (add-hook 'edts-api-node-down-hook 'edts-xref-node-down-hook))
 
 (defun edts-xref-after-node-init-hook ()
   "Hook to run after node initialization."
   ;; Start the xref server
-  (let ((node (edts-node-name)))
+  (let ((node (edts-api-node-name)))
     (setq edts-xref-initialized-nodes (remove node edts-xref-initialized-nodes))
     (edts-plugin-call-async node
                             'edts_xref
@@ -79,9 +80,9 @@ undefined_function_calls, unexported_functions"
 buffer either by belonging to the same project or, if current buffer
 does not belong to any project, being in the same directory as the
 current buffer's file."
-  (if (not (member (edts-node-name) edts-xref-initialized-nodes))
+  (if (not (member (edts-api-node-name) edts-xref-initialized-nodes))
       (edts-log-info "Not running xref analysis on %s, server not ready yet"
-                     (edts-node-name))
+                     (edts-api-node-name))
     (when edts-xref-checks
       (let* ((mods nil))
         (with-each-buffer-in-project (gen-sym) (eproject-root)
@@ -113,7 +114,7 @@ buffer's project."
   "Run xref-checks on MODULE on the node associated with current buffer,
 asynchronously. When the request terminates, call CALLBACK with the
 parsed response as the single argument"
-  (let* ((node (edts-node-name))
+  (let* ((node (edts-api-node-name))
          (args `(("xref_checks" . ,(mapcar #'symbol-name edts-xref-checks))
                  ("modules"     . ,modules))))
     (edts-log-debug "fetching xref-analysis of %s async on %s" modules node)
@@ -140,7 +141,7 @@ current buffer's project node."
   (let ((args (list (cons "module"   module)
                     (cons "function" function)
                     (cons "arity"    (number-to-string arity)))))
-    (edts-plugin-call (edts-node-name) 'edts_xref 'who_calls args)))
+    (edts-plugin-call (edts-api-node-name) 'edts_xref 'who_calls args)))
 
 (defun edts-xref-who-calls ()
   (interactive)

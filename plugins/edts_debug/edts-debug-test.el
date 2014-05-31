@@ -19,6 +19,7 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
+(require 'edts-api)
 (require 'edts-test)
 
 (edts-test-add-suite
@@ -26,8 +27,8 @@
  edts-debug-suite
  ;; Setup
  (lambda ()
-   (let ((async-node-init edts-async-node-init))
-     (setq edts-async-node-init nil)
+   (let ((async-node-init edts-api-async-node-init))
+     (setq edts-api-async-node-init nil)
      (setq edts-event-inhibit t)
      (edts-rest-force-sync t)
      (edts-test-pre-cleanup-all-buffers)
@@ -38,7 +39,7 @@
 
  ;; Teardown
  (lambda (setup-config)
-   (setq edts-async-node-init (cdr (assoc 'async-node-init setup-config)))
+   (setq edts-api-async-node-init (cdr (assoc 'async-node-init setup-config)))
    (edts-rest-force-sync nil)
    (setq edts-event-inhibit nil)
    (edts-test-post-cleanup-all-buffers)

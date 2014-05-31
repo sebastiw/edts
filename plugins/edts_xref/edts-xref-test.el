@@ -16,8 +16,10 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
 ;; xref interaction code for EDTS
-
+(require 'edts-api)
 (require 'edts-test)
+(require 'edts-xref)
+
 (edts-test-add-suite
  ;; Name
  edts-xref-suite
@@ -40,7 +42,7 @@
 (edts-test-case edts-xref-suite edts-xref-analysis-test ()
   "Basic xref analysis setup test"
   (flet ((edts-node-down-request () nil))
-    (let ((edts-async-node-init nil))
+    (let ((edts-api-async-node-init nil))
       (find-file (car (edts-test-project1-modules)))
       (edts-xref-module-analysis-async '("one"))
       (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
@@ -54,7 +56,7 @@
 (edts-test-case edts-xref-suite edts-xref-who-calls-test ()
   "Basic project setup test"
   (flet ((edts-node-down-request () nil))
-    (let ((edts-async-node-init nil))
+    (let ((edts-api-async-node-init nil))
       (find-file (car (edts-test-project1-modules)))
       (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
              (caller   (car callers))

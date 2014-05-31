@@ -66,7 +66,7 @@ buffer's project, on the node related to that project."
          (args (list (cons "otp_plt" otp-plt)
                      (cons "out_plt" out-plt)
                      (cons "modules" modules))))
-    (edts-plugin-call-async (edts-node-name)
+    (edts-plugin-call-async (edts-api-node-name)
                             'edts_dialyzer
                             'analyze
                             args
@@ -79,7 +79,7 @@ buffer's directory, on the node related to that buffer."
          (args '(("otp_plt"  nil)
                  ("out-plt"  (f-join edts-data-directory plt-file))
                  ("modules"  (edts-code-directory-open-modules default-directory)))))
-    (edts-plugin-call-async (edts-node-name)
+    (edts-plugin-call-async (edts-api-node-name)
                             'edts_dialyzer
                             'analyze
                             args

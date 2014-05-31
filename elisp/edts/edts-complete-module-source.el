@@ -57,7 +57,7 @@
     (edts-log-debug "completing modules")
     (let ((completions
            (or edts-complete-module-cache
-               (setq edts-complete-module-cache (edts-get-modules)))))
+               (setq edts-complete-module-cache (edts-api-get-modules)))))
       (edts-log-debug "completing modules done")
       completions)))
 

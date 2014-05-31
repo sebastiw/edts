@@ -58,10 +58,9 @@
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing exported function completions")
-         (let* ((module  (ferl-symbol-at (- point 1)))
-                (exports (edts-get-module-exports module t)))
+         (let* ((module  (ferl-symbol-at (- point 1))))
            (setq edts-complete-exported-function-candidates
-                 (mapcar #'edts-function-to-string exports))))))))
+                 (edts-api-get-module-export-strings module t))))))))
 
 (defun edts-complete-exported-function-candidates ()
   (case (ferl-point-inside-quotes)

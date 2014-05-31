@@ -26,6 +26,8 @@
 (require 'ring)
 (require 'thingatpt)
 
+(require 'edts-api)
+
 (require 'ferl)
 
 (defvar edts-navigate-originating-module nil
@@ -38,11 +40,11 @@ set for .hrl-files.")
 (defun edts-find-global-function ()
   "Find a module in the current project."
   (interactive)
-  (let ((modules (edts-get-modules)))
+  (let ((modules (edts-api-get-modules)))
     (unless modules
       (error "No modules found"))
     (let* ((choice (edts-query "Module: " modules "No such module"))
-           (file (cdr (assoc 'source (edts-get-basic-module-info choice)))))
+           (file (cdr (assoc 'source (edts-api-get-basic-module-info choice)))))
       (edts-find-file-existing file)
       (edts-find-local-function nil))))
 
@@ -155,7 +157,7 @@ directive."
   "Jump to the record-definition under point."
   (let* ((mark (copy-marker (point-marker)))
          (rec-name (thing-at-point 'symbol))
-         (info (edts-get-detailed-module-info (ferl-get-module)))
+         (info (edts-api-get-detailed-module-info (ferl-get-module)))
          (records (cdr (assoc 'records info)))
          (record (edts-nav-find-record rec-name records)))
     (if record
@@ -214,8 +216,8 @@ Move point there and make an entry in edts-window-history-ring."
 
 (defun edts-navigate-get-includes ()
   (if (string= (file-name-extension (buffer-file-name)) "hrl")
-      (edts-get-includes edts-navigate-originating-module)
-    (edts-get-includes)))
+      (edts-api-get-includes edts-navigate-originating-module)
+    (edts-api-get-includes)))
 
 (defun edts-find-source (module function arity)
   "Find the source code for MODULE in a buffer, loading it if necessary.
@@ -231,7 +233,7 @@ When FUNCTION is specified, the point is moved to its start."
               (unless (eq (marker-position mark) (point))
                 (ring-insert-at-beginning (edts-window-history-ring) mark)))
             (error "Function %s:%s/%s not found" module function arity))
-        (let* ((info (edts-get-function-info module function arity)))
+        (let* ((info (edts-api-get-function-info module function arity)))
           (if info
               (let ((line (cdr (assoc 'line info))))
                 (edts-find-file-existing (cdr (assoc 'source info)))
@@ -251,7 +253,7 @@ When FUNCTION is specified, the point is moved to its start."
 When FUNCTION is specified, the point is moved to its start."
   ;; Add us to the history list
   (let* ((mark (copy-marker (point-marker)))
-         (info (edts-get-basic-module-info module)))
+         (info (edts-api-get-basic-module-info module)))
     (if (not info)
         (null (edts-log-error "Module %s not found" module))
       (edts-find-file-existing (cdr (assoc 'source info)))

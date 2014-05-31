@@ -30,6 +30,7 @@
 (require 'eproject-extras)
 (require 'f)
 
+(require 'edts-api)
 (require 'edts-face)
 (require 'ferl)
 
@@ -111,7 +112,7 @@ with severity as key and a lists of issues as values"
         (file     (buffer-file-name)))
     (when module
       (run-hook-with-args 'edts-code-before-compile-hook (intern module))
-      (edts-compile-and-load-async
+      (edts-api-compile-and-load-async
        module file #'edts-code-handle-compilation-result))))
 
 (defun edts-code-handle-compilation-result (comp-res)
@@ -148,7 +149,7 @@ buffer's project."
       (edts-face-remove-overlays '(edts-code-eunit-passed))
       (edts-face-remove-overlays '(edts-code-eunit-failed))
       (when (not (eq result 'error))
-	(edts-get-module-eunit-async
+	(edts-api-get-module-eunit-async
 	 module #'edts-code-handle-eunit-result)))))
 
 (defun edts-code-handle-eunit-result (eunit-res)
