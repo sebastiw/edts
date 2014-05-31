@@ -134,17 +134,18 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
   if you have a build configuration that sets up your paths for you during your
   normal build process.
 
- - `xref-error-whitelist <list of strings>`
+  - `xref-error-whitelist <list of strings>`
 
- A list of regular expressions that will be applied as a whitelist to xref error
- descriptions. Useful if you are using external libraries (such as Quickcheck)
- for which you don't have access to binaries compiled with debug_info.
+  A list of regular expressions that will be applied as a whitelist to xref
+  error descriptions. Useful if you are using external libraries (such as
+  Quickcheck) for which you don't have access to binaries compiled with
+  debug_info.
 
- - `xref-file-whitelist <list of strings>`
+  - `xref-file-whitelist <list of strings>`
 
- Same as `xref-error-whitelist`, but the regular expressions  will be applied to
- the path of file the file where the errors occur rather than the description of
- the error.
+  Same as `xref-error-whitelist`, but the regular expressions  will be applied
+  to the path of file the file where the errors occur rather than the
+  description of the error.
 
 ##### Example configuration:
   ```elisp
