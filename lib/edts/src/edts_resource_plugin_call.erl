@@ -38,10 +38,11 @@
 
 
 %%%_* Includes =================================================================
--include_lib("tulib/include/prelude.hrl").
 -include_lib("webmachine/include/webmachine.hrl").
 
 %%%_* Defines ==================================================================
+-define(a2l(A), atom_to_list(A)).
+-define(l2a(A), list_to_atom(A)).
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
@@ -119,7 +120,7 @@ assert(Prop, false) -> throw(Prop).
 
 convert_params(Params, Specs) ->
   lists:map(fun({Key, Spec}) ->
-                {ok, Val} = tulib_lists:assoc(?a2l(Key), Params),
+                {ok, Val} = edts_util:assoc(?a2l(Key), Params),
                 convert_param(Val, Spec)
             end,
             Specs).

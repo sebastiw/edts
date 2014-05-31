@@ -34,11 +34,12 @@
           validate/3]).
 
 %%%_* Includes =================================================================
--include_lib("tulib/include/prelude.hrl").
 
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
+
+-define(a2l(A), atom_to_list(A)).
 
 %%%_* Types ====================================================================
 
@@ -84,7 +85,7 @@ validate(ReqData0, Ctx0, Keys) ->
           Name = case Key of
                    Key when is_atom(Key) -> Key;
                    {_Type, Props}        ->
-                     {ok, N} = tulib_lists:assoc(name, Props),
+                     {ok, N} = edts_util:assoc(name, Props),
                      N
                  end,
           case (term_to_validate(Key))(ReqData, Ctx) of
@@ -104,7 +105,7 @@ validate(ReqData0, Ctx0, Keys) ->
               Key1          when is_atom(Key1) -> atom_to_list(Key1);
               {_Type, Key1} when is_atom(Key1) -> Key1;
               {_Type, Props} ->
-                {ok, N} = tulib_lists:assoc(name, Props),
+                {ok, N} = edts_util:assoc(name, Props),
                 N
             end,
       Value = wrq:get_qs_value(atom_to_list(Key), ReqData0),
@@ -236,13 +237,13 @@ dirs_validate(ReqData, QsKey) ->
                           {error, {not_found, atom()}}.
 %%------------------------------------------------------------------------------
 enum_list_validate(ReqData, Props) ->
-  {ok, Name}   = tulib_lists:assoc(name,     Props),
+  {ok, Name}   = edts_util:assoc(name,     Props),
   QsKey = atom_to_list(Name),
-  {ok, Allowed} = tulib_lists:assoc(allowed,  Props),
-  Required      = tulib_lists:assoc(required, Props, false),
+  {ok, Allowed} = edts_util:assoc(allowed,  Props),
+  Required      = edts_util:assoc(required, Props, false),
   case wrq:get_qs_value(QsKey, ReqData) of
     undefined when Required -> {error, {not_found, QsKey}};
-    undefined               -> {ok, tulib_lists:assoc(default, Props, [])};
+    undefined               -> {ok, edts_util:assoc(default, Props, [])};
     Str                     ->
       Tokens = string:tokens(Str, ","),
       Vals = [list_to_atom(string:strip(Mod, both)) || Mod <- Tokens],
@@ -266,14 +267,14 @@ enum_list_validate(ReqData, Props) ->
                        {error, {not_found, atom()}}.
 %%------------------------------------------------------------------------------
 enum_validate(ReqData, Props) ->
-  {ok, Name}   = tulib_lists:assoc(name,     Props),
+  {ok, Name}   = edts_util:assoc(name,     Props),
   QsKey = atom_to_list(Name),
-  {ok, Allowed} = tulib_lists:assoc(allowed,  Props),
-  Required      = tulib_lists:assoc(required, Props, false),
+  {ok, Allowed} = edts_util:assoc(allowed,  Props),
+  Required      = edts_util:assoc(required, Props, false),
   case wrq:get_qs_value(QsKey, ReqData) of
     undefined when Required -> {error, {not_found, QsKey}};
     undefined               ->
-      {ok, tulib_lists:assoc(default, Props, undefined)};
+      {ok, edts_util:assoc(default, Props, undefined)};
     V                       ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of

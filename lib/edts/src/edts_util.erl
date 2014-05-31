@@ -31,7 +31,9 @@
 
 %%%_* Exports ==================================================================
 
--export([nodename2shortname/1,
+-export([assoc/2,
+         assoc/3,
+         nodename2shortname/1,
          shortname2nodename/1,
          pid2atom/1,
          lib_and_app_dirs/0,
@@ -42,6 +44,18 @@
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
+
+assoc(K, AList) ->
+  case lists:keyfind(K, 1, AList) of
+    false  -> {error, notfound};
+    {K, V} -> {ok, V}
+  end.
+
+assoc(K, AList, Default) ->
+  case assoc(K, AList) of
+    {error, notfound} -> Default;
+    {ok, V}           -> V
+  end.
 
 nodename2shortname(Nodename) ->
   Str = atom_to_list(Nodename),

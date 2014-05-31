@@ -419,7 +419,6 @@ started_p() ->
 
 %%%_* Internal functions =======================================================
 
-
 %%------------------------------------------------------------------------------
 %% @equiv ensure_module_loaded(Mod,
 %%                             code:where_is_file(atom_to_list(Mod) ++ ".beam"),
@@ -763,15 +762,15 @@ get_additional_includes_test_() ->
         {prev_project_root_dir, PrevRootDir}]
    end,
    fun(Cfg) ->
-       case tulib_lists:assoc(prev_app_include_dirs, Cfg, undefined) of
+       case edts_util:assoc(prev_app_include_dirs, Cfg, undefined) of
          undefined  -> application:unset_env(edts, app_include_dirs);
          Prev0 -> application:set_env(edts, app_include_dirs, Prev0)
        end,
-       case tulib_lists:assoc(prev_project_include_dirs, Cfg, undefined) of
+       case edts_util:assoc(prev_project_include_dirs, Cfg, undefined) of
          undefined  -> application:unset_env(edts, project_include_dirs);
          Prev1 -> application:set_env(edts, project_include_dirs, Prev1)
        end,
-       case tulib_lists:assoc(prev_project_root_dir, Cfg, undefined) of
+       case edts_util:assoc(prev_project_root_dir, Cfg, undefined) of
          undefined  -> application:unset_env(edts, prev_project_root_dir);
          Prev2 -> application:set_env(edts, prev_project_root_dir, Prev2)
        end
