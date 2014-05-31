@@ -486,7 +486,7 @@ check_modules_test() ->
 eunit_test_init() ->
   stop(),
   meck:unload(),
-  meck:new(dummy_file_backend),
+  meck:new(dummy_file_backend, [non_strict]),
   meck:expect(dummy_file_backend, read_file, fun(_) -> {error, enoent} end),
   meck:expect(dummy_file_backend, write_file, fun(_, _) -> ok end),
   meck:new(edts_code, [passthrough]),

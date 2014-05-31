@@ -866,7 +866,7 @@ string_to_mfa_test_() ->
 format_errors_test_() ->
   SetupF = fun() ->
                meck:unload(),
-               meck:new(source),
+               meck:new(source, [non_strict]),
                meck:expect(source, format_error,
                            fun(Error) -> atom_to_list(Error) end)
            end,
@@ -990,7 +990,7 @@ parse_abstract_function_test_() ->
   CurFile = "/foo/test.erl",
   Exports = [{bar, 1}],
   meck:unload(),
-  meck:new(Mod, [no_link]),
+  meck:new(Mod, [no_link, non_strict]),
   meck:expect(Mod, Fun, fun(_) -> ok end),
   Acc = orddict:from_list([ {module,    Mod},
                             {cur_file,  CurFile},
