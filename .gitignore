@@ -11,6 +11,7 @@ lib/proper
 lib/tulib
 lib/webmachine
 log
+edts-autoloads.el
 erl_crash.dump
 *.o
 *.beam
