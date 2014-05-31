@@ -62,7 +62,6 @@
       (edts-xref-module-analysis-async '("one"))
       (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
                                 'error)))
-        (message "errors %s" errors)
         (should (equal (length errors) 0))))))
 
 (edts-test-case edts-xref-suite edts-xref-file-whitelist-test ()
