@@ -4,12 +4,8 @@ deps
 ebin
 elisp/erlang-mode
 elisp/ert
-lib/lager
-lib/mochiweb
-lib/meck
-lib/proper
-lib/tulib
-lib/webmachine
+lib/*
+!lib/edts
 log
 edts-autoloads.el
 erl_crash.dump
