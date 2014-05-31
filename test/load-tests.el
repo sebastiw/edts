@@ -17,24 +17,28 @@
 ;;
 ;; Test loading library for edts.
 
-(let ((edts-dir (file-name-directory
-                  (directory-file-name
-                   (file-name-directory load-file-name)))))
-  (add-to-list 'load-path edts-dir)
 
-  (dolist (file
-           (directory-files
-            (expand-file-name "elisp" edts-root-directory) t "^[^.]"))
-    (when (file-directory-p file)
-      (add-to-list 'load-path file)))
+(defvar edts-dir (file-name-directory (directory-file-name
+                                       (file-name-directory load-file-name))))
 
-  (require 'f)
-  (require 'edts-autoloads)
+(dolist (file
+         (directory-files
+          (expand-file-name "elisp" edts-dir) t "^[^.]"))
+  (when (file-directory-p file)
+    (add-to-list 'load-path file)))
+(add-to-list 'load-path (directory-file-name edts-dir))
 
-  (dolist (file (directory-files (f-join edts-dir "elisp" "edts") t "-test\\.el$"))
-    ;; avoid symlinks created as emacs backups
-    (when (not (file-symlink-p file))
-      (load file))))
+(when (>= emacs-major-version 24)
+  (require 'package)
+  (package-initialize))
+
+(require 'edts-mode)
+
+(dolist (file (directory-files (f-join edts-dir "elisp" "edts") t "-test\\.el$"))
+  ;; avoid symlinks created as emacs backups
+  (when (not (file-symlink-p file))
+    (load file)))
+
 (require 'edts-test)
 (require 'edts-plugin)
 (edts-plugin-load-tests)
