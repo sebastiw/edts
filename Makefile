@@ -4,12 +4,7 @@ export ERL_LIBS:=`pwd`"/lib"
 EMACS?= "emacs"
 
 .PHONY: all
-all: submodule-update libs $(PLUGINS)
-
-.PHONY: submodule-update
-submodule-update:
-	@-if [ -z "${EDTS_SKIP_SUBMODULE_UPDATE}" ]; \
-	then git submodule update --init; fi
+all: libs $(PLUGINS)
 
 .PHONY: libs
 libs:
