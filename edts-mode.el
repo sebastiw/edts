@@ -7,6 +7,91 @@
 ;; Prerequisites
 (require 'auto-highlight-symbol)
 (require 'erlang)
+(require 'f)
+
+(defgroup edts nil
+  "Erlang development tools"
+  :group 'convenience
+  :prefix "edts-")
+
+
+(add-to-list 'load-path (f-join
+                         (f-dirname load-file-name)
+                         "elisp"
+                         "edts"))
+
+;;;###autoload
+(defconst edts-root-directory
+  (file-name-directory (or (locate-library "edts-autoloads")
+                           load-file-name
+                           default-directory))
+  "EDTS root directory.")
+
+(defconst edts-code-directory
+  (f-join edts-root-directory "elisp" "edts")
+  "Directory where edts code is located.")
+
+(defcustom edts-data-directory
+  (if (boundp 'user-emacs-directory)
+      (expand-file-name "edts" user-emacs-directory)
+    (expand-file-name "~/.emacs.d"))
+  "Where EDTS should save its data."
+  :group 'edts)
+
+(defconst edts-lib-directory
+  (f-join edts-root-directory "elisp")
+  "Directory where edts libraries are located.")
+
+;;;###autoload
+(defconst edts-plugin-directory
+  (f-join edts-root-directory "plugins")
+  "Directory where edts plugins are located.")
+
+(defconst edts-test-directory
+  (f-join edts-root-directory "test")
+  "Directory where edts test data are located.")
+
+(eval-when-compile
+  (unless load-file-name
+    (let ((default-directory edts-root-directory)
+          (buf  "*EDTS compile*"))
+      (pop-to-buffer (get-buffer-create buf))
+      (goto-char (point-max))
+      (if (= (call-process "make" nil t t "libs") 0)
+          (quit-window)
+        (error (format (concat "Failed to compile EDTS libraries. "
+                               "See %s for details.")
+                       buf))))))
+
+(defcustom edts-erl-command
+  (or (executable-find "erl")
+      (null
+        (warn
+         "No erl on exec-path. Most of EDTS' functionality will be broken.")))
+  "Location of the erl-executable to use when launching the main EDTS-
+node."
+  :group 'edts)
+
+(defconst edts-erl-root
+  (and edts-erl-command
+       (file-name-directory
+        (directory-file-name
+         (file-name-directory (f-canonical edts-erl-command)))))
+  "Location of the Erlang root directory")
+
+
+(require 'edts)
+(require 'edts-api)
+(require 'edts-code)
+(require 'edts-complete)
+(require 'edts-face)
+(require 'edts-log)
+(require 'edts-project)
+(require 'edts-plugin)
+
+;;;###autoload
+(dolist (dir (f-directories edts-plugin-directory))
+  (add-to-list 'load-path dir))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
@@ -27,6 +112,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EDTS mode
 
+;;;###autoload
 (defvar edts-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-n"     'edts-code-next-issue)
@@ -53,7 +139,7 @@
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)
-  (edts-ensure-server-started)
+  (edts-api-ensure-server-started)
   (ad-activate-regexp "edts-face.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
 
@@ -94,9 +180,11 @@
   (if (boundp 'show-paren-priority)
       (kill-local-variable 'show-paren-priority)))
 
+;;;###autoload
 (defvar edts-mode nil
   "The edts mode-variable.")
 
+;;;###autoload
 (define-minor-mode edts-mode
   "An easy to set up Development-environment for Erlang. See README for
 details about EDTS.
@@ -145,10 +233,36 @@ further.
       (edts-setup)
       (edts-teardown)))
 
+;;;###autoload
 (defun edts-erlang-mode-hook ()
   (when (buffer-file-name)
     (edts-mode t)))
 
+;;;###autoload
+(defcustom edts-erlang-mode-regexps
+  '("^\\.erlang$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.config$"
+    "\\.erl$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.script$"
+    "\\.yaws$")
+  "Additional extensions for which to auto-activate erlang-mode."
+  :group 'edts)
+
+;;;###autoload
 (add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
+
+;;;###autoload
+(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
+      edts-erlang-mode-regexps)
+
+(make-directory edts-data-directory 'parents)
+
+
+(edts-plugin-init-all)
 
 (provide 'edts-mode)
