@@ -63,11 +63,6 @@ sources:
   $make
 ```
 
-#### Make sure EDTS is loaded and started in your .emacs:
-```elisp
-  (require 'edts-start)
-```
-
 #### Configure your projects.
   EDTS projects are configured by creating a file called
   `.edts` in your project's root. The configuration file is a number of lines,
