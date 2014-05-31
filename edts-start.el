@@ -22,6 +22,12 @@
   (when (y-or-n-p "Do you want to disable package check now?")
     (customize-save-variable 'edts-inhibit-package-check t)))
 
+(let* ((top-dir (file-name-directory load-file-name))
+       (dirs    (directory-files (expand-file-name "elisp" top-dir) t "^[^.]")))
+  (dolist (dir dirs)
+    (when (file-directory-p dir)
+      (add-to-list 'load-path dir))))
+
 (require 'edts-mode)
 
 (provide 'edts-start)
