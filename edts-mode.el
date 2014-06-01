@@ -57,7 +57,7 @@
           (buf  "*EDTS compile*"))
       (pop-to-buffer (get-buffer-create buf))
       (goto-char (point-max))
-      (if (= (call-process "make" nil t t "libs") 0)
+      (if (= (call-process "make" nil t t "libs" "plugins") 0)
           (quit-window)
         (error (format (concat "Failed to compile EDTS libraries. "
                                "See %s for details.")

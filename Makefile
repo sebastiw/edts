@@ -4,7 +4,13 @@ export ERL_LIBS:=`pwd`"/lib"
 EMACS?= "emacs"
 
 .PHONY: all
-all: libs $(PLUGINS)
+all: submodule-update libs plugins
+
+.PHONY: submodule-update
+submodule-update:
+	@-if [ -z "${EDTS_SKIP_SUBMODULE_UPDATE}" ]; \
+	then git submodule update --init; fi
+
 
 .PHONY: libs
 libs:
@@ -44,7 +50,7 @@ ert:
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test
-test: all test-edts ert integration-tests $(PLUGINS:%=test-%)
+test: libs plugins test-edts ert integration-tests $(PLUGINS:%=test-%)
 
 :PHONY: test-edts
 test-edts:
@@ -55,7 +61,7 @@ $(PLUGINS:%=test-%):
 	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C plugins/$(@:test-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
 
 .PHONY: eunit
-eunit: all eunit-edts $(PLUGINS:%=eunit-%)
+eunit: libs plugins eunit-edts $(PLUGINS:%=eunit-%)
 
 :PHONY: eunit-edts
 eunit-edts:
