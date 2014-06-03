@@ -128,8 +128,7 @@ Example:
                    "\\.eterm$"
                    "\\.script$"
                    "\\.yaws$")
-  :irrelevant-files ("^\\.edts$"
-                     "^\\.gitignore$"
+  :irrelevant-files ("^\\.gitignore$"
                      "^\\.gitmodules$")
   :lib-dirs ("lib"))
 
