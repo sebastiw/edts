@@ -318,7 +318,7 @@ Example:
 (defun edts-project--run-init-p ()
   "Return non-nil if project buffer initialization code should be run."
   (and (buffer-file-name)
-       (eproject-classify-file (buffer-file-name))))
+       (eproject-classify-file (f-filename (buffer-file-name)))))
 
 (defun edts-project--temp-root (file)
   "Find the appropriate root directory for a temporary project for
