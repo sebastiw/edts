@@ -134,9 +134,10 @@ of ISSUES."
   (let* ((issue-alist nil))
     (mapc
      #'(lambda (e)
-         (let* ((file (file-truename (cdr (assoc 'file e))))
-                (new-e (cons e (cdr (assoc file issue-alist)))))
-           (push (cons file new-e) issue-alist)))
+         (let* ((file   (file-truename (cdr (assoc 'file e))))
+                (el     (assoc file issue-alist))
+                (new-el (cons file (cons e (cdr el)))))
+           (setq issue-alist (cons new-el (delete el issue-alist)))))
      issues)
     issue-alist))
 
