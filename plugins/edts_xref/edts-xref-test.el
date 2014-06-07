@@ -47,7 +47,7 @@
       (edts-xref-module-analysis-async '("one"))
       (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
                                 'error)))
-        (should (equal (length errors) 1))
+        (should (equal (length errors) 2))
         (should (equal (cdr (assoc 'line (car errors))) 24))
         (should (string= (cdr (assoc 'type (car errors))) "error"))
         (should (string= (cdr (assoc 'file (car errors)))
@@ -58,11 +58,11 @@
   (flet ((edts-node-down-request () nil))
     (let ((edts-api-async-node-init nil))
       (find-file (car (edts-test-project1-modules)))
-      (edts-project-set-attribute (eproject-root) :xref-error-whitelist '("one_two:one_two.*/0"))
+      (edts-project-set-attribute (eproject-root) :xref-error-whitelist '("two"))
       (edts-xref-module-analysis-async '("one"))
       (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
                                 'error)))
-        (should (equal (length errors) 0))))))
+        (should (equal (length errors) 1))))))
 
 (edts-test-case edts-xref-suite edts-xref-file-whitelist-test ()
   "Basic xref analysis setup test"
