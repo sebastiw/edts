@@ -138,19 +138,27 @@ parsed response as the single argument"
             (edts-code-display-error-overlays 'edts-xref errs)))))))
 
 (defun edts-xref-apply-whitelists (errs)
-  (-filter #'(lambda (err)
-               (and
-                (not (edts-xref--desc-whitelisted-p err))
-                (not (edts-xref--file-whitelisted-p err))))
-           errs))
+  "ERRS is an alist of (FILE . FILE-ERRORS) where FILE is a filename and
+FILE-ERRORS is in turn a list of alists, each one describing an error.
+This function applies the `:xref-error-whitelist' and
+`:xref-file-whitelist' to each of the errors in each FILE-ERRORS and
+returns the filtered ERRS alist."
+  (-map #'(lambda (file-errs)
+            (cons (car file-errs)
+                  (-filter #'(lambda (err)
+                               (and
+                                (not (edts-xref--desc-whitelisted-p err))
+                                (not (edts-xref--file-whitelisted-p err))))
+                           (cdr file-errs))))
+        errs))
 
 (defun edts-xref--desc-whitelisted-p (err)
-  (let ((desc (cdr (assoc 'description (cadr err))))
+  (let ((desc (cdr (assoc 'description err)))
         (regexps (eproject-attribute :xref-error-whitelist)))
     (-any? (lambda (re) (string-match re desc)) regexps)))
 
 (defun edts-xref--file-whitelisted-p (err)
-  (let ((file (car err))
+  (let ((file (cdr (assoc 'file err)))
         (regexps (eproject-attribute :xref-file-whitelist)))
     (-any? (lambda (re) (string-match re file)) regexps)))
 
