@@ -14,15 +14,15 @@
   :group 'convenience
   :prefix "edts-")
 
+;;;###autoload
+(eval-and-compile
+ (add-to-list 'load-path
+              (file-name-as-directory
+               (expand-file-name "elisp/edts"
+                                 (file-name-directory (or load-file-name
+                                                          byte-compile-current-file))))))
 
-(add-to-list 'load-path (f-join
-                         (f-dirname load-file-name)
-                         "elisp"
-                         "edts"))
-
-(eval-when-compile
-
-  (defvar edts-mode-map
+(defvar edts-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-n"     'edts-code-next-issue)
     (define-key map "\C-c\C-p"     'edts-code-previous-issue)
@@ -40,64 +40,64 @@
     map)
   "Keymap for EDTS.")
 
-  (defcustom edts-erl-command
-    (or (executable-find "erl")
-        (null
-         (warn
-          "No erl on exec-path. Most of EDTS' functionality will be broken.")))
-    "Location of the erl-executable to use when launching the main EDTS-node."
-    :group 'edts)
+(defcustom edts-erl-command
+  (or (executable-find "erl")
+      (null
+       (warn
+        "No erl on exec-path. Most of EDTS' functionality will be broken.")))
+  "Location of the erl-executable to use when launching the main EDTS-node."
+  :group 'edts)
 
-  (defconst edts-root-directory
-    (file-name-directory (or (locate-library "edts-autoloads")
-                             load-file-name
-                             default-directory))
-    "EDTS root directory.")
-  (add-to-list 'load-path edts-root-directory)
+(defconst edts-root-directory
+  (file-name-directory (or (locate-library "edts-autoloads")
+                           load-file-name
+                           default-directory))
+  "EDTS root directory.")
+(add-to-list 'load-path edts-root-directory)
 
-  (defconst edts-code-directory
-    (f-join edts-root-directory "elisp" "edts")
-    "Directory where edts code is located.")
-  (add-to-list 'load-path edts-root-directory)
+(defconst edts-code-directory
+  (f-join edts-root-directory "elisp" "edts")
+  "Directory where edts code is located.")
+(add-to-list 'load-path edts-root-directory)
 
-  (defcustom edts-data-directory
-    (if (boundp 'user-emacs-directory)
-        (expand-file-name "edts" user-emacs-directory)
-      (expand-file-name "~/.emacs.d"))
-    "Where EDTS should save its data."
-    :group 'edts)
+(defcustom edts-data-directory
+  (if (boundp 'user-emacs-directory)
+      (expand-file-name "edts" user-emacs-directory)
+    (expand-file-name "~/.emacs.d"))
+  "Where EDTS should save its data."
+  :group 'edts)
 
-  (defconst edts-lib-directory
-    (f-join edts-root-directory "elisp")
-    "Directory where edts libraries are located.")
-  (dolist (dir (f-directories edts-lib-directory))
-    (add-to-list 'load-path dir))
+(defconst edts-lib-directory
+  (f-join edts-root-directory "elisp")
+  "Directory where edts libraries are located.")
+(dolist (dir (f-directories edts-lib-directory))
+  (add-to-list 'load-path dir))
 
-  (defconst edts-plugin-directory
-    (f-join edts-root-directory "plugins")
-    "Directory where edts plugins are located.")
+(defconst edts-plugin-directory
+  (f-join edts-root-directory "plugins")
+  "Directory where edts plugins are located.")
 
-  (dolist (dir (f-directories edts-plugin-directory))
-    (add-to-list 'load-path dir))
+(dolist (dir (f-directories edts-plugin-directory))
+  (add-to-list 'load-path dir))
 
-  (defun edts-compile-deps ()
-    "Compile EDTS' external (Erlang) dependecies."
-    (interactive)
-    (let ((default-directory edts-root-directory)
-          (buf  "*EDTS compile*"))
-      (pop-to-buffer (get-buffer-create buf))
-      (goto-char (point-max))
-      (let* ((path (mapconcat #'expand-file-name exec-path ":"))
-             (process-environment (cons (concat "PATH=" path)
-                                        process-environment)))
-        (if (= (call-process "make" nil t t "libs" "plugins") 0)
-            (when (called-interactively-p 'interactive)
-              (quit-window))
-          (error (format (concat "Failed to compile EDTS libraries. "
-                                 "See %s for details.")
-                         buf))))))
-  (unless load-file-name
-    (edts-compile-deps)))
+(defun edts-compile-deps ()
+  "Compile EDTS' external (Erlang) dependecies."
+  (interactive)
+  (let ((default-directory edts-root-directory)
+        (buf  "*EDTS compile*"))
+    (pop-to-buffer (get-buffer-create buf))
+    (goto-char (point-max))
+    (let* ((path (mapconcat #'expand-file-name exec-path ":"))
+           (process-environment (cons (concat "PATH=" path)
+                                      process-environment)))
+      (if (= (call-process "make" nil t t "libs" "plugins") 0)
+          (when (called-interactively-p 'interactive)
+            (quit-window))
+        (error (format (concat "Failed to compile EDTS libraries. "
+                               "See %s for details.")
+                       buf))))))
+(unless load-file-name
+  (edts-compile-deps))
 
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
