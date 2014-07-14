@@ -51,16 +51,22 @@ on [Emacs Wiki](http://www.emacswiki.org/emacs/ELPA).
   - You will need make and Erlang installed or the package installation will
 fail.
   - You will also need both elpa and melpa package repositories added to your
-sources:
+sources. Add these lines to your .emacs:
     - ```(add-to-list 'package-archives '("elpa" . "http://elpa.gnu.org/packages/"))```
     - ```(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))```
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:
-```shell
-  $git clone git://github.com/tjarvstrand/edts.git
-  $cd edts
-  $make
+```M-x package-install RET edts RET
+```
+
+#### Make sure EDTS gets loaded in your .emacs:
+An easy way is to load edts-start:
+
+```
+(add-hook 'after-init-hook 'my-after-init-hook)
+(defun my-after-init-hook ()
+  (require 'edts-start))
 ```
 
 #### Configure your projects.
