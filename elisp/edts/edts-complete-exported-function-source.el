@@ -76,11 +76,11 @@
     edts-complete-exported-function-candidates))
 
 (defun edts-complete-single-quoted-exported-function-candidates ()
-  "Produces the completion for single-qoted erlang modules, Same as normal
-candidates, except we single-quote-terminate candidates."
+  "Produces the completion for single-qoted exported erlang functions.
+Same as normal candidates, except we single-quote-terminate candidates."
   (mapcar
    #'ferl-single-quote-terminate
-   (edts-complete-normal-module-candidates)))
+   (edts-complete-normal-exported-function-candidates)))
 
 (defun edts-complete-exported-function-doc (candidate)
   "Find the documentation for CANDIDATE."

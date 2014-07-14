@@ -20,55 +20,89 @@
                          "elisp"
                          "edts"))
 
-(defconst edts-root-directory
-  (file-name-directory (or (locate-library "edts-autoloads")
-                           load-file-name
-                           default-directory))
-  "EDTS root directory.")
-
-(defconst edts-code-directory
-  (f-join edts-root-directory "elisp" "edts")
-  "Directory where edts code is located.")
-
-(defcustom edts-data-directory
-  (if (boundp 'user-emacs-directory)
-      (expand-file-name "edts" user-emacs-directory)
-    (expand-file-name "~/.emacs.d"))
-  "Where EDTS should save its data."
-  :group 'edts)
-
-(defconst edts-lib-directory
-  (f-join edts-root-directory "elisp")
-  "Directory where edts libraries are located.")
-
-(defconst edts-plugin-directory
-  (f-join edts-root-directory "plugins")
-  "Directory where edts plugins are located.")
-
-(defconst edts-test-directory
-  (f-join edts-root-directory "test")
-  "Directory where edts test data are located.")
-
 (eval-when-compile
-  (unless load-file-name
+
+  (defvar edts-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-n"     'edts-code-next-issue)
+    (define-key map "\C-c\C-p"     'edts-code-previous-issue)
+    (define-key map "\C-c\C-df"    'edts-find-local-function)
+    (define-key map "\C-c\C-d\S-f" 'edts-find-global-function)
+    (define-key map "\C-c\C-dH"    'edts-find-doc)
+    (define-key map "\C-c\C-dh"    'edts-show-doc-under-point)
+    (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
+    (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
+    (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
+    (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
+    (define-key map "\C-c\C-dt"    'edts-code-eunit)
+    (define-key map "\M-."         'edts-find-source-under-point)
+    (define-key map "\M-,"         'edts-find-source-unwind)
+    map)
+  "Keymap for EDTS.")
+
+  (defcustom edts-erl-command
+    (or (executable-find "erl")
+        (null
+         (warn
+          "No erl on exec-path. Most of EDTS' functionality will be broken.")))
+    "Location of the erl-executable to use when launching the main EDTS-node."
+    :group 'edts)
+
+  (defconst edts-root-directory
+    (file-name-directory (or (locate-library "edts-autoloads")
+                             load-file-name
+                             default-directory))
+    "EDTS root directory.")
+  (add-to-list 'load-path edts-root-directory)
+
+  (defconst edts-code-directory
+    (f-join edts-root-directory "elisp" "edts")
+    "Directory where edts code is located.")
+  (add-to-list 'load-path edts-root-directory)
+
+  (defcustom edts-data-directory
+    (if (boundp 'user-emacs-directory)
+        (expand-file-name "edts" user-emacs-directory)
+      (expand-file-name "~/.emacs.d"))
+    "Where EDTS should save its data."
+    :group 'edts)
+
+  (defconst edts-lib-directory
+    (f-join edts-root-directory "elisp")
+    "Directory where edts libraries are located.")
+  (dolist (dir (f-directories edts-lib-directory))
+    (add-to-list 'load-path dir))
+
+  (defconst edts-plugin-directory
+    (f-join edts-root-directory "plugins")
+    "Directory where edts plugins are located.")
+
+  (dolist (dir (f-directories edts-plugin-directory))
+    (add-to-list 'load-path dir))
+
+  (defun edts-compile-deps ()
+    "Compile EDTS' external (Erlang) dependecies."
+    (interactive)
     (let ((default-directory edts-root-directory)
           (buf  "*EDTS compile*"))
       (pop-to-buffer (get-buffer-create buf))
       (goto-char (point-max))
-      (if (= (call-process "make" nil t t "libs" "plugins") 0)
-          (quit-window)
-        (error (format (concat "Failed to compile EDTS libraries. "
-                               "See %s for details.")
-                       buf))))))
+      (let* ((path (mapconcat #'expand-file-name exec-path ":"))
+             (process-environment (cons (concat "PATH=" path)
+                                        process-environment)))
+        (if (= (call-process "make" nil t t "libs" "plugins") 0)
+            (when (called-interactively-p 'interactive)
+              (quit-window))
+          (error (format (concat "Failed to compile EDTS libraries. "
+                                 "See %s for details.")
+                         buf))))))
+  ;; (unless load-file-name
+  ;;   (edts-compile-deps))
+  )
 
-(defcustom edts-erl-command
-  (or (executable-find "erl")
-      (null
-        (warn
-         "No erl on exec-path. Most of EDTS' functionality will be broken.")))
-  "Location of the erl-executable to use when launching the main EDTS-
-node."
-  :group 'edts)
+(defconst edts-test-directory
+  (f-join edts-root-directory "test")
+  "Directory where edts test data are located.")
 
 (defconst edts-erl-root
   (and edts-erl-command
@@ -87,9 +121,6 @@ node."
 (require 'edts-project)
 (require 'edts-plugin)
 
-(dolist (dir (f-directories edts-plugin-directory))
-  (add-to-list 'load-path dir))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
 (defconst edts-auto-highlight-exclusions
@@ -105,27 +136,6 @@ node."
    (face    . ahs-plugin-defalt-face)
    (start   . ferl-point-beginning-of-function)
    (end     . ferl-point-end-of-function)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; EDTS mode
-
-(defvar edts-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-n"     'edts-code-next-issue)
-    (define-key map "\C-c\C-p"     'edts-code-previous-issue)
-    (define-key map "\C-c\C-df"    'edts-find-local-function)
-    (define-key map "\C-c\C-d\S-f" 'edts-find-global-function)
-    (define-key map "\C-c\C-dH"    'edts-find-doc)
-    (define-key map "\C-c\C-dh"    'edts-show-doc-under-point)
-    (define-key map "\C-c\C-d\C-b" 'ferl-goto-previous-function)
-    (define-key map "\C-c\C-d\C-f" 'ferl-goto-next-function)
-    (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
-    (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
-    (define-key map "\C-c\C-dt"    'edts-code-eunit)
-    (define-key map "\M-."         'edts-find-source-under-point)
-    (define-key map "\M-,"         'edts-find-source-unwind)
-    map)
-  "Keymap for EDTS.")
 
 (defvar edts-mode-hook nil
   "Hooks to run at the end of edts-mode initialization in a buffer.")
