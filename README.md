@@ -57,8 +57,7 @@ sources. Add these lines to your .emacs:
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:
-```M-x package-install RET edts RET
-```
+```M-x package-install RET edts RET```
 
 #### Make sure EDTS gets loaded in your .emacs:
 An easy way is to load edts-start:
