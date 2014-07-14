@@ -158,7 +158,7 @@ the highest priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
 
 (defun edts-face-print-overlay-on-line ()
-  (when edts-mode
+  (when (and (boundp 'edts-mode) edts-mode)
     (let ((overlay (edts-face-max-prio-overlay (overlays-at (point)))))
       (when overlay
         (message "%s" (overlay-get overlay 'help-echo))))))
