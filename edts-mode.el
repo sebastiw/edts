@@ -96,9 +96,8 @@
           (error (format (concat "Failed to compile EDTS libraries. "
                                  "See %s for details.")
                          buf))))))
-  ;; (unless load-file-name
-  ;;   (edts-compile-deps))
-  )
+  (unless load-file-name
+    (edts-compile-deps)))
 
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
