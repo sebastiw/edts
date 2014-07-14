@@ -92,14 +92,14 @@ node."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
-(defconst erlang-auto-highlight-exclusions
+(defconst edts-auto-highlight-exclusions
   (cons (quote erlang-mode)
                (concat
                 "^\\(" erlang-operators-regexp
                 "\\|" erlang-keywords-regexp
                 "\\|\\<[[:digit:]]+\\>\\)$")))
 
-(defvar erlang-current-function-ahs-plugin
+(defvar edts-current-function-ahs-plugin
   '((name    . "erlang current function")
    (lighter . "CF")
    (face    . ahs-plugin-defalt-face)
@@ -140,14 +140,14 @@ node."
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
 
   (auto-highlight-symbol-mode t)
-  (add-to-list 'ahs-exclude erlang-auto-highlight-exclusions)
+  (add-to-list 'ahs-exclude edts-auto-highlight-exclusions)
   (make-local-variable 'ahs-case-fold-search)
   (setq ahs-case-fold-search nil)
 
   ;; Register the range plugin with ahs
   (ahs-regist-range-plugin
-    erlang-current-function
-    erlang-current-function-ahs-plugin
+    edts-current-function
+    edts-current-function-ahs-plugin
     "Current Erlang function")
 
   ;; Make sure we remember our history

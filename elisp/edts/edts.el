@@ -185,20 +185,6 @@
 (defalias 'edts-inhibit-fringe-markers 'edts-face-inhibit-fringe-markers)
 (defalias 'edts-marker-fringe 'edts-face-marker-fringe)
 
-;; workaround to get proper variable highlighting in the shell.
-(defvar erlang-font-lock-keywords-vars
-  (list
-   (list
-    #'(lambda (max)
-        (block nil
-          (while (re-search-forward erlang-variable-regexp max 'move-point)
-            ;; no numerical constants
-            (unless (eq ?# (char-before (match-beginning 0)))
-              (return (match-string 0))))))
-    1 'font-lock-variable-name-face nil))
-  "Font lock keyword highlighting Erlang variables.
-Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
-
 (defun edts-event-handler (node class type info)
   (case type
     (node_down
@@ -354,9 +340,9 @@ for ARITY will give a regexp matching any arity."
    ((concat "[^,]*?" (apply #'concat (make-list (- arity 1) ",[^,]*?"))))))
 
 (defun edts-ahs-edit-current-function ()
-  "Activate ahs-edit-mode with erlang-current-function range-plugin."
+  "Activate ahs-edit-mode with edts-current-function range-plugin."
   (interactive)
-  (ahs-onekey-edit-function 'erlang-current-function nil))
+  (ahs-onekey-edit-function 'edts-current-function nil))
 
 (defun edts-ahs-edit-buffer ()
   "Activate ahs-edit-mode with ahs-range-whole-buffer range-plugin."

@@ -120,6 +120,21 @@ PWD and running COMMAND."
   (if edts-shell-mode
       (edts-shell-mode-setup)))
 
+;; FIXME This isn't working anyway
+;; workaround to get proper variable highlighting in the shell.
+;; (defvar erlang-font-lock-keywords-vars
+;;   (list
+;;    (list
+;;     #'(lambda (max)
+;;         (block nil
+;;           (while (re-search-forward erlang-variable-regexp max 'move-point)
+;;             ;; no numerical constants
+;;             (unless (eq ?# (char-before (match-beginning 0)))
+;;               (return (match-string 0))))))
+;;     1 'font-lock-variable-name-face nil))
+;;   "Font lock keyword highlighting Erlang variables.
+;; Must be preceded by `erlang-font-lock-keywords-macros' to work properly.")
+
 (defun edts-shell-mode-setup ()
   ;; generic stuff
   (ignore-errors
