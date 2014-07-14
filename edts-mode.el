@@ -142,7 +142,6 @@
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
-  (erlang-mode)
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)

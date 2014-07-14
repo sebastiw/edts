@@ -4,7 +4,9 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defcustom edts-inhibit-package-check t
+(require 'erlang)
+
+(defcustom edts-inhibit-package-check nil
   "If non-nil, don't check whether EDTS was installed as a package."
   :group 'edts)
 
@@ -30,7 +32,13 @@
 
 (require 'edts-mode)
 
-(defcustom edts-mode-regexps
+(defun edts-erlang-mode-hook ()
+  (when (buffer-file-name)
+    (edts-mode t)))
+
+(add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
+
+(defcustom edts-erlang-mode-regexps
   '("^\\.erlang$"
     "\\.app$"
     "\\.app.src$"
@@ -43,7 +51,7 @@
   "File-name patterns for which to auto-activate edts-mode."
   :group 'edts)
 
-(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'edts-mode)))
-      edts-mode-regexps)
+(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
+      edts-erlang-mode-regexps)
 
 (provide 'edts-start)
