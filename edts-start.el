@@ -30,4 +30,20 @@
 
 (require 'edts-mode)
 
+(defcustom edts-mode-regexps
+  '("^\\.erlang$"
+    "\\.app$"
+    "\\.app.src$"
+    "\\.erl$"
+    "\\.es$"
+    "\\.escript$"
+    "\\.eterm$"
+    "\\.script$"
+    "\\.yaws$")
+  "File-name patterns for which to auto-activate edts-mode."
+  :group 'edts)
+
+(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'edts-mode)))
+      edts-mode-regexps)
+
 (provide 'edts-start)

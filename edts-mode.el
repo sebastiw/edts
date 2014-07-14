@@ -20,7 +20,6 @@
                          "elisp"
                          "edts"))
 
-;;;###autoload
 (defconst edts-root-directory
   (file-name-directory (or (locate-library "edts-autoloads")
                            load-file-name
@@ -42,7 +41,6 @@
   (f-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
 
-;;;###autoload
 (defconst edts-plugin-directory
   (f-join edts-root-directory "plugins")
   "Directory where edts plugins are located.")
@@ -89,7 +87,6 @@ node."
 (require 'edts-project)
 (require 'edts-plugin)
 
-;;;###autoload
 (dolist (dir (f-directories edts-plugin-directory))
   (add-to-list 'load-path dir))
 
@@ -112,7 +109,6 @@ node."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EDTS mode
 
-;;;###autoload
 (defvar edts-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-n"     'edts-code-next-issue)
@@ -136,6 +132,7 @@ node."
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
+  (erlang-mode)
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)
@@ -179,7 +176,6 @@ node."
   (if (boundp 'show-paren-priority)
       (kill-local-variable 'show-paren-priority)))
 
-;;;###autoload
 (defvar edts-mode nil
   "The edts mode-variable.")
 
@@ -232,36 +228,7 @@ further.
       (edts-setup)
       (edts-teardown)))
 
-;;;###autoload
-(defun edts-erlang-mode-hook ()
-  (when (buffer-file-name)
-    (edts-mode t)))
-
-;;;###autoload
-(defcustom edts-erlang-mode-regexps
-  '("^\\.erlang$"
-    "\\.app$"
-    "\\.app.src$"
-    "\\.config$"
-    "\\.erl$"
-    "\\.es$"
-    "\\.escript$"
-    "\\.eterm$"
-    "\\.script$"
-    "\\.yaws$")
-  "Additional extensions for which to auto-activate erlang-mode."
-  :group 'edts)
-
-;;;###autoload
-(add-hook 'erlang-mode-hook 'edts-erlang-mode-hook)
-
-;;;###autoload
-(mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
-      edts-erlang-mode-regexps)
-
 (make-directory edts-data-directory 'parents)
-
-
 (edts-plugin-init-all)
 
 (provide 'edts-mode)
