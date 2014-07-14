@@ -239,7 +239,7 @@ Example:
       (unless (eproject-attribute :node-sname)
         (edts-project-set-attribute
          root
-         :node-sname (eproject-name)))
+         :node-sname (edts-project--make-node-name (eproject-attribute :name))))
       (unless (eproject-attribute :start-command)
         (edts-project-set-attribute
          root
@@ -333,7 +333,7 @@ FILE."
   (let ((node-name (or node-name
 		       (eproject-attribute :node-sname)
 		       (eproject-name))))
-    (format "erl -sname %s" (edts-project--make-node-name node-name))))
+    (format "erl -sname %s" node-name)))
 
 (defun edts-project--make-node-name (src)
   "Construct a default node-sname for current buffer's project node."
