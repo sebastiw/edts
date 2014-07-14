@@ -140,7 +140,6 @@ node."
   ;; Start with our own stuff
   (edts-face-remove-overlays)
   (edts-api-ensure-server-started)
-  (ad-activate-regexp "edts-face.*")
   (add-hook 'after-save-hook 'edts-code-compile-and-display t t)
 
   (auto-highlight-symbol-mode t)

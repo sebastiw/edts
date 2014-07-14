@@ -34,7 +34,7 @@
 ;;
 ;; To avoid weird eproject types like generic-git interfering with us
 ;; make sure we only consider edts project types.
-(defadvice eproject--all-types (around edts-eproject-types)
+(defadvice eproject--all-types (around edts-eproject-types activate)
   "Ignore irrelevant eproject types for files where we should really only
 consider EDTS."
   (let ((re (eproject--combine-regexps
@@ -48,7 +48,6 @@ consider EDTS."
              (string-match re (f-filename file-name)))
         (setq ad-return-value '(edts-otp edts-temp edts generic))
       ad-do-it)))
-(ad-activate-regexp "edts-eproject-types")
 
 ;; Prevent project-file-visit-hooks from being run several times every
 ;; time a file is opened or reverted.

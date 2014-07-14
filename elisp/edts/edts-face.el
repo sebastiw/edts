@@ -147,20 +147,21 @@ that we can reset our face remappings.")
   "Face used for marking the current line during debugging"
   :group 'edts)
 
-(defadvice next-line (after edts-face-next-line)
+(defadvice next-line (after edts-face-next-li1ne activate)
   "Moves point to the next line and then prints the help-echo of the highest
 priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
 
-(defadvice previous-line (after edts-face-previous-line)
+(defadvice previous-line (after edts-face-previous-line activate)
   "Moves point to the previous line and then prints the help-echo of
 the highest priority any edts overlay at new point if any."
   (edts-face-print-overlay-on-line))
 
 (defun edts-face-print-overlay-on-line ()
-  (let ((overlay (edts-face-max-prio-overlay (overlays-at (point)))))
-    (when overlay
-      (message "%s" (overlay-get overlay 'help-echo)))))
+  (when edts-mode
+    (let ((overlay (edts-face-max-prio-overlay (overlays-at (point)))))
+      (when overlay
+        (message "%s" (overlay-get overlay 'help-echo))))))
 
 (defun edts-face-max-prio-overlay (overlays)
   "Returns the edts-face-overlay with the highest priority in OVERLAYS"
