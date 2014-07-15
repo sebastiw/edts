@@ -23,7 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
-(require 'pos-tip)
+(require 'pos-tip nil t)
 (require 'ferl)
 
 (defcustom edts-complete-inhibit nil
