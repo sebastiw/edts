@@ -29,5 +29,4 @@
     (eproject              "1.5")
     (erlang                "2.4.1")
     (f                     "0.16.0")
-    (popup                 "0.4")
-    (pos-tip               "0.4.5")))
+    (popup                 "0.4")))
