@@ -54,6 +54,8 @@ fail.
 sources. Add these lines to your .emacs:
     - ```(add-to-list 'package-archives '("elpa" . "http://elpa.gnu.org/packages/"))```
     - ```(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))```
+    - ```(add-to-list 'package-archives '("marmalade" . "http://marmalade-repo.org/packages/"))```
+
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:
