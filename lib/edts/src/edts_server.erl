@@ -379,6 +379,8 @@ init_node_test() ->
   meck:expect(edts_dist, set_app_envs,             fun(foo, _, _) -> [ok];
                                                       (bar, _, _) -> [ok]
                                                   end),
+  meck:expect(edts_dist, set_cookie,             fun(foo, cookie) -> ok
+                                                 end),
   meck:expect(edts_dist, start_service,
               fun(foo, _Srv) -> ok;
                  (bar, _Srv) -> {error, already_started}
