@@ -80,25 +80,6 @@
 (dolist (dir (f-directories edts-plugin-directory))
   (add-to-list 'load-path dir))
 
-(defun edts-compile-deps ()
-  "Compile EDTS' external (Erlang) dependecies."
-  (interactive)
-  (let ((default-directory edts-root-directory)
-        (buf  "*EDTS compile*"))
-    (pop-to-buffer (get-buffer-create buf))
-    (goto-char (point-max))
-    (let* ((path (mapconcat #'expand-file-name exec-path ":"))
-           (process-environment (cons (concat "PATH=" path)
-                                      process-environment)))
-      (if (= (call-process "make" nil t t "libs" "plugins") 0)
-          (when (called-interactively-p 'interactive)
-            (quit-window))
-        (error (format (concat "Failed to compile EDTS libraries. "
-                               "See %s for details.")
-                       buf))))))
-(unless load-file-name
-  (edts-compile-deps))
-
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
   "Directory where edts test data are located.")
@@ -240,3 +221,24 @@ further.
 (edts-plugin-init-all)
 
 (provide 'edts-mode)
+
+(eval-and-compile
+  (defun edts-compile-deps ()
+  "Compile EDTS' external (Erlang) dependecies."
+  (interactive)
+  (let ((default-directory edts-root-directory)
+        (buf  "*EDTS compile*"))
+    (pop-to-buffer (get-buffer-create buf))
+    (goto-char (point-max))
+    (let* ((path (mapconcat #'expand-file-name exec-path ":"))
+           (process-environment (cons (concat "PATH=" path)
+                                      process-environment)))
+      (if (= (call-process "make" nil t t "libs" "plugins") 0)
+          (when (called-interactively-p 'interactive)
+            (quit-window))
+        (error (format (concat "Failed to compile EDTS libraries. "
+                               "See %s for details.")
+                       buf))))))
+
+  (unless load-file-name
+    (edts-compile-deps)))
