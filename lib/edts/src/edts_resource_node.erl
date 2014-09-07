@@ -73,7 +73,8 @@ malformed_request(ReqData, Ctx) ->
                                             project_root,
                                             project_lib_dirs,
                                             app_include_dirs,
-                                            project_include_dirs]).
+                                            project_include_dirs,
+                                            erlang_cookie]).
 
 post_is_create(ReqData, Ctx) ->
   {true, ReqData, Ctx}.
@@ -93,7 +94,8 @@ init_node(Ctx) ->
                  orddict:fetch(project_root,         Ctx),
                  orddict:fetch(project_lib_dirs,     Ctx),
                  orddict:fetch(app_include_dirs,     Ctx),
-                 orddict:fetch(project_include_dirs, Ctx)).
+                 orddict:fetch(project_include_dirs, Ctx),
+                 orddict:fetch(erlang_cookie,        Ctx)).
 
 %%%_* Unit tests ===============================================================
 
@@ -122,7 +124,8 @@ malformed_request_test() ->
           project_root,
           project_lib_dirs,
           app_include_dirs,
-          project_include_dirs],
+          project_include_dirs,
+          erlang_cookie],
   meck:expect(edts_resource_lib, validate,
               fun(req_data, [], Args0) when Args0 =:= Args ->
                   {false, req_data, []};
@@ -139,15 +142,16 @@ post_is_create_test() ->
 from_json_test() ->
   meck:unload(),
   meck:new(edts),
-  meck:expect(edts, init_node, fun(name, true, r, [], [], []) -> ok;
-                                  (name, _,    _, _,  _,  _)  -> {error, foo}
+  meck:expect(edts, init_node, fun(name, true, r, [], [], [], undefined) -> ok;
+                                  (name, _,    _, _,  _,  _, _)  -> {error, foo}
                                end),
   Dict1 = orddict:from_list([{project_name, name},
                              {nodename, true},
                              {project_root, r},
                              {project_lib_dirs, []},
                              {app_include_dirs, []},
-                             {project_include_dirs, []}]),
+                             {project_include_dirs, []},
+                             {erlang_cookie, undefined}]),
   ?assertEqual({true, req_data,  Dict1},
                from_json(req_data, Dict1)),
   Dict2 = orddict:from_list([{project_name, name},
@@ -155,7 +159,8 @@ from_json_test() ->
                              {project_root, r},
                              {project_lib_dirs, []},
                              {app_include_dirs, []},
-                             {project_include_dirs, []}]),
+                             {project_include_dirs, []},
+                             {erlang_cookie, undefined}]),
   ?assertException(error, foo, from_json(req_data, Dict2)),
   meck:unload().
 

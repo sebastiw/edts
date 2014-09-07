@@ -136,6 +136,8 @@ term_to_validate({enum_list, Props})   ->
   fun(RD, _Ctx) -> enum_list_validate(RD, Props) end;
 term_to_validate({enum, Props})        ->
   fun(RD, _Ctx) -> enum_validate(RD, Props) end;
+term_to_validate(erlang_cookie) ->
+  fun(RD, _Ctx) -> string_validate(RD, "erlang_cookie", undefined) end;
 term_to_validate(exported)             ->
   fun(ReqData, _Ctx) ->
       enum_validate(ReqData, [{name,    exported},
@@ -162,7 +164,7 @@ term_to_validate(modules)              -> fun modules_validate/2;
 term_to_validate(nodename)             -> fun nodename_validate/2;
 term_to_validate(process)              -> fun process_validate/2;
 term_to_validate(project_name)         ->
-  fun(RD, _Ctx) -> string_validate(RD, "project_name") end;
+  fun(RD, _Ctx) -> string_validate(RD, "project_name", "") end;
 term_to_validate(project_root)         -> fun project_root_validate/2;
 term_to_validate(project_include_dirs) ->
   fun(RD, _Ctx) -> dirs_validate(RD, "project_include_dirs") end;
@@ -447,20 +449,29 @@ project_root_validate(ReqData, _Ctx) ->
       end
   end.
 
-
 %%------------------------------------------------------------------------------
 %% @doc
 %% Validate a string
 %% @end
 -spec string_validate(wrq:req_data(), string()) -> {ok, string()}.
 %%------------------------------------------------------------------------------
-string_validate(ReqData, Key) ->
-  case wrq:get_qs_value(Key, ReqData) of
-    undefined -> {ok, ""};
-    String    -> {ok, String}
+string_validate(ReqData, Key, Default) ->
+  case string_validate(ReqData, Key) of
+    {ok, String}      -> {ok, String};
+    {error, notfound} -> {ok, Default}
   end.
 
-
+%%------------------------------------------------------------------------------
+%% @doc
+%% Validate a string
+%% @end
+-spec string_validate(wrq:req_data(), string(), term()) -> term().
+%%------------------------------------------------------------------------------
+string_validate(ReqData, Key) ->
+  case wrq:get_qs_value(Key, ReqData) of
+    undefined -> {error, notfound};
+    String    -> {ok, String}
+  end.
 
 %%%_* Unit tests ===============================================================
 arity_validate_test() ->
@@ -480,7 +491,7 @@ string_validate_test() ->
   meck:unload(),
   meck:new(wrq),
   meck:expect(wrq, get_qs_value, fun(bar, _) -> undefined end),
-  ?assertEqual({ok, ""}, string_validate(foo, bar)),
+  ?assertEqual({error, notfound}, string_validate(foo, bar)),
   meck:expect(wrq, get_qs_value, fun(bar, _) -> "a_string" end),
   ?assertEqual({ok, "a_string"}, string_validate(foo, bar)),
   meck:unload().

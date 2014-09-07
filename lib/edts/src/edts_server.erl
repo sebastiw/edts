@@ -29,7 +29,7 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([init_node/6,
+-export([init_node/7,
          node_registered_p/1,
          nodes/0,
          start_link/0,
@@ -74,21 +74,29 @@ start_link() ->
 %% Initializes a new edts node.
 %% @end
 %%
--spec init_node(ProjectName    :: string(),
-                Node        :: node(),
-                ProjectRoot :: filename:filename(),
-                LibDirs     :: [filename:filename()],
-                AppInclDirs :: [filename:filename()],
-                SysInclDirs :: [filename:filename()]) -> ok.
+-spec init_node(ProjectName  :: string(),
+                Node         :: node(),
+                ProjectRoot  :: filename:filename(),
+                LibDirs      :: [filename:filename()],
+                AppInclDirs  :: [filename:filename()],
+                SysInclDirs  :: [filename:filename()],
+                ErlangCookie :: string()) -> ok.
 %%------------------------------------------------------------------------------
-init_node(ProjectName, Node, ProjectRoot, LibDirs, AppInclDirs, SysInclDirs) ->
+init_node(ProjectName,
+          Node,
+          ProjectRoot,
+          LibDirs,
+          AppInclDirs,
+          SysInclDirs,
+          ErlangCookie) ->
   Call = {init_node,
           ProjectName,
           Node,
           ProjectRoot,
           LibDirs,
           AppInclDirs,
-          SysInclDirs},
+          SysInclDirs,
+          ErlangCookie},
   gen_server:call(?SERVER, Call, infinity).
 
 
@@ -152,7 +160,8 @@ handle_call({init_node,
              ProjectRoot,
              LibDirs,
              AppInclDirs,
-             SysInclDirs},
+             SysInclDirs,
+             ErlangCookie},
             _From,
             State0) ->
   edts_log:info("Initializing ~p.", [NodeName]),
@@ -161,7 +170,8 @@ handle_call({init_node,
                     ProjectRoot,
                     LibDirs,
                     AppInclDirs,
-                    SysInclDirs) of
+                    SysInclDirs,
+                    ErlangCookie) of
     ok ->
       edts_log:debug("Initialization call done on ~p.", [NodeName]),
       State =
@@ -254,16 +264,23 @@ code_change(_OldVsn, State, _Extra) ->
                    ProjectRoot    :: filename:filename(),
                    LibDirs        :: [filename:filename()],
                    AppIncludeDirs :: [filename:filename()],
-                   SysIncludeDirs :: [filename:filename()]) -> [rpc:key()].
+                   SysIncludeDirs :: [filename:filename()],
+                   ErlangCookie   :: string()) -> [rpc:key()].
 %%------------------------------------------------------------------------------
 do_init_node(ProjectName,
              Node,
              ProjectRoot,
              LibDirs,
              AppIncludeDirs,
-             ProjectIncludeDirs) ->
+             ProjectIncludeDirs,
+             ErlangCookie) ->
   try
+    case ErlangCookie of
+      undefined -> ok;
+      _         -> ok = edts_dist:set_cookie(Node, list_to_atom(ErlangCookie))
+    end,
     Plugins = edts_plugins:names(),
+    edts_plugins:specs(),
     ok = lists:foreach(fun(Spec) -> edts_dist:load_app(Node, Spec) end,
                        edts_plugins:specs()),
     PluginRemoteLoad =
@@ -354,6 +371,8 @@ init_node_test() ->
   meck:expect(edts_dist, add_paths,               fun(foo, _) -> ok;
                                                      (bar, _) -> ok
                                                   end),
+  meck:expect(edts_dist, load_app,                fun(_, _) -> ok
+                                                  end),
   meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok;
                                                      (bar, _) -> ok
                                                   end),
@@ -366,17 +385,18 @@ init_node_test() ->
               end),
   meck:expect(edts_dist, refresh_service, fun(bar, _Srv) -> ok end),
 
-  ?assertEqual(
-     {reply, ok, S1#state{nodes = [N1]}},
-     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
-  ?assertEqual(
-     {reply, ok, S2#state{nodes = [N1]}},
-     handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S2)),
+  Call0 = {init_node, project_name, N1#node.name, "", [], [], [], "cookie"},
+  ?assertEqual({reply, ok, S1#state{nodes = [N1]}},
+               handle_call(Call0, self(), S1)),
+  Call1 = {init_node, project_name, N1#node.name, "", [], [], [], "cookie"},
+  ?assertEqual({reply, ok, S2#state{nodes = [N1]}},
+               handle_call(Call1, self(), S2)),
 
   meck:expect(edts_dist, add_paths,
               fun(foo, _) -> error(some_error) end),
+  Call2 = {init_node, project_name, N1#node.name, "", [], [], [], undefined},
   ?assertEqual({reply, {error, some_error}, S1},
-               handle_call({init_node, project_name, N1#node.name, "", [], [], []}, self(), S1)),
+               handle_call(Call2, self(), S1)),
 
   case PrevEnv of
     undefined -> ok;

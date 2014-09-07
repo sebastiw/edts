@@ -93,7 +93,8 @@ Example:
                                         :start-command
                                         :otp-path
                                         :app-include-dirs
-                                        :project-include-dirs))
+                                        :project-include-dirs
+                                        :erlang-cookie))
 
 (defun edts-project--config-prop-p (prop)
   "Return non-nil if PROP is a valid keyword for edts project configurations."
@@ -269,7 +270,8 @@ Example:
    (eproject-root)
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)
-   (eproject-attribute :project-include-dirs)))
+   (eproject-attribute :project-include-dirs)
+   (eproject-attribute :erlang-cookie)))
 
 (defun edts-project-init-temp ()
   "Sets up values for a temporary project when visiting a non-project module."
@@ -361,7 +363,8 @@ FILE."
    (eproject-root)
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)
-   (eproject-attribute :project-include-dirs)))
+   (eproject-attribute :project-include-dirs)
+   (eproject-attribute :erlang-cookie)))
 
 (defun edts-project-build-exec-path ()
   "Build up the exec-path to use when starting the project-node of PROJECT."

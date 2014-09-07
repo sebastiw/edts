@@ -92,6 +92,12 @@ An easy way is to load edts-start:
   The erlang sname that the project's erlang node should have. It should contain
   only the part before the `@`-sign and defaults to same name as the project.
 
+  - `erlang-cookie <string>`
+
+  The erlang cookie to use for the connection to the project's erlang node. If
+  EDTS can connect to the node with its default cookie, the project node's
+  cookie for the EDTS server will also be updated.
+
   - `lib-dirs <string>`
 
   A list of paths (relative to the project's root) where the project's code is

@@ -102,7 +102,8 @@ localhost."
                                       &optional
                                       app-include-dirs
                                       project-include-dirs
-                                      &optional retries)
+                                      erlang-cookie
+                                      retries)
   "Once NODE-NAME is registered with epmd, register it with the edts server."
   (add-to-list 'edts-api--pending-node-startups node-name)
   (let ((retries (or retries 5)))
@@ -122,6 +123,7 @@ localhost."
                                      libs
                                      app-include-dirs
                                      project-include-dirs
+                                     erlang-cookie
                                      (1- retries))
               ;; Synchronous init
               (sit-for 0.5)
@@ -131,6 +133,7 @@ localhost."
                                              libs
                                              app-include-dirs
                                              project-include-dirs
+                                             erlang-cookie
                                              (1- retries)))
           ;; Give up
           (setq edts-api--pending-node-startups
@@ -146,7 +149,8 @@ localhost."
                           root
                           libs
                           app-include-dirs
-                          project-include-dirs))))
+                          project-include-dirs
+                          erlang-cookie))))
 
 (defun edts-api-node-name ()
   "Return the sname of current buffer's project node."
@@ -159,14 +163,16 @@ localhost."
                            root
                            libs
                            app-include-dirs
-                           project-include-dirs)
+                           project-include-dirs
+                           erlang-cookie)
   "Register NODE-NAME with the EDTS server asynchronously."
   (interactive (list (eproject-attribute :name)
                      (edts-api-node-name)
                      (eproject-attribute :root)
                      (eproject-attribute :lib-dirs)
                      (eproject-attribute :app-include-dirs)
-                     (eproject-attribute :project-include-dirs)))
+                     (eproject-attribute :project-include-dirs)
+                     (eproject-attribute :erlang-cookie)))
   (unless (member node-name edts-api--outstanding-node-registration-requests)
     (edts-log-debug "Initializing node %s" node-name)
     (add-to-list 'edts-api--outstanding-node-registration-requests node-name)
@@ -175,7 +181,8 @@ localhost."
                            (cons "project_root"         root)
                            (cons "project_lib_dirs"     libs)
                            (cons "app_include_dirs"     app-include-dirs)
-                           (cons "project_include_dirs" project-include-dirs)))
+                           (cons "project_include_dirs" project-include-dirs)
+                           (cons "erlang_cookie"        erlang-cookie)))
            (cb-args  (list node-name)))
       (if edts-api-async-node-init
           (edts-rest-post-async resource

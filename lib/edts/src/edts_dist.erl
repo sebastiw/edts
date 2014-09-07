@@ -40,7 +40,8 @@
          make_sname/2,
          refresh_service/2,
          remote_load_modules/2,
-         set_app_envs/3]).
+         set_app_envs/3,
+         set_cookie/2]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -242,6 +243,24 @@ set_app_envs(Node, App, KVs) ->
 %%------------------------------------------------------------------------------
 set_app_env(Node, App, Key, Value) ->
   call(Node, application, set_env, [App, Key, Value]).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Adds LibDirs to the code-path on Node
+%% @end
+-spec set_cookie(Node :: node(), Cookie :: atom()) ->
+              ok | {error, term()}.
+%%------------------------------------------------------------------------------
+set_cookie(Node, Cookie) ->
+  case net_kernel:connect_node(Node) of
+    true  -> call(Node, erlang, set_cookie, [node(), Cookie]);
+    false -> ok
+  end,
+  erlang:set_cookie(Node, Cookie),
+  case net_kernel:connect_node(Node) of
+    true  -> ok;
+    false -> {error, {failed_to_connect, Node}}
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc

@@ -31,7 +31,7 @@
 -export([call/3,
          call/4,
          call/5,
-         init_node/6,
+         init_node/7,
          is_node/1,
          node_reachable/1,
          nodes/0]).
@@ -55,20 +55,23 @@
                 ProjectRoot    :: filename:filename(),
                 LibDirs        :: [filename:filename()],
                 AppIncludeDirs :: [filename:filename()],
-                SysIncludeDirs :: [filename:filename()]) -> ok.
+                SysIncludeDirs :: [filename:filename()],
+                ErlangCookie   :: string()) -> ok.
 %%------------------------------------------------------------------------------
 init_node(ProjectName,
           Node,
           ProjectRoot,
           LibDirs,
           AppIncludeDirs,
-          SysIncludeDirs) ->
+          SysIncludeDirs,
+          ErlangCookie) ->
   edts_server:init_node(ProjectName,
                         Node,
                         ProjectRoot,
                         LibDirs,
                         AppIncludeDirs,
-                        SysIncludeDirs).
+                        SysIncludeDirs,
+                        ErlangCookie).
 
 %%------------------------------------------------------------------------------
 %% @doc
