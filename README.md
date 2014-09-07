@@ -98,7 +98,7 @@ An easy way is to load edts-start:
   EDTS can connect to the node with its default cookie, the project node's
   cookie for the EDTS server will also be updated.
 
-  - `lib-dirs <string>`
+  - `lib-dirs <list of strings>`
 
   A list of paths (relative to the project's root) where the project's code is
   located. All subdirectories of lib-dirs are assumed to be otp-applications.
