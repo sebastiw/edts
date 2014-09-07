@@ -129,7 +129,7 @@ Example:
                    "\\.yaws$")
   :irrelevant-files ("^\\.gitignore$"
                      "^\\.gitmodules$")
-  :lib-dirs ("lib"))
+  :lib-dirs ("lib" "deps"))
 
 (defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
