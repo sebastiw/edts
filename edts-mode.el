@@ -48,11 +48,12 @@
   "Location of the erl-executable to use when launching the main EDTS-node."
   :group 'edts)
 
-(defconst edts-root-directory
-  (file-name-directory (or (locate-library "edts-autoloads")
-                           load-file-name
-                           default-directory))
-  "EDTS root directory.")
+(eval-and-compile
+  (defconst edts-root-directory
+    (file-name-directory (or (locate-library "edts-autoloads")
+                             load-file-name
+                             default-directory))
+    "EDTS root directory."))
 (add-to-list 'load-path edts-root-directory)
 
 (defconst edts-code-directory
