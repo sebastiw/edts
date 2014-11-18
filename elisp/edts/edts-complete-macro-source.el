@@ -78,7 +78,7 @@ candidates, except we single-quote-terminate candidates."
 (defun edts-complete-find-module-macros ()
   (let* ((files  (cons (buffer-file-name) (edts-api-get-includes)))
          (macros   (apply #'append
-                          (mapcar #'edts-complete-get-file-macros files)))
+                          (mapcar #'edts-complete-parse-get-file-macros files)))
          (parsed  (edts-complete-parse-macros macros)))
     parsed))
 
