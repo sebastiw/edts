@@ -38,6 +38,14 @@ that is not part of a project")
   "Whether or not node initialization should be synchronous"
   :group 'edts)
 
+(defcustom edts-api-num-server-start-retries 20
+  "The number of retries to wait for server to start before giving up"
+  :group 'edts)
+
+(defcustom edts-api-server-start-retry-interval 0.2
+  "Time between each server availability check at start up"
+  :group 'edts)
+
 (defvar edts-api--pending-node-startups nil
   "List of nodes that we are waiting on to get ready for registration.")
 
@@ -67,13 +75,13 @@ the node-name of the node that has gone down as the argument.")
     (error "EDTS: Server already running"))
   (let* ((pwd (f-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory edts-erl-command))
-         (retries 20)
+         (retries edts-api-num-server-start-retries)
          available)
     (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
     (setq available (edts-api-get-nodes t))
     (while (and (> retries 0) (not available))
       (setq available (edts-api-get-nodes t))
-      (sit-for 0.2)
+      (sit-for edts-api-server-start-retry-interval)
       (decf retries))
     (when available
       (edts-log-info "Started EDTS server")
