@@ -181,7 +181,9 @@ make_function_info(M, F, A, ExportedP, FunSrc, Line, ModSrc) ->
       absolute -> FunSrc;
       relative ->
         % Deals with File = "./src". Must be a better way to do this.
-        case lists:suffix(FunSrc, ModSrc) of
+        BaseFunSrc = filename:basename(FunSrc),
+        BaseModSrc = filename:basename(ModSrc),
+        case BaseFunSrc =:= BaseModSrc of
           true  -> ModSrc;
           false -> filename:join(filename:dirname(ModSrc), FunSrc)
         end
