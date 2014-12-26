@@ -46,15 +46,16 @@
 %% Start the whole shebang.
 start() ->
   %% Webmachine requirements
-  application:start(inets),
-  application:start(crypto),
+  ok = application:start(inets),
+  ok = application:start(crypto),
 
   %% Lager requirements
-  application:start(compiler),
-  application:start(syntax_tools),
-  application:start(lager),
+  ok = application:start(compiler),
+  ok = application:start(syntax_tools),
+  ok = application:start(goldrush),
+  ok = application:start(lager),
 
-  application:start(edts).
+  ok = application:start(edts).
 
 
 %% Application callbacks
