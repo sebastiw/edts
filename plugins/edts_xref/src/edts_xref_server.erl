@@ -171,6 +171,7 @@ check_modules(Modules0, Checks) ->
         end
     end,
   Modules = lists:filter(MaybeReloadFun, Modules0),
+  update(),
   update_modules(Modules),
   Files = [proplists:get_value(source, M:module_info(compile)) || M <- Modules],
   Fun  = fun(Check) -> do_check_modules(Modules, Files, Check) end,

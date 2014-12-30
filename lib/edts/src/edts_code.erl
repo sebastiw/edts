@@ -42,6 +42,7 @@
          get_function_info/3,
          get_module_info/2,
          get_module_source/1,
+         init/1,
          modules/0,
          parse_expressions/1,
          project_data_dir/0,
@@ -94,6 +95,7 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
                           {ok | error, [issue()]}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
+  update_paths(),
   compile_and_load(Module, []).
 
 
@@ -335,6 +337,24 @@ pop_dirs(Source0, Rel) ->
     [] -> [];
     _  -> filename:join(lists:reverse(Source))
   end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Initialize current node with AppEnvs.
+%% @end
+-spec init([{Key::atom(), Value::term()}]) -> ok.
+%%------------------------------------------------------------------------------
+init(AppEnvs) ->
+  lists:foreach(fun({K, V}) -> application:set_env(edts, K, V) end, AppEnvs),
+  update_paths().
+
+
+update_paths() ->
+  {ok, ProjectRoot} = application:get_env(edts, project_root_dir),
+  {ok, LibDirs} = application:get_env(edts, project_lib_dirs),
+  Paths = edts_util:expand_code_paths(ProjectRoot, LibDirs),
+  lists:foreach(fun code:add_path/1, Paths).
+
 
 %%------------------------------------------------------------------------------
 %% @doc

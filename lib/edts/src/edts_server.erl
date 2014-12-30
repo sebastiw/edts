@@ -296,15 +296,15 @@ do_init_node(ProjectName,
                                         edts_plugins,
                                         edts_util] ++
                                          PluginRemoteLoad),
-    ok = edts_dist:add_paths(Node, expand_code_paths(ProjectRoot, LibDirs)),
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
     AppEnv = [{server_node,          node()},
+              {project_lib_dirs,     LibDirs},
               {project_name,         ProjectName},
               {project_data_dir,     ProjectDir},
               {project_root_dir,     ProjectRoot},
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
-    init_node_env(Node, AppEnv),
+    edts_dist:init_node(Node, AppEnv),
     start_services(Node, [edts_code] ++ PluginRemoteServices)
   catch
     C:E ->
@@ -312,9 +312,6 @@ do_init_node(ProjectName,
                      [Node, C, E, erlang:get_stacktrace()]),
       {error, E}
   end.
-
-init_node_env(Node, AppEnv) ->
-  [] = [R || R <- edts_dist:set_app_envs(Node, edts, AppEnv), R =/= ok].
 
 start_services(_Node, []) -> ok;
 start_services(Node, [Service|Rest]) ->
@@ -334,18 +331,6 @@ start_service(Node, Service) ->
                      [Service, Node, Err]),
       Err
   end.
-
-
-expand_code_paths("", _LibDirs) -> [];
-expand_code_paths(ProjectRoot, LibDirs) ->
-  RootPaths = [filename:join(ProjectRoot, "ebin"),
-               filename:join(ProjectRoot, "test")],
-  F = fun(Dir) -> expand_code_path(ProjectRoot, Dir) end,
-  RootPaths ++ lists:flatmap(F, LibDirs).
-
-expand_code_path(Root, Dir) ->
-  Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
-  lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
 
 node_delete(Name, State) ->
   State#state{nodes = lists:keydelete(Name, #node.name, State#state.nodes)}.
@@ -373,11 +358,10 @@ init_node_test() ->
                                                   end),
   meck:expect(edts_dist, load_app,                fun(_, _) -> ok
                                                   end),
+  meck:expect(edts_dist, init_node,               fun(_, _) -> ok
+                                                  end),
   meck:expect(edts_dist, remote_load_modules,     fun(foo, _) -> ok;
                                                      (bar, _) -> ok
-                                                  end),
-  meck:expect(edts_dist, set_app_envs,             fun(foo, _, _) -> [ok];
-                                                      (bar, _, _) -> [ok]
                                                   end),
   meck:expect(edts_dist, set_cookie,             fun(foo, cookie) -> ok
                                                  end),
@@ -394,7 +378,7 @@ init_node_test() ->
   ?assertEqual({reply, ok, S2#state{nodes = [N1]}},
                handle_call(Call1, self(), S2)),
 
-  meck:expect(edts_dist, add_paths,
+  meck:expect(edts_dist, init_node,
               fun(foo, _) -> error(some_error) end),
   Call2 = {init_node, project_name, N1#node.name, "", [], [], [], undefined},
   ?assertEqual({reply, {error, some_error}, S1},
@@ -456,27 +440,6 @@ terminate_test() ->
 code_change_test() ->
   ?assertEqual({ok, foo}, code_change("vsn", foo, extra)),
   ?assertEqual({ok, extra}, code_change("vsn", extra, foo)).
-
-expand_code_paths_test() ->
-  ?assertEqual([], expand_code_paths("", ["/foo"])),
-  ?assertEqual(["/foo/ebin", "/foo/test"], expand_code_paths("/foo", [])).
-
-expand_code_path_test() ->
-  meck:new(filelib, [passthrough, unstick]),
-  meck:expect(filelib, wildcard,
-              fun(Path) ->
-                  Dirname = filename:dirname(Path),
-                  [filename:join(Dirname, "foo"), filename:join(Dirname, "bar")]
-              end),
-  Root = "/foo",
-  Lib  = "lib",
-  ?assertEqual([filename:join([Root, "lib", "foo", "ebin"]),
-                filename:join([Root, "lib", "foo", "test"]),
-                filename:join([Root, "lib", "bar", "ebin"]),
-                filename:join([Root, "lib", "bar", "test"])],
-               expand_code_path(Root, Lib)),
-  meck:unload().
-
 
 node_find_test() ->
   N = #node{name = foo},

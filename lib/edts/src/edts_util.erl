@@ -33,6 +33,7 @@
 
 -export([assoc/2,
          assoc/3,
+         expand_code_paths/2,
          nodename2shortname/1,
          shortname2nodename/1,
          pid2atom/1,
@@ -56,6 +57,18 @@ assoc(K, AList, Default) ->
     {error, notfound} -> Default;
     {ok, V}           -> V
   end.
+
+expand_code_paths("", _LibDirs) -> [];
+expand_code_paths(ProjectRoot, LibDirs) ->
+  RootPaths = [filename:join(ProjectRoot, "ebin"),
+               filename:join(ProjectRoot, "test")],
+  F = fun(Dir) -> expand_code_path(ProjectRoot, Dir) end,
+  RootPaths ++ lists:flatmap(F, LibDirs).
+
+expand_code_path(Root, Dir) ->
+  Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
+  lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
+
 
 nodename2shortname(Nodename) ->
   Str = atom_to_list(Nodename),
@@ -96,6 +109,26 @@ shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
 
 
 %%%_* Unit tests ===============================================================
+
+expand_code_paths_test() ->
+  ?assertEqual([], expand_code_paths("", ["/foo"])),
+  ?assertEqual(["/foo/ebin", "/foo/test"], expand_code_paths("/foo", [])).
+
+expand_code_path_test() ->
+  meck:new(filelib, [passthrough, unstick]),
+  meck:expect(filelib, wildcard,
+              fun(Path) ->
+                  Dirname = filename:dirname(Path),
+                  [filename:join(Dirname, "foo"), filename:join(Dirname, "bar")]
+              end),
+  Root = "/foo",
+  Lib  = "lib",
+  ?assertEqual([filename:join([Root, "lib", "foo", "ebin"]),
+                filename:join([Root, "lib", "foo", "test"]),
+                filename:join([Root, "lib", "bar", "ebin"]),
+                filename:join([Root, "lib", "bar", "test"])],
+               expand_code_path(Root, Lib)),
+  meck:unload().
 
 shorten_path_test_() ->
   [ ?_assertEqual("", shorten_path("")),

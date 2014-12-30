@@ -33,15 +33,15 @@
          call/4,
          connect/1,
          connect_all/0,
-         start_service/2,
+         init_node/2,
          load_all/1,
          load_app/2,
          make_sname/1,
          make_sname/2,
          refresh_service/2,
          remote_load_modules/2,
-         set_app_envs/3,
-         set_cookie/2]).
+         set_cookie/2,
+         start_service/2]).
 
 -compile({no_auto_import,[load_module/2]}).
 
@@ -139,6 +139,15 @@ connect_all() ->
                 end,
                 Nodes).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Initialize procect node Node with AppEnvs.
+%% @end
+-spec init_node(node(), [{Key::atom(), Value::term()}]) -> ok.
+%%------------------------------------------------------------------------------
+init_node(Node, AppEnvs) ->
+  call(Node, edts_code, init, [AppEnvs]).
+
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -215,34 +224,6 @@ remote_load_module(Node, Mod) ->
       {ok, Mod, Bin} = remote_compile_module(Node, File),
       {module, Mod}  = remote_load_module(Node, Mod, Bin)
   end.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Sets each of the Key/Value pairs in KVs in App's application environment on
-%% Node.
-%% @end
--spec set_app_envs(Node ::node(),
-                   App  ::atom(),
-                   KVs  :: [{Key::atom(), Value::term()}]) ->
-                      [ok | {badrpc, Reason::term()}].
-%%------------------------------------------------------------------------------
-set_app_envs(Node, App, KVs) ->
-  lists:map(fun({Key, Value}) -> set_app_env(Node, App, Key, Value) end, KVs).
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Sets the environment variable Key for App on Node to Value.
-%% @end
--spec set_app_env(Node :: node(),
-                  App::atom(),
-                  Key::atom(),
-                  Value::term()) ->
-                     ok | {badrpc, Reason::term()}.
-%%------------------------------------------------------------------------------
-set_app_env(Node, App, Key, Value) ->
-  call(Node, application, set_env, [App, Key, Value]).
 
 %%------------------------------------------------------------------------------
 %% @doc
