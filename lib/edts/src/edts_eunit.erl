@@ -145,7 +145,7 @@ format_error({error, {Reason, Info} = Err, _Stack}) ->
   case reason_to_props(Reason) of
     {ok, {ExpectProp, ValueProp}} ->
       Expected = proplists:get_value(ExpectProp, Info),
-      Value = proplists:get_value(ValueProp, Info),
+      Value = get_first_prop(ValueProp, Info),
       io_lib:format("~p\n"
                     "expected: ~s\n"
                     "value:    ~s",
@@ -157,6 +157,12 @@ format_error({Err,Reason,_Stack}) ->
   io_lib:format("~p", [{Err,Reason}]);
 format_error(Err) ->
   io_lib:format("~p", [Err]).
+
+get_first_prop([Key|Keys], Proplist) ->
+  case proplists:get_value(Key, Proplist) of
+    undefined -> get_first_prop(Keys, Proplist);
+    Value     -> Value
+  end.
 
 
 get_line(Result) ->
@@ -194,16 +200,17 @@ get_error_line_from_loc([{_M, _F, _A, Src}]) ->
 
 reason_to_props(Reason) ->
   Mapping =
-    [{assertException_failed, {pattern, unexpected_success}},
-     {assertNotException_failed, {pattern, unexpected_exception}},
-     {assertCmdOutput_failed, {expected_output, output}},
-     {assertCmd_failed, {expected_status, status}},
-     {assertEqual_failed, {expected, value}},
-     {assertMatch_failed, {pattern, value}},
-     {assertNotEqual_failed, {expected, expected}},
-     {assertNotMatch_failed, {pattern, value}},
-     {assertion_failed, {expected, value}},
-     {command_failed, {expected_status, status}}],
+    [{assertException_failed, {pattern, [unexpected_success,
+                                         unexpected_exception]}},
+     {assertNotException_failed, {pattern, [unexpected_exception]}},
+     {assertCmdOutput_failed, {expected_output, [output]}},
+     {assertCmd_failed, {expected_status, [status]}},
+     {assertEqual_failed, {expected, [value]}},
+     {assertMatch_failed, {pattern, [value]}},
+     {assertNotEqual_failed, {expected, [expected]}},
+     {assertNotMatch_failed, {pattern, [value]}},
+     {assertion_failed, {expected, [value]}},
+     {command_failed, {expected_status, [status]}}],
   case lists:keyfind(Reason, 1, Mapping) of
     {Reason, Props} -> {ok, Props};
     false           -> {error, not_found}
@@ -262,7 +269,7 @@ to_str_test_() ->
   ].
 
 reason_to_props_test_() ->
-  [?_assertEqual({ok, {expected, value}}, reason_to_props(assertion_failed)),
+  [?_assertEqual({ok, {expected, [value]}}, reason_to_props(assertion_failed)),
    ?_assertEqual({error, not_found}, reason_to_props(foooo))
   ].
 
