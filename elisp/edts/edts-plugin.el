@@ -85,8 +85,12 @@
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
       (if (equal "error" (cdr (assoc 'result body)))
           (prog1 nil
-            (edts-log-error "Error in plugin call: %s"
-                            (cdr (assoc 'return body))))
+            (let* ((err (cdr (assoc 'return body)))
+                   (err-fmt "Error in plugin call: ")
+                   (err-str  (if (stringp err)
+                                 (concat err-fmt err)
+                               (format "%s: %s" err-fmt err))))
+            (edts-log-error err-str)))
         (cdr (assoc 'return body))))))
 
 (defun edts-plugin-call-async (node plugin method &optional args cb cb-args)
