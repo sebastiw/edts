@@ -122,12 +122,12 @@ An easy way is to load edts-start:
 
   - `dialyzer-plt <string>`
 
-  The path to any custom plt on which to base dialyzer analyses on. You only
-  have to set this if the plt in dialyzer's default location (`$DIALYZER_PLT`
-  or `$HOME/.dialyzer_plt`, in that order) is not appropriate for the project.
-  The plt-file pointed to will not be overwritten, but instead used as a base
-  when building the new plt-file for the project, which will be located in your
-  `edts-data-directory`.
+  The absolute path to any custom PLT-file on which to base the creation of the
+  project's own PLT-file. You only have to set this if the plt in dialyzer's
+  default location (`$DIALYZER_PLT` or `$HOME/.dialyzer_plt`, in that order) is
+  not appropriate for the project. The plt-file pointed to will not be
+  overwritten, but instead used as a base when building the new plt-file for the
+  project, which will be located in your `edts-data-directory`.
 
   - `app-include-dirs <list of strings>`
 
