@@ -87,17 +87,21 @@ analyze(OutPlt, Modules) ->
 analyze(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
     non_otp_beam_files(code:lib_dir(), code:all_loaded()),
-  ok = update_plt(BasePlt, OutPlt, LoadedFiles),
-  Warnings = get_plt_warnings(OutPlt),
-  format_warnings(filter_warnings(Modules, Warnings)).
+  try
+    ok = update_plt(BasePlt, OutPlt, LoadedFiles),
+    Warnings = get_plt_warnings(OutPlt),
+    format_warnings(filter_warnings(Modules, Warnings))
+  catch
+    throw:{dialyzer_error, Err} -> {error, Err}
+  end.
 
 %%%_* Internal functions =======================================================
 
 update_plt(BasePlt, OutPlt, Files) ->
   %% FIXME What to do if BasePlt has changed?
   case filelib:is_file(OutPlt) of
-    false  -> create_plt(BasePlt, OutPlt, Files);
-    true ->
+    false -> create_plt(BasePlt, OutPlt, Files);
+    true  ->
       FileSet    = ordsets:from_list(Files),
       case ordsets:from_list(get_included_files(OutPlt)) of
         FileSet    -> check_plt(OutPlt, Files);
