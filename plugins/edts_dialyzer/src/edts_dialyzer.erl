@@ -92,7 +92,10 @@ analyze(BasePlt, OutPlt, Modules) ->
     Warnings = get_plt_warnings(OutPlt),
     format_warnings(filter_warnings(Modules, Warnings))
   catch
-    throw:{dialyzer_error, Err} -> {error, Err}
+    throw:{dialyzer_error, Err} when is_list(Err) ->
+      {error, lists:flatten(Err)};
+    throw:{dialyzer_error, Err}                   ->
+      {error, Err}
   end.
 
 %%%_* Internal functions =======================================================
