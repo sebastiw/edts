@@ -125,17 +125,40 @@ localhost."
         (if (> retries 0)
             ;; Wait same more
             (if edts-api-async-node-init
-                (run-with-idle-timer 0.5
-                                     nil
-                                     'edts-api-init-node-when-ready
-                                     project-name
-                                     node-name
-                                     root
-                                     libs
-                                     app-include-dirs
-                                     project-include-dirs
-                                     erlang-cookie
-                                     (1- retries))
+                ;; This used to use run-with-idle-timer.  A problem
+                ;; with that is that we risk checking immediately
+                ;; thereby exhausting the retries very quickly which
+                ;; is a problem on slower systems.
+                ;;
+                ;;   * Assume the interval is 0.5 s.
+                ;;   * Assume we leave emacs idle, then the timer
+                ;;     triggers after 0.5 s.
+                ;;   * The function will now add another 0.5 s idle
+                ;;     timer, but the time is counted from when emacs
+                ;;     became idle and the funtion will trigger
+                ;;     immediately.
+                ;;   * We could add the (current-idle-time) to the 0.5
+                ;;     second interval, but then we have a problem if
+                ;;     emacs goes from idle to active and then to idle
+                ;;     a second time.  Now we have an idle timer with
+                ;;     a (let's say) 4.5 second interval. In this case
+                ;;     we would have to reset the timer's interval
+                ;;     when emacs goes from active to idle.
+                ;;
+                ;; We could make it more complex by making this work
+                ;; with idleness, but hopefully using the regular
+                ;; run-with-timer doesn't load emacs too much.
+                (run-with-timer 0.5
+                                nil
+                                'edts-api-init-node-when-ready
+                                project-name
+                                node-name
+                                root
+                                libs
+                                app-include-dirs
+                                project-include-dirs
+                                erlang-cookie
+                                (1- retries))
               ;; Synchronous init
               (sit-for 0.5)
               (edts-api-init-node-when-ready project-name
