@@ -49,6 +49,16 @@ that is not part of a project")
   :type 'number
   :group 'edts)
 
+(defcustom edts-api-num-project-node-start-retries 5
+  "The number of retries to wait for a project node to start before giving up"
+  :type 'integer
+  :group 'edts)
+
+(defcustom edts-api-project-node-start-retry-interval 0.5
+  "Time between each project node availability check at start up"
+  :type 'number
+  :group 'edts)
+
 (defvar edts-api--pending-node-startups nil
   "List of nodes that we are waiting on to get ready for registration.")
 
@@ -117,7 +127,7 @@ localhost."
                                       retries)
   "Once NODE-NAME is registered with epmd, register it with the edts server."
   (add-to-list 'edts-api--pending-node-startups node-name)
-  (let ((retries (or retries 5)))
+  (let ((retries (or retries edts-api-num-project-node-start-retries)))
     (edts-log-debug "Waiting for node %s to start (retries %s)"
                     node-name
                     retries)
@@ -148,7 +158,7 @@ localhost."
                 ;; We could make it more complex by making this work
                 ;; with idleness, but hopefully using the regular
                 ;; run-with-timer doesn't load emacs too much.
-                (run-with-timer 0.5
+                (run-with-timer edts-api-project-node-start-retry-interval
                                 nil
                                 'edts-api-init-node-when-ready
                                 project-name
@@ -160,7 +170,7 @@ localhost."
                                 erlang-cookie
                                 (1- retries))
               ;; Synchronous init
-              (sit-for 0.5)
+              (sit-for edts-api-project-node-start-retry-interval)
               (edts-api-init-node-when-ready project-name
                                              node-name
                                              root
