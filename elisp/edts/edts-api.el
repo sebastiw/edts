@@ -36,14 +36,17 @@ that is not part of a project")
 
 (defcustom edts-api-async-node-init t
   "Whether or not node initialization should be synchronous"
+  :type 'boolean
   :group 'edts)
 
 (defcustom edts-api-num-server-start-retries 20
   "The number of retries to wait for server to start before giving up"
+  :type 'integer
   :group 'edts)
 
 (defcustom edts-api-server-start-retry-interval 0.2
   "Time between each server availability check at start up"
+  :type 'number
   :group 'edts)
 
 (defvar edts-api--pending-node-startups nil

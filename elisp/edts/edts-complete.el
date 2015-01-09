@@ -52,6 +52,7 @@
     edts-complete-macro-source
     edts-complete-record-source)
   "Sources that EDTS uses for auto-completion."
+  :type '(repeat symbol)
   :group 'edts)
 
 (defcustom edts-complete-shell-sources
@@ -61,6 +62,7 @@
     edts-complete-module-source)
   "Sources that EDTS uses for auto-completion in shell (comint)
 buffers."
+  :type '(repeat symbol)
   :group 'edts)
 
 (defun edts-complete-setup (&optional sources)

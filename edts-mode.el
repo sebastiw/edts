@@ -46,6 +46,7 @@
        (warn
         "No erl on exec-path. Most of EDTS' functionality will be broken.")))
   "Location of the erl-executable to use when launching the main EDTS-node."
+  :type 'file
   :group 'edts)
 
 (eval-and-compile
@@ -66,6 +67,7 @@
       (expand-file-name "edts" user-emacs-directory)
     (expand-file-name "~/.emacs.d"))
   "Where EDTS should save its data."
+  :type 'directory
   :group 'edts)
 
 (defconst edts-lib-directory

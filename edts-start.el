@@ -8,6 +8,7 @@
 
 (defcustom edts-inhibit-package-check nil
   "If non-nil, don't check whether EDTS was installed as a package."
+  :type 'boolean
   :group 'edts)
 
 (unless (or edts-inhibit-package-check
@@ -49,6 +50,7 @@
     "\\.script$"
     "\\.yaws$")
   "File-name patterns for which to auto-activate edts-mode."
+  :type '(repeat regexp)
   :group 'edts)
 
 (mapc #'(lambda(re) (add-to-list 'auto-mode-alist (cons re 'erlang-mode)))
