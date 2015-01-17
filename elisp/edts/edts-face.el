@@ -30,11 +30,14 @@
 
 (defcustom edts-face-inhibit-fringe-markers nil
   "If non-nil, do not display markers in the fringe for errors etc."
+  :type 'boolean
   :group 'edts)
 
 (defcustom edts-face-marker-fringe 'left-fringe
   "Which side to display fringe-markers on. The value must be either
 left-fringe or right-fringe."
+  :type '(choice (const :tag "Left fringe" left-fringe)
+		 (const :tag "Right fringe" right-fringe))
   :group 'edts)
 
 (defcustom edts-face-inhibit-mode-line-updates nil

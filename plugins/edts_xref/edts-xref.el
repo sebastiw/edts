@@ -29,6 +29,9 @@
 (defcustom edts-xref-checks '(undefined_function_calls)
   "What xref checks EDTS should perform. A list of 0 or more of
 undefined_function_calls, unexported_functions"
+  :type '(set
+	  (const undefined_function_calls)
+	  (const unexported_functions))
   :group 'edts)
 
 (defvar edts-xref-initialized-nodes nil

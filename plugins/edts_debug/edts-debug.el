@@ -64,6 +64,7 @@ request should always be outstanding if we are not already attached.")
 
 (defcustom edts-debug-auto-attach t
   "If non-nil, automatically enter debug-mode when a breakpoint is hit."
+  :type 'boolean
   :group 'edts)
 
 (defvar edts-debug-node nil

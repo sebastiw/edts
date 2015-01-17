@@ -48,6 +48,7 @@ list is itself an alist of the shell's properties.")
     edts-complete-module-source)
   "Sources that EDTS uses for auto-completion in shell (comint)
 buffers."
+  :type '(repeat symbol)
   :group 'edts)
 
 (defcustom edts-shell-inhibit-comint-input-highlight t
