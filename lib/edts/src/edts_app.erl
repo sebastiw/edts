@@ -46,16 +46,16 @@
 %% Start the whole shebang.
 start() ->
   %% Webmachine requirements
-  ok = application:start(inets),
-  ok = application:start(crypto),
+  ok = ensure_application_started(inets),
+  ok = ensure_application_started(crypto),
 
   %% Lager requirements
-  ok = application:start(compiler),
-  ok = application:start(syntax_tools),
-  ok = application:start(goldrush),
-  ok = application:start(lager),
+  ok = ensure_application_started(compiler),
+  ok = ensure_application_started(syntax_tools),
+  ok = ensure_application_started(goldrush),
+  ok = ensure_application_started(lager),
 
-  ok = application:start(edts).
+  ok = ensure_application_started(edts).
 
 
 %% Application callbacks
@@ -64,6 +64,26 @@ start(_StartType, _Start) ->
 
 stop(_State) ->
   ok.
+
+%% Make sure the application is started.  This function will succeed
+%% if the application is already started or was successfully started,
+%% something that comes in handy when we're running an erlang from a
+%% reltools-built release which has already started apps like inets.
+ensure_application_started(AppName) ->
+  %% In newer Erlang/OTP versions there are functions which would do
+  %% this for us, until older versions are dropped from edts we have
+  %% to roll our own.
+  %%
+  %% * application:ensure_started:     first appearance in R16B01
+  %% * application:ensure_all_started: first appearance in R16B02
+  case application:start(AppName) of
+    ok ->
+      ok;
+    {error, {already_started, AppName}} ->
+      ok;
+    Other ->
+      Other
+  end.
 
 %%%_* Internal functions =======================================================
 
