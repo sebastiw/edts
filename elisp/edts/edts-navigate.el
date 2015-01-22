@@ -112,9 +112,17 @@ directive."
 
 (defun edts-record-under-point-p ()
   "Return non-nil if the form under point is a record"
+  (let ((bounds (edts-atom-at-point)))
+    (and bounds
+         (eq ?# (char-before (nth 0 bounds))))))
+
+(defun edts-atom-at-point ()
+  "Return the bounds of the atom at point or nil."
+  (let ((point (point)))
     (save-excursion
-    (beginning-of-thing 'symbol)
-    (equal ?# (char-before (point)))))
+      (re-search-backward "[^'@_a-zA-Z0-9]")
+      (re-search-forward erlang-atom-regexp)
+      (match-data 0))))
 
 (defun edts-header-at-point ()
   "Return the filename for the header under point."
@@ -156,7 +164,8 @@ directive."
 (defun edts-find-record-source ()
   "Jump to the record-definition under point."
   (let* ((mark (copy-marker (point-marker)))
-         (rec-name (thing-at-point 'symbol))
+         (rec-bounds (edts-atom-at-point))
+         (rec-name (buffer-substring (nth 0 rec-bounds) (nth 1 rec-bounds)))
          (info (edts-api-get-detailed-module-info (ferl-get-module)))
          (records (cdr (assoc 'records info)))
          (record (edts-nav-find-record rec-name records)))
@@ -168,7 +177,10 @@ directive."
 
 (defun edts-nav-find-record (rec-name records)
   "find record-struct with REC-NAME in RECORDS."
-  (-first #'(lambda (rec)(string= rec-name (cdr (assoc 'record rec))))
+  (-first #'(lambda (rec)
+              (let ((rec (cdr (assoc 'record rec))))
+                (or (string= rec-name rec)
+                    (string= rec-name (format "'%s'" rec)))))
           records))
 
 (defun edts-find-macro-source ()
