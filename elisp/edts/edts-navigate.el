@@ -120,9 +120,14 @@ directive."
   "Return the bounds of the atom at point or nil."
   (let ((point (point)))
     (save-excursion
-      (re-search-backward "[^'@_a-zA-Z0-9]")
-      (re-search-forward erlang-atom-regexp)
-      (match-data 0))))
+      (if (not (eq (get-text-property (point) 'face) 'font-lock-string-face))
+          (re-search-backward "[^@_a-zA-Z09]")
+        (while (eq (get-text-property (point) 'face)
+                   'font-lock-string-face)
+          (backward-char)))
+      (forward-char)
+      (when (looking-at erlang-atom-regexp)
+        (match-data 0)))))
 
 (defun edts-header-at-point ()
   "Return the filename for the header under point."
