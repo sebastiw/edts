@@ -102,7 +102,7 @@ start() ->
                       {stop, term()}.
 %%------------------------------------------------------------------------------
 init(_Args) ->
-  {ok, TRef} = timer:send_interval(3000, update),
+  {ok, TRef} = timer:send_after(3000, update),
   {ok, #state{modules = fetch_modules(),
               timerref = TRef}}.
 
@@ -140,7 +140,9 @@ handle_cast(_Message, State) -> {noreply, State}.
                                             {stop, Reason::term(), state()}.
 %%------------------------------------------------------------------------------
 handle_info(update, State) ->
-  {noreply, State#state{modules = fetch_modules()}};
+  Modules = fetch_modules(),
+  {ok, TRef} = timer:send_after(3000, update),
+  {noreply, State#state{modules = Modules, timerref = TRef}};
 handle_info(_Info, State) ->
   {noreply, State}.
 
