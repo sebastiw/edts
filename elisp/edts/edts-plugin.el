@@ -39,6 +39,13 @@
        when dirp
        collect file))
 
+(defcustom edts-plugin-disabled-plugins nil
+  "List of disabled plugins."
+  :type (cons 'set
+              (mapcar #'(lambda (plugin) (list 'const plugin))
+                      (edts-plugin-names)))
+  :group 'edts)
+
 (defun edts-plugin-init-all ()
   "Initialize available plugins."
   (mapc #'edts-plugin-init (edts-plugin-names)))
@@ -56,21 +63,24 @@
 
 (defun edts-plugin-init (plugin-name)
   "Do the necessary initialization for PLUGIN."
-  (edts-log-info "Initializing plugin %s" plugin-name)
-  (let* ((plugin-dir        (f-join edts-plugin-directory plugin-name))
-         (elisp-plugin-name (replace-regexp-in-string "_" "-" plugin-name))
-         (init-fun          (intern (concat elisp-plugin-name "-init")))
-         (buf-init-fun      (intern (concat elisp-plugin-name "-buffer-init")))
-         (el-pattern        (f-join plugin-dir "*.el"))
-         (el-files          (file-expand-wildcards el-pattern)))
-    (mapc #'(lambda (f)
-              (when (not (string-match ".*-test" (f-base f)))
-                (require (intern (f-base f)))))
-          el-files)
-    (when (fboundp init-fun)
-      (funcall init-fun))
-    (when (fboundp buf-init-fun)
-      (add-hook 'edts-mode-hook buf-init-fun))))
+  (if (member plugin-name edts-plugin-disabled-plugins)
+      (edts-log-info "Plugin %s is disabled" plugin-name)
+    (edts-log-info "Initializing plugin %s" plugin-name)
+    (let* ((plugin-dir        (f-join edts-plugin-directory plugin-name))
+           (elisp-plugin-name (replace-regexp-in-string "_" "-" plugin-name))
+           (init-fun          (intern (concat elisp-plugin-name "-init")))
+           (buf-init-fun      (intern (concat elisp-plugin-name
+                                              "-buffer-init")))
+           (el-pattern        (f-join plugin-dir "*.el"))
+           (el-files          (file-expand-wildcards el-pattern)))
+      (mapc #'(lambda (f)
+                (when (not (string-match ".*-test" (f-base f)))
+                  (require (intern (f-base f)))))
+            el-files)
+      (when (fboundp init-fun)
+        (funcall init-fun))
+      (when (fboundp buf-init-fun)
+        (add-hook 'edts-mode-hook buf-init-fun)))))
 
 (defun edts-plugin-call (node plugin method &optional args)
   "Call PLUGIN's rpc method METHOD with ARGS on NODE."
