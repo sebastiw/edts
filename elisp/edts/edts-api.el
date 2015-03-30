@@ -45,17 +45,17 @@ that is not part of a project")
   :group 'edts)
 
 (defcustom edts-api-server-start-retry-interval 0.2
-  "Time between each server availability check at start up"
+  "Time to wait between server availability checks at startup"
   :type 'number
   :group 'edts)
 
 (defcustom edts-api-num-project-node-start-retries 5
-  "The number of retries to wait for a project node to start before giving up"
+  "The number of times to try starting a project node before giving up"
   :type 'integer
   :group 'edts)
 
 (defcustom edts-api-project-node-start-retry-interval 0.5
-  "Time between each project node availability check at start up"
+  "Time to wait between project node availability checks at startup"
   :type 'number
   :group 'edts)
 
@@ -70,7 +70,7 @@ requests.")
   "Hooks to be run after the EDTS server has gone down")
 
 (defvar edts-api-after-node-init-hook nil
-  "Hooks to run after a node has been initialized.")
+  "Hooks to run after a node has been initialized")
 
 (defvar edts-api-node-down-hook nil
   "Hooks to run after a node has gone down. These hooks are called with
@@ -108,7 +108,7 @@ localhost."
     (error "Node already started")))
 
 (defun edts-api-node-started-p (name)
-  "Syncronously query epmd to see whether it has a node with NAME registered."
+  "Synchronously query epmd to see whether it has a node with NAME registered."
   (with-temp-buffer
     (let* ((otp-bin-dir (f-canonical (f-dirname edts-erl-command)))
            (epmd        (f-join otp-bin-dir "epmd")))
@@ -128,7 +128,7 @@ localhost."
   "Once NODE-NAME is registered with epmd, register it with the edts server."
   (add-to-list 'edts-api--pending-node-startups node-name)
   (let ((retries (or retries edts-api-num-project-node-start-retries)))
-    (edts-log-debug "Waiting for node %s to start (retries %s)"
+    (edts-log-debug "Waiting for node %s to start (tries left: %s)"
                     node-name
                     retries)
     (if (not (edts-api-node-started-p node-name))
@@ -182,7 +182,7 @@ localhost."
           ;; Give up
           (setq edts-api--pending-node-startups
                 (remove node-name edts-api--pending-node-startups))
-          (null (edts-log-error "Node %s failed to start." node-name)))
+          (null (edts-log-error "Node %s failed to start" node-name)))
       ;; Node started, remove it from list of pending nodes and start
       ;; initialization.
       (edts-log-info "Node %s started" node-name)
@@ -237,20 +237,20 @@ localhost."
           (edts-api-init-node-async-callback reply node-name))))))
 
 (defun edts-api-init-node-async-callback (reply node-name)
-  "Handle the result of an asynchronous node registration."
+  "Handle the result of an asynchronous node registration"
   (setq edts-api--outstanding-node-registration-requests
         (remove node-name edts-api--outstanding-node-registration-requests))
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 201))
         (progn
-          (edts-log-info "Successfuly intialized node %s" node-name)
+          (edts-log-info "Successfully intialized node %s" node-name)
           (run-hooks 'edts-api-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))
 
 (defun edts-api-get-function-info (module function arity)
   "Fetches info MODULE on the current buffer's project node associated with
-current buffer."
+current buffer"
   (let* ((resource (list "nodes"     (edts-api-node-name)
                          "modules"   module
                          "functions" function
@@ -263,7 +263,7 @@ current buffer."
 
 (defun edts-api-get-modules ()
   "Fetches all available erlang modules for the node associated with
-current buffer."
+current buffer"
   (let* ((resource (list "nodes" (edts-api-node-name) "modules"))
          (res      (edts-rest-get resource nil)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -294,13 +294,13 @@ fails."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res))))))))
 
 (defun edts-api-function-to-string (function-struct)
-  "Convert FUNCTION-STRUCT to a string of <function>/<arity>."
+  "Convert FUNCTION-STRUCT to a string of <function>/<arity>"
   (format "%s/%s"
           (cdr (assoc 'function function-struct))
           (cdr (assoc 'arity    function-struct))))
 
 (defun edts-get-free-vars (snippet)
-  "Return a list of the free variables in SNIPPET."
+  "Return a list of the free variables in SNIPPET"
   (let* ((resource (list "code" "free_vars"))
          (res      (edts-rest-get resource nil snippet)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -309,7 +309,7 @@ fails."
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result res)))))))
 
 (defun edts-api-get-mfas (snippets)
-  "Return a each code snippet in SNIPPETS parsed as an mfa."
+  "Return a each code snippet in SNIPPETS parsed as an MFA"
   (let* ((resource (list "code" "parsed_expressions" "mfa"))
          (res      (edts-rest-get resource nil snippets)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
@@ -327,7 +327,7 @@ buffer"
   (edts-api-get-module-info (edts-api-node-name) module 'detailed))
 
 (defun edts-api-get-module-info (node module level)
-  "Fetches info about MODULE on NODE LEVEL is either basic or detailed."
+  "Fetches info about MODULE on NODE. LEVEL is either basic or detailed."
   (let* ((resource (list "nodes" node "modules" module))
          (args     (list (cons "info_level" (symbol-name level))))
          (res      (edts-rest-get resource args)))
@@ -364,13 +364,13 @@ parsed response as the single argument."
 
 (defun edts-api-get-includes (&optional module)
   "Get all includes of module in current-buffer from the node
-associated with that buffer."
+associated with that buffer"
   (let ((info (edts-api-get-detailed-module-info (or module
                                                      (ferl-get-module)))))
     (cdr (assoc 'includes info)))) ;; Get all includes
 
 (defun edts-api-node-registeredp (node &optional no-error)
-  "Return non-nil if NODE is registered with the EDTS server."
+  "Return non-nil if NODE is registered with the EDTS server"
   (member node (edts-api-get-nodes no-error)))
 
 (defun edts-api-get-nodes (&optional no-error)
@@ -385,9 +385,9 @@ non-nil, don't report an error if the request fails."
                               (cdr (assoc 'result res))))))))
 
 (defun edts-api-async-callback (reply callback expected &rest args)
-  "Generic callback-function for handling the reply of rest-requests.
-If the http return-code (an integer) of REPLY equals EXPECTED, call
-CALLBACK with the http-body part of REPLY as the first argument and
+  "Generic callback-function for handling the reply of REST requests.
+If the HTTP return-code (an integer) of REPLY equals EXPECTED, call
+CALLBACK with the HTTP body of REPLY as the first argument and
 ARGS as the other arguments"
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) expected))
@@ -397,7 +397,7 @@ ARGS as the other arguments"
        (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply)))))))
 
 (defun edts-api-epmd-nodenames-from-string (string)
-  "Convert the epmd reply STRING into a list of nodenames."
+  "Convert the epmd reply STRING into a list of nodenames"
   (setq string (split-string (substring string 4)))
   (let ((names  nil))
     (while string
