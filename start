@@ -22,7 +22,7 @@
 
 PROJDIR=${1:-"$HOME"}
 ERL=${2:-$(which erl)}
-EDTS_HOME="$( cd "$( dirname "$0" )" && pwd )"
+EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
 PLUGIN_DIR=$EDTS_HOME/plugins
 
 cd $EDTS_HOME
