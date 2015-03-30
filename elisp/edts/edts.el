@@ -29,6 +29,7 @@
 (require 'edts-doc)
 (require 'edts-event)
 (require 'edts-api)
+(require 'edts-navigate)
 
 (eval-and-compile
   (defvar edts-built-in-functions
