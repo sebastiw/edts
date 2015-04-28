@@ -34,8 +34,10 @@
 (defconst edts-rest-host "0"
   "The host where the edts erlang node is running.")
 
-(defconst edts-rest-port 4587
-  "The port on which the edts erlang node's rest-api is available.")
+(defcustom edts-rest-port 4587
+  "The port on which the edts erlang node's rest-api is available."
+  :type 'integer
+  :group 'edts)
 
 (defconst edts-rest-content-type-hdr '("Content-Type" . "application/json"))
 

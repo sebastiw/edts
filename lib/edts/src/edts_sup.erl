@@ -53,7 +53,7 @@ start_link() ->
 
 init([]) ->
 
-  WebmConf = [{port,     ?EDTS_PORT},
+  WebmConf = [{port,     configured_port()},
               {dispatch, dispatch()}],
   WemachineRouter = child_spec(webmachine_router),
   Webmachine      = {webmachine_mochiweb,
@@ -77,6 +77,18 @@ init([]) ->
 
 
 %%%_* Internal functions =======================================================
+
+configured_port() ->
+  PortFile = filename:join(code:priv_dir(edts), "port.conf"),
+  case file:consult(PortFile) of
+    {ok, Terms} ->
+      {edts_port, Port} = lists:keyfind(edts_port, 1, Terms),
+      edts_log:debug("Using EDTS port ~p from file.", [Port]),
+      Port;
+    _ ->
+      edts_log:debug("Using standard EDTS port ~p.", [?EDTS_PORT]),
+      ?EDTS_PORT
+  end.
 
 child_spec(Name) ->
   child_spec(Name, []).
