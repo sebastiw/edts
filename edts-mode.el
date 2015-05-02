@@ -100,6 +100,9 @@
          (file-name-directory (f-canonical edts-erl-command)))))
   "Location of the Erlang root directory")
 
+(defconst edts-port-file
+  (f-join edts-root-directory "lib" "edts" "priv" "port.conf")
+  "File that specifies which port to use for edts web server.")
 
 (require 'edts)
 (require 'edts-api)

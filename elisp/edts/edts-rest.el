@@ -34,13 +34,35 @@
 (defconst edts-rest-host "0"
   "The host where the edts erlang node is running.")
 
-(defcustom edts-rest-port 4587
-  "The port on which the edts erlang node's rest-api is available."
-  :type 'integer
-  :group 'edts)
+(defconst edts-rest-default-port 4587
+  "The port on which the edts erlang node's rest-api is available.")
 
 (defconst edts-rest-content-type-hdr '("Content-Type" . "application/json"))
 
+(defvar-local edts-rest-final-port nil)
+
+(defun edts-rest-get-port ()
+  "Will try to open the file specified by `edts-port-file' fetching
+the port settings. Will return the port used by edts rest api, either
+the port from the file or `edts-rest-default-port'."
+  (if edts-rest-final-port edts-rest-final-port
+    (if (file-exists-p edts-port-file)
+        (let* ((file-string (with-temp-buffer
+                              (insert-file-contents edts-port-file)
+                              (buffer-string)))
+               (extracted-port (edts-rest-extract-port-regexp file-string)))
+          (setq edts-rest-final-port
+                (if extracted-port extracted-port edts-rest-default-port)))
+      edts-rest-default-port)))
+
+(defun edts-rest-extract-port-regexp (buffer-string)
+  "Return the port number extracted from a string."
+  (let ((buffer-string-no-spaces
+         (replace-regexp-in-string "[[:space:]]*" "" buffer-string)))
+    (when (string-match "{edts_port,\\([0-9]+\\)}." buffer-string-no-spaces)
+      (string-to-number (substring buffer-string-no-spaces
+                                   (match-beginning 1)
+                                   (match-end 1))))))
 
 (defun edts-rest-get (resource args &optional body)
   "Send a get request to RESOURCE with ARGS with optional BODY."
@@ -192,7 +214,7 @@ FORCE-CALLBACK is non-nil, call the callback anyway inside a
 (defun edts-rest-resource-url (resource args)
   "Construct the edts resource url."
   (let ((host edts-rest-host)
-        (port edts-rest-port)
+        (port (edts-rest-get-port))
         (path (mapconcat #'identity resource "/"))
         (args (edts-rest-encode-args args)))
     (format "http://%s:%s/%s%s" host port path args)))
