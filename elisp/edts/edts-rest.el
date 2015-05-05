@@ -39,7 +39,8 @@
 
 (defconst edts-rest-content-type-hdr '("Content-Type" . "application/json"))
 
-(defvar-local edts-rest-final-port nil)
+(defvar edts-rest-final-port nil)
+(make-variable-buffer-local 'edts-rest-final-port)
 
 (defun edts-rest-get-port ()
   "Will try to open the file specified by `edts-port-file' fetching
