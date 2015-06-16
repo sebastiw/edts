@@ -34,8 +34,7 @@
 -export([assoc/2,
          assoc/3,
          expand_code_paths/2,
-         nodename2shortname/1,
-         shortname2nodename/1,
+         make_nodename/1,
          pid2atom/1,
          lib_and_app_dirs/0,
          shorten_path/1]).
@@ -70,13 +69,14 @@ expand_code_path(Root, Dir) ->
   lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
 
 
-nodename2shortname(Nodename) ->
-  Str = atom_to_list(Nodename),
-  list_to_atom(string:sub_string(Str, 1, string:rchr(Str, $@) -1)).
-
-shortname2nodename(Shortname) ->
-  Str = atom_to_list(node()),
-  list_to_atom(Shortname ++ string:sub_string(Str, string:rchr(Str, $@))).
+make_nodename(NameStr) ->
+  case string:tokens(NameStr, "@") of
+    [Name] ->
+      [_Name, Host] = string:tokens(atom_to_list(node()), "@"),
+      list_to_atom(Name ++ "@" ++ Host);
+    [_, _] ->
+      list_to_atom(NameStr)
+  end.
 
 pid2atom(Pid) ->
   PidStr0 = pid_to_list(Pid),

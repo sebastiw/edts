@@ -57,7 +57,7 @@ allowed_methods(ReqData, Ctx) ->
 
 malformed_request(ReqData, Ctx0) ->
   try
-    Node    = edts_util:shortname2nodename(wrq:path_info(nodename, ReqData)),
+    Node    = edts_util:make_nodename(wrq:path_info(nodename, ReqData)),
     Plugin  = ?l2a(wrq:path_info(plugin, ReqData)),
     Method  = ?l2a((wrq:path_info(method, ReqData))),
     Params0 = wrq:req_qs(ReqData),

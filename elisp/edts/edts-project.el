@@ -76,7 +76,7 @@ to set, and their new values.
 
 Example:
  (edts-project-override \"~/my-project\" (:name \"my-project-dev\"
-                                          :node-sname \"my-project-dev\"))"
+                                          :node-name \"my-project-dev\"))"
   (interactive)
   (let ((exp-root (file-name-as-directory (expand-file-name root)))
         (invalid (-remove #'edts-project--config-prop-p
@@ -88,6 +88,7 @@ Example:
     (push (cons exp-root properties) edts-project-overrides)))
 
 (defvar edts-project-valid-properties '(:name
+                                        :node-name
                                         :node-sname
                                         :lib-dirs
                                         :start-command
@@ -237,10 +238,12 @@ Example:
 
       ;; Set values of absent config parameters whose defaults are derived from
       ;; other values.
-      (unless (eproject-attribute :node-sname)
+      (unless (eproject-attribute :node-name)
         (edts-project-set-attribute
          root
-         :node-sname (edts-project--make-node-name (eproject-attribute :name))))
+         :node-name (edts-project--make-node-name
+                     (or (eproject-attribute :node-sname)
+                         (eproject-attribute :name)))))
       (unless (eproject-attribute :start-command)
         (edts-project-set-attribute
          root
@@ -248,7 +251,7 @@ Example:
 
       ;; Make necessary initializations if opened file is relevant to its
       ;; project.
-      (if (edts-api-node-registeredp (eproject-attribute :node-sname))
+      (if (edts-api-node-registeredp (eproject-attribute :node-name))
           (edts-project-node-refresh)
         (edts-project-node-init)))))
 (add-hook 'edts-project-file-visit-hook 'edts-project-init-buffer)
@@ -256,7 +259,7 @@ Example:
 (defun edts-project-node-init ()
   (interactive)
   ;; Ensure project node is started
-  (unless (edts-api-node-started-p (eproject-attribute :node-sname))
+  (unless (edts-api-node-started-p (eproject-attribute :node-name))
     (edts-project-start-node))
   ;; Register it with the EDTS node
   (edts-project--register-project-node))
@@ -266,7 +269,7 @@ Example:
   (interactive)
   (edts-api-init-node
    (eproject-attribute :name)
-   (eproject-attribute :node-sname)
+   (eproject-attribute :node-name)
    (eproject-root)
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)
@@ -281,7 +284,7 @@ Example:
     (let* ((file (buffer-file-name))
            (root-dir (edts-project--temp-root file))
            (node-name (f-filename root-dir)))
-      (edts-project-set-attribute root-dir :node-sname node-name)
+      (edts-project-set-attribute root-dir :node-name node-name)
       (if (edts-shell-find-by-path root-dir)
           (edts-project-node-refresh)
         (edts-log-debug "Initializing temporary project node for %s"
@@ -303,7 +306,7 @@ Example:
            (root-dir (eproject-root))
            (node-name (format "otp-%s" (eproject-name)))
            (erl (f-join (eproject-root) "bin" "erl")))
-      (edts-project-set-attribute root-dir :node-sname node-name)
+      (edts-project-set-attribute root-dir :node-name node-name)
       (if (edts-shell-find-by-path root-dir)
           (edts-project-node-refresh)
         (edts-log-debug "Initializing otp project node for %s" (current-buffer))
@@ -333,13 +336,13 @@ FILE."
 (defun edts-project--make-command (&optional node-name)
   "Construct a default command line to start current buffer's project node."
   (let ((node-name (or node-name
-		       (eproject-attribute :node-sname)
+		       (eproject-attribute :node-name)
 		       (eproject-name))))
     (format "erl -sname %s" node-name)))
 
 (defun edts-project--make-node-name (src)
   "Construct a default node-sname for current buffer's project node."
-  (replace-regexp-in-string "[^A-Za-z0-9_-]" "" src))
+  (replace-regexp-in-string "[^@A-Za-z0-9_-]" "" src))
 
 (defun edts-project-start-node ()
   "Starts a new erlang node for PROJECT."
@@ -347,19 +350,19 @@ FILE."
          (command (split-string (eproject-attribute :start-command)))
          (exec-path (edts-project-build-exec-path))
          (process-environment (edts-project-build-env))
-         (node (eproject-attribute :node-sname)))
+         (node (eproject-attribute :node-name)))
     (edts-api-ensure-node-not-started node)
     (edts-shell-make-comint-buffer buffer-name node (eproject-root) command)
     (get-buffer buffer-name)))
 
 (defun edts-project--register-project-node ()
   "Register the node of current buffer's project."
-  (if (edts-api-node-registeredp (eproject-attribute :node-sname))
+  (if (edts-api-node-registeredp (eproject-attribute :node-name))
       (edts-log-info "Re-initializing node for project %s" (eproject-name))
     (edts-log-info "Initializing node for project %s" (eproject-name)))
   (edts-api-init-node-when-ready
    (eproject-attribute :name)
-   (eproject-attribute :node-sname)
+   (eproject-attribute :node-name)
    (eproject-root)
    (eproject-attribute :lib-dirs)
    (eproject-attribute :app-include-dirs)

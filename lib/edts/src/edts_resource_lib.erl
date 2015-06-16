@@ -30,7 +30,6 @@
 %% Application callbacks
 -export([ check_exists_and_do_rpc/4,
           exists_p/3,
-          make_nodename/1,
           validate/3]).
 
 %%%_* Includes =================================================================
@@ -112,16 +111,6 @@ validate(ReqData0, Ctx0, Keys) ->
       edts_log:debug("Invalid Request, ~nKey: ~p~nValue: ~p", [Key, Value]),
       {true, ReqData0, orddict:store(error, E, Ctx0)}
   end.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Try to construct a node sname from a string.
-%% @end
--spec make_nodename(string()) -> node().
-%%------------------------------------------------------------------------------
-make_nodename(NameStr) ->
-  [_Name, Host] = string:tokens(atom_to_list(node()), "@"),
-  list_to_atom(hd(string:tokens(NameStr, "@")) ++ "@" ++ Host).
 
 %%%_* Internal functions =======================================================
 atom_to_exists_p(nodename) -> fun nodename_exists_p/2;
@@ -407,7 +396,7 @@ modules_exists_p(_ReqData, Ctx) ->
 -spec nodename_validate(wrq:req_data(), orddict:orddict()) -> {ok, node()}.
 %%------------------------------------------------------------------------------
 nodename_validate(ReqData, _Ctx) ->
-  {ok, make_nodename(wrq:path_info(nodename, ReqData))}.
+  {ok, edts_util:make_nodename(wrq:path_info(nodename, ReqData))}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -474,6 +463,7 @@ string_validate(ReqData, Key) ->
   end.
 
 %%%_* Unit tests ===============================================================
+
 arity_validate_test() ->
   meck:unload(),
   meck:new(wrq),

@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'eproject)
+(require 's)
 
 (require 'ferl)
 (require 'edts-event)
@@ -113,8 +114,8 @@ localhost."
     (let* ((otp-bin-dir (f-canonical (f-dirname edts-erl-command)))
            (epmd        (f-join otp-bin-dir "epmd")))
     (call-process epmd nil (current-buffer) nil "-names")
-    (member name (edts-api-epmd-nodenames-from-string (buffer-string))))))
-
+    (member (car (s-split "@" name))
+                 (edts-api-epmd-nodenames-from-string (buffer-string))))))
 
 (defun edts-api-init-node-when-ready (project-name
                                       node-name
@@ -199,7 +200,7 @@ localhost."
 (defun edts-api-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex
-      (eproject-attribute :node-sname)
+      (eproject-attribute :node-name)
     ('error edts-api-node-name)))
 
 (defun edts-api-init-node (project-name

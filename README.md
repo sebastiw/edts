@@ -87,10 +87,14 @@ An easy way is to load edts-start:
     root-directory (eg a root set to `~/src/p` would yield `p` as the project name
     if not explicitly set.
 
+  - `node-name <string>`
+
+  The name that the project's erlang node should have. It can be either a short
+  or long Erlang node name and defaults to the name of the project.
+
   - `node-sname <string>`
 
-  The erlang sname that the project's erlang node should have. It should contain
-  only the part before the `@`-sign and defaults to same name as the project.
+  Deprecated. This is now an alias for `node-name`.
 
   - `erlang-cookie <string>`
 
