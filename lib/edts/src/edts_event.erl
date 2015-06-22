@@ -193,7 +193,7 @@ fmt_event({Class, Type, Info}, Formatters) ->
    {type,  Type},
    {info,  fmt_event_info(Class, Type, Info, Formatters)}];
 fmt_event({Node, Class, Type, Info}, Formatters) ->
-  [{node,  edts_util:nodename2shortname(Node)},
+  [{node,  Node},
    {class, Class},
    {type,  Type},
    {info,  fmt_event_info(Class, Type, Info, Formatters)}].
