@@ -131,7 +131,11 @@ Example:
                    "\\.yaws$")
   :irrelevant-files ("^\\.gitignore$"
                      "^\\.gitmodules$")
-  :lib-dirs ("lib" "deps"))
+  ;; Default lib dirs
+  ;; * deps: dependencies included by rebar2
+  ;; * _build/default/lib: dependencies included by rebar3
+  ;; * _build/test/lib: test scope dependencies from rebar3
+  :lib-dirs ("lib" "deps" "_build/default/lib" "_build/test/lib"))
 
 (defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
