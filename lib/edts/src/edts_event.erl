@@ -53,9 +53,15 @@
 
 -define(SERVER, ?MODULE).
 
+-ifdef(namespaced_types).
+-type edts_queue() :: queue:queue().
+-else.
+-type edts_queue() :: queue().
+-endif.
+
 -record(state,
-        {events     = queue:new() :: queue(),
-         listeners  = queue:new() :: queue(),
+        {events     = queue:new() :: edts_queue(),
+         listeners  = queue:new() :: edts_queue(),
          formatters = []          :: [{class(),           module()}] |
                                      [{{class(), type()}, module()}]
                }).
