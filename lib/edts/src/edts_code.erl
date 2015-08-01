@@ -120,6 +120,7 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
+  reload_if_newer(File0, OutDir),
   OldOpts = extract_compile_opts(File),
 
   AdditionalIncludes = get_additional_includes(filename:dirname(File), OldOpts),
@@ -485,6 +486,26 @@ maybe_reload(Mod, File) ->
   case module_modified_p(Mod, File) of
     true  -> try_load_mod(Mod, File);
     false -> false
+  end.
+
+reload_if_newer(SrcFile, OutDir) ->
+  ModuleName = filename:basename(SrcFile, ".erl"),
+  Beam = filename:join([OutDir, ModuleName ++ ".beam"]),
+  Module = list_to_atom(ModuleName),
+
+  case code:is_loaded(Module) of
+    {file, _Loaded} ->
+      do_reload_if_newer(Module, Beam);
+    false ->
+      false
+  end.
+
+do_reload_if_newer(Module, Beam) ->
+  case module_modified_p(Module, Beam) of
+    true ->
+      try_load_mod(Module, Beam);
+    false ->
+      false
   end.
 
 try_load_mod(Mod, File) ->
