@@ -263,10 +263,30 @@ remote_load_module(Node, Mod, Bin) ->
 
 
 remote_compile_module(Node, File) ->
-  Opts = [debug_info, binary, return_errors, {d, namespaced_types}],
+  Opts = [{d, namespaced_types}, debug_info, binary, return_errors],
   case call(Node, compile, file, [File, Opts]) of
     {ok, _, _} = Res      -> Res;
-    {error, Rsns, _Warns} -> erlang:error({compile_error, {File, Rsns}})
+    {error, Rsns, _Warns} ->
+      case imported_predefined_type_p(Rsns) of
+        true ->
+          case call(Node, compile, file, [File, tl(Opts)]) of
+            {ok, _, _} = Res      -> Res;
+            {error, Rsns, _Warns} ->
+              erlang:error({compile_error, {File, Rsns}})
+          end;
+        false ->
+          erlang:error({compile_error, {File, Rsns}})
+      end
+  end.
+
+imported_predefined_type_p(Errors) ->
+  do_imported_predefined_type_p(lists:concat([E || {_F, E} <- Errors])).
+
+do_imported_predefined_type_p([]) -> false;
+do_imported_predefined_type_p([Error|Errors]) ->
+  case Error of
+    {_, erl_lint, {imported_predefined_type, _}} -> true;
+    _ -> imported_predefined_type_p(Errors)
   end.
 
 
