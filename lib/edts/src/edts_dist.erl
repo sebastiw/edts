@@ -263,7 +263,8 @@ remote_load_module(Node, Mod, Bin) ->
 
 
 remote_compile_module(Node, File) ->
-  case call(Node, compile, file, [File, [debug_info, binary, return_errors]]) of
+  Opts = [debug_info, binary, return_errors, {d, namespaced_types}],
+  case call(Node, compile, file, [File, Opts]) of
     {ok, _, _} = Res      -> Res;
     {error, Rsns, _Warns} -> erlang:error({compile_error, {File, Rsns}})
   end.
