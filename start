@@ -27,6 +27,7 @@ PLUGIN_DIR=$EDTS_HOME/plugins
 
 cd "$EDTS_HOME"
 exec "$ERL" \
+    $3 \
     -sname edts \
     -config "$EDTS_HOME/lib/edts/priv/app" \
     -edts project_data_dir "\"$PROJDIR\"" \

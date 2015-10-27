@@ -49,6 +49,12 @@
   :type 'file
   :group 'edts)
 
+(defcustom edts-erl-flags
+  ""
+  "Flags to use when launching the main EDTS-node."
+  :type 'string
+  :group 'edts)
+
 (eval-and-compile
   (defconst edts-root-directory
     (file-name-directory (or (locate-library "edts-autoloads")
