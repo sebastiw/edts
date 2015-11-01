@@ -60,6 +60,14 @@ no_tokens_test_() ->
                  edts_parse:from_string(expr, "\n", {2, 2}))
   ].
 
+var_expr_test_() ->
+  [?_assertEqual({[{var, {{1, 1}, "Abc", 'Abc'}},
+                   {expr, {{1, 1}, undefined, undefined}}],
+                  {var, {{1, 1}, {1, 4}, "Abc", 'Abc'}},
+                  []},
+                edts_parse:from_string(expr, "Abc", {1, 2}))
+  ].
+
 char_expr_test_() ->
   [?_assertEqual({[{char, {{1, 1}, "$A", 65}},
                    {expr, {{1, 1}, undefined, undefined}}],
@@ -86,7 +94,8 @@ float_expr_test_() ->
   ].
 
 string_expr_test_() ->
-  [?_assertEqual({[{string, {{1, 1}, "\"123\"", "123"}},
+  [
+   ?_assertEqual({[{string, {{1, 1}, "\"123\"", "123"}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {string, {{1, 1}, {1, 6}, "\"123\"", "123"}},
                   []},
@@ -118,8 +127,7 @@ string_expr_test_() ->
 
 
 atom_expr_test_() ->
-  [
-   ?_assertEqual({[{atom, {{1, 1}, "abc", abc}},
+  [?_assertEqual({[{atom, {{1, 1}, "abc", abc}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 1}, {1, 4}, "abc", abc}},
                   []},
@@ -154,9 +162,79 @@ atom_expr_test_() ->
                  edts_parse:from_string(expr, "'123'", {1, 6}))
   ].
 
+basic_expr_test_() ->
+  [
+   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
+                  undefined,
+                  [{integer,{{1,1},{1,2}, "1", 1}},
+                   {'+',{{1,3},{1,4}, "+", undefined}},
+                   {integer,{{1,5},{1,6}, "1", 1}},
+                   {',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 1})),
+
+   ?_assertEqual({[{integer, {{1, 1}, "1", 1}},
+                   {expr, {{1, 1}, undefined, undefined}}],
+                  {integer,{{1,1},{1,2}, "1", 1}},
+                  [{'+',{{1,3},{1,4}, "+", undefined}},
+                   {integer,{{1,5},{1,6}, "1", 1}},
+                   {',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 2})),
+
+   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
+                  {integer,{{1,1},{1,2}, "1", 1}},
+                  [{'+',{{1,3},{1,4}, "+", undefined}},
+                   {integer,{{1,5},{1,6}, "1", 1}},
+                   {',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 3})),
+
+   ?_assertEqual({[{'+', {{1, 3}, "+", undefined}},
+                   {expr, {{1, 1}, undefined, undefined}}],
+                  {'+',{{1,3},{1,4}, "+", undefined}},
+                  [{integer,{{1,5},{1,6}, "1", 1}},
+                   {',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 4})),
+
+   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
+                  {'+',{{1,3},{1,4}, "+", undefined}},
+                  [{integer,{{1,6},{1,7}, "1", 1}},
+                   {',',{{1,7},{1,8}, ",", undefined}},
+                   {integer,{{1,9},{1,10}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 +  1, 2", {1, 5})),
+
+   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
+                  {'+',{{1,3},{1,4}, "+", undefined}},
+                  [{integer,{{1,5},{1,6}, "1", 1}},
+                   {',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 5})),
+
+   ?_assertEqual({[{integer, {{1, 5}, "1", 1}},
+                   {expr, {{1, 1}, undefined, undefined}}],
+                  {integer,{{1,5},{1,6}, "1", 1}},
+                  [{',',{{1,6},{1,7}, ",", undefined}},
+                   {integer,{{1,8},{1,9}, "2", 2}}]},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 6})),
+
+   ?_assertEqual({error, {end_of_expr, {1, 6}}},
+                 edts_parse:from_string(expr, "1 + 1, 2", {1, 7})),
+
+   ?_assertEqual({error, {end_of_expr, {1, 6}}},
+                 edts_parse:from_string(expr, "1 + 1. 2", {1, 7})),
+
+   ?_assertEqual({error, {end_of_expr, {1, 1}}},
+                 edts_parse:from_string(expr, ", 2", {1, 7})),
+
+   ?_assertEqual({error, {end_of_file, {1, 2}}},
+                 edts_parse:from_string(expr, "2", {1, 3}))
+  ].
+
 
 binary_expr_test_() ->
-  [?_assertEqual({[{binary, {{1, 1}, "<<", undefined}},
+  [?_assertEqual({[{expr, {{1, 1}, "<<", binary}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'<<', {{1, 1}, {1, 3}, "<<", undefined}},
                   [{string, {{1, 3}, {1, 8}, "\"123\"", "123"}},
@@ -164,20 +242,20 @@ binary_expr_test_() ->
                  edts_parse:from_string(expr, "<<\"123\">>", {1, 2})),
 
    ?_assertEqual({[{string, {{1, 3}, "\"123\"", "123"}},
-                   {binary, {{1, 1}, "<<", undefined}},
+                   {expr, {{1, 1}, "<<", binary}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {string, {{1, 3}, {1, 8}, "\"123\"", "123"}},
                   [{'>>', {{1, 8}, {1, 10}, ">>", undefined}}]},
                  edts_parse:from_string(expr, "<<\"123\">>", {1, 4})),
 
-   ?_assertEqual({[{binary, {{1, 1}, "<<", undefined}},
+   ?_assertEqual({[{expr, {{1, 1}, "<<", binary}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {string, {{1, 3}, {1, 8}, "\"123\"", "123"}},
                   [{'>>', {{1, 8}, {1, 10}, ">>", undefined}}]},
                  edts_parse:from_string(expr, "<<\"123\">>", {1, 8})),
 
-   ?_assertEqual({[{bin_size, {{1, 8}, ":", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+   ?_assertEqual({[{expr, {{1, 8}, ":", bin_size}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {':', {{1, 8}, {1, 9}, ":", undefined}},
                   [{integer, {{1,9}, {1,12}, "128", 128}},
@@ -185,8 +263,8 @@ binary_expr_test_() ->
                  edts_parse:from_string(expr, "<<\"123\":128>>", {1, 9})),
 
    ?_assertEqual({[{integer, {{1,9}, "128", 128}},
-                   {bin_size, {{1, 8}, ":", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1, 8}, ":", bin_size}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {integer, {{1,9}, {1,12}, "128", 128}},
                   [{'>>', {{1,12}, {1,14}, ">>", undefined}}]},
@@ -194,8 +272,20 @@ binary_expr_test_() ->
                                         "<<\"123\":128>>",
                                         {1, 10})),
 
-   ?_assertEqual({[{bin_type, {{1, 12}, "/", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+   ?_assertEqual({[{expr, {{1, 8}, "/", bin_type_list}},
+                   {expr, {{1,1}, "<<", binary}},
+                   {expr, {{1,1}, undefined, undefined}}],
+                  {'/', {{1, 8}, {1, 9}, "/", undefined}},
+                  [{atom, {{1, 9}, {1, 15}, "signed", signed}},
+                   {'-', {{1, 15}, {1, 16}, "-", undefined}},
+                   {atom, {{1, 16}, {1, 20}, "bits", bits}},
+                   {'>>', {{1, 20}, {1, 22}, ">>", undefined}}]},
+                 edts_parse:from_string(expr,
+                                        "<<\"123\"/signed-bits>>",
+                                        {1, 9})),
+
+   ?_assertEqual({[{expr, {{1, 12}, "/", bin_type_list}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {'/', {{1, 12}, {1, 13}, "/", undefined}},
                   [{atom, {{1, 13}, {1, 19}, "signed", signed}},
@@ -207,8 +297,8 @@ binary_expr_test_() ->
                                         {1, 13})),
 
    ?_assertEqual({[{atom, {{1, 13}, "signed", signed}},
-                   {bin_type, {{1, 12}, "/", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1, 12}, "/", bin_type_list}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {atom, {{1, 13}, {1, 19}, "signed", signed}},
                   [{'-', {{1, 19}, {1, 20}, "-", undefined}},
@@ -218,8 +308,8 @@ binary_expr_test_() ->
                                         "<<\"123\":128/signed-bits>>",
                                         {1, 14})),
 
-   ?_assertEqual({[{bin_type, {{1, 19}, "-", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+   ?_assertEqual({[{expr, {{1, 12}, "/", bin_type_list}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {'-', {{1, 19}, {1, 20}, "-", undefined}},
                   [{atom, {{1, 20}, {1, 24}, "bits", bits}},
@@ -229,19 +319,19 @@ binary_expr_test_() ->
                                         {1,20})),
 
    ?_assertEqual({[{atom, {{1, 20}, "bits", bits}},
-                   {bin_type, {{1, 19}, "-", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1, 12}, "/", bin_type_list}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
-                  {atom, {{1, 20}, {1, 24}, "bits", bits}},
+                  {atom, {{1, 20}, {1,24}, "bits", bits}},
                   [{'>>', {{1,24}, {1,26}, ">>", undefined}}]},
                  edts_parse:from_string(expr,
                                         "<<\"123\":128/signed-bits>>",
-                                        {1, 21})),
+                                        {1,21})),
 
    ?_assertEqual({[{integer, {{1, 10}, "128", 128}},
                    {expr, {{1, 9}, "(", '('}},
-                   {bin_size, {{1, 8}, ":", undefined}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1, 8}, ":", bin_size}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {integer, {{1, 10}, {1, 13}, "128", 128}},
                   [{'+', {{1, 14}, {1, 15}, "+", undefined}},
@@ -256,8 +346,28 @@ binary_expr_test_() ->
                                         "<<\"123\":(128 + 4)/signed-bits>>",
                                         {1, 13})),
 
+   ?_assertEqual({[{integer, {{1, 3}, "1", 1}},
+                   {expr, {{1,1}, "<<", binary}},
+                   {expr, {{1,1}, undefined, undefined}}],
+                  {integer, {{1, 3}, {1, 4}, "1", 1}},
+                  [{',', {{1, 4}, {1, 5}, ",", undefined}},
+                   {integer, {{1, 5}, {1, 6}, "2", 2}},
+                   {'>>', {{1,6}, {1,8}, ">>", undefined}}]},
+                 edts_parse:from_string(expr,
+                                        "<<1,2>>",
+                                        {1, 4})),
+
+   ?_assertEqual({[{expr, {{1,1}, "<<", binary}},
+                   {expr, {{1,1}, undefined, undefined}}],
+                  {',', {{1, 4}, {1, 5}, ",", undefined}},
+                  [{integer, {{1, 5}, {1, 6}, "2", 2}},
+                   {'>>', {{1,6}, {1,8}, ">>", undefined}}]},
+                 edts_parse:from_string(expr,
+                                        "<<1,2>>",
+                                        {1, 5})),
+
    ?_assertEqual({[{integer, {{1, 5}, "2", 2}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {integer, {{1, 5}, {1, 6}, "2", 2}},
                   [{'>>', {{1,6}, {1,8}, ">>", undefined}}]},
@@ -265,7 +375,7 @@ binary_expr_test_() ->
                                         "<<1,2>>",
                                         {1, 6})),
 
-   ?_assertEqual({[{binary, {{1,1}, "<<", undefined}},
+   ?_assertEqual({[{expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {'>>', {{1, 6}, {1, 8}, ">>", undefined}},
                   []},
@@ -274,7 +384,7 @@ binary_expr_test_() ->
                                         {1, 7})),
 
    ?_assertEqual({[{integer, {{1, 19}, "2", 2}},
-                   {binary, {{1,1}, "<<", undefined}},
+                   {expr, {{1,1}, "<<", binary}},
                    {expr, {{1,1}, undefined, undefined}}],
                   {integer, {{1, 19}, {1, 20}, "2", 2}},
                   [{':', {    {1, 20}, {1, 21}, ":",     undefined}},
@@ -292,8 +402,7 @@ binary_expr_test_() ->
   ].
 
 list_expr_test_() ->
-  [?_assertEqual({[{element, {{1, 2}, undefined, 1}},
-                   {expr, {{1, 1}, "[", '['}},
+  [?_assertEqual({[{expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'[', {{1, 1}, {1, 2}, "[", undefined}},
                   [{']', {{1, 2}, {1, 3}, "]", undefined}}]},
@@ -304,8 +413,7 @@ list_expr_test_() ->
                   []},
                  edts_parse:from_string(expr, "[]", {1, 3})),
 
-   ?_assertEqual({[{element, {{1, 2}, undefined, 1}},
-                   {expr, {{1, 1}, "[", '['}},
+   ?_assertEqual({[{expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'[', {{1, 1}, {1, 2}, "[", undefined}},
                   [{atom, {{1, 2}, {1, 3}, "a", a}},
@@ -313,8 +421,7 @@ list_expr_test_() ->
                  edts_parse:from_string(expr, "[a]", {1, 2})),
 
 
-   ?_assertEqual({[{element, {{1, 2}, undefined, 1}},
-                   {expr, {{1, 1}, "[", '['}},
+   ?_assertEqual({[{expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'[', {{1, 1}, {1, 2}, "[", undefined}},
                   [{atom, {{1, 2}, {1, 3}, "a", a}},
@@ -322,15 +429,13 @@ list_expr_test_() ->
                  edts_parse:from_string(expr, "[a]", {1, 2})),
 
    ?_assertEqual({[{atom, {{1, 2}, "a", a}},
-                   {element, {{1, 2}, undefined, 1}},
                    {expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 2}, {1, 3}, "a", a}},
                   [{']', {{1, 3}, {1, 4}, "]", undefined}}]},
                  edts_parse:from_string(expr, "[a]", {1, 3})),
 
-   ?_assertEqual({[{element, {{1, 4}, undefined, 2}},
-                   {expr, {{1, 1}, "[", '['}},
+   ?_assertEqual({[{expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {',', {{1, 3}, {1, 4}, ",", undefined}},
                   [{atom, {{1, 4}, {1, 5}, "b", b}},
@@ -338,15 +443,13 @@ list_expr_test_() ->
                  edts_parse:from_string(expr, "[a,b]", {1, 4})),
 
    ?_assertEqual({[{atom, {{1, 4}, "b", b}},
-                   {element, {{1, 4}, undefined, 2}},
                    {expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 4}, {1, 5}, "b", b}},
                   [{']', {{1, 5}, {1, 6}, "]", undefined}}]},
                  edts_parse:from_string(expr, "[a,b]", {1, 5})),
 
-   ?_assertEqual({[{element, {{1, 4}, undefined, tail}},
-                   {expr, {{1, 1}, "[", '['}},
+   ?_assertEqual({[{expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'|', {{1, 3}, {1, 4}, "|", undefined}},
                   [{atom, {{1, 4}, {1, 5}, "b", b}},
@@ -354,7 +457,6 @@ list_expr_test_() ->
                  edts_parse:from_string(expr, "[a|b]", {1, 4})),
 
    ?_assertEqual({[{atom, {{1, 4}, "b", b}},
-                   {element, {{1, 4}, undefined, tail}},
                    {expr, {{1, 1}, "[", '['}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 4}, {1, 5}, "b", b}},
@@ -365,12 +467,11 @@ list_expr_test_() ->
                   {']', {{1, 5}, {1, 6}, "]", undefined}},
                   []},
                  edts_parse:from_string(expr, "[a|b]", {1, 6}))
-
   ].
 
 tuple_expr_test_() ->
   [
-   ?_assertEqual({[{tuple, {{1, 1}, "{", '{'}},
+   ?_assertEqual({[{expr, {{1, 1}, "{", '{'}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'{', {{1, 1}, {1, 2}, "{", undefined}},
                   [{'}', {{1, 2}, {1, 3}, "}", undefined}}]},
@@ -381,7 +482,7 @@ tuple_expr_test_() ->
                   []},
                  edts_parse:from_string(expr, "{}", {1, 3})),
 
-   ?_assertEqual({[{tuple, {{1, 1}, "{", '{'}},
+   ?_assertEqual({[{expr, {{1, 1}, "{", '{'}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {'{', {{1, 1}, {1, 2}, "{", undefined}},
                   [{atom, {{1, 2}, {1, 3}, "a", a}},
@@ -389,13 +490,13 @@ tuple_expr_test_() ->
                  edts_parse:from_string(expr, "{a}", {1, 2})),
 
    ?_assertEqual({[{atom, {{1, 2}, "a", a}},
-                   {tuple, {{1, 1}, "{", '{'}},
+                   {expr, {{1, 1}, "{", '{'}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 2}, {1, 3}, "a", a}},
                   [{'}', {{1, 3}, {1, 4}, "}", undefined}}]},
                  edts_parse:from_string(expr, "{a}", {1, 3})),
 
-   ?_assertEqual({[{tuple, {{1, 1}, "{", '{'}},
+   ?_assertEqual({[{expr, {{1, 1}, "{", '{'}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {',', {{1, 3}, {1, 4}, ",", undefined}},
                   [{atom, {{1, 4}, {1, 5}, "b", b}},
@@ -403,11 +504,16 @@ tuple_expr_test_() ->
                  edts_parse:from_string(expr, "{a,b}", {1, 4})),
 
    ?_assertEqual({[{atom, {{1, 4}, "b", b}},
-                   {tuple, {{1, 1}, "{", '{'}},
+                   {expr, {{1, 1}, "{", '{'}},
                    {expr, {{1, 1}, undefined, undefined}}],
                   {atom, {{1, 4}, {1, 5}, "b", b}},
                   [{'}', {{1, 5}, {1, 6}, "}", undefined}}]},
-                 edts_parse:from_string(expr, "{a,b}", {1, 5}))
+                 edts_parse:from_string(expr, "{a,b}", {1, 5})),
+
+   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
+                  {'}', {{1, 5}, {1, 6}, "}", undefined}},
+                  []},
+                 edts_parse:from_string(expr, "{a,b}", {1, 6}))
   ].
 
 
@@ -466,78 +572,6 @@ record_expr_test_() ->
    %%                {atom, {{1, 8}, {1, 9}, "d", d}},
    %%                {'}', {{1, 9}, {1, 10}, "}", undefined}}]},
    %%              edts_parse:from_string(expr, "#foo{a=b,c=d}", {1, 10}))
-  ].
-
-
-basic_expr_test_() ->
-  [
-   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
-                  undefined,
-                  [{integer,{{1,1},{1,2}, "1", 1}},
-                   {'+',{{1,3},{1,4}, "+", undefined}},
-                   {integer,{{1,5},{1,6}, "1", 1}},
-                   {',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 1})),
-
-   ?_assertEqual({[{integer, {{1, 1}, "1", 1}},
-                   {expr, {{1, 1}, undefined, undefined}}],
-                  {integer,{{1,1},{1,2}, "1", 1}},
-                  [{'+',{{1,3},{1,4}, "+", undefined}},
-                   {integer,{{1,5},{1,6}, "1", 1}},
-                   {',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 2})),
-
-   ?_assertMatch({[{expr, {{1, 1}, undefined, undefined}}],
-                  {integer,{{1,1},{1,2}, "1", 1}},
-                  [{'+',{{1,3},{1,4}, "+", undefined}},
-                   {integer,{{1,5},{1,6}, "1", 1}},
-                   {',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 3})),
-
-   ?_assertEqual({[{'+', {{1, 3}, "+", undefined}},
-                   {expr, {{1, 1}, undefined, undefined}}],
-                  {'+',{{1,3},{1,4}, "+", undefined}},
-                  [{integer,{{1,5},{1,6}, "1", 1}},
-                   {',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 4})),
-
-   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
-                  {'+',{{1,3},{1,4}, "+", undefined}},
-                  [{integer,{{1,5},{1,6}, "1", 1}},
-                   {',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 5})),
-
-   ?_assertEqual({[{integer, {{1, 5}, "1", 1}},
-                   {expr, {{1, 1}, undefined, undefined}}],
-                  {integer,{{1,5},{1,6}, "1", 1}},
-                  [{',',{{1,6},{1,7}, ",", undefined}},
-                   {integer,{{1,8},{1,9}, "2", 2}}]},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 6})),
-
-   ?_assertEqual({error,
-                  {end_of_expr,
-                   {',', {{1,6}, {1,7}, ",", undefined}}}},
-                 edts_parse:from_string(expr, "1 + 1, 2", {1, 7})),
-
-   ?_assertEqual({error,
-                  {end_of_expr,
-                   {dot, {{1,6}, {1,8}, ". ", undefined}}}},
-                 edts_parse:from_string(expr, "1 + 1. 2", {1, 7})),
-
-   ?_assertEqual({error,
-                  {end_of_expr,
-                   {',', {{1,1}, {1,2}, ",", undefined}}}},
-                 edts_parse:from_string(expr, ", 2", {1, 7})),
-
-   ?_assertEqual({[{expr, {{1, 1}, undefined, undefined}}],
-                  {integer, {{1, 1}, {1, 2}, "2", 2}},
-                  []},
-                 edts_parse:from_string(expr, "2", {1, 3}))
   ].
 
 parenthesis_subexpr_test_() ->

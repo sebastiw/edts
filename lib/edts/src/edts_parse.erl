@@ -51,20 +51,41 @@
 -define(end_column(Token), element(2, ?end_loc(Token))).
 
 %% true if Loc1 is after Loc2
--define(loc_after_p(Loc1, Loc2),
+-define(loc_after_or_at(Loc1, Loc2),
         (element(1, Loc1) > element(1, Loc2) orelse
           (element(1, Loc1) =:= element(1, Loc2) andalso
             (element(2, Loc1) >= element(2, Loc2))))).
 
--define(starts_after_p(Token, Loc),
+-define(starts_after_or_at(Token, Loc),
         (?start_line(Token) > element(1, Loc) orelse
           (?start_line(Token) =:= element(1, Loc) andalso
              ?start_column(Token) >= element(2, Loc)))).
 
--define(ends_after_p(Token, Loc),
+-define(ends_after_or_at(Token, Loc),
         (?end_line(Token) > element(1, Loc) orelse
           (?end_line(Token) =:= element(1, Loc) andalso
              ?end_column(Token) >= element(2, Loc)))).
+
+-define(ends_before_or_at(Token, Loc),
+        (?end_line(Token) > element(1, Loc) orelse
+          (?end_line(Token) =:= element(1, Loc) andalso
+             ?end_column(Token) =< element(2, Loc)))).
+
+-define(starts_after(Token, Loc),
+        (?start_line(Token) > element(1, Loc) orelse
+          (?start_line(Token) =:= element(1, Loc) andalso
+             ?start_column(Token) > element(2, Loc)))).
+
+-define(ends_after(Token, Loc),
+        (?end_line(Token) > element(1, Loc) orelse
+          (?end_line(Token) =:= element(1, Loc) andalso
+             ?end_column(Token) > element(2, Loc)))).
+
+-define(ends_before(Token, Loc),
+        (?end_line(Token) < element(1, Loc) orelse
+          (?end_line(Token) =:= element(1, Loc) andalso
+             ?end_column(Token) < element(2, Loc)))).
+
 
 -define(closing_delimiter_p(Symbol),
         Symbol =:= ']' orelse
@@ -73,7 +94,7 @@
         Symbol =:= '>>').
 
 -define(done(Tokens, Loc),
-        (Tokens =:= [] orelse ?starts_after_p(hd(Tokens), Loc))).
+        (Tokens =:= [] orelse ?starts_after_or_at(hd(Tokens), Loc))).
 
 
 %%%_* Types ====================================================================
@@ -91,7 +112,7 @@ from_string(Start, String, Loc) ->
     {ok,    Tokens, _NextScanLoc} ->
       context(Start, Tokens, Loc);
     {error, {ErrStart, erl_scan, {string, TypeChar, Value}}, _Next} ->
-      case ?loc_after_p(ErrStart, Loc) of
+      case ?loc_after_or_at(ErrStart, Loc) of
         true ->
           {CutLine, CutCol} = case ErrStart of
                                 {Line, 1}      -> {Line - 1, - 1};
@@ -116,9 +137,22 @@ context(Start, Tokens0, Loc) ->
   [{_, {StartLoc, _, _, _}}|_] = Tokens = tokens(Tokens0),
   InitialCtxt = [{Start, {StartLoc, undefined, undefined}}],
   case ?MODULE:Start(Tokens, Loc, InitialCtxt, undefined) of
-    {_Ctxt, _, [Token|_]} when not ?starts_after_p(Token, Loc) ->
-      {error, {list_to_atom("end_of_" ++ atom_to_list(Start)), Token}};
-    Result ->
+    {complete, {_Ctxt, undefined, []}} ->
+      {error, {end_of_file, {1, 1}}};
+    {complete, {_Ctxt, Prev, []}} ->
+      {error, {end_of_file, ?end_loc(Prev)}};
+    {complete, {_Ctxt, Prev, [Token|_]}} when ?ends_before(Prev, Loc) ->
+      ErrAtom = list_to_atom("end_of_" ++ atom_to_list(Start)),
+      {error, {ErrAtom, ?start_loc(Token)}};
+    {complete, {_Ctxt, undefined, [Token|_]}} ->
+      ErrAtom = list_to_atom("end_of_" ++ atom_to_list(Start)),
+      {error, {ErrAtom, ?start_loc(Token)}};
+
+    {partial, {_Ctxt, undefined, []}} ->
+      {error, {end_of_file, {1, 1}}};
+    {partial, {_Ctxt, Prev, []}} when ?ends_before(Prev, Loc) ->
+      {error, {end_of_file, ?end_loc(Prev)}};
+    {partial, Result} ->
       Result
   end.
 
@@ -128,11 +162,14 @@ context(Start, Tokens0, Loc) ->
 %% TODO
 %% - Types
 %% - Functions
+%% - Local function calls
+%% - Qualified function calls
 %% - Guards
 %% - Matches
 %% - Record fields
 %% - Maps
 %% - Funs
+%% - Named funs
 %% - Pids/ports/refs
 %% - List comprehension
 %% - Comments
@@ -158,18 +195,7 @@ context(Start, Tokens0, Loc) ->
 
 
 expr(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
-
-%% End of expression
-expr([{',', _} = Next|[TailHd|_] = Tokens], Loc, [{Type, {_, _, Number}}|Ctxt], _Prev) when
-    Type =:= element orelse Type =:= field ->
-  expr(Tokens, Loc, [{Type, {?start_loc(TailHd), undefined, Number + 1}}|Ctxt], Next);
-expr([{Symbol, _}|_] = Tokens, _Loc, [{expr, _}|_] = Ctxt, Prev) when
-    Symbol =:= ',' orelse Symbol =:= dot ->
-  {Ctxt, Prev, Tokens};
-expr([{Symbol, _}|_] = Tokens, _Loc, Ctxt, Prev) when
-    Symbol =:= ',' orelse Symbol =:= dot ->
-  {Ctxt, Prev ,Tokens};
+  {partial, {Ctxt, Prev, Tokens}};
 
 %% Parentesized sub-expression
 expr([{'(', {Start, _, Text, _}} = Next|Tokens], Loc, Ctxt, _Prev) ->
@@ -206,134 +232,335 @@ expr([{'=', _} = Next| [{_, {ValueStart, _, _, _}}|_] = Tokens],
        [{field_value, {ValueStart, undefined, undefined}}|Ctxt],
       Next);
 
-%% List
-expr([{'[', _} = Next|[Element|_] = Tokens], Loc, Ctxt, _Prev) ->
-  expr(Tokens,
-       Loc,
-       [{element, {?start_loc(Element), undefined, 1}},
-        {expr, {?start_loc(Next), ?text(Next), '['}}|Ctxt],
-      Next);
-
-expr([{'|', _} = Next|[TailHd|_] = Tokens],
-     Loc,
-     [{element, _}|[{expr, {_, _, '['}}|_] = Ctxt0],
-    _Prev) ->
-  Ctxt = [{element, {?start_loc(TailHd), undefined, tail}}|Ctxt0],
-  expr(Tokens, Loc, Ctxt, Next);
-
-expr([{']', _}|_] = Tokens, Loc, [{element, _}|Ctxt], Prev) ->
-  expr(Tokens, Loc, Ctxt, Prev);
-
-expr([{']', _} = Next|Tokens], Loc, [_|Ctxt], _Prev) ->
-  expr(Tokens, Loc, Ctxt, Next);
+expr([{'[', _}|_] = Tokens0, Loc, Ctxt0, Prev0) ->
+  case list(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> expr(Tokens, Loc, Ctxt, Prev)
+  end;
 
 expr([{'{', _}|_] = Tokens0, Loc, Ctxt0, Prev0) ->
-  {Ctxt, Prev, Tokens} = tuple(Tokens0, Loc, Ctxt0, Prev0),
-  tuple(Tokens, Loc, Ctxt, Prev);
-
+  case tuple(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> expr(Tokens, Loc, Ctxt, Prev)
+  end;
 expr([{'<<', _}|_] = Tokens0, Loc, Ctxt0, Prev0) ->
-  {Ctxt, Prev, Tokens} = binary(Tokens0, Loc, Ctxt0, Prev0),
-  expr(Tokens, Loc, Ctxt, Prev);
-
-expr([Next|Tokens], Loc, Ctxt, _Prev) when
-    not (?ends_after_p(Next, Loc)) ->
-  expr(Tokens, Loc, Ctxt, Next);
+  case binary(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> expr(Tokens, Loc, Ctxt, Prev)
+  end;
 expr([{string, {_, End, _, _}} = Next|Tokens], Loc, Ctxt, _Prev) when
     Loc =:= End ->
   expr(Tokens, Loc, Ctxt, Next);
 expr([{atom, {_, End, "'" ++ _, _}} = Next|Tokens], Loc, Ctxt, _Prev) when
     Loc =:= End ->
   expr(Tokens, Loc, Ctxt, Next);
-expr([{Type, {Start, _, Text, Value}} = Next|Tokens], _Loc, Ctxt, _Prev) ->
-  {[{Type, {Start, Text, Value}}|Ctxt], Next, Tokens};
-expr(Tokens, _, Ctxt, _Prev) ->
-  {error, {syntax, Tokens, Ctxt}}.
+expr([{Type, _} = Next|Tokens], Loc, Ctxt0, _Prev) when
+    Type =:= string orelse
+    (Type =:= atom andalso hd(?text(Next)) =:= $') ->
+  case ?ends_after(Next, Loc) of
+    true ->
+      Ctxt = [{Type, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      expr(Tokens, Loc, Ctxt0, Next)
+  end;
+expr([{Type, _} = Next|Tokens], Loc, Ctxt0, _Prev) when
+    Type =:= atom orelse
+    Type =:= integer orelse
+    Type =:= float orelse
+    Type =:= char orelse
+    Type =:= var orelse
+    Type =:= '+' orelse
+    Type =:= '++' orelse
+    Type =:= '-' orelse
+    Type =:= '--' orelse
+    Type =:= '<' orelse
+    Type =:= '>' orelse
+    Type =:= '>=' orelse
+    Type =:= '=<' orelse
+    Type =:= '/' orelse
+    Type =:= '*' orelse
+    Type =:= 'div' orelse
+    Type =:= 'rem' orelse
+    Type =:= 'not' orelse
+    Type =:= 'and' orelse
+    Type =:= 'or' orelse
+    Type =:= 'andalso' orelse
+    Type =:= 'orelse' orelse
+    Type =:= 'bnot' orelse
+    Type =:= 'band' orelse
+    Type =:= 'bor' orelse
+    Type =:= 'bxor' orelse
+    Type =:= '=' orelse
+    Type =:= '==' orelse
+    Type =:= '/=' orelse
+    Type =:= '=:=' orelse
+    Type =:= '=/=' orelse
+    Type =:= '=:=' orelse
+    Type =:= 'bsl' orelse
+    Type =:= 'bsr' ->
+  case ?ends_after_or_at(Next, Loc) of
+    true ->
+      Ctxt = [{Type, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      expr(Tokens, Loc, Ctxt0, Next)
+  end;
+expr(Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}}.
+
+
+
+list(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+list([{'[', _} = Next|Tokens0], Loc, Ctxt0, _Prev0) ->
+  Ctxt1 = [{expr, {?start_loc(Next), ?text(Next), '['}}|Ctxt0],
+  case list_elements(Tokens0, Loc, Ctxt1, Next) of
+    {partial, _} = Result -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> list(Tokens, Prev, Ctxt, Prev)
+  end;
+list([{']', _} = Next|Tokens], _Loc, [{expr, {_, _, '['}}|Ctxt], _Prev) ->
+  {complete, {Ctxt, Next, Tokens}};
+list([{']', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  list(Tokens, Loc, Ctxt, Prev).
+
+
+list_elements(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+list_elements([{',', _} = Next|Tokens], Loc, [{expr, {_, _, '['}}|_] = Ctxt, _Prev) ->
+  list_elements(Tokens, Loc, Ctxt, Next);
+list_elements([{',', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  list_elements(Tokens, Loc, Ctxt, Prev);
+list_elements([{'|', _} = Next|Tokens], Loc, [{expr, {_, _, '['}}|_] = Ctxt, _Prev) ->
+  list_elements(Tokens, Loc, Ctxt, Next);
+list_elements([{'|', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  list_elements(Tokens, Loc, Ctxt, Prev);
+list_elements([{']', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}};
+list_elements(Tokens0, Loc, [_|_] = Ctxt0, Prev0) ->
+  case expr(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> list_elements(Tokens, Loc, Ctxt, Prev)
+  end.
 
 
 tuple(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
+  {partial, {Ctxt, Prev, Tokens}};
 tuple([{'{', {Start, _, Text, _}} = Next|Tokens0], Loc, Ctxt0, _Prev0) ->
-  Ctxt1 = [{tuple, {Start, Text, '{'}}|Ctxt0],
-  {Ctxt, Prev, Tokens} = tuple_elements(Tokens0, Loc, Ctxt1, Next),
-  tuple(Tokens, Loc, Ctxt, Prev);
-tuple([{'}', _} = Next|Tokens], Loc, [{tuple, {_, _, '{'}}|Ctxt], _Prev) ->
-  tuple(Tokens, Loc, Ctxt, Next);
-
+  Ctxt1 = [{expr, {Start, Text, '{'}}|Ctxt0],
+  case tuple_elements(Tokens0, Loc, Ctxt1, Next) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> tuple(Tokens, Loc, Ctxt, Prev)
+  end;
+tuple([{'}', _} = Next|Tokens], _Loc, [{expr, {_, _, '{'}}|Ctxt], _Prev) ->
+  {complete, {Ctxt, Next, Tokens}};
 tuple([{'}', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
   tuple(Tokens, Loc, Ctxt, Prev).
 
 tuple_elements(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
-tuple_elements([{',', _} = Next|Tokens], Loc, [{tuple, {_, _, '{'}}|_] = Ctxt, _Prev) ->
+  {partial, {Ctxt, Prev, Tokens}};
+tuple_elements([{',', _} = Next|Tokens], Loc, [{expr, {_, _, '{'}}|_] = Ctxt, _Prev) ->
   tuple_elements(Tokens, Loc, Ctxt, Next);
 tuple_elements([{',', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
   tuple_elements(Tokens, Loc, Ctxt, Prev);
 tuple_elements([{'}', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
-  {Ctxt, Prev, Tokens};
+  {complete, {Ctxt, Prev, Tokens}};
 tuple_elements(Tokens0, Loc, [_|_] = Ctxt0, Prev0) ->
-  {Ctxt, Prev, Tokens} = expr(Tokens0, Loc, Ctxt0, Prev0),
-  tuple_elements(Tokens, Loc, Ctxt, Prev).
-
-
+  case expr(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> tuple_elements(Tokens, Loc, Ctxt, Prev)
+  end.
 
 binary(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
+  {partial, {Ctxt, Prev, Tokens}};
 binary([{'<<', {Start, _, Text, _}} = Next|Tokens0], Loc, Ctxt0, _Prev0) ->
-  Ctxt1 = [{binary, {Start, Text, undefined}}|Ctxt0],
-  {Ctxt, Prev, Tokens} = bit_exprs(Tokens0, Loc, Ctxt1, Next),
-  binary(Tokens, Loc, Ctxt, Prev);
-binary([{'>>', _} = Next|Tokens], _Loc, [{binary, _}|_] = Ctxt, _Prev) ->
-  {Ctxt, Next, Tokens};
+  Ctxt1 = [{expr, {Start, Text, binary}}|Ctxt0],
+  case binary_elements(Tokens0, Loc, Ctxt1, Next) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> binary(Tokens, Loc, Ctxt, Prev)
+  end;
+binary([{'>>', _} = Next|Tokens], _Loc, [{expr, {_, _, binary}}|_] = Ctxt, _Prev) ->
+  {complete, {Ctxt, Next, Tokens}};
 binary([{'>>', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
-  binary(Tokens, Loc, Ctxt, Prev);
-binary(Tokens, _Loc, Ctxt, Prev) ->
-  {Ctxt, Prev, Tokens}.
+  binary(Tokens, Loc, Ctxt, Prev).
 
-bit_exprs(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
-bit_exprs([{',', _} = Next|Tokens], Loc, [{binary, _}|_] = Ctxt, _Prev) ->
-  bit_exprs(Tokens, Loc, Ctxt, Next);
-bit_exprs([{',', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
-  bit_exprs(Tokens, Loc, Ctxt, Prev);
-bit_exprs([{'>>', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
-  {Ctxt, Prev, Tokens};
-bit_exprs(Tokens0, Loc, Ctxt0, Prev0) ->
-  {Ctxt, Prev, Tokens} = bit_expr(Tokens0, Loc, Ctxt0, Prev0),
-  bit_exprs(Tokens, Loc, Ctxt, Prev).
+binary_elements(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_elements([{',', _} = Next|Tokens], Loc, [{expr, {_, _, binary}}|_] = Ctxt, _Prev) ->
+  binary_elements(Tokens, Loc, Ctxt, Next);
+binary_elements([{',', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  binary_elements(Tokens, Loc, Ctxt, Prev);
+binary_elements([{'>>', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}};
+binary_elements(Tokens0, Loc, Ctxt0, Prev0) ->
+  case binary_element(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> binary_elements(Tokens, Loc, Ctxt, Prev)
+  end.
+
+binary_element(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_element(Tokens0, Loc, Ctxt0, Prev0) ->
+  case binary_expr(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result ->
+      Result;
+    {complete, {_Ctxt, _Prev, []}} = Result ->
+      Result;
+    {complete, {Ctxt, Prev, [{':', _}|_] = Tokens}} ->
+      binary_element_suffix(Tokens, Loc, Ctxt, Prev);
+    {complete, {Ctxt, Prev, [{'/', _}|_] = Tokens}} ->
+      binary_element_suffix(Tokens, Loc, Ctxt, Prev);
+    {complete, _} = Result ->
+      Result
+  end.
+
+binary_expr(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_expr([{'(', {Start, _, Text, _}} = Next|Tokens], Loc, Ctxt, _Prev) ->
+  expr(Tokens, Loc, [{expr, {Start, Text, '('}}|Ctxt], Next);
+binary_expr([{')', _} = Next|Tokens], Loc, [{expr, {_, _,'('}}|Ctxt], _Prev) ->
+  expr(Tokens, Loc, Ctxt, Next);
+binary_expr([{')', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  expr(Tokens, Loc, Ctxt, Prev);
+binary_expr([{Type, _} = Next|Tokens], Loc, Ctxt0, _Prev) when
+    Type =:= integer orelse
+    Type =:= char orelse
+    Type =:= var ->
+  case ?ends_after_or_at(Next, Loc) of
+    true ->
+      Ctxt = [{Type, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      {complete, {Ctxt0, Next, Tokens}}
+  end;
+binary_expr([{string, _} = Next|Tokens], Loc, Ctxt0, _Prev) ->
+  case ?ends_after(Next, Loc) of
+    true ->
+      Ctxt = [{string, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      {complete, {Ctxt0, Next, Tokens}}
+  end;
+binary_expr(Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}}.
+
+binary_element_suffix(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_element_suffix([{':', _}|_] = Tokens0, Loc, Ctxt0, Prev0) ->
+  case binary_size(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result ->
+      Result;
+    {complete, {_Ctxt, _Prev, []}} = Result ->
+      Result;
+    {complete, {Ctxt, Prev, [{'/', _}|_] = Tokens}} ->
+      binary_type(Tokens, Loc, Ctxt, Prev);
+    {complete, _} = Result ->
+      Result
+  end;
+binary_element_suffix([{'/', _}|_] = Tokens0, Loc, Ctxt0, Prev0) ->
+  binary_type(Tokens0, Loc, Ctxt0, Prev0).
+
+binary_size(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_size([{':', _} = Next|Tokens0], Loc, Ctxt0, _Prev0) ->
+  Ctxt1 = [{expr, {?start_loc(Next), ":", bin_size}}|Ctxt0],
+  case binary_size_expr(Tokens0, Loc, Ctxt1, Next) of
+    {partial, _} = Result ->
+      Result;
+    {complete, {[_|Ctxt], Prev, Tokens}} ->
+      {complete, {Ctxt, Prev, Tokens}}
+  end.
+
+binary_size_expr(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_size_expr([{'(', {Start, _, Text, _}} = Next|Tokens], Loc, Ctxt, _Prev) ->
+  expr(Tokens, Loc, [{expr, {Start, Text, '('}}|Ctxt], Next);
+binary_size_expr([{')', _} = Next|Tokens], Loc, [{expr, {_, _,'('}}|Ctxt], _Prev) ->
+  expr(Tokens, Loc, Ctxt, Next);
+binary_size_expr([{')', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  expr(Tokens, Loc, Ctxt, Prev);
+binary_size_expr([{Type, _} = Next|Tokens], Loc, Ctxt0, _Prev) when
+    Type =:= integer orelse
+    Type =:= var ->
+  case ?ends_after_or_at(Next, Loc) of
+    true ->
+      Ctxt = [{Type, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      {complete, {Ctxt0, Next, Tokens}}
+  end;
+binary_size_expr([{',', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}}.
 
 
-bit_expr(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
-  {Ctxt, Prev, Tokens};
-bit_expr([{',', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
-  {Ctxt, Prev, Tokens};
-bit_expr([{'>>', _}|_] = Tokens, _Loc, Ctxt, Prev) ->
-  {Ctxt, Prev, Tokens};
-bit_expr([{':', _} = Next|Tokens], Loc, [{binary, _}|_] = Ctxt0, _Prev) ->
-  Ctxt = [{bin_size, {?start_loc(Next), ":", undefined}}|Ctxt0],
-  bit_expr(Tokens, Loc, Ctxt, Next);
-bit_expr([{'/', _} = Next|Tokens], Loc, [{Type, _}|Ctxt0], _Prev) when
-    Type =:= binary orelse Type =:= bin_size ->
-  Ctxt = [{bin_type, {?start_loc(Next), "/", undefined}}|Ctxt0],
-  bit_expr(Tokens, Loc, Ctxt, Next);
-bit_expr([{'-', _} = Next|Tokens], Loc, [{bin_type, _}|Ctxt0], _Prev) ->
-  Ctxt = [{bin_type, {?start_loc(Next), "-", undefined}}|Ctxt0],
-  bit_expr(Tokens, Loc, Ctxt, Next);
-bit_expr([{'-', _} = Next|Tokens], Loc, [{atom, _}, {bin_type, _}|Ctxt0], _Prev) ->
-  Ctxt = [{bin_type, {?start_loc(Next), "-", undefined}}|Ctxt0],
-  bit_expr(Tokens, Loc, Ctxt, Next);
-bit_expr([{'(', _} = Next|_] = Tokens0, Loc, Ctxt0, _Prev0) ->
-  {Ctxt, Prev, Tokens} = expr(Tokens0, Loc, Ctxt0, Next),
-  bit_expr(Tokens, Loc, Ctxt, Prev);
+binary_type(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_type([{'/', _} = Next|_] = Tokens0, Loc, Ctxt0, _Prev0) ->
+  case binary_type_list(Tokens0, Loc, Ctxt0, Next) of
+    {partial, _} = Result ->
+      Result;
+    {complete, {_Ctxt, _Prev, []}} = Result ->
+      Result;
+    {complete, {[_|Ctxt], Prev, Tokens}} ->
+      {complete, {Ctxt, Prev, Tokens}}
+  end.
 
-bit_expr([Next|Tokens], Loc, Ctxt, _Prev) when not ?ends_after_p(Next, Loc) ->
-  bit_expr(Tokens, Loc, Ctxt, Next);
+binary_type_list(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_type_list([{'/', _} = Next|Tokens0], Loc, Ctxt0, _Prev) ->
+  Ctxt1 = [{expr, {?start_loc(Next), ?text(Next), bin_type_list}}|Ctxt0],
+  case binary_type_elements(Tokens0, Loc, Ctxt1, Next) of
+    {partial, _} = Result ->
+      Result;
+    {complete, {[_|Ctxt], Prev, Tokens}} ->
+      {complete, {Ctxt, Prev, Tokens}}
+  end.
 
-bit_expr([{string, _} = Next|Tokens], Loc, Ctxt, _Prev) when
-    Loc =:= ?end_loc(Next) ->
-  bit_expr(Tokens, Loc, Ctxt, Next);
+binary_type_elements(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_type_elements([{'-', _} = Next|Tokens], Loc, [{expr, {_, _, bin_type_list}}|_] = Ctxt, _Prev) ->
+  binary_type_elements(Tokens, Loc, Ctxt, Next);
+binary_type_elements([{'-', _}|_] = Tokens, Loc, [_|Ctxt], Prev) ->
+  binary_type_elements(Tokens, Loc, Ctxt, Prev);
+binary_type_elements([{atom, _}|_] = Tokens0, Loc, [_|_] = Ctxt0, Prev0) ->
+  case binary_type_element(Tokens0, Loc, Ctxt0, Prev0) of
+    {partial, _} = Result            -> Result;
+    {complete, {Ctxt, Prev, Tokens}} -> binary_type_elements(Tokens, Loc, Ctxt, Prev)
+  end;
+binary_type_elements(Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}}.
 
-bit_expr([{Type, _} = Next|Tokens], _Loc, Ctxt, _Prev) ->
-  {[{Type, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt], Next, Tokens}.
+
+%% TODO unit binary type specifier
+binary_type_element(Tokens, Loc, Ctxt, Prev) when ?done(Tokens, Loc) ->
+  {partial, {Ctxt, Prev, Tokens}};
+binary_type_element([{atom, _} = Next|Tokens], Loc, Ctxt0, _Prev) when
+    %% Type
+    ?value(Next) =:= integer orelse
+    ?value(Next) =:= float orelse
+    ?value(Next) =:= binary orelse
+    ?value(Next) =:= bytes orelse
+    ?value(Next) =:= bitstring orelse
+    ?value(Next) =:= bits orelse
+    ?value(Next) =:= utf8 orelse
+    ?value(Next) =:= utf16 orelse
+    ?value(Next) =:= utf32 orelse
+    %% Signedness
+    ?value(Next) =:= signed orelse
+    ?value(Next) =:= unsigned orelse
+    %% Endianness
+    ?value(Next) =:= big orelse
+    ?value(Next) =:= little orelse
+    ?value(Next) =:= native ->
+  case ?ends_after_or_at(Next, Loc) of
+    true ->
+      Ctxt = [{atom, {?start_loc(Next), ?text(Next), ?value(Next)}}|Ctxt0],
+      {partial, {Ctxt, Next, Tokens}};
+    false ->
+      {complete, {Ctxt0, Next, Tokens}}
+  end;
+binary_type_element(Tokens, _Loc, Ctxt, Prev) ->
+  {complete, {Ctxt, Prev, Tokens}}.
 
 string_cut({Line, Column}, String) ->
   cut_after_col(Column, cut_after_line(Line, String)).
