@@ -358,7 +358,7 @@ FILE."
 (defun edts-project-start-node ()
   "Starts a new erlang node for PROJECT."
   (let* ((buffer-name (concat "*" (eproject-name) "*"))
-         (command (split-string (eproject-attribute :start-command)))
+         (command (split-string-and-unquote (eproject-attribute :start-command)))
          (exec-path (edts-project-build-exec-path))
          (process-environment (edts-project-build-env))
          (node (eproject-attribute :node-name)))
