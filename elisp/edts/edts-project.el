@@ -133,9 +133,16 @@ Example:
                      "^\\.gitmodules$")
   ;; Default lib dirs
   ;; * deps: dependencies included by rebar2
-  ;; * _build/default/lib: dependencies included by rebar3
   ;; * _build/test/lib: test scope dependencies from rebar3
-  :lib-dirs ("lib" "deps" "_build/default/lib" "_build/test/lib"))
+  ;; * _build/default/lib: dependencies included by rebar3
+
+  ;; NOTE: It's important for rebar3's test profile to be loaded
+  ;; first, because rebar3 might have different contents of a specific
+  ;; dependency, so it doesn't load the second copy it finds. For your
+  ;; root project, that basically would mean that any supporting
+  ;; modules you have for your test cases won't be loaded into EDTS,
+  ;; making your test modules a sea of red squiggles.
+  :lib-dirs ("lib" "deps" "_build/test/lib" "_build/default/lib"))
 
 (defun edts-project-selector (file-name)
   "Try to figure out if FILE should be part of an edts-project."
