@@ -119,6 +119,10 @@ compile_and_load(File0, Opts) ->
            true  -> lists:nthtail(length(Cwd) + 1, File0);
            false -> File0
          end,
+  FileLastModified =
+    calendar:datetime_to_gregorian_seconds(filelib:last_modified(File)),
+  BeamLastModified =
+    calendar:gregorian_seconds_to_datetime(FileLastModified - 1),
   OutDir  = get_compile_outdir(File0),
   OldOpts = extract_compile_opts(File),
 
@@ -137,6 +141,7 @@ compile_and_load(File0, Opts) ->
       OutFile = filename:join(OutDir, atom_to_list(Mod)),
       case file:write_file(OutFile ++ ".beam", Bin) of
         ok ->
+          file:change_time(OutFile ++ ".beam", BeamLastModified),
           code:purge(Mod),
           {module, Mod} = code:load_abs(OutFile),
           add_path(OutDir),
