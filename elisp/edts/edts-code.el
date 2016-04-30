@@ -277,7 +277,7 @@ non-recursive."
           (progn
             (goto-char (point-min))
             (edts-code-next-issue t)
-        (error "EDTS: no more issues found")))))
+        (error "EDTS: no more issues found"))))))
 
 (defun edts-code-previous-issue (&optional wrapped)
   "Moves point to the next error in current buffer and prints the error."
