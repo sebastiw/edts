@@ -264,7 +264,7 @@ non-recursive."
                 0); Will to look strange, but at least we show the issue.
             )))))
 
-(defun edts-code-next-issue ()
+(defun edts-code-next-issue (&optional wrapped)
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
@@ -273,13 +273,13 @@ non-recursive."
         (progn
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
-      (if edts-code-issue-wrap-around
+      (if (and edts-code-issue-wrap-around (not wrapped))
           (progn
             (goto-char (point-min))
-            (edts-code-next-issue))
+            (edts-code-next-issue t)
         (error "EDTS: no more issues found")))))
 
-(defun edts-code-previous-issue ()
+(defun edts-code-previous-issue (&optional wrapped)
   "Moves point to the next error in current buffer and prints the error."
   (interactive)
   (push-mark)
@@ -288,10 +288,10 @@ non-recursive."
         (progn
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
-      (if edts-code-issue-wrap-around
+      (if (and edts-code-issue-wrap-around (not wrapped))
           (progn
             (goto-char (point-max))
-            (edts-code-previous-issue))
+            (edts-code-previous-issue t))
         (error "EDTS: no more issues found")))))
 
 (provide 'edts-code)
