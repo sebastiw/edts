@@ -59,6 +59,12 @@ xref, eunit, etc). Each entry in turn is an plist with an entry for each
 issue severity (error, warning, etc).")
 (make-variable-buffer-local 'edts-code-buffer-issues)
 
+(defcustom edts-code-issue-wrap-around nil
+  "Should next/previous issue wrap around after no issues have been found"
+  :type 'boolean
+  :options '(t nil)
+  :group 'edts)
+
 (defconst edts-code-issue-overlay-priorities
   '((passed-test . 900)
     (failed-test . 901)
@@ -267,7 +273,11 @@ non-recursive."
         (progn
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
-        (error "EDTS: no more issues found"))))
+      (if edts-code-issue-wrap-around
+          (progn
+            (goto-char (point-min))
+            (edts-code-next-issue))
+        (error "EDTS: no more issues found")))))
 
 (defun edts-code-previous-issue ()
   "Moves point to the next error in current buffer and prints the error."
@@ -278,6 +288,10 @@ non-recursive."
         (progn
           (goto-char (overlay-start overlay))
           (message (overlay-get overlay 'help-echo)))
-        (error "EDTS: no more issues found"))))
+      (if edts-code-issue-wrap-around
+          (progn
+            (goto-char (point-max))
+            (edts-code-previous-issue))
+        (error "EDTS: no more issues found")))))
 
 (provide 'edts-code)
