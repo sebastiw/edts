@@ -749,9 +749,12 @@ get_project_includes() ->
   [{i, filename:join(RootDir, IncDir)} || IncDir <- ProjectIncDirs].
 
 get_app_includes(FileLoc) ->
-  {ok, AppIncDirs}     = application:get_env(edts, app_include_dirs),
+  {ok, AppIncDirs} = application:get_env(edts, app_include_dirs),
   ParentDir = filename:dirname(FileLoc),
-  case filename:basename(FileLoc) =:= "src" of
+  case
+    filename:basename(FileLoc) =:= "src" orelse
+    filename:basename(FileLoc) =:= "test"
+  of
     true  -> [{i, filename:join(ParentDir, D)} || D <- AppIncDirs];
     false -> []
   end.
