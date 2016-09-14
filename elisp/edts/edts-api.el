@@ -78,11 +78,10 @@ requests.")
 the node-name of the node that has gone down as the argument.")
 
 (defvar edts-node-sname
-  (concat "edts_"
-          (let ((s (shell-command-to-string "whoami")))
-            (if (string-match "[ \t\r\n]+" s) (replace-match "" t t s) s)))
-  "Sets the edts node sname to `edts_<username>'. This makes it
-possible to have several edts nodes on the same host.")
+  (if (string= "" edts-erl-sname) "edts" edts-erl-sname)
+  "Use `edts-erl-sname' if available. If not the sname will be
+set to \"edts\". This makes it possible to have several edts
+nodes on the same host.")
 (make-variable-buffer-local 'edts-node-sname)
 
 (defun edts-api-ensure-server-started ()
@@ -97,7 +96,7 @@ possible to have several edts nodes on the same host.")
     (error "EDTS: Server already running"))
   (let* ((pwd (f-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start" edts-data-directory
-                        edts-erl-command edts-node-sname))
+                        edts-erl-command edts-node-sname edts-erl-flags))
          (retries edts-api-num-server-start-retries)
          available)
     (edts-shell-make-comint-buffer "*edts*" edts-node-sname pwd command)

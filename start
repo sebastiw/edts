@@ -24,11 +24,13 @@ PROJDIR=${1:-"$HOME"}
 ERL=${2:-$(which erl)}
 EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
 PLUGIN_DIR=$EDTS_HOME/plugins
-EDTS_SNAME=${3:-"edts_$(whoami)"}
+ERL_SNAME=${3:-"edts"}
+ERL_FLAGS=$4
 
 cd "$EDTS_HOME"
 exec "$ERL" \
-    -sname $EDTS_SNAME \
+     $ERL_FLAGS \
+    -sname $ERL_SNAME \
     -config "$EDTS_HOME/lib/edts/priv/app" \
     -edts project_data_dir "\"$PROJDIR\"" \
     -edts plugin_dir "\"$PLUGIN_DIR\"" \
