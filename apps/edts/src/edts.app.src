@@ -1,0 +1,16 @@
+{application, edts,
+ [{description, "The Erlang Development Tool Suite for Emacs"},
+  {vsn, "0.2"},
+  {registered, []},
+  {applications, [kernel
+                 ,stdlib
+                 ,lager
+                 ,mochiweb
+                 ,webmachine
+                 ,edts_debug
+                 ,edts_dialyzer
+                 ,edts_xref
+                 ]},
+  {mod, {edts_app, []}},
+  {env, []}
+ ]}.

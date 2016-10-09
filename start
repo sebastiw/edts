@@ -21,16 +21,9 @@
 ###############################################################################
 
 PROJDIR=${1:-"$HOME"}
-ERL=${2:-$(which erl)}
 EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
-PLUGIN_DIR=$EDTS_HOME/plugins
 
 cd "$EDTS_HOME"
-exec "$ERL" \
-    $3 \
-    -sname edts \
-    -config "$EDTS_HOME/lib/edts/priv/app" \
-    -edts project_data_dir "\"$PROJDIR\"" \
-    -edts plugin_dir "\"$PLUGIN_DIR\"" \
-    -pa "$EDTS_HOME"/{lib,plugins}/*/ebin \
-    -s edts_app
+./_build/default/rel/edts/bin/edts \
+	$3 \
+	-edts project_data_dir "\"$PROJDIR\""

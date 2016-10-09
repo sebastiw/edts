@@ -55,7 +55,6 @@ init([]) ->
 
   WebmConf = [{port,     ?EDTS_PORT},
               {dispatch, dispatch()}],
-  WemachineRouter = child_spec(webmachine_router),
   Webmachine      = {webmachine_mochiweb,
                      {webmachine_mochiweb, start, [WebmConf]},
                      permanent, 5000, worker, [webmachine_mochiweb]},
@@ -72,7 +71,7 @@ init([]) ->
                                   edts_plugins:names()),
   PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
 
-  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,
+  Children = [EdtsEvent, Edts, Webmachine] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 
@@ -87,10 +86,20 @@ child_spec(Name, Args) ->
    permanent, 5000, worker, [Name]}.
 
 dispatch() ->
-  DispatchFile       = filename:join(code:priv_dir(edts), "dispatch.conf"),
-  {ok, EDTSDispatch} = file:consult(DispatchFile),
-  EDTSDispatch.
-
+  [
+   { ["event"],                                                             edts_resource_event,        [] },
+   { ["code", "parsed_expressions", "mfa"],                                 edts_resource_parse,        [] },
+   { ["code", "free_vars"],                                                 edts_resource_code,         [] },
+   { ["nodes"],                                                             edts_resource_nodes,        [] },
+   { ["nodes", nodename],                                                   edts_resource_node,         [] },
+   { ["nodes", nodename, "modules"],                                        edts_resource_modules,      [] },
+   { ["nodes", nodename, "modules", module],                                edts_resource_module,       [] },
+   { ["nodes", nodename, "modules", module, "eunit"],                       edts_resource_eunit,        [] },
+   { ["nodes", nodename, "modules", module, "functions"],                   edts_resource_functions,    [] },
+   { ["nodes", nodename, "modules", module, "functions",  function, arity], edts_resource_function,     [] },
+   { ["nodes", nodename, "plugins", plugin, method],                        edts_resource_plugin_call,  [] },
+   { ["pretty_print"],                                                      edts_resource_pretty_print, [] }
+  ].
 %%%_* Unit tests ===============================================================
 
 %%%_* Emacs ====================================================================

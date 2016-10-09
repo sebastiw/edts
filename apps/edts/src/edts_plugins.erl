@@ -58,17 +58,13 @@ behaviour_info(callbacks) ->
 behaviour_info(_) -> undefined.
 
 dirs() ->
-  case application:get_env(edts, plugin_dir) of
-    undefined -> [];
-    {ok, Dir} ->
-      AbsDir = filename:absname(Dir),
-      PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
-      [PluginDir || PluginDir <- PluginDirs,
-                    filelib:is_dir(PluginDir)]
-  end.
+  AbsDir = code:lib_dir(),
+  PluginDirs = filelib:wildcard(filename:join(AbsDir, "edts_*")),
+  [PluginDir || PluginDir <- PluginDirs,
+                filelib:is_dir(PluginDir)].
 
 names() ->
-  [list_to_atom(filename:basename(Dir)) || Dir <- dirs()].
+  [ element(2, Spec) || Spec <- specs()].
 
 
 specs() ->

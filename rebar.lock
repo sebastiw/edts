@@ -1,0 +1,22 @@
+{"1.1.0",
+[{<<"goldrush">>,
+  {git,"git://github.com/DeadZen/goldrush.git",
+       {ref,"212299233c7e7eb63a97be2777e1c05ebaa58dbe"}},
+  1},
+ {<<"lager">>,
+  {git,"git://github.com/basho/lager",
+       {ref,"1c42c3bffbab49b0f06c9a916b00ca4911ae6a2f"}},
+  0},
+ {<<"meck">>,
+  {git,"git://github.com/eproxus/meck",
+       {ref,"dde759050eff19a1a80fd854d7375174b191665d"}},
+  0},
+ {<<"mochiweb">>,{pkg,<<"mochiweb">>,<<"2.12.2">>},1},
+ {<<"webmachine">>,
+  {git,"git://github.com/webmachine/webmachine.git",
+       {ref,"5e1ff9213a2a3638eb12be9c84279840d0803414"}},
+  0}]}.
+[
+{pkg_hash,[
+ {<<"mochiweb">>, <<"80804AD342AFA3D7F3524040D4EED66CE74B17A555DE454AC85B07C479928E46">>}]}
+].

@@ -13,3 +13,7 @@ erl_crash.dump
 *.beam
 *.elc
 *.plt
+_build
+rebar3.crashdump
+*.coverdata
+.DS_Store
