@@ -35,6 +35,7 @@
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
     (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\C-c\C-dt"    'edts-code-eunit)
+    (define-key map "\C-c\C-dr"    'edts-refactor-extract-function)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)
@@ -108,6 +109,7 @@
 (require 'edts-face)
 (require 'edts-log)
 (require 'edts-project)
+(require 'edts-refactor)
 (require 'edts-plugin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -209,8 +211,6 @@ further.
 \\[edts-byte-compile]               - Byte compile all EDTS elisp files.
 \\[edts-project-start-node]         - Start current buffers project-node
                                       if not already running.
-\\[edts-refactor-extract-function]  - Extract code in current region
-                                      into a separate function.
 \\[edts-init-node]                  - Register the project-node of
                                       current buffer with the central
                                       EDTS server.
