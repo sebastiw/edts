@@ -45,16 +45,18 @@
 
 %% Start the whole shebang.
 start() ->
-  %% Webmachine requirements
   ok = ensure_application_started(inets),
   ok = ensure_application_started(crypto),
-
-  %% Lager requirements
-  ok = ensure_application_started(compiler),
   ok = ensure_application_started(syntax_tools),
+  ok = ensure_application_started(compiler),
   ok = ensure_application_started(goldrush),
   ok = ensure_application_started(lager),
-
+  ok = ensure_application_started(xmerl),
+  ok = ensure_application_started(asn1),
+  ok = ensure_application_started(public_key),
+  ok = ensure_application_started(ssl),
+  ok = ensure_application_started(mochiweb),
+  ok = ensure_application_started(webmachine),
   ok = ensure_application_started(edts).
 
 

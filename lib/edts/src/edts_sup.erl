@@ -55,7 +55,6 @@ init([]) ->
 
   WebmConf = [{port,     ?EDTS_PORT},
               {dispatch, dispatch()}],
-  WemachineRouter = child_spec(webmachine_router),
   Webmachine      = {webmachine_mochiweb,
                      {webmachine_mochiweb, start, [WebmConf]},
                      permanent, 5000, worker, [webmachine_mochiweb]},
@@ -72,7 +71,7 @@ init([]) ->
                                   edts_plugins:names()),
   PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
 
-  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,
+  Children = [EdtsEvent, Edts, Webmachine] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 
