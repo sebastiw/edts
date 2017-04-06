@@ -147,9 +147,7 @@ FORCE-CALLBACK is non-nil, call the callback anyway inside a
     (setq url-show-status nil)
     (edts-log-debug "Sending async %s-request to %s" method url)
     (with-current-buffer
-        (if (>= emacs-major-version 24)
-            (url-retrieve url #'edts-rest-request-callback callback-args t)
-          (url-retrieve url #'edts-rest-request-callback callback-args))
+        (url-retrieve url #'edts-rest-request-callback callback-args t)
       (make-local-variable 'url-show-status)
       (setq url-show-status nil)
       (current-buffer))))
@@ -229,38 +227,6 @@ FORCE-CALLBACK is non-nil, call the callback anyway inside a
               (json-false       nil))
           (json-read-from-string string)))
     (error string)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Test support
-
-(defun edts-rest-force-sync (force)
-  "If FORCE is non-nil, force all requests to be synchronous. Otherwise
-ensure that this is not enforced."
-  (if force
-      (ad-activate-regexp "edts-rest-test-sync")
-    (ad-deactivate-regexp "edts-rest-test-sync")))
-
-(defadvice edts-rest-request-async (around edts-rest-test-sync (method
-                                                                resource
-                                                                args
-                                                                callback
-                                                                callback-args
-                                                                force-callback))
-  "** Use only for testing **
-
-Wrap a an async request to RESOURCE with ARGS and turn it into a
-synchronous request, calling CALLBACK with CALLBACK-ARGS when the
-request completes."
-  (make-local-variable 'url-show-status)
-  (setq url-show-status nil)
-  (let ((url                       (edts-rest-resource-url resource args))
-        (url-request-method        method)
-        (url-request-extra-headers (list edts-rest-content-type-hdr)))
-    (apply callback
-           (edts-rest-request method resource args)
-           callback-args)))
-(edts-rest-force-sync nil)
 
 (defadvice url-http-end-of-document-sentinel
   (around edts-rest-end-of-document-sentinel (process why))

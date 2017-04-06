@@ -30,24 +30,20 @@
    (let ((async-node-init edts-api-async-node-init))
      (setq edts-api-async-node-init nil)
      (setq edts-event-inhibit t)
-     (edts-rest-force-sync t)
      (edts-test-pre-cleanup-all-buffers)
-     (edts-test-setup-project edts-test-project1-directory
-                              "test"
-                              nil)
+     (edts-test-setup-project 'project-1 "test")
      `((async-node-init . ,async-node-init))))
 
  ;; Teardown
  (lambda (setup-config)
    (setq edts-api-async-node-init (cdr (assoc 'async-node-init setup-config)))
-   (edts-rest-force-sync nil)
    (setq edts-event-inhibit nil)
    (edts-test-post-cleanup-all-buffers)
-   (edts-test-teardown-project edts-test-project1-directory)))
+   (edts-test-teardown-project 'project-1)))
 
 (edts-test-case edts-debug-suite edts-debug-basic-test ()
   "Basic debugger setup test"
-  (find-file (car (edts-test-project1-modules)))
+  (edts-test-find-project-module 'project-1 'one)
 
   (should-not (edts-debug-interpretedp))
   (edts-debug-interpret nil nil 't)

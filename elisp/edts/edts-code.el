@@ -27,7 +27,6 @@
 ;; done by Sebastian Weddmark Olsson.
 
 (require 'dash)
-(require 'eproject-extras)
 (require 'f)
 
 (require 'edts-api)
@@ -151,13 +150,12 @@ of ISSUES."
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
   (interactive '(ok))
-  (let ((module (ferl-get-module)))
-    (when module
-      (edts-face-remove-overlays '(edts-code-eunit-passed))
-      (edts-face-remove-overlays '(edts-code-eunit-failed))
-      (when (not (eq result 'error))
-	(edts-api-get-module-eunit-async
-	 module #'edts-code-handle-eunit-result)))))
+  (-when-let (module (ferl-get-module))
+    (edts-face-remove-overlays '(edts-code-eunit-passed))
+    (edts-face-remove-overlays '(edts-code-eunit-failed))
+    (when (not (eq result 'error))
+      (edts-api-get-module-eunit-async
+       module #'edts-code-handle-eunit-result))))
 
 (defun edts-code-handle-eunit-result (eunit-res)
   (when eunit-res

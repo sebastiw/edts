@@ -5,6 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'erlang)
+(require 'f)
 
 (defcustom edts-inhibit-package-check nil
   "If non-nil, don't check whether EDTS was installed as a package."
@@ -25,11 +26,9 @@
   (when (y-or-n-p "Do you want to disable package check now?")
     (customize-save-variable 'edts-inhibit-package-check t)))
 
-(let* ((top-dir (file-name-directory load-file-name))
-       (dirs    (directory-files (expand-file-name "elisp" top-dir) t "^[^.]")))
-  (dolist (dir dirs)
-    (when (file-directory-p dir)
-      (add-to-list 'load-path dir))))
+(let* ((top-dir (f-dirname (f-this-file)))
+       (dirs    (f-directories (f-expand "elisp" top-dir))))
+  (-each dirs (-partial 'add-to-list 'load-path)))
 
 (require 'edts-mode)
 
