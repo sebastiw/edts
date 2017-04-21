@@ -94,7 +94,7 @@ the node-name of the node that has gone down as the argument.")
     (setq available (edts-api-get-nodes t))
     (while (and (> retries 0) (not available))
       (setq available (edts-api-get-nodes t))
-      (sit-for edts-api-server-start-retry-interval)
+      (sleep-for edts-api-server-start-retry-interval)
       (decf retries))
     (when available
       (edts-log-info "Started EDTS server")
@@ -170,7 +170,7 @@ localhost."
                                 erlang-cookie
                                 (1- retries))
               ;; Synchronous init
-              (sit-for edts-api-project-node-start-retry-interval)
+              (sleep-for edts-api-project-node-start-retry-interval)
               (edts-api-init-node-when-ready project-name
                                              node-name
                                              root
