@@ -120,7 +120,7 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
-  reload_if_newer(File0, OutDir),
+  reload_if_modified(File0, OutDir),
   OldOpts = extract_compile_opts(File),
 
   AdditionalIncludes = get_additional_includes(filename:dirname(File), OldOpts),
@@ -486,19 +486,19 @@ maybe_reload(Mod, File) ->
     false -> false
   end.
 
-reload_if_newer(SrcFile, OutDir) ->
+reload_if_modified(SrcFile, OutDir) ->
   ModuleName = filename:basename(SrcFile, ".erl"),
   Beam = filename:join([OutDir, ModuleName ++ ".beam"]),
   Module = list_to_atom(ModuleName),
 
   case code:is_loaded(Module) of
     {file, _Loaded} ->
-      do_reload_if_newer(Module, Beam);
+      do_reload_if_modified(Module, Beam);
     false ->
       false
   end.
 
-do_reload_if_newer(Module, Beam) ->
+do_reload_if_modified(Module, Beam) ->
   case module_modified_p(Module, Beam) of
     true ->
       try_load_mod(Module, Beam);
@@ -824,40 +824,6 @@ get_additional_includes_test_() ->
                    get_additional_includes(SrcDir,
                                           [{i, filename:join(AppDir, "foo")}]))
    ]}.
-
-%% do_module_modified_p_test_() ->
-%%   Now = calendar:local_time(),
-%%   {{Year, Month, Day}, {Hour, Minute, Second} = Time} = Now,
-
-%%   NowMTime = #file_info{mtime = Now},
-%%   NowCTime = {time, {Year, Month, Day, Hour, Minute, Second}},
-
-%%   FutureMTime = #file_info{mtime = {{Year + 1, Month, Day}, Time}},
-%%   FutureCTime = {time, {Year + 1, Month, Day, Hour, Minute, Second}},
-
-%%   PastMTime = #file_info{mtime = {{Year - 1, Month, Day}, Time}},
-%%   PastCTime = {time, {Year - 1, Month, Day, Hour, Minute, Second}},
-
-%%   [ ?_assert(do_module_modified_p(false, {ok, PastMTime})),
-%%     ?_assert(do_module_modified_p(false, {ok, NowMTime})),
-%%     ?_assert(do_module_modified_p(false, {ok, FutureMTime})),
-
-%%     ?_assert(do_module_modified_p(PastCTime, {error, foo})),
-%%     ?_assert(do_module_modified_p(NowCTime, {error, foo})),
-%%     ?_assert(do_module_modified_p(FutureCTime, {error, foo})),
-
-%%     ?_assertNot(do_module_modified_p(PastCTime, {ok, PastMTime})),
-%%     ?_assert(do_module_modified_p(PastCTime, {ok, NowMTime})),
-%%     ?_assert(do_module_modified_p(PastCTime, {ok, FutureMTime})),
-
-%%     ?_assertNot(do_module_modified_p(NowCTime, {ok, PastMTime})),
-%%     ?_assertNot(do_module_modified_p(NowCTime, {ok, NowMTime})),
-%%     ?_assert(do_module_modified_p(NowCTime, {ok, FutureMTime})),
-
-%%     ?_assertNot(do_module_modified_p(FutureCTime, {ok, PastMTime})),
-%%     ?_assertNot(do_module_modified_p(FutureCTime, {ok, NowMTime})),
-%%     ?_assertNot(do_module_modified_p(FutureCTime, {ok, FutureMTime}))
-%%   ].
 
 string_to_mfa_test_() ->
   [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
