@@ -95,7 +95,7 @@ request should always be outstanding if we are not already attached.")
 
 (defun edts-debug-after-node-init-hook ()
   "Hook to run after node initialization."
-  (edts-debug-sync))
+  (run-with-timer 0.2 nil 'edts-debug-sync))
 
 (defun edts-debug-node-down-hook (node)
   "Hook to run after node goes down."
@@ -370,7 +370,7 @@ value associated with current buffer."
 (defun edts-debug-all-processes (&optional node)
   "Return a list of all processes states on NODE. NODE defaults to the
 value associated with current buffer."
-  (let* ((node(or node (edts-api-node-name))))
+  (let* ((node (or node (edts-api-node-name))))
     (edts-plugin-call node 'edts_debug 'processes)))
 
 (defun edts-debug-interpretedp (&optional node module)

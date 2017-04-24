@@ -28,7 +28,7 @@
 
 (let* ((top-dir (f-dirname (f-this-file)))
        (dirs    (f-directories (f-expand "elisp" top-dir))))
-  (-each dirs (-partial 'add-to-list 'load-path)))
+  (-each dirs (lambda (d) (add-to-list 'load-path d t))))
 
 (require 'edts-mode)
 

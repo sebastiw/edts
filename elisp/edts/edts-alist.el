@@ -91,4 +91,15 @@
   (set alist-variable
        (edts-alist-store-in key-list value (symbol-value alist-variable))))
 
+
+(defun edts-alist-select (predicate alist)
+  "Return all elements of ALIST for which PREDICATE returns a non-nil value. PREDICATE is a function that takes two argument KEY and VALUE."
+  (-filter (lambda (el) (funcall predicate (car el) (cdr el))) alist))
+
+
+(defun edts-alist-filter (predicate alist)
+  "Remove all elements of ALIST for which PREDICATE returns a non-nil value. PREDICATE is a function that takes two argument KEY and VALUE."
+  (-filter (lambda (el) (not (funcall predicate (car el) (cdr el)))) alist))
+
+
 (provide 'edts-alist)

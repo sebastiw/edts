@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc The edts otp-application entry-point.
+%%% @doc get_free_vars command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,71 +23,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_app).
--behaviour(application).
+-module(edts_cmd_get_free_vars).
 
 %%%_* Exports ==================================================================
 
 %% API
--export([start/0]).
-
-%% Application callbacks
--export([ start/2
-        , stop/1]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
-
 %%%_* Defines ==================================================================
-
 %%%_* Types ====================================================================
-
 %%%_* API ======================================================================
 
-%% Start the whole shebang.
-start() ->
-  %% Webmachine requirements
-  ok = ensure_application_started(inets),
-  ok = ensure_application_started(crypto),
+spec() ->
+  [code].
 
-  %% Lager requirements
-  ok = ensure_application_started(compiler),
-  ok = ensure_application_started(syntax_tools),
-
-  ok = ensure_application_started(edts).
-
-
-%% Application callbacks
-start(_StartType, _Start) ->
-  edts_sup:start_link().
-
-stop(_State) ->
-  ok.
-
-%% Make sure the application is started.  This function will succeed
-%% if the application is already started or was successfully started,
-%% something that comes in handy when we're running an erlang from a
-%% reltools-built release which has already started apps like inets.
-ensure_application_started(AppName) ->
-  %% In newer Erlang/OTP versions there are functions which would do
-  %% this for us, until older versions are dropped from edts we have
-  %% to roll our own.
-  %%
-  %% * application:ensure_started:     first appearance in R16B01
-  %% * application:ensure_all_started: first appearance in R16B02
-  case application:start(AppName) of
-    ok ->
-      ok;
-    {error, {already_started, AppName}} ->
-      ok;
-    Other ->
-      Other
+execute(Ctx) ->
+  Code = orddict:fetch(code, Ctx),
+  case edts_code:free_vars(Code) of
+    {ok, Vars}      -> {ok, [{vars, Vars}]};
+    {error, Errors} ->
+      {ok, [{errors, [format_error(Err) || Err <- Errors]}]}
   end.
 
 %%%_* Internal functions =======================================================
+
+format_error({Type, File, Line, Desc}) ->
+  [ {type, Type}
+  , {file, list_to_binary(File)}
+  , {line, Line}
+  , {description, list_to_binary(Desc)}].
+
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-

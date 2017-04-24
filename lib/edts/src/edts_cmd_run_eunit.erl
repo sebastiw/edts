@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc nodes resource
+%%% @doc run_module_eunit command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,47 +23,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_nodes).
+-module(edts_cmd_run_eunit).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1]).
-
-%% Handlers
--export([ to_json/2]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
-
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
+spec() ->
+  [nodename, module].
 
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, []}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-%% Handlers
-to_json(ReqData, Ctx) ->
-  {ok, Names} = edts:nodes(),
-  {mochijson2:encode([{nodes, Names}]), ReqData, Ctx}.
+execute(Ctx) ->
+    Node   = orddict:fetch(nodename, Ctx),
+    Module = orddict:fetch(module, Ctx),
+    {ok, {ok, Result}} = edts:call(Node, edts_eunit, run_tests, [Module]),
+    {Passed, Failed} = lists:partition(fun passed_test_p/1, Result),
+    {ok, [{passed, {array, [format_test(Test) || Test <- Passed]}},
+          {failed, {array, [format_test(Test) || Test <- Failed]}}]}.
 
 %%%_* Internal functions =======================================================
+
+passed_test_p({Type, _, _, _}) ->
+    Type =:= 'passed-test'.
+
+format_test({Type, File, Line, Desc}) ->
+  {struct, [ {type, Type}
+           , {file, list_to_binary(File)}
+           , {line, Line}
+           , {description, unicode:characters_to_binary(Desc)}]}.
+
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

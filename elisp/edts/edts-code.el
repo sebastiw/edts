@@ -146,14 +146,15 @@ of ISSUES."
      issues)
     issue-alist))
 
-(defun edts-code-eunit (result)
+(defun edts-code-eunit (&optional compilation-result)
   "Runs eunit tests for current buffer on node related to that
 buffer's project."
   (interactive '(ok))
   (-when-let (module (ferl-get-module))
     (edts-face-remove-overlays '(edts-code-eunit-passed))
     (edts-face-remove-overlays '(edts-code-eunit-failed))
-    (when (not (eq result 'error))
+    (when (or (not compilation-result)
+              (not (eq compilation-result 'error)))
       (edts-api-get-module-eunit-async
        module #'edts-code-handle-eunit-result))))
 
@@ -223,7 +224,7 @@ non-recursive."
    #'(lambda (passed-test)
        (edts-code-display-issue-overlay type
                                         'edts-face-passed-test-line
-                                        nil
+                                        nil ;; FIXME
                                         passed-test))
    passed-tests))
 

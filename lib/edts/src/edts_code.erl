@@ -34,6 +34,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
+
 -export([add_paths/1,
          compile_and_load/1,
          ensure_module_loaded/2,
@@ -219,7 +220,7 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 free_vars(Text, StartLine) ->
   case edts_syntax:free_vars(Text, StartLine) of
     {ok, _} = Res    -> Res;
-    {error, _} = Err -> format_errors(error, [{"Snippet", [Err]}])
+    {error, Errs} -> {error, format_errors(error, [{"Snippet", [Errs]}])}
   end.
 
 string_to_mfa(String0) ->
@@ -293,7 +294,6 @@ get_module_info(M, Level) ->
 
 do_get_module_info(M, basic) ->
   Info                         = erlang:get_module_info(M),
-  {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
   {ok, ModSrc}                 = get_module_source(M, Info),
   [ {module, M}
@@ -523,9 +523,32 @@ load_mod(Mod, File) ->
   end.
 
 module_modified_p(Mod, File) ->
-  ModMD5 = lists:module_info(md5),
-  {ok, {Mod, FileMD5}} = beam_lib:md5(File),
-  ModMD5 =/= FileMD5.
+  case module_modified_md5_p(Mod, File) of
+    {ok, ModifiedP} -> ModifiedP;
+    error           -> module_modified_mtime_p(Mod, File)
+  end.
+
+module_modified_md5_p(Mod, File) ->
+  case lists:keyfind(md5, 1, Mod:module_info()) of
+    {md5, ModMD5} ->
+      {ok, {Mod, FileMD5}} = beam_lib:md5(File),
+      {ok, ModMD5 =/= FileMD5};
+    false ->
+      error
+  end.
+
+module_modified_mtime_p(Mod, File) ->
+  do_module_modified_mtime_p(lists:keyfind(time, 1, Mod:module_info(compile)),
+                             file:read_file_info(File)).
+
+do_module_modified_mtime_p(false, _) ->
+  true;
+do_module_modified_mtime_p(_, {error, _}) ->
+  true;
+do_module_modified_mtime_p({time,
+                            {CYear, CMonth, CDay, CHour, CMinute, CSecond}},
+                           {ok, #file_info{mtime = MTime}}) ->
+  MTime > {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}}.
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
@@ -785,29 +808,15 @@ get_additional_includes_test_() ->
 
   {setup,
    fun() ->
-       PrevAppIncs = application:get_env(edts, app_include_dirs),
+       Env = application:get_all_env(edts),
        application:set_env(edts, app_include_dirs, AppIncDirs),
-       PrevProjIncs = application:get_env(edts, project_include_dirs),
        application:set_env(edts, project_include_dirs, ProjIncs),
-       PrevRootDir = application:get_env(edts, project_root_dir),
        application:set_env(edts, project_root_dir, Root),
-       [{prev_app_include_dirs, PrevAppIncs},
-        {prev_project_include_dirs, PrevProjIncs},
-        {prev_project_root_dir, PrevRootDir}]
+       [{prev_env, Env}]
    end,
-   fun(Cfg) ->
-       case edts_util:assoc(prev_app_include_dirs, Cfg, undefined) of
-         undefined  -> application:unset_env(edts, app_include_dirs);
-         Prev0 -> application:set_env(edts, app_include_dirs, Prev0)
-       end,
-       case edts_util:assoc(prev_project_include_dirs, Cfg, undefined) of
-         undefined  -> application:unset_env(edts, project_include_dirs);
-         Prev1 -> application:set_env(edts, project_include_dirs, Prev1)
-       end,
-       case edts_util:assoc(prev_project_root_dir, Cfg, undefined) of
-         undefined  -> application:unset_env(edts, prev_project_root_dir);
-         Prev2 -> application:set_env(edts, prev_project_root_dir, Prev2)
-       end
+   fun([{prev_env, Env}]) ->
+       [application:unset_env(edts, K) || {K, _V} <- application:get_all_env()],
+       [application:set_env(edts, K, V) || {K, V} <- Env]
    end,
    [ ?_assertEqual([], ""),
      ?_assertEqual([{i, AbsProjectInc}],
@@ -1090,6 +1099,19 @@ get_compile_outdir_test_() ->
      ]
    }].
 
+do_module_modified_mtime_p_test_() ->
+  CTime1 = {time, {1, 1, 1, 1, 1, 1}},
+  CTime2 = {time, {1, 1, 1, 1, 1, 2}},
+  MTime1 = #file_info{mtime = {{1, 1, 1}, {1, 1, 1}}},
+  MTime2 = #file_info{mtime = {{1, 1, 1}, {1, 1, 2}}},
+  [?_assert(do_module_modified_mtime_p(false, {ok, MTime1})),
+   ?_assert(do_module_modified_mtime_p(CTime1, {error, bla})),
+   ?_assert(do_module_modified_mtime_p(CTime1, {ok, MTime2})),
+   ?_assertNot(do_module_modified_mtime_p(CTime1, {ok, MTime1})),
+   ?_assertNot(do_module_modified_mtime_p(CTime2, {ok, MTime1}))
+  ].
+
+
 %%%_* Test helpers =============================================================
 
 module_source_test_ret({ok, Path}) -> edts_util:shorten_path(Path);
@@ -1102,7 +1124,7 @@ test_file_forms(File) ->
   Forms.
 
 %%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
+%% %%% Local Variables:
+%% %%% allout-layout: t
+%% %%% erlang-indent-level: 2
+%% %%% End:

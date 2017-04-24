@@ -25,8 +25,15 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
+(require 'dash)
 
-(defcustom edts-log-level 'info
+(defconst edts-log-default-level 'info)
+
+(defvar edts-log-inhibit nil)
+
+(defcustom edts-log-level (-if-let (level (getenv "EDTS_LOG_LEVEL"))
+                              (intern level)
+                            edts-log-default-level)
   "The current EDTS log-level."
   :type '(choice
 	  (const error)
@@ -42,7 +49,8 @@
   '((error   . 0)
     (warning . 1)
     (info    . 2)
-    (debug   . 3))
+    (debug   . 3)
+    (debug-2 . 4))
   "The different edts log levels.")
 
 (defun edts-log-set-level (level)
@@ -71,11 +79,16 @@
   "Log MSG at debug-level."
   (apply #'edts-log-message 'debug msg args))
 
+(defun edts-log-debug-2 (msg &rest args)
+  "Log MSG at debug-level."
+  (apply #'edts-log-message 'debug-2 msg args))
+
 (defun edts-log-message (level msg &rest args)
   "Log MSG at LEVEL"
-  (when (<= (edts-log--level-to-number level)
-            (edts-log--level-to-number edts-log-level))
-    (message (format "EDTS [%s]: %s" level (apply #'format msg args)))))
+  (when (and (not edts-log-inhibit)
+             (<= (edts-log--level-to-number level)
+                 (edts-log--level-to-number edts-log-level)))
+    (message "EDTS [%s]: %s" level (apply 'format msg args))))
 
 (defun edts-log--level-to-number (level)
   "Convert an edts-log log-level symbol to a number for comparison."

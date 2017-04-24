@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc functions resource
+%%% @doc get_module_info command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,75 +23,35 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_functions).
+-module(edts_cmd_get_function_info).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1
-        , malformed_request/2
-        , resource_exists/2]).
-
-%% Handlers
--export([to_json/2]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
-
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
+spec() ->
+  [nodename, module, function, arity].
 
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, orddict:new()}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename, module, exported]).
-
-resource_exists(ReqData, Ctx) ->
-  MFArgKeys = {edts_code, get_module_info, [module]},
-  edts_resource_lib:check_exists_and_do_rpc(ReqData, Ctx, [], MFArgKeys).
-
-to_json(ReqData, Ctx) ->
-  Exported = orddict:fetch(exported, Ctx),
-  Info     = orddict:fetch(result, Ctx),
-  {functions, Functions} = lists:keyfind(functions, 1, Info),
-  Data = format(Exported, Functions),
-  {mochijson2:encode(Data), ReqData, Ctx}.
-
-format(Exported, Functions0) ->
-  FunFun =
-    fun(Function, Acc) ->
-        case lists:keyfind(exported, 1, Function) of
-          {exported, V} when Exported =:= all orelse
-                             Exported =:= V ->
-            {value, {source, S}, Other} =
-              lists:keytake(source, 1, Function),
-            [{struct, [{source, list_to_binary(S)}|Other]}|Acc];
-          _ -> Acc
-        end
-    end,
-  Functions = lists:foldl(FunFun, [], Functions0),
-  {struct, [{functions, {array, Functions}}]}.
-
+execute(Ctx) ->
+    Node     = orddict:fetch(nodename, Ctx),
+    Module   = orddict:fetch(module, Ctx),
+    Function = orddict:fetch(function, Ctx),
+    Arity    = orddict:fetch(arity, Ctx),
+    {ok, Info} = edts:call(Node,
+                           edts_code,
+                           get_function_info,
+                           [Module, Function, Arity]),
+    {value, {source, Src}, Other} = lists:keytake(source, 1, Info),
+    {ok, {struct, [{source, list_to_binary(Src)}|Other]}}.
 
 %%%_* Internal functions =======================================================
-
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc nodes resource
+%%% @doc compile_and_load_command command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,70 +23,39 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_pretty_print).
+-module(edts_cmd_compile_and_load).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2,
-          content_types_provided/2,
-          malformed_request/2,
-          init/1]).
-
-%% Handlers
--export([ to_json/2]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
-
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
+spec() ->
+  [nodename, file].
 
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, []}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-malformed_request(ReqData, Ctx) ->
-  try
-    Str    = wrq:get_qs_value("string", ReqData),
-    {ok, AbsTerm, _} = erl_scan:string(Str ++ "."),
-    {ok, Term} = erl_parse:parse_term(AbsTerm),
-
-    Indent = list_to_integer(wrq:get_qs_value("indent", ReqData)),
-    MaxCol = list_to_integer(wrq:get_qs_value("max_column", ReqData)),
-
-    RecF = fun(_A, _N) -> no end,
-    PPString =
-      lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
-    {false, ReqData, orddict:store(return, PPString, Ctx)}
-  catch
-    _:_ -> {true, ReqData, Ctx}
-  end.
-
-%% Handlers
-to_json(ReqData, Ctx) ->
-  case orddict:find(return, Ctx) of
-    false     -> {[], ReqData, Ctx};
-    {ok, Ret} ->
-      Bin = list_to_binary(Ret),
-      {mochijson2:encode([{return, Bin}]), ReqData, Ctx}
-  end.
-
+execute(Ctx) ->
+    Node     = orddict:fetch(nodename, Ctx),
+    Filename = orddict:fetch(file, Ctx),
+    {ok, {Result, {Errors0, Warnings0}}} =
+        edts:call(Node, edts_code, compile_and_load, [Filename]),
+    Errors   = {array, [format_error(Error) || Error <- Errors0]},
+    Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
+    {ok, {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]}}.
 
 %%%_* Internal functions =======================================================
+
+format_error({Type, File, Line, Desc}) ->
+    [ {type, Type}
+    , {file, list_to_binary(File)}
+    , {line, Line}
+    , {description, list_to_binary(Desc)}].
+
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

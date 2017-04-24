@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc The edts otp-application entry-point.
+%%% @doc get_event command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,71 +23,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_app).
--behaviour(application).
+-module(edts_cmd_pretty_print).
 
 %%%_* Exports ==================================================================
 
 %% API
--export([start/0]).
-
-%% Application callbacks
--export([ start/2
-        , stop/1]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
-
 %%%_* Defines ==================================================================
-
 %%%_* Types ====================================================================
-
 %%%_* API ======================================================================
 
-%% Start the whole shebang.
-start() ->
-  %% Webmachine requirements
-  ok = ensure_application_started(inets),
-  ok = ensure_application_started(crypto),
+spec() ->
+  [string, indent, max_column].
 
-  %% Lager requirements
-  ok = ensure_application_started(compiler),
-  ok = ensure_application_started(syntax_tools),
-
-  ok = ensure_application_started(edts).
-
-
-%% Application callbacks
-start(_StartType, _Start) ->
-  edts_sup:start_link().
-
-stop(_State) ->
-  ok.
-
-%% Make sure the application is started.  This function will succeed
-%% if the application is already started or was successfully started,
-%% something that comes in handy when we're running an erlang from a
-%% reltools-built release which has already started apps like inets.
-ensure_application_started(AppName) ->
-  %% In newer Erlang/OTP versions there are functions which would do
-  %% this for us, until older versions are dropped from edts we have
-  %% to roll our own.
-  %%
-  %% * application:ensure_started:     first appearance in R16B01
-  %% * application:ensure_all_started: first appearance in R16B02
-  case application:start(AppName) of
-    ok ->
-      ok;
-    {error, {already_started, AppName}} ->
-      ok;
-    Other ->
-      Other
+execute(Ctx) ->
+  String = orddict:fetch(string, Ctx),
+  Indent = orddict:fetch(indent, Ctx),
+  MaxCol = orddict:fetch(max_column, Ctx),
+  try
+    {ok, AbsTerm, _} = erl_scan:string(String ++ "."),
+    {ok, Term} = erl_parse:parse_term(AbsTerm),
+    RecF = fun(_A, _N) -> no end,
+    PPStr =
+      lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
+    {ok, [{return, list_to_binary(PPStr)}]}
+  catch
+    _:Error -> {error, Error}
   end.
 
 %%%_* Internal functions =======================================================
 
-%%%_* Emacs ====================================================================
+%%%_* Emacs ============================================================
 %%% Local Variables:
 %%% allout-layout: t
 %%% erlang-indent-level: 2
 %%% End:
-

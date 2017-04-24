@@ -22,6 +22,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'dash)
+
 (defun edts-doc-spec-regexp (function arity)
   (format
    (concat
@@ -46,13 +48,16 @@ source in SOURCE."
 (defun edts-doc-extract-function-information (function arity)
   "Extract information (spec and comments) about FUNCTION/ARITY from
 source in current buffer."
-  (edts-search-function function arity)
-  (let* ((end (point))
-         (re  (edts-doc-any-function-regexp))
-         (start (or (and (re-search-backward re nil t) (match-end 0)) 0)))
-    (concat (edts-doc-extract-spec start end function arity)
-            "\n\n"
-            (edts-doc-extract-doc start end))))
+  (save-excursion
+    (edts-search-function function arity)
+    (let* ((end (point))
+           (re  (edts-doc-any-function-regexp))
+           (start (or (and (re-search-backward re nil t) (match-end 0)) 0))
+           (spec (edts-doc-extract-spec start end function arity))
+           (doc  (edts-doc-extract-doc start end))
+           (info (s-join "\n\n" (-non-nil (list spec doc)))))
+      (unless (s-blank? info)
+        info))))
 
 (defun edts-doc-extract-spec (start end function arity)
   "Extract spec for FUNCTION/ARITY from source in current buffer. Search
@@ -68,8 +73,8 @@ is bounded by START and END."
   "Extract documentation from source. Search is bounded by
 START and END."
   (goto-char start)
-  (let ((re "^%% @doc\\([[:ascii:]]+?\\)\\(\n[^%]\\|@end\\)"))
-    (when (re-search-forward re end t)
+  (let ((re "^%+\s*@doc\\([[:ascii:]]+?\\)\\(\n[^%]\\|@end\\)"))
+    (when (re-search-forward re (1+ end) t)
       (replace-regexp-in-string
        "\\([[:space:]]*%*[[:space:]]+\\)\\|\\([[:space:]]\{2,\}\\)+"
        " "

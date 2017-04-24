@@ -47,7 +47,7 @@
     (edts-mode t)))
 
 (defun edts-test-cleanup ()
-  (edts-log-debug "Doing test cleanup")
+  (edts-log-debug "Cleaning up after test")
   (setq edts-project-attributes nil)
   (edts-log-debug "Test cleanup done"))
 
@@ -55,6 +55,7 @@
 (defun edts-test-setup-project (project name &optional config)
   "Create project with NAME and CONFIG in ROOT."
   (let ((root (edts-test-project-directory project)))
+    (add-to-list 'edts-project-roots root)
     (edts-project-write-config (f-join root ".edts")
                                (edts-alist-add :name name config))))
 
@@ -158,7 +159,6 @@
   (kill-emacs 0))
 
 (defun edts-test-run-suites-batch ()
-  (edts-log-set-level 'error)
   (let ((all-successful 0)
         (all-failed 0)
         (all-total 0)

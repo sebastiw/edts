@@ -448,7 +448,7 @@ who_calls_test() ->
      who_calls(edts_test_module, bar, 1)),
   teardown_eunit().
 
-check_undefined_functions_calls_test() ->
+check_undefined_function_calls_test() ->
   eunit_test_init(),
   ok = start(),
   compile_and_add_test_modules(),

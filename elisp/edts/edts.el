@@ -353,11 +353,10 @@ for ARITY will give a regexp matching any arity."
 (defun edts-pretty-print-term (term-str indent max-col)
   "Pretty-print the term represented by TERM-STR, indenting it INDENT
 spaces and breaking lines at column MAX-COL."
-  (let* ((resource '("pretty_print"))
-         (rest-args `(("string" .   ,term-str)
-                      ("indent" .   ,(number-to-string indent))
-                      ("max_column" ,(number-to-string max-col))))
-         (res         (edts-rest-get resource rest-args )))
+  (let* ((rest-args `(("string" .     ,term-str)
+                      ("indent" .     ,(number-to-string indent))
+                      ("max_column" . ,(number-to-string max-col))))
+         (res         (edts-rpc-call "pretty_print" rest-args)))
     (if (equal (assoc 'result res) '(result "200" "OK"))
         (cdr (assoc 'return (cdr (assoc 'body res))))
       (null

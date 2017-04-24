@@ -101,11 +101,11 @@ spec(step_over,            1) -> [{pid, pid}].
 %% @end
 -spec break(Module :: module(),
             Line   :: non_neg_integer(),
-            Break :: true | false | toggle) -> boolean().
+            Break :: true | false | toggle) -> {ok, boolean()}.
 %%------------------------------------------------------------------------------
 break(Module, Line, Break) ->
   ensure_started(),
-  do_break(Module, Line, Break).
+  {ok, do_break(Module, Line, Break)}.
 
 do_break(Module, Line, toggle) ->
   do_break(Module, Line, not breakpoint_exists_p(Module, Line));
@@ -131,10 +131,10 @@ do_break(Module, Line, false) ->
 %% Returns true if there exists a breakpoint at Line in Module
 %% @end
 -spec breakpoint_exists_p(Module :: module(),
-                          Line   :: non_neg_integer()) -> boolean().
+                          Line   :: non_neg_integer()) -> {ok, boolean()}.
 %%------------------------------------------------------------------------------
 breakpoint_exists_p(Module, Line) ->
-  lists:keymember({Module, Line}, 1, int:all_breaks()).
+  {ok, lists:keymember({Module, Line}, 1, int:all_breaks())}.
 
 
 
@@ -144,22 +144,19 @@ breakpoint_exists_p(Module, Line) ->
 %% @doc
 %% Get all breakpoints and their status in the current interpreter
 %% @end
--spec breakpoints() -> [{ { Module :: module()
-                              , Line   :: non_neg_integer()
-                              }
-                            , Options  :: [term()]
-                            }].
+-spec breakpoints() -> {ok, [{{Module :: module(), Line :: non_neg_integer()},
+                              Options  :: [term()]}]}.
 %%------------------------------------------------------------------------------
 breakpoints() ->
   ensure_started(),
-  lists:map(fun({{Module, Line}, [Status, Trigger, null, Condition]}) ->
-                [{module,     Module},
-                 {line,      Line},
-                 {status,    Status},
-                 {trigger,   Trigger},
-                 {condition, edts_plugins:to_ret_str(Condition)}]
-            end,
-            int:all_breaks()).
+  {ok, lists:map(fun({{Module, Line}, [Status, Trigger, null, Condition]}) ->
+                     [{module,     Module},
+                      {line,      Line},
+                      {status,    Status},
+                      {trigger,   Trigger},
+                      {condition, edts_plugins:to_ret_str(Condition)}]
+                 end,
+                 int:all_breaks())}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -167,13 +164,15 @@ breakpoints() ->
 %% @end
 -spec breakpoints(Module :: module()) ->
                      [{{Module :: module(), Line   :: non_neg_integer()},
-                       Options  :: [term()]}].
+                       Options  :: {ok, [term()]}}].
 %%------------------------------------------------------------------------------
 breakpoints(Module) ->
   ensure_started(),
+  {ok, BreakPoints} = breakpoints(),
   %% int:all_breaks/1 is broken in OTP < R15.
-  lists:filter(fun(B) -> {module, Module} =:= lists:keyfind(module, 1, B) end,
-               breakpoints()).
+  {ok, lists:filter(fun(B) -> {module, Module} =:= lists:keyfind(module, 1, B)
+                    end,
+                    BreakPoints)}.
 
 
 %%------------------------------------------------------------------------------
@@ -218,10 +217,10 @@ finish(Pid) ->
 %% @doc
 %% Return a list of all of Pid's currently bound variables.
 %% @end
--spec bound_variables(pid()) -> [atom()].
+-spec bound_variables(pid()) -> {ok, [atom()]}.
 %%------------------------------------------------------------------------------
 bound_variables(Pid) ->
-  [Var || {Var, _Binding} <- get_bindings(Pid)].
+  {ok, [Var || {Var, _Binding} <- get_bindings(Pid)]}.
 
 
 %%------------------------------------------------------------------------------
@@ -230,13 +229,13 @@ bound_variables(Pid) ->
 %% strings with Indent spaces of indentantion and line breaks at MaxColumn
 %% @end
 -spec get_bindings_pretty(pid(), non_neg_integer(), non_neg_integer()) ->
-                             [{atom(), binary()}].
+                             {ok, [{atom(), binary()}]}.
 %%------------------------------------------------------------------------------
 get_bindings_pretty(Pid, Indent, MaxColumn) ->
   Fun = fun({Binding, Value}) ->
             {Binding, edts_plugins:to_ret_str(Value, Indent, MaxColumn)}
         end,
-  lists:sort(lists:map(Fun, get_bindings(Pid))).
+  {ok, lists:sort(lists:map(Fun, get_bindings(Pid)))}.
 
 
 %%------------------------------------------------------------------------------
@@ -244,7 +243,7 @@ get_bindings_pretty(Pid, Indent, MaxColumn) ->
 %% Return a list of all of Pid's current variable bindings. Unless the process
 %% is in a 'break' state, this will be [].
 %% @end
--spec get_bindings(pid()) -> [{atom(), binary()}].
+-spec get_bindings(pid()) -> {ok, [{atom(), binary()}]} | {error, term()}.
 %%------------------------------------------------------------------------------
 get_bindings(Pid) ->
   ensure_started(),
@@ -253,9 +252,9 @@ get_bindings(Pid) ->
       case process_status(ProcessState) of
         break ->
           {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
-          int:meta(Meta, bindings, nostack);
+          {ok, int:meta(Meta, bindings, nostack)};
         _ ->
-          []
+          {ok, []}
       end;
     {error, _} = Err ->
       Err
@@ -274,7 +273,7 @@ get_bindings(Pid) ->
 %%------------------------------------------------------------------------------
 interpret_module(Module, Interpret) ->
   ensure_started(),
-  do_interpret_module(Module, Interpret).
+  {ok, do_interpret_module(Module, Interpret)}.
 
 do_interpret_module(Module, toggle) ->
   do_interpret_module(Module, not module_interpreted_p(Module));
@@ -294,11 +293,11 @@ do_interpret_module(Module, false) ->
 %% @doc
 %% Return a list of all interpreted modules.
 %% @end
--spec interpreted_modules() -> [module()].
+-spec interpreted_modules() -> {ok, [module()]}.
 %%------------------------------------------------------------------------------
 interpreted_modules() ->
   ensure_started(),
-  int:interpreted().
+  {ok, int:interpreted()}.
 
 
 %%------------------------------------------------------------------------------
@@ -315,13 +314,13 @@ module_interpreted_p(Module) ->
 %% @doc
 %% Return true if Module is interpretable, false otherwise
 %% @end
--spec module_interpretable_p(module()) -> boolean().
+-spec module_interpretable_p(module()) -> {ok, boolean()}.
 %%------------------------------------------------------------------------------
 module_interpretable_p(Module) ->
   ensure_started(),
   case int:interpretable(Module) of
-    true       -> true;
-    {error, _} -> false
+    true       -> {ok, true};
+    {error, _} -> {ok, false}
   end.
 
 %%------------------------------------------------------------------------------
@@ -330,8 +329,9 @@ module_interpretable_p(Module) ->
 %% @end
 %% @see int:snapshot/0
 -spec process_state(Pid :: pid()) ->
-                       {{Module :: module(), Line :: non_neg_integer()},
-                        Options  :: [term()]}.
+                       {ok, {{Module :: module(), Line :: non_neg_integer()},
+                             Options  :: [term()]}} |
+                       {error, not_found}.
 %%------------------------------------------------------------------------------
 process_state(Pid) ->
   ensure_started(),
@@ -346,12 +346,12 @@ process_state(Pid) ->
 %% Return a list of all non terminated processes known to the debug server.
 %% @end
 %% @see int:snapshot/0
--spec processes() -> [pid()].
+-spec processes() -> {ok, [pid()]}.
 %%------------------------------------------------------------------------------
 processes() ->
   ensure_started(),
   Procs = [P || {_, _, Status, _}  = P <- int:snapshot(), Status =/= exit],
-  [format_process(P) || P <- Procs].
+  {ok, [format_process(P) || P <- Procs]}.
 
 format_process({Pid, Init, Status, Info}) ->
   orddict:from_list([{pid,      Pid},

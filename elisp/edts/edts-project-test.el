@@ -1,4 +1,4 @@
-;; edts-project.el --- Tests for edts-project.el
+;; edts-project-test.el --- Tests for edts-project.el
 ;;
 ;; Copyright 2012-2017 Thomas Järvstrand <tjarvstrand@gmail.com>
 ;;
@@ -34,8 +34,6 @@
  edts-project-suite
  ;; Setup
  (lambda ()
-   ;; (when (featurep 'uniquify)
-   ;;   (uniquify-unload-function))
    (setq edts-event-inhibit t)
    (edts-test-pre-cleanup-all-buffers)
    (edts-test-setup-project 'project-1
@@ -49,17 +47,26 @@
 
 
 (edts-test-case edts-project-suite edts-project--find-project-root-test ()
+  "Tests edts-project--find-project-root"
   (should (string= "/foo"
                    (cl-letf (((symbol-function 'f-file?)
                               (lambda (f)
                                 (or (equal f "/foo/.edts")
                                     (equal f "/foo/bar/baz/bam/.edts")))))
                      (edts-project--find-project-root "/foo/bar/baz/bam"))))
+  (should (string= "/foo/bar"
+                   (cl-letf (((symbol-function 'f-file?)
+                              (lambda (f)
+                                (or (equal f "/foo/.edts")
+                                    (equal f "/foo/bar/baz/bam/.edts")))))
+                     (let ((edts-project-roots '("/foo/bar")))
+                       (edts-project--find-project-root "/foo/bar/baz/bam")))))
   (should-not (cl-letf (((symbol-function 'f-file?)
                          (lambda (f) nil)))
                 (edts-project--find-project-root "/foo/bar/baz/bam"))))
 
 (edts-test-case edts-project-suite edts-project--find-otp-root-test ()
+  "Tests edts-project--find-project-root"
   (should (string= "/foo"
                    (cl-letf (((symbol-function 'f-exists?)
                               (lambda (f) t))

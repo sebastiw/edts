@@ -39,6 +39,11 @@
 (defvar edts-project-attributes nil
   "Alist of current attributes for all open projects")
 
+(defvar edts-project-roots nil
+  "List of directories that are to be considered the top level of a project.
+Use this if you want to override the behaviour where EDTS considers all projects
+underneath a project root to be subprojects of that super project.")
+
 (defun edts-project-name (&optional root)
   "Return current buffer's project name."
   (edts-project-attribute :name root))
@@ -61,12 +66,19 @@
 
 (defun edts-project--find-project-root (dir)
   "Try to find the top-most edts-file above current buffer's file."
-  (let ((root nil))
-    (while (not (f-root? dir))
-      (setq dir (f-dirname dir))
-      (when (f-file? (f-join dir ".edts"))
-        (setq root dir)))
-    root))
+  (if edts-project-root
+      edts-project-root
+    (let (stop
+          (roots (-map 'f-slash edts-project-roots))
+          (root nil))
+      (while (and (not stop) (not (f-root? dir)))
+        (if (-contains? roots (f-slash dir))
+            (setq root dir
+                  stop t)
+          (when (f-file? (f-join dir ".edts"))
+            (setq root dir))
+          (setq dir (f-dirname dir))))
+      root)))
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
@@ -85,6 +97,10 @@ FILE."
   (unless edts-project-root
     (setq edts-project-root (edts-project--find-root)))
   edts-project-root)
+
+(defun edts-project-refresh-root ()
+  (setq edts-project-root nil)
+  (edts-project--find-root))
 
 (defun edts-project-init (&optional dir)
   "Initializes EDTS in DIR. DIR defaults to the directory of the current

@@ -47,14 +47,14 @@
 
 assoc(K, AList) ->
   case lists:keyfind(K, 1, AList) of
-    false  -> {error, notfound};
+    false  -> {error, {notfound, K}};
     {K, V} -> {ok, V}
   end.
 
 assoc(K, AList, Default) ->
   case assoc(K, AList) of
-    {error, notfound} -> Default;
-    {ok, V}           -> V
+    {error, {notfound, _}} -> Default;
+    {ok, V}                -> V
   end.
 
 expand_code_paths("", _LibDirs) -> [];
@@ -62,7 +62,8 @@ expand_code_paths(ProjectRoot, LibDirs) ->
   RootPaths = [filename:join(ProjectRoot, "ebin"),
                filename:join(ProjectRoot, "test")],
   F = fun(Dir) -> expand_code_path(ProjectRoot, Dir) end,
-  RootPaths ++ lists:flatmap(F, LibDirs).
+  LibPaths = lists:flatmap(F, LibDirs),
+  RootPaths ++ LibPaths.
 
 expand_code_path(Root, Dir) ->
   Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,

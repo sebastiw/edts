@@ -287,15 +287,17 @@ do_init_node(ProjectName,
       lists:flatmap(fun(Plugin) -> Plugin:project_node_modules() end, Plugins),
     PluginRemoteServices =
       lists:flatmap(fun(Plugin) -> Plugin:project_node_services() end, Plugins),
-    ok = edts_dist:remote_load_modules(Node,
-                                       [edts_code,
-                                        edts_eunit,
-                                        edts_eunit_listener,
-                                        edts_event,
-                                        edts_module_server,
-                                        edts_plugins,
-                                        edts_util] ++
-                                         PluginRemoteLoad),
+
+    ModulesToLoad = [edts_code,
+                     edts_eunit,
+                     edts_eunit_listener,
+                     edts_event,
+                     edts_module_server,
+                     edts_plugins,
+                     edts_util] ++ PluginRemoteLoad,
+    edts_log:debug("Loading modules on ~p: ~p", [Node, ModulesToLoad]),
+    ok = edts_dist:remote_load_modules(Node, ModulesToLoad),
+
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
     AppEnv = [{server_node,          node()},
               {project_lib_dirs,     LibDirs},
@@ -304,7 +306,10 @@ do_init_node(ProjectName,
               {project_root_dir,     ProjectRoot},
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
+
+    edts_log:debug("Initalizing ~p with environment: ~p", [Node, AppEnv]),
     edts_dist:init_node(Node, AppEnv),
+
     start_services(Node, [edts_code] ++ PluginRemoteServices)
   catch
     C:E ->

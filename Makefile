@@ -53,7 +53,7 @@ test-projects:
 
 .PHONY: clean-test-projects
 clean-test-projects:
-	$(MAKE) -C test/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)" clean
+	find test -name *.beam -delete
 
 .PHONY: test
 test: all test-edts ert integration-tests $(PLUGINS:%=test-%)

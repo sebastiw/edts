@@ -23,36 +23,38 @@
 ;; Paths
 (require 'cl)
 (require 'f)
+(require 's)
 
 (require 'edts)
-(require 'edts-rest)
 
 (defconst edts-plugin-directory
   (f-join (file-name-directory edts-root-directory) "plugins")
   "Directory where edts plugins are located.")
 (add-to-list 'load-path edts-plugin-directory)
 
-(defun edts-plugin-names ()
-  "Return a list of the namees of all available plugins."
+(defconst edts-plugin-names
   (loop for (file dirp . rest)
        in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
        when dirp
-       collect file))
+       collect file)
+  "a list of the names of all available plugins.")
 
 (defcustom edts-plugin-disabled-plugins nil
   "List of disabled plugins."
   :type (cons 'set
               (mapcar #'(lambda (plugin) (list 'const plugin))
-                      (edts-plugin-names)))
+                      edts-plugin-names))
   :group 'edts)
 
 (defun edts-plugin-init-all ()
   "Initialize available plugins."
-  (mapc #'edts-plugin-init (edts-plugin-names)))
+  (mapc #'edts-plugin-init edts-plugin-names))
 
 (defun edts-plugin-load-tests ()
   "Load test-files for all plugins."
-  (mapc #'edts-plugin--load-plugin-tests (edts-plugin-names)))
+  (mapc #'edts-plugin--load-plugin-tests '("edts_xref"))
+  ;; (mapc #'edts-plugin--load-plugin-tests edts-plugin-names)
+  )
 
 (defun edts-plugin--load-plugin-tests (plugin)
   "Load test-files for all plugins."
@@ -85,11 +87,13 @@
 (defun edts-plugin-call (node plugin method &optional args)
   "Call PLUGIN's rpc method METHOD with ARGS on NODE."
   (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
-  (let* ((resource `("nodes"   ,node
-                     "plugins" ,(symbol-name plugin)
-                     ,(symbol-name method)))
-         (reply      (edts-rest-post resource args))
-         (body       (cdr (assoc 'body reply))))
+  (let* ((resource (s-join "/"
+                           (list "plugins"
+                                 (symbol-name plugin)
+                                 (symbol-name method))))
+         (args     (cons (cons "node" node) args))
+         (reply    (edts-rpc-call resource args))
+         (body     (cdr (assoc 'body reply))))
     (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
         (prog1 nil
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
@@ -103,10 +107,12 @@
   "Call PLUGIN's rpc method METHOD with ARGS on NODE asynchronously. Calling
 CB with the result when request terminates."
   (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
-  (let* ((resource `("nodes"   ,node
-                     "plugins" ,(symbol-name plugin)
-                     ,(symbol-name method))))
-    (edts-rest-post-async resource
+  (let* ((resource (s-join "/"
+                           (list "plugins"
+                                 (symbol-name plugin)
+                                 (symbol-name method))))
+         (args     (cons (cons "node" node) args)))
+    (edts-rpc-call-async resource
                           args
                           'edts-plugin-call-async-callback
                           (list cb cb-args))))

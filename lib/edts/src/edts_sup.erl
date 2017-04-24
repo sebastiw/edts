@@ -35,8 +35,6 @@
 
 -export([dispatch/0]).
 
--define(EDTS_PORT, 4587).
-
 %% Helper macro for declaring children of supervisor
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
@@ -52,15 +50,8 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-
-  WebmConf = [{port,     ?EDTS_PORT},
-              {dispatch, dispatch()}],
-  WemachineRouter = child_spec(webmachine_router),
-  Webmachine      = {webmachine_mochiweb,
-                     {webmachine_mochiweb, start, [WebmConf]},
-                     permanent, 5000, worker, [webmachine_mochiweb]},
+  Mochiweb        = child_spec(edts_mochiweb),
   Edts            = child_spec(edts_server),
-
 
   Formatters0     = lists:flatmap(fun edts_plugins:event_formatters/1,
                                   edts_plugins:names()),
@@ -72,7 +63,7 @@ init([]) ->
                                   edts_plugins:names()),
   PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
 
-  Children = [EdtsEvent, Edts, WemachineRouter, Webmachine] ++ PluginSpecs,
+  Children = [EdtsEvent, Edts, Mochiweb] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 

@@ -197,4 +197,15 @@
                    (!edts-alist-store-in '(:bar :foo) "foo" 'alist)))
     (should (equal '((:bar . ((:foo . "foo")))) alist))))
 
+(edts-test-case edts-alist-suite edts-alist-filter ()
+  "Test edts-alist-filter"
+  (should (equal nil (edts-alist-filter (lambda (k v) t) nil)))
+  (should (equal nil (edts-alist-filter (lambda (k v) nil) nil)))
+
+  (should (equal '((a . b)) (edts-alist-filter (lambda (k v) nil) '((a . b)))))
+  (should (equal nil (edts-alist-filter (lambda (k v) t) '((a . b)))))
+
+  (should (equal '((a . b)) (edts-alist-filter (lambda (k v) (equal v 'e))
+                                               '((a . b) (c . e) (d . e)))))
+  (should (equal nil (edts-alist-filter (lambda (k v) t) '((a . b))))))
 (provide 'edts-alist-test)

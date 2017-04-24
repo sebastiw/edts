@@ -53,11 +53,10 @@
 
 -define(SERVER, ?MODULE).
 
--ifdef(namespaced_types).
--type edts_queue() :: queue:queue().
--else.
--type edts_queue() :: queue().
--endif.
+%% Really a queue:queue() but that doesn't compile in older OTP releases and the
+%% and the compiler ifdef that was here earlier was causing problem in the
+%% travis build environment.
+-type edts_queue() :: any().
 
 -record(state,
         {events     = queue:new() :: edts_queue(),
@@ -95,7 +94,7 @@ state() ->
   gen_server:call({global, ?SERVER}, state).
 
 %% gen_server callbacks.
-%%----------------------------------------a--------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc Starts the server.
 -spec start_link([{class(), module()} | {{class(), type()}, module()}]) ->
                     {ok, pid} | ignore | {error,term()}.

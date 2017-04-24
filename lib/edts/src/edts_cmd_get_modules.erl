@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc nodes resource
+%%% @doc get_modules command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,53 +23,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_event).
+-module(edts_cmd_get_modules).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1]).
-
-%% Handlers
--export([ to_json/2]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
-
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
+spec() ->
+  [nodename].
 
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, []}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-%% Handlers
-to_json(ReqData, Ctx) ->
-  try
-    {ok, Event} = edts_event:listen(),
-    {mochijson2:encode([{event, Event}]), ReqData, Ctx}
-  catch
-    C:E ->
-      edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
-                     [C,E, erlang:get_stacktrace()]),
-      to_json(ReqData, Ctx)
-  end.
-
+execute(Ctx) ->
+    Node = orddict:fetch(nodename, Ctx),
+    edts:call(Node, edts_code, modules, []).
 
 %%%_* Internal functions =======================================================
 

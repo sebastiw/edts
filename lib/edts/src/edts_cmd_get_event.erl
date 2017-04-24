@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc modules resource
+%%% @doc get_event command
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -23,58 +23,34 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%_* Module declaration =======================================================
--module(edts_resource_modules).
+-module(edts_cmd_get_event).
 
 %%%_* Exports ==================================================================
 
 %% API
-%% Webmachine callbacks
--export([ allowed_methods/2
-        , content_types_provided/2
-        , init/1
-        , malformed_request/2
-        , resource_exists/2]).
-
-%% Handlers
--export([to_json/2]).
+-export([spec/0,
+         execute/1]).
 
 %%%_* Includes =================================================================
--include_lib("webmachine/include/webmachine.hrl").
-
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
+spec() ->
+  [].
 
-%% Webmachine callbacks
-init(_Config) ->
-  edts_log:debug("Call to ~p", [?MODULE]),
-  {ok, orddict:new()}.
-
-allowed_methods(ReqData, Ctx) ->
-  {['GET'], ReqData, Ctx}.
-
-content_types_provided(ReqData, Ctx) ->
-  Map = [ {"application/json", to_json}
-        , {"text/html",        to_json}
-        , {"text/plain",       to_json}],
-  {Map, ReqData, Ctx}.
-
-malformed_request(ReqData, Ctx) ->
-  edts_resource_lib:validate(ReqData, Ctx, [nodename]).
-
-resource_exists(ReqData, Ctx) ->
-  {edts_resource_lib:exists_p(ReqData, Ctx, [nodename]), ReqData, Ctx}.
-
-%% Handlers
-
-to_json(ReqData, Ctx) ->
-  Node = orddict:fetch(nodename, Ctx),
-  {ok, Modules} = edts:call(Node, edts_code, modules),
-  {mochijson2:encode(Modules), ReqData, Ctx}.
+execute(Ctx) ->
+    try
+        {ok, Event} = edts_event:listen(),
+        {ok, [{event, Event}]}
+    catch
+        C:E ->
+            edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
+                           [C,E, erlang:get_stacktrace()]),
+            execute(Ctx)
+    end.
 
 %%%_* Internal functions =======================================================
-
 
 %%%_* Emacs ============================================================
 %%% Local Variables:

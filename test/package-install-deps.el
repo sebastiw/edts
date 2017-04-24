@@ -22,18 +22,22 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'cl-lib)
 (require 'package)
 
-(defun edts-pkg-deps ()
-  (let (package-alist)
-    (load-library "edts-pkg")
-    (package-desc-reqs (cdr (assoc 'edts package-alist)))))
-
-(let ((deps (edts-pkg-deps)))
-  (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
-                         ("marmalade" . "http://marmalade-repo.org/packages/")
+(setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
+                         ("marmalade" . "https://marmalade-repo.org/packages/")
                          ("melpa" . "http://melpa.milkbox.net/packages/")))
-  (package-initialize)
-  (package-refresh-contents)
-  (let ((deps (delete "edts" (package-compute-transaction '("edts") deps))))
-    (package-download-transaction deps)))
+(package-initialize)
+(package-refresh-contents)
+
+(let* ((pkg-dir (concat (file-name-directory
+                         (or load-file-name buffer-file-name))
+                        ".."))
+       (pkg-desc (package-load-descriptor (expand-file-name pkg-dir)))
+       (pkgs     (package-compute-transaction (list pkg-desc)
+                                              (package-desc-reqs pkg-desc)))
+       (reqs     (cl-remove-if (lambda (p)
+                                 (and p (equal (package-desc-name p) 'edts)))
+                               pkgs)))
+  (package-download-transaction reqs))

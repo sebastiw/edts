@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc Wrapper for lager.
+%%% @doc Logging intrastructure
 %%% @end
 %%% @author Thomas Järvstrand <tjarvstrand@gmail.com>
 %%% @copyright
@@ -28,36 +28,62 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([debug/2,
+-export([debug/1,
+         debug/2,
+         info/1,
          info/2,
-         notice/2,
+         warning/1,
          warning/2,
+         error/1,
          error/2,
-         critical/2,
-         alert/2,
-         emergency/2,
 
+         log/3,
+
+         get_log_level/0,
          set_log_level/1]).
+
+-compile({no_auto_import,[error/2]}).
 
 %%%_* Includes =================================================================
 
 %%%_* Defines ==================================================================
 
+-define(log_levels, [{debug, 4},
+                     {info, 3},
+                     {warning, 2},
+                     {error, 1}]).
+
 %%%_* Types ====================================================================
 
 %%%_* API ======================================================================
-debug(    Fmt, Args) -> lager:debug(    Fmt, Args).
-info(     Fmt, Args) -> lager:info(     Fmt, Args).
-notice(   Fmt, Args) -> lager:notice(   Fmt, Args).
-warning(  Fmt, Args) -> lager:notice(   Fmt, Args).
-error(    Fmt, Args) -> lager:error(    Fmt, Args).
-critical( Fmt, Args) -> lager:critical( Fmt, Args).
-alert(    Fmt, Args) -> lager:alert(    Fmt, Args).
-emergency(Fmt, Args) -> lager:emergency(Fmt, Args).
+debug(    Fmt)       -> debug(Fmt, []).
+debug(    Fmt, Args) -> log(debug, Fmt, Args).
+info(     Fmt)       -> info(Fmt, []).
+info(     Fmt, Args) -> log(info, Fmt, Args).
+warning(  Fmt)       -> warning(Fmt, []).
+warning(  Fmt, Args) -> log(warning, Fmt, Args).
+error(    Fmt)       -> error(Fmt, []).
+error(    Fmt, Args) -> log(error, Fmt, Args).
 
-set_log_level(Level) -> lager:set_loglevel(lager_console_backend, Level).
+log(Level, Fmt, Args) ->
+  case should_log_p(Level) of
+    true  -> io:format("[~p] ~s~n", [Level, io_lib:format(Fmt, Args)]);
+    false -> ok
+  end.
+
+get_log_level() ->
+  case application:get_env(edts, log_level) of
+    {ok, Lvl} -> Lvl;
+    undefined -> info
+  end.
+
+set_log_level(Level) -> application:set_env(edts, log_level, Level).
 
 %%%_* Internal functions =======================================================
+
+should_log_p(Level) ->
+  proplists:get_value(get_log_level(), ?log_levels) >=
+    proplists:get_value(Level, ?log_levels).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

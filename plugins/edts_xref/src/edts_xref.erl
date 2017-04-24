@@ -66,21 +66,21 @@ spec(who_calls, 3) -> [{module,   atom},
 
 analyze(Modules, Checks) ->
   Res = edts_xref_server:check_modules(Modules, Checks),
-  [[{type, Type},
-    {file, list_to_binary(File)},
-    {line, Line},
-    {description, list_to_binary(Desc)}] ||
-    {Type, File, Line, Desc} <- Res].
+  {ok, [[{type, Type},
+         {file, list_to_binary(File)},
+         {line, Line},
+         {description, list_to_binary(Desc)}] ||
+         {Type, File, Line, Desc} <- Res]}.
 
 start() -> edts_xref_server:start().
 
 who_calls(Module, Function, Arity) ->
   Res = edts_xref_server:who_calls(Module, Function, Arity),
-  [[{module,   M},
-    {function, F},
-    {arity,    A},
-    {lines, Lines}] ||
-    {{M, F, A}, Lines} <- Res].
+  {ok, [[{module,   M},
+         {function, F},
+         {arity,    A},
+         {lines, Lines}] ||
+         {{M, F, A}, Lines} <- Res]}.
 
 %%%_* INTERNAL functions =======================================================
 
