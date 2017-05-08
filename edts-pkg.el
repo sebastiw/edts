@@ -22,12 +22,11 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(define-package "edts" "1.0.0" "Erlang Development Tool Suite"
+(define-package "edts" "1.1.0" "Erlang Development Tool Suite"
   '((auto-complete         "1.3.1")
     (auto-highlight-symbol "1.53")
-    (dash                  "1.5.0")
-    (eproject              "1.5")
+    (dash                  "2.13")
     (erlang                "2.4.1")
-    (f                     "0.16.0")
+    (f                     "0.19.0")
     (popup                 "0.4")
-    (s                     "1.9.0")))
+    (s                     "1.11.0")))

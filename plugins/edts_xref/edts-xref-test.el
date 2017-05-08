@@ -15,10 +15,16 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
-;; xref interaction code for EDTS
+;; Tests for xref interaction code for EDTS
+
+(require 'cl-lib)
+
 (require 'edts-api)
 (require 'edts-test)
 (require 'edts-xref)
+
+(defun edts-xref-test-testcase-init ()
+  (edts-test-post-cleanup-all-buffers))
 
 (edts-test-add-suite
  ;; Name
@@ -27,67 +33,63 @@
  (lambda ()
    (setq edts-event-inhibit t)
    (edts-test-pre-cleanup-all-buffers)
-   (edts-test-setup-project edts-test-project1-directory
-                            "test"
-                            nil)
-   (edts-rest-force-sync t))
+   (edts-test-setup-project 'project-1 "test"))
 
  ;; Teardown
  (lambda (setup-config)
    (setq edts-event-inhibit nil)
-   (edts-test-teardown-project edts-test-project1-directory)
-   (edts-test-post-cleanup-all-buffers)
-   (edts-rest-force-sync nil)))
+   (edts-test-teardown-project 'project-1)
+   (edts-test-post-cleanup-all-buffers)))
 
 (edts-test-case edts-xref-suite edts-xref-analysis-test ()
   "Basic xref analysis setup test"
-  (flet ((edts-node-down-request () nil))
-    (let ((edts-api-async-node-init nil))
-      (find-file (car (edts-test-project1-modules)))
-      (edts-xref-module-analysis-async '("one"))
-      (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
-                                'error)))
-        (should (equal (length errors) 2))
-        (should (equal (cdr (assoc 'line (car errors))) 24))
-        (should (string= (cdr (assoc 'type (car errors))) "error"))
-        (should (string= (cdr (assoc 'file (car errors)))
-                         (file-truename (buffer-file-name))))))))
+  (let (edts-code-buffer-issues
+        (edts-api-async-node-init nil))
+    (edts-test-find-project-module 'project-1 'one)
+    (edts-xref-module-analysis-async '("one"))
+    (let* ((errors (edts-test-wait-for 'edts-xref-errors))
+           (file   (cdr (assoc 'file (car errors)))))
+      (should (equal (length errors) 2))
+      (should (equal (cdr (assoc 'line (car errors))) 24))
+      (should (string= (cdr (assoc 'type (car errors))) "error"))
+      (should (or (string= file (buffer-file-name))
+                  (string= file (file-truename (buffer-file-name))))))))
 
 (edts-test-case edts-xref-suite edts-xref-error-whitelist-test ()
-  "Basic xref analysis setup test"
-  (flet ((edts-node-down-request () nil))
-    (let ((edts-api-async-node-init nil))
-      (find-file (car (edts-test-project1-modules)))
-      (edts-project-set-attribute (eproject-root) :xref-error-whitelist '("two"))
-      (edts-xref-module-analysis-async '("one"))
-      (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
-                                'error)))
-        (should (equal (length errors) 1))))))
+  "Tests xref whitelisting of calls"
+  (edts-xref-test-testcase-init)
+  (let (edts-code-buffer-issues
+        (edts-api-async-node-init nil))
+    (edts-test-find-project-module 'project-1 'one)
+    (edts-project-set-attribute :xref-error-whitelist '("two"))
+    (edts-xref-module-analysis-async '("one"))
+    (let* ((errors (edts-test-wait-for 'edts-xref-errors)))
+      (should (equal (length errors) 1)))))
 
 (edts-test-case edts-xref-suite edts-xref-file-whitelist-test ()
   "Basic xref analysis setup test"
-  (flet ((edts-node-down-request () nil))
-    (let ((edts-api-async-node-init nil))
-      (find-file (car (edts-test-project1-modules)))
-      (edts-project-set-attribute (eproject-root) :xref-file-whitelist '("one.erl"))
-      (edts-xref-module-analysis-async '("one"))
-      (let* ((errors (plist-get (plist-get edts-code-buffer-issues 'edts-xref)
-                                'error)))
-        (should (equal (length errors) 0))))))
+  (edts-xref-test-testcase-init)
+  (let ((edts-api-async-node-init nil))
+    (edts-test-find-project-module 'project-1 'one)
+    (edts-project-set-attribute :xref-file-whitelist '("one.erl"))
+    (edts-xref-module-analysis-async '("one"))
+    (let* (edts-code-buffer-issues)
+      (edts-test-wait-for 'edts-code-buffer-issues)
+      (should (equal (length (edts-xref-errors)) 0)))))
 
 (edts-test-case edts-xref-suite edts-xref-who-calls-test ()
   "Basic project setup test"
-  (flet ((edts-node-down-request () nil))
-    (let ((edts-api-async-node-init nil))
-      (find-file (car (edts-test-project1-modules)))
-      (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
-             (caller   (car callers))
-             (module   (cdr (assoc 'module caller)))
-             (function (cdr (assoc 'function caller)))
-             (arity    (cdr (assoc 'arity caller)))
-             (lines    (cdr (assoc 'lines caller))))
-        (should (equal (length callers) 1))
-        (should (equal module "one"))
-        (should (equal function "one"))
-        (should (equal arity 1))))))
+  (edts-xref-test-testcase-init)
+  (let ((edts-api-async-node-init nil))
+    (edts-test-find-project-module 'project-1 'one)
+    (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
+           (caller   (car callers))
+           (module   (cdr (assoc 'module caller)))
+           (function (cdr (assoc 'function caller)))
+           (arity    (cdr (assoc 'arity caller)))
+           (lines    (cdr (assoc 'lines caller))))
+      (should (equal (length callers) 1))
+      (should (equal module "one"))
+      (should (equal function "one"))
+      (should (equal arity 1)))))
 

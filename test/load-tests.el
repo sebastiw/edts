@@ -17,26 +17,22 @@
 ;;
 ;; Test loading library for edts.
 
+(require 'package)
+(package-initialize)
 
-(defvar edts-dir (file-name-directory (directory-file-name
-                                       (file-name-directory load-file-name))))
+(require 'f)
 
-(dolist (file
-         (directory-files
-          (expand-file-name "elisp" edts-dir) t "^[^.]"))
-  (when (file-directory-p file)
-    (add-to-list 'load-path file)))
+(defvar edts-dir (f-dirname (f-dirname (f-this-file))))
+
+(dolist (file (f-directories (f-join edts-dir "elisp")))
+  (add-to-list 'load-path file))
 (add-to-list 'load-path (directory-file-name edts-dir))
-
-(when (>= emacs-major-version 24)
-  (require 'package)
-  (package-initialize))
 
 (require 'edts-mode)
 
-(dolist (file (directory-files (f-join edts-dir "elisp" "edts") t "-test\\.el$"))
+(dolist (file (f-glob (f-join edts-dir "elisp" "edts" "*-test.el")))
   ;; avoid symlinks created as emacs backups
-  (when (not (file-symlink-p file))
+  (when (not (f-symlink? file))
     (load file)))
 
 (require 'edts-test)

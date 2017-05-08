@@ -62,14 +62,20 @@ malformed_request(ReqData, Ctx0) ->
     Method  = ?l2a((wrq:path_info(method, ReqData))),
     Params0 = wrq:req_qs(ReqData),
     Arity   = length(Params0),
-    Params  = convert_params(Params0, Plugin:spec(Method, Arity)),
+    Spec = try Plugin:spec(Method, Arity)
+           catch error:function_clause ->
+               edts_log:error("Undefined function ~p:~p/~p",
+                              [Plugin, Method, Arity]),
+               throw({undefined_function, {Method, Arity}})
+           end,
+    Params  = convert_params(Params0, Spec),
     Ctx = [{node,   Node},
            {plugin, Plugin},
            {method, Method},
            {params, Params}],
     {false, ReqData, orddict:from_list(Ctx)}
   catch
-    _ -> {true, ReqData, Ctx0}
+    _:_ -> {true, ReqData, Ctx0}
   end.
 
 resource_exists(ReqData, Ctx) ->
@@ -85,7 +91,8 @@ resource_exists(ReqData, Ctx) ->
     assert(method, erlang:function_exported(Plugin, Method, Arity)),
     {true, ReqData, Ctx}
   catch
-    _ -> {false, ReqData, Ctx}
+    _ ->
+      {false, ReqData, Ctx}
   end.
 
 allow_missing_post(ReqData, Ctx) ->

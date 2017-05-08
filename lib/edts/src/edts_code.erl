@@ -120,7 +120,7 @@ compile_and_load(File0, Opts) ->
            false -> File0
          end,
   OutDir  = get_compile_outdir(File0),
-  reload_if_newer(File0, OutDir),
+  reload_if_modified(File0, OutDir),
   OldOpts = extract_compile_opts(File),
 
   AdditionalIncludes = get_additional_includes(filename:dirname(File), OldOpts),
@@ -295,11 +295,9 @@ do_get_module_info(M, basic) ->
   Info                         = erlang:get_module_info(M),
   {compile, Compile}           = lists:keyfind(compile, 1, Info),
   {exports, Exports}           = lists:keyfind(exports, 1, Info),
-  {time, {Y, Mo, D, H, Mi, S}} = lists:keyfind(time,    1, Compile),
   {ok, ModSrc}                 = get_module_source(M, Info),
   [ {module, M}
   , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
-  , {time, {{Y, Mo, D}, {H, Mi, S}}}
   , {source, ModSrc}];
 do_get_module_info(M, detailed) ->
   {M, Bin, _File}                   = code:get_object_code(M),
@@ -488,19 +486,19 @@ maybe_reload(Mod, File) ->
     false -> false
   end.
 
-reload_if_newer(SrcFile, OutDir) ->
+reload_if_modified(SrcFile, OutDir) ->
   ModuleName = filename:basename(SrcFile, ".erl"),
   Beam = filename:join([OutDir, ModuleName ++ ".beam"]),
   Module = list_to_atom(ModuleName),
 
   case code:is_loaded(Module) of
     {file, _Loaded} ->
-      do_reload_if_newer(Module, Beam);
+      do_reload_if_modified(Module, Beam);
     false ->
       false
   end.
 
-do_reload_if_newer(Module, Beam) ->
+do_reload_if_modified(Module, Beam) ->
   case module_modified_p(Module, Beam) of
     true ->
       try_load_mod(Module, Beam);
@@ -525,17 +523,9 @@ load_mod(Mod, File) ->
   end.
 
 module_modified_p(Mod, File) ->
-  do_module_modified_p(lists:keyfind(time, 1, Mod:module_info(compile)),
-                       file:read_file_info(File)).
-
-do_module_modified_p(false, _MTime)                         -> true;
-do_module_modified_p(_CTime, {error, _})                    -> true;
-do_module_modified_p(CTime, {ok, #file_info{mtime = MTime}}) ->
-  {time, {CYear, CMonth, CDay, CHour, CMinute, CSecond}} = CTime,
-  [UniversalMTime] = calendar:local_time_to_universal_time_dst(MTime),
-  CompileTime = {{CYear, CMonth, CDay}, {CHour, CMinute, CSecond}},
-  calendar:datetime_to_gregorian_seconds(UniversalMTime) >
-    calendar:datetime_to_gregorian_seconds(CompileTime).
+  ModMD5 = lists:module_info(md5),
+  {ok, {Mod, FileMD5}} = beam_lib:md5(File),
+  ModMD5 =/= FileMD5.
 
 get_compile_outdir(File) ->
   Mod  = list_to_atom(filename:basename(filename:rootname(File))),
@@ -834,40 +824,6 @@ get_additional_includes_test_() ->
                    get_additional_includes(SrcDir,
                                           [{i, filename:join(AppDir, "foo")}]))
    ]}.
-
-do_module_modified_p_test_() ->
-  Now = calendar:local_time(),
-  {{Year, Month, Day}, {Hour, Minute, Second} = Time} = Now,
-
-  NowMTime = #file_info{mtime = Now},
-  NowCTime = {time, {Year, Month, Day, Hour, Minute, Second}},
-
-  FutureMTime = #file_info{mtime = {{Year + 1, Month, Day}, Time}},
-  FutureCTime = {time, {Year + 1, Month, Day, Hour, Minute, Second}},
-
-  PastMTime = #file_info{mtime = {{Year - 1, Month, Day}, Time}},
-  PastCTime = {time, {Year - 1, Month, Day, Hour, Minute, Second}},
-
-  [ ?_assert(do_module_modified_p(false, {ok, PastMTime})),
-    ?_assert(do_module_modified_p(false, {ok, NowMTime})),
-    ?_assert(do_module_modified_p(false, {ok, FutureMTime})),
-
-    ?_assert(do_module_modified_p(PastCTime, {error, foo})),
-    ?_assert(do_module_modified_p(NowCTime, {error, foo})),
-    ?_assert(do_module_modified_p(FutureCTime, {error, foo})),
-
-    ?_assertNot(do_module_modified_p(PastCTime, {ok, PastMTime})),
-    ?_assert(do_module_modified_p(PastCTime, {ok, NowMTime})),
-    ?_assert(do_module_modified_p(PastCTime, {ok, FutureMTime})),
-
-    ?_assertNot(do_module_modified_p(NowCTime, {ok, PastMTime})),
-    ?_assertNot(do_module_modified_p(NowCTime, {ok, NowMTime})),
-    ?_assert(do_module_modified_p(NowCTime, {ok, FutureMTime})),
-
-    ?_assertNot(do_module_modified_p(FutureCTime, {ok, PastMTime})),
-    ?_assertNot(do_module_modified_p(FutureCTime, {ok, NowMTime})),
-    ?_assertNot(do_module_modified_p(FutureCTime, {ok, FutureMTime}))
-  ].
 
 string_to_mfa_test_() ->
   [ ?_assertEqual({ok, [{function, foo}, {arity, 0}]},
