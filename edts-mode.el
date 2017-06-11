@@ -103,6 +103,7 @@
          (file-name-directory (f-canonical edts-erl-command)))))
   "Location of the Erlang root directory")
 
+
 (require 'edts)
 (require 'edts-api)
 (require 'edts-code)
