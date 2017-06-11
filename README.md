@@ -3,7 +3,7 @@
                       ______    ____| $$ _| $$_     _______
                      /      \  /      $$|   $$ \   /       \
                     |  $$$$$$\|  $$$$$$$ \$$$$$$  |  $$$$$$$
-                    | $$    $$| $$  | $$  | $$ __  \$$    \
+                    | $$    $$| $$  | $$  | $$ __  \$$    \
                     | $$$$$$$$| $$__| $$  | $$|  \ _\$$$$$$\
                      \$$     \ \$$    $$   \$$  $$|       $$
                       \$$$$$$$  \$$$$$$$    \$$$$  \$$$$$$$
@@ -198,6 +198,12 @@ An easy way is to load edts-start:
 
 
 That should be all it takes. If it's not, please report any issues on github.
+
+## Multiuser systems ##
+
+For EDTS to work in multiuser systems, each user needs to configure
+the environment variable EDTS_PORT to something unique. It defaults to
+4587, which is the port that the *edts* node listens on.
 
 ## Backward compatibility note ##
 

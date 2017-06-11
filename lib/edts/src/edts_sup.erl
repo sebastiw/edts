@@ -35,7 +35,7 @@
 
 -export([dispatch/0]).
 
--define(EDTS_PORT, 4587).
+-define(EDTS_PORT_DEFAULT, "4587").
 
 %% Helper macro for declaring children of supervisor
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
@@ -79,15 +79,17 @@ init([]) ->
 %%%_* Internal functions =======================================================
 
 configured_port() ->
-  PortFile = filename:join(code:priv_dir(edts), "port.conf"),
-  case file:consult(PortFile) of
-    {ok, Terms} ->
-      {edts_port, Port} = lists:keyfind(edts_port, 1, Terms),
-      edts_log:debug("Using EDTS port ~p from file.", [Port]),
-      Port;
-    _ ->
-      edts_log:debug("Using standard EDTS port ~p.", [?EDTS_PORT]),
-      ?EDTS_PORT
+  Port = getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
+  edts_log:debug("Using EDTS port ~p from file.", [Port]),
+  list_to_integer(Port).
+
+%%% TODO: Remove this function when dropping R17 support. Use os:getenv/2.
+getenv(Variable, Default) ->
+  case os:getenv(Variable) of
+    false ->
+      Default;
+    Value ->
+      Value
   end.
 
 child_spec(Name) ->

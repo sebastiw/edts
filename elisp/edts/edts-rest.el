@@ -39,31 +39,14 @@
 
 (defconst edts-rest-content-type-hdr '("Content-Type" . "application/json"))
 
-(defvar edts-rest-final-port nil)
-(make-variable-buffer-local 'edts-rest-final-port)
 
 (defun edts-rest-get-port ()
-  "Will try to open the file specified by `edts-port-file' fetching
-the port settings. Will return the port used by edts rest api, either
-the port from the file or `edts-rest-default-port'."
-  (if edts-rest-final-port edts-rest-final-port
-    (if (file-exists-p edts-port-file)
-        (let* ((file-string (with-temp-buffer
-                              (insert-file-contents edts-port-file)
-                              (buffer-string)))
-               (extracted-port (edts-rest-extract-port-regexp file-string)))
-          (setq edts-rest-final-port
-                (if extracted-port extracted-port edts-rest-default-port)))
-      edts-rest-default-port)))
-
-(defun edts-rest-extract-port-regexp (buffer-string)
-  "Return the port number extracted from a string."
-  (let ((buffer-string-no-spaces
-         (replace-regexp-in-string "[[:space:]]*" "" buffer-string)))
-    (when (string-match "{edts_port,\\([0-9]+\\)}." buffer-string-no-spaces)
-      (string-to-number (substring buffer-string-no-spaces
-                                   (match-beginning 1)
-                                   (match-end 1))))))
+  "Return the value for the environment variable EDTS_PORT if it is configured.
+ Otherwise return the value `edts-rest-default-port'"
+  (let ((edts-port-env (getenv "EDTS_PORT")))
+    (if edts-port-env
+        edts-port-env
+      edts-rest-default-port))
 
 (defun edts-rest-get (resource args &optional body)
   "Send a get request to RESOURCE with ARGS with optional BODY."
