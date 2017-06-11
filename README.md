@@ -203,7 +203,8 @@ That should be all it takes. If it's not, please report any issues on github.
 
 For EDTS to work in multiuser systems, each user needs to configure
 the environment variable EDTS_PORT to something unique. It defaults to
-4587, which is the port that the *edts* node listens on.
+4587, which is the port that the REST-interface of which the EDTS-node
+listens on.
 
 ## Backward compatibility note ##
 
@@ -221,7 +222,7 @@ projects, then EDTS will automatically fire up the corresponding project node
 and initiate communication between the EDTS-node and the project-node. If a node
 with the same name as the project's node is already registered with the Erlang
 port mapper daemon (epmd), then EDTS will initiate communication with that node
-instead. The EDTS node exposes a REST-interface (using webmachine) through which
+instead. The EDTS-node exposes a REST-interface (using webmachine) through which
 emacs can then communicate with the project node.
 
 ## EDTS and Distel ##
