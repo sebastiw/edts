@@ -46,7 +46,7 @@
   (let ((edts-port-env (getenv "EDTS_PORT")))
     (if edts-port-env
         edts-port-env
-      edts-rest-default-port))
+      edts-rest-default-port)))
 
 (defun edts-rest-get (resource args &optional body)
   "Send a get request to RESOURCE with ARGS with optional BODY."
