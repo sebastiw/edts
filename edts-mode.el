@@ -4,6 +4,9 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(when (< emacs-major-version 24)
+    (error "EDTS requires Emacs >= 24.0"))
+
 ;; Prerequisites
 (require 'auto-highlight-symbol)
 (require 'erlang)
@@ -112,6 +115,13 @@
 (require 'edts-log)
 (require 'edts-project)
 (require 'edts-plugin)
+(require 'edts-shell)
+
+(defalias 'edts-init    'edts-api-init-project-node)
+(defalias 'edts-refresh 'edts-api-refresh-project-node)
+;;For Backward compatilibity
+(defalias 'edts-project-node-init 'edts-api-init-project-node)
+(defalias 'edts-project-node-refresh 'edts-api-refresh-project-node)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; autohighlight-symbol-mode setup for EDTS
@@ -134,6 +144,8 @@
 
 (defun edts-setup ()
   (edts-log-debug "Setting up edts-mode in buffer %s" (current-buffer))
+  (edts-project-init)
+  (edts-api-init-project-node)
 
   ;; Start with our own stuff
   (edts-face-remove-overlays)

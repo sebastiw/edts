@@ -23,20 +23,31 @@
 (require 'edts-plugin)
 (require 'edts-project)
 
-(defcustom edts-code-inhibit-dialyzer-on-compile t
+
+(defcustom edts-dialyzer-base-plt (f-join (f-expand "~") ".dialyzer.plt")
+  "The location of the default base plt."
+  :group 'edts
+  :type :file)
+
+(defcustom edts-dialyzer-inhibit-on-compile t
   "If non-nil, don't run dialyzer analysis on every save."
   :group 'edts
   :type 'boolean)
 
+(define-obsolete-variable-alias
+  'edts-code-inhibit-dialyzer-on-compile
+  'edts-dialyzer-inhibit-on-compile
+  "2017-04-15")
+
 (defun edts-dialyzer-init ()
-  "Initialize edts-debug."
+  "Initialize edts-dialyzer."
   (add-to-list 'edts-code-issue-types 'edts-dialyzer)
   (add-hook 'edts-code-after-compile-hook 'edts-dialyzer-after-compile-hook)
   (add-to-list 'edts-project-valid-properties :dialyzer-plt))
 
 (defun edts-dialyzer-after-compile-hook (result)
   "Hook to run after compilation of a module."
-  (unless (or edts-code-inhibit-dialyzer-on-compile (eq result 'error))
+  (unless (or edts-dialyzer-inhibit-on-compile (eq result 'error))
     (edts-dialyzer-analyze)))
 
 (defun edts-dialyzer-analyze ()
@@ -46,22 +57,18 @@ does not belong to any project, being in the same directory as the
 current buffer's file."
   (interactive)
   (edts-face-remove-overlays '(edts-dialyzer))
-  (if eproject-mode
-      (edts-dialyzer-analyze-project)
-    (edts-dialyzer-analyze-directory)))
-
-(define-obsolete-function-alias
-  'edts-code-dialyze-related
-  'edts-dialyzer-analyze
-  "2014-01-23")
+  (if (equal (edts-project-attribute :type) :temp)
+      (edts-dialyzer-analyze-directory)
+    (edts-dialyzer-analyze-project)))
 
 (defun edts-dialyzer-analyze-project ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's project, on the node related to that project."
-  (let* ((bufs (edts-project-buffer-list (eproject-root) '(ferl-get-module)))
-         (otp-plt  (eproject-attribute :dialyzer-plt))
+  (let* ((bufs     (edts-project-buffers (edts-project-root)))
+         (otp-plt  (or (edts-project-attribute :dialyzer-plt)
+                       edts-dialyzer-base-plt))
          (out-plt  (f-join edts-data-directory
-                                   (concat (eproject-name) ".plt")))
+                                   (concat (edts-project-name) ".plt")))
          (modules  (mapcar #'ferl-get-module bufs))
          (args (list (cons "otp_plt" otp-plt)
                      (cons "out_plt" out-plt)
@@ -75,10 +82,11 @@ buffer's project, on the node related to that project."
 (defun edts-dialyzer-analyze-directory ()
   "Runs dialyzer for all live buffers with its file in current
 buffer's directory, on the node related to that buffer."
-  (let* ((plt-file (concat (file-name-nondirectory default-directory) ".plt"))
-         (args '(("otp_plt"  nil)
-                 ("out-plt"  (f-join edts-data-directory plt-file))
-                 ("modules"  (edts-code-directory-open-modules default-directory)))))
+  (let* ((plt-file (concat (f-base default-directory) ".plt"))
+         (modules (edts-code-directory-open-modules default-directory))
+         (args `(("otp_plt" . ,edts-dialyzer-base-plt)
+                 ("out_plt" . ,(f-join edts-data-directory plt-file))
+                 ("modules" . ,modules))))
     (edts-plugin-call-async (edts-api-node-name)
                             'edts_dialyzer
                             'analyze
@@ -90,12 +98,14 @@ buffer's directory, on the node related to that buffer."
     (let* ((all-warnings (cdr (assoc 'warnings analysis-res)))
            (warn-alist  (edts-code--issue-to-file-map all-warnings)))
       ;; Set the warning list in each project-buffer
-      (with-each-buffer-in-project (gen-sym) (eproject-root)
-        (let ((warnings (cdr (assoc (buffer-file-name) warn-alist))))
-          (edts-code--set-issues 'edts-dialyzer (list 'warning warnings))
-          (edts-face-update-buffer-mode-line (edts-code-buffer-status))
-          (when warnings
-            (edts-code-display-warning-overlays 'edts-dialyzer warnings)))))))
+      (edts-project-in-each-buffer
+       (lambda ()
+         (let ((warnings (cdr (assoc (buffer-file-name) warn-alist))))
+           (edts-code--set-issues 'edts-dialyzer (list 'warning warnings))
+           (edts-face-update-buffer-mode-line (edts-code-buffer-status))
+           (when warnings
+             (edts-code-display-warning-overlays 'edts-dialyzer warnings))))
+       (edts-project-root)))))
 
 (provide 'edts-dialyzer)
 

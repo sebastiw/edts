@@ -22,7 +22,6 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(require 'eproject)
 (require 's)
 
 (require 'ferl)
@@ -200,7 +199,7 @@ localhost."
 (defun edts-api-node-name ()
   "Return the sname of current buffer's project node."
   (condition-case ex
-      (eproject-attribute :node-name)
+      (edts-project-attribute :node-name)
     ('error edts-api-node-name)))
 
 (defun edts-api-init-node (project-name
@@ -211,13 +210,13 @@ localhost."
                            project-include-dirs
                            erlang-cookie)
   "Register NODE-NAME with the EDTS server asynchronously."
-  (interactive (list (eproject-attribute :name)
+  (interactive (list (edts-project-attribute :name)
                      (edts-api-node-name)
-                     (eproject-attribute :root)
-                     (eproject-attribute :lib-dirs)
-                     (eproject-attribute :app-include-dirs)
-                     (eproject-attribute :project-include-dirs)
-                     (eproject-attribute :erlang-cookie)))
+                     (edts-project-attribute :root)
+                     (edts-project-attribute :lib-dirs)
+                     (edts-project-attribute :app-include-dirs)
+                     (edts-project-attribute :project-include-dirs)
+                     (edts-project-attribute :erlang-cookie)))
   (unless (member node-name edts-api--outstanding-node-registration-requests)
     (edts-log-debug "Initializing node %s" node-name)
     (add-to-list 'edts-api--outstanding-node-registration-requests node-name)
@@ -407,6 +406,76 @@ ARGS as the other arguments"
       (setq string (cdr string)))
     names))
 
+(defun edts-api-init-project-node ()
+  (interactive)
+  (edts-api-ensure-server-started)
+  (if (edts-api-node-registeredp (edts-project-attribute :node-name))
+      (edts-api-refresh-project-node)
+    ;; Ensure project node is started
+    (unless (edts-api-node-started-p (edts-project-attribute :node-name))
+      (edts-api--start-project-node))
+    ;; Register it with the EDTS node
+    (edts-api--register-project-node)))
+
+(defun edts-api--start-project-node ()
+  "Starts a new erlang node for current buffer's project."
+  (let* ((buffer-name (concat "*" (edts-project-name) "*"))
+         (command (split-string (edts-project-attribute :start-command)))
+         (exec-path (edts-api--build-exec-path))
+         (process-environment (edts-api--build-env))
+         (node (edts-project-attribute :node-name)))
+    (edts-api-ensure-node-not-started node)
+    (edts-shell-make-comint-buffer buffer-name node (edts-project-root) command)
+    (get-buffer buffer-name)))
+
+(defun edts-api--build-exec-path ()
+  "Build up the exec-path to use when starting the project-node of PROJECT."
+  (-if-let (otp-path (edts-project-attribute :otp-path))
+      ;; put otp-path first in path
+      (cons (f-expand "bin" otp-path) exec-path)
+    exec-path))
+
+(defun edts-api--build-env ()
+  "Build up the PATH environment variable to use when starting current-
+buffer's project-node and return the resulting environment."
+  (let* ((bin-dir  (edts-api--otp-bin-path))
+         (path-var (concat "PATH=" bin-dir path-separator (getenv "PATH"))))
+    (cons path-var process-environment)))
+
+(defun edts-api--otp-bin-path ()
+  "Return the otp bin-path of current-buffer's project or, if that is
+not defined, the first directory in the `exec-path' that contains a file
+named erl."
+  (or (-when-let (otp-path (edts-project-attribute :otp-path))
+        (f-full (f-join otp-path "bin")))
+      (-when-let (erl (executable-find "erl"))
+        (f-dirname erl))))
+
+(defun edts-api-refresh-project-node ()
+  "Asynchronously refresh the state of current buffer's project node"
+  (interactive)
+  (edts-api-init-node
+   (edts-project-attribute :name)
+   (edts-project-attribute :node-name)
+   (edts-project-root)
+   (edts-project-attribute :lib-dirs)
+   (edts-project-attribute :app-include-dirs)
+   (edts-project-attribute :project-include-dirs)
+   (edts-project-attribute :erlang-cookie)))
+
+(defun edts-api--register-project-node ()
+  "Register the node of current buffer's project."
+  (if (edts-api-node-registeredp (edts-project-attribute :node-name))
+      (edts-log-info "Re-initializing node for project %s" (edts-project-name))
+    (edts-log-info "Initializing node for project %s" (edts-project-name)))
+  (edts-api-init-node-when-ready
+   (edts-project-attribute :name)
+   (edts-project-attribute :node-name)
+   (edts-project-root)
+   (edts-project-attribute :lib-dirs)
+   (edts-project-attribute :app-include-dirs)
+   (edts-project-attribute :project-include-dirs)
+   (edts-project-attribute :erlang-cookie)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
