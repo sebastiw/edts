@@ -42,6 +42,12 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
 ## Getting started ##
 
+#### Support:
+
+For questions or support, please sign up for the [EDTS mailing list](https://groups.google.com/forum/#!forum/erlangdevelopmenttoolsuite)
+
+Please use the Github issue tracker to report bugs.
+
 #### Requirements:
   - Emacs 23.3 or later (24.2 or higher recommended)
 
