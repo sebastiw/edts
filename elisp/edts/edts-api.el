@@ -204,9 +204,8 @@ localhost."
 
 (defun edts-api-node-name ()
   "Return the sname of current buffer's project node."
-  (condition-case ex
-      (edts-project-attribute :node-name)
-    ('error edts-api-node-name)))
+  (or (edts-project-attribute :node-name)
+      edts-api-node-name))
 
 (defun edts-api-init-node (project-name
                            node-name
