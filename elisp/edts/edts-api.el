@@ -426,7 +426,7 @@ ARGS as the other arguments"
 (defun edts-api--start-project-node ()
   "Starts a new erlang node for current buffer's project."
   (let* ((buffer-name (concat "*" (edts-project-name) "*"))
-         (command (split-string-string-and-unquote
+         (command (split-string-and-unquote
                    (edts-project-attribute :start-command)))
          (exec-path (edts-api--build-exec-path))
          (process-environment (edts-api--build-env))
