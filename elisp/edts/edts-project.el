@@ -66,19 +66,17 @@ underneath a project root to be subprojects of that super project.")
 
 (defun edts-project--find-project-root (dir)
   "Try to find the top-most edts-file above current buffer's file."
-  (if edts-project-root
-      edts-project-root
-    (let (stop
-          (roots (-map 'f-slash edts-project-roots))
-          (root nil))
-      (while (and (not stop) (not (f-root? dir)))
-        (if (-contains? roots (f-slash dir))
-            (setq root dir
-                  stop t)
-          (when (f-file? (f-join dir ".edts"))
-            (setq root dir))
-          (setq dir (f-dirname dir))))
-      root)))
+  (let (stop
+        (roots (-map 'f-slash edts-project-roots))
+        (root nil))
+    (while (and (not stop) (not (f-root? dir)))
+      (if (-contains? roots (f-slash dir))
+          (setq root dir
+                stop t)
+        (when (f-file? (f-join dir ".edts"))
+          (setq root dir))
+        (setq dir (f-dirname dir))))
+    root))
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
