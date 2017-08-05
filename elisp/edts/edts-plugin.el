@@ -99,7 +99,9 @@
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
       (if (equal "error" (cdr (assoc 'result body)))
           (prog1 nil
-            (edts-log-error "Error in plugin call: %s"
+            (edts-log-error "Error in %s call to %s: %s"
+                            plugin
+                            method
                             (cdr (assoc 'return body))))
         (cdr (assoc 'return body))))))
 
@@ -115,16 +117,22 @@ CB with the result when request terminates."
     (edts-rpc-call-async resource
                           args
                           'edts-plugin-call-async-callback
-                          (list cb cb-args))))
+                          (list plugin method cb cb-args))))
 
-(defun edts-plugin-call-async-callback (reply callback callback-args)
+(defun edts-plugin-call-async-callback (reply
+                                        plugin
+                                        method
+                                        callback
+                                        callback-args)
   (let ((body       (cdr (assoc 'body reply))))
     (if (not (equal (cdr (assoc 'result reply)) '("200" "OK")))
         (prog1 nil
          (edts-log-error "Unexpected reply: %s" (cdr (assoc 'result reply))))
       (if (equal "error" (cdr (assoc 'result body)))
           (prog1 nil
-            (edts-log-error "Error in plugin call: %s"
+            (edts-log-error "Error in %s call to %s: %s"
+                            plugin
+                            method
                             (cdr (assoc 'return body))))
         (apply callback (cdr (assoc 'return body)) callback-args)))))
 
