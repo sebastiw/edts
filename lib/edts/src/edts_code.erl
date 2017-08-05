@@ -531,8 +531,10 @@ module_modified_p(Mod, File) ->
 module_modified_md5_p(Mod, File) ->
   case lists:keyfind(md5, 1, Mod:module_info()) of
     {md5, ModMD5} ->
-      {ok, {Mod, FileMD5}} = beam_lib:md5(File),
-      {ok, ModMD5 =/= FileMD5};
+      case beam_lib:md5(File) of
+        {error, _, _}        -> {ok, true};
+        {ok, {Mod, FileMD5}} -> {ok, ModMD5 =/= FileMD5}
+      end;
     false ->
       error
   end.
