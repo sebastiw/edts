@@ -320,15 +320,17 @@ do_query(QueryFmt, Args) ->
 
 try_add_module(Mod) ->
   case find_beam(Mod) of
+    preloaded    -> ok;
     non_existing -> {error, {no_beam, Mod}};
     Beam         -> try_add_module(Mod, Beam)
   end.
 
 find_beam(Mod) ->
   case code:is_loaded(Mod) of
-    {file, Beam} -> Beam;
-    false        -> code:where_is_file(atom_to_list(Mod) ++
-                                         code:objfile_extension())
+    {file, preloaded} -> preloaded;
+    {file, Beam}      -> Beam;
+    false             ->
+      code:where_is_file(atom_to_list(Mod) ++ code:objfile_extension())
   end.
 
 try_add_module(Mod, Beam) ->
