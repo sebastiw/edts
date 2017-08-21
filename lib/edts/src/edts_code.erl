@@ -293,33 +293,42 @@ get_module_info(M, Level) ->
   do_get_module_info(M, Level).
 
 do_get_module_info(M, basic) ->
-  Info                         = erlang:get_module_info(M),
-  {exports, Exports}           = lists:keyfind(exports, 1, Info),
-  {ok, ModSrc}                 = get_module_source(M, Info),
-  [ {module, M}
-  , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
-  , {source, ModSrc}];
+  try erlang:get_module_info(M) of
+    Info ->
+      {exports, Exports}           = lists:keyfind(exports, 1, Info),
+      {ok, ModSrc}                 = get_module_source(M, Info),
+      {ok, [ {module, M}
+           , {exports, [[{function, F}, {arity, A}] || {F, A} <- Exports]}
+           , {source, ModSrc}]}
+  catch
+    error:badarg ->
+      {error, {not_found, M}}
+  end;
 do_get_module_info(M, detailed) ->
-  {M, Bin, _File}                   = code:get_object_code(M),
-  {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
-  {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
-  Basic            = do_get_module_info(M, basic),
+  case code:get_object_code(M) of
+    {M, Bin, _File} ->
+      {ok, {M, Chunks}} = beam_lib:chunks(Bin, [abstract_code]),
+      {abstract_code, {_, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+      {ok, Basic} = do_get_module_info(M, basic),
 
-  {source, Source} = lists:keyfind(source, 1, Basic),
+      {source, Source} = lists:keyfind(source, 1, Basic),
 
-  Acc0 = orddict:from_list([ {cur_file,    Source}
-                           , {compile_cwd, get_compile_cwd(M, Abstract)}
-                           , {exports,     M:module_info(exports)}
-                           , {imports,     []}
-                           , {includes,    []}
-                           , {functions,   []}
-                           , {records,     []}]
-                           ++ Basic),
-  Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
-  Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
-  Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
-  Dict = orddict:erase(cur_file,  Dict2),
-  orddict:to_list(Dict).
+      Acc0 = orddict:from_list([ {cur_file,    Source}
+                               , {compile_cwd, get_compile_cwd(M, Abstract)}
+                               , {exports,     M:module_info(exports)}
+                               , {imports,     []}
+                               , {includes,    []}
+                               , {functions,   []}
+                               , {records,     []}]
+                               ++ Basic),
+      Dict0 = lists:foldl(fun parse_abstract/2, Acc0, Abstract),
+      Dict1 = orddict:update(imports,  fun(I) -> lists:usort(I) end, Dict0),
+      Dict2 = orddict:update(includes, fun(I) -> lists:usort(I) end, Dict1),
+      Dict = orddict:erase(cur_file,  Dict2),
+      {ok, orddict:to_list(Dict)};
+    error ->
+      {error, {not_found, M}}
+  end.
 
 get_compile_cwd(M, [{attribute,1,file,{RelPath,1}}|_]) ->
   CompileInfo = M:module_info(compile),

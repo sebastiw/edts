@@ -32,6 +32,9 @@
 
 (require 'edts-log)
 
+(defvar edts-rpc-suppress-error-codes nil
+  "Do not log http errors of requests with these return codes")
+
 (defconst edts-rpc-host "0"
   "The host where the edts erlang node is running.")
 
@@ -126,7 +129,14 @@ inside a `with-temp-buffer'."
 
 (defun edts-rpc--log-http-response (url)
   (let* ((status (cadr (edts-rpc--parse-http-response-status)))
-         (levels (if (equal status "200") '(debug debug-2) '(error error))))
+         (levels (if (or (equal status "200")
+                         (and
+                          (stringp status)
+                          (s-numeric? status)
+                          (-contains? edts-rpc-suppress-error-codes
+                                     (string-to-number status))))
+                     '(debug debug-2)
+                   '(error error))))
     (edts-log-message (car levels)
                       "Reply %s received for request to %s"
                       status

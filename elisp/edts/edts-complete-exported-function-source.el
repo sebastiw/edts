@@ -58,7 +58,8 @@
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing exported function completions")
-         (let* ((module  (ferl-symbol-at (- point 1))))
+         (let* ((module  (ferl-symbol-at (- point 1)))
+                (edts-rpc-suppress-error-codes '(404)))
            (setq edts-complete-exported-function-candidates
                  (edts-api-get-module-export-strings module t))))))))
 

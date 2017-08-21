@@ -91,6 +91,7 @@
     (edts-api-compile-and-load-async "one" (buffer-file-name) callback)
     (edts-test-wait-for 'module-compiled))
   (should (edts-alist-get 'source (edts-api-get-detailed-module-info "one")))
+  (should-not (edts-api-get-detailed-module-info "bla"))
   (should (edts-alist-get 'exported (edts-api-get-function-info "one" "one" 1)))
   (should (-contains? (edts-api-get-modules) "one"))
   (should (equal 4 (length (edts-api-get-module-exports "one")))))

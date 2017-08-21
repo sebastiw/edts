@@ -40,11 +40,13 @@ spec() ->
   [nodename, module, info_level].
 
 execute(Ctx) ->
-    Node   = orddict:fetch(nodename, Ctx),
-    Module = orddict:fetch(module, Ctx),
-    Level  = orddict:fetch(info_level, Ctx),
-    {ok, Info} = edts:call(Node, edts_code, get_module_info, [Module, Level]),
-    {ok, format(Info)}.
+  Node   = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  Level  = orddict:fetch(info_level, Ctx),
+  case edts:call(Node, edts_code, get_module_info, [Module, Level]) of
+    {ok, {ok, Info}}     -> {ok, format(Info)};
+    {ok, {error, _} = E} -> E
+  end.
 
 %%%_* Internal functions =======================================================
 

@@ -33,9 +33,13 @@
 
 -export([assoc/2,
          assoc/3,
+         directory_child_p/2,
          expand_code_paths/2,
+         filename_to_module/1,
          make_nodename/1,
          pid2atom/1,
+         project_lib_file_p/1,
+         project_lib_file_p/3,
          lib_and_app_dirs/0,
          shorten_path/1]).
 
@@ -69,6 +73,8 @@ expand_code_path(Root, Dir) ->
   Fun = fun(F) -> [filename:join(F, "ebin"), filename:join(F, "test")] end,
   lists:flatmap(Fun, filelib:wildcard(filename:join([Root, Dir, "*"]))).
 
+filename_to_module(Filename) ->
+  list_to_atom(filename:basename(filename:basename(Filename))).
 
 make_nodename(NameStr) ->
   case string:tokens(NameStr, "@") of
@@ -88,6 +94,64 @@ lib_and_app_dirs() ->
   lists:partition(fun(Path) -> lists:prefix(ErlLibDir, Path) end,
                   code:get_path()).
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if File belongs to this node's EDTS project.
+-spec project_lib_file_p(File :: file:filename()) -> boolean().
+%%------------------------------------------------------------------------------
+project_lib_file_p(File) ->
+  {ok, ProjectDir} = application:get_env(edts, project_root_dir),
+  {ok, LibDirs} = application:get_env(edts, project_lib_dirs),
+  project_lib_file_p(ProjectDir, LibDirs, File).
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if File is located underneath any of LibDirs relative to
+%% ProjectDir.
+-spec project_lib_file_p(ProjectDir :: file:filename(),
+                         LibDirs :: file:filename(),
+                         File :: file:filename()) ->
+                           boolean().
+%%------------------------------------------------------------------------------
+project_lib_file_p(ProjectDir, LibDirs, File) ->
+  lists:any(fun(LibDir) ->
+                directory_child_p(filename:join(ProjectDir, LibDir), File)
+            end,
+            LibDirs) orelse
+    lists:any(fun(Dir) ->
+                  filename:join(ProjectDir, Dir) =:= filename:dirname(File)
+              end,
+              ["src", "test", "ebin", ""]).
+
+
+project_lib_file_p_test_() ->
+  [?_assertNot(project_lib_file_p("root", [], "")),
+   ?_assert(project_lib_file_p("root", [], "root/a")),
+   ?_assert(project_lib_file_p("root", [], "root/src/a")),
+   ?_assert(project_lib_file_p("root", [], "root/ebin/a")),
+   ?_assert(project_lib_file_p("root", [""], "root/")),
+   ?_assert(project_lib_file_p("root", ["a"], "root/a/b")),
+   ?_assertNot(project_lib_file_p("root", ["a"], "/b")),
+   ?_assert(project_lib_file_p("a", ["b"], "a/b")),
+   ?_assert(project_lib_file_p("a", ["b"], "a/c")),
+   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c")),
+   ?_assertNot(project_lib_file_p("a", ["b", "c"], "a/a/c")),
+   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c/d"))
+  ].
+
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Return true if File is located at any level underneath Dir in the file tree.
+%% File can be a directory. This function only supports tilde expansion of the
+%% current user's home directory (~/...), not for specific users
+%% (eg. ~myuser/...)
+-spec directory_child_p(Dir :: file:filename(), File :: file:filename()) ->
+                           boolean().
+%%------------------------------------------------------------------------------
+directory_child_p(Dir, File) ->
+  lists:prefix(filename:absname(Dir), filename:absname(File)).
 
 shorten_path("") -> "";
 shorten_path(P)  ->
@@ -132,13 +196,13 @@ expand_code_path_test() ->
   meck:unload().
 
 shorten_path_test_() ->
-  [ ?_assertEqual("", shorten_path("")),
-    ?_assertEqual(".", shorten_path(".")),
-    ?_assertEqual("..", shorten_path("..")),
-    ?_assertEqual("../..", shorten_path("../..")),
-    ?_assertEqual("../ebin", shorten_path("../ebin")),
-    ?_assertEqual("..", shorten_path("../ebin/..")),
-    ?_assertEqual("..", shorten_path("../ebin/./.."))
+  [?_assertEqual("", shorten_path("")),
+   ?_assertEqual(".", shorten_path(".")),
+   ?_assertEqual("..", shorten_path("..")),
+   ?_assertEqual("../..", shorten_path("../..")),
+   ?_assertEqual("../ebin", shorten_path("../ebin")),
+   ?_assertEqual("..", shorten_path("../ebin/..")),
+   ?_assertEqual("..", shorten_path("../ebin/./.."))
   ].
 
 %%%_* Test helpers =============================================================

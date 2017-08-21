@@ -23,7 +23,7 @@
 (require 'edts-xref)
 
 (defun edts-xref-test-testcase-init ()
-  (edts-test-post-cleanup-all-buffers))
+  (edts-test-pre-cleanup-all-buffers))
 
 (edts-test-add-suite
  ;; Name
@@ -37,9 +37,8 @@
  ;; Teardown
  (lambda (setup-config)
    (setq edts-event-inhibit nil)
-   ;; (edts-test-teardown-project 'project-1)
-   ;; (edts-test-post-cleanup-all-buffers)
-   ))
+   (edts-test-teardown-project 'project-1)
+   (edts-test-post-cleanup-all-buffers)))
 
 
 (edts-test-case edts-xref-suite edts-xref-analysis-test ()
@@ -90,17 +89,16 @@
   (let (edts-code-buffer-issues
         edts-xref-initialized-nodes)
     (edts-xref-test-testcase-init)
-    (let ((a 1))
-      (edts-test-find-project-module 'project-1 'one)
-      (edts-test-wait-for 'edts-xref-initialized-nodes)
-      (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
-             (caller   (car callers))
-             (module   (cdr (assoc 'module caller)))
-             (function (cdr (assoc 'function caller)))
-             (arity    (cdr (assoc 'arity caller)))
-             (lines    (cdr (assoc 'lines caller))))
-        (should (equal (length callers) 1))
-        (should (equal module "one"))
-        (should (equal function "one"))
-        (should (equal arity 1))))))
+    (edts-test-find-project-module 'project-1 'one)
+    (edts-test-wait-for 'edts-xref-initialized-nodes)
+    (let* ((callers  (edts-xref-get-who-calls "one_two" "one_two_fun" 1))
+           (caller   (car callers))
+           (module   (cdr (assoc 'module caller)))
+           (function (cdr (assoc 'function caller)))
+           (arity    (cdr (assoc 'arity caller)))
+           (lines    (cdr (assoc 'lines caller))))
+      (should (equal (length callers) 1))
+      (should (equal module "one"))
+      (should (equal function "one"))
+      (should (equal arity 1)))))
 
