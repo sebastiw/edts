@@ -23,11 +23,13 @@ PROJDIR=${1:-"$HOME"}
 ERL=${2:-$(which erl)}
 EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
 PLUGIN_DIR=$EDTS_HOME/plugins
+ERL_SNAME=${3:-"edts"}
+ERL_FLAGS=$4
 
 cd "$EDTS_HOME"
 exec "$ERL" \
-    $3 \
-    -sname edts \
+    $ERL_FLAGS \
+    -sname $ERL_SNAME \
     -edts project_data_dir "\"$PROJDIR\"" \
     -edts plugin_dir "\"$PLUGIN_DIR\"" \
     -pa "$EDTS_HOME"/{lib,plugins}/*/ebin \

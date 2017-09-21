@@ -79,24 +79,32 @@ requests.")
   "Hooks to run after a node has gone down. These hooks are called with
 the node-name of the node that has gone down as the argument.")
 
+(defvar edts-node-sname
+  (if (string= "" edts-erl-sname) "edts" edts-erl-sname)
+  "Use `edts-erl-sname' if available. If not the sname will be
+set to \"edts\". This makes it possible to have several edts
+nodes on the same host.")
+(make-variable-buffer-local 'edts-node-sname)
+
 (defun edts-api-ensure-server-started ()
   "Starts an edts server-node in a comint-buffer unless it is already running."
-  (unless (or (edts-api-node-started-p "edts") (edts-api-start-server))
+  (unless (or (edts-api-node-started-p edts-node-sname) (edts-api-start-server))
     (error "EDTS: Could not start main server")))
 
 (defun edts-api-start-server ()
   "Starts an edts server-node in a comint-buffer"
   (interactive)
-  (when (edts-api-node-started-p "edts")
+  (when (edts-api-node-started-p edts-node-sname)
     (error "EDTS: Server already running"))
   (let* ((pwd (f-join (directory-file-name edts-lib-directory) ".."))
          (command (list "./start"
                         edts-data-directory
                         edts-erl-command
+                        edts-node-sname
                         edts-erl-flags))
          (retries edts-api-num-server-start-retries)
          available)
-    (edts-shell-make-comint-buffer "*edts*" "edts" pwd command)
+    (edts-shell-make-comint-buffer "*edts*" edts-node-sname pwd command)
     (setq available (edts-api-get-nodes t))
     (while (and (> retries 0) (not available))
       (setq available (edts-api-get-nodes t))
