@@ -32,7 +32,7 @@
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 
--define(EDTS_PORT, 4587).
+-define(EDTS_PORT_DEFAULT, "4587").
 
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
@@ -40,7 +40,7 @@
 start_link() ->
   mochiweb_http:start_link([{name, ?MODULE},
                             {loop, fun ?MODULE:handle_request/1},
-                            {port, ?EDTS_PORT}]).
+                            {port, configured_port()}]).
 
 
 handle_request(Req) ->
@@ -141,6 +141,22 @@ respond(Req, Code, Data) ->
                  _         -> mochijson2:encode(Data)
                end,
   Req:respond({Code, Headers, BodyString}).
+
+%%%_* Internal functions =======================================================
+
+configured_port() ->
+  Port = getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
+  edts_log:debug("Using EDTS port ~p from file.", [Port]),
+  list_to_integer(Port).
+
+%%% TODO: Remove this function when dropping R17 support. Use os:getenv/2.
+getenv(Variable, Default) ->
+  case os:getenv(Variable) of
+    false ->
+      Default;
+    Value ->
+      Value
+  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
