@@ -716,9 +716,7 @@ parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
              , {arity, A}] || {F, A} <- Imports0],
   orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
 parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
-  FieldsF = fun({record_field, _, {_, _, FName}})        -> FName;
-               ({record_field, _, {_, _, FName}, _Call}) -> FName
-            end,
+  FieldsF = fun get_record_field/1,
   RecordInfo =
     [ {record, Recordname}
     , {fields, lists:map(FieldsF, Fields)}
@@ -727,6 +725,10 @@ parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
   orddict:update(records, fun(Old) -> [RecordInfo|Old] end, Acc);
 parse_abstract(_, Acc) -> Acc.
 
+get_record_field({record_field, _, {_, _, FName}}) -> FName;
+get_record_field({record_field, _, {_, _, FName}, _Call}) -> FName;
+get_record_field({typed_record_field, RecFieldTuple, _}) ->
+  get_record_field(RecFieldTuple).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -1068,7 +1070,12 @@ parse_abstract_import_test_() ->
 
 parse_abstract_record_test_() ->
   Fields = [ {record_field, foo, {foo, foo, field_1}}
-           , {record_field, foo, {foo, foo, field_2}, init_call}],
+           , {record_field, foo, {foo, foo, field_2}, init_call}
+           , {typed_record_field,
+              {record_field, foo, {foo, foo, field_3}}, type}
+           , {typed_record_field,
+              {record_field, foo, {foo, foo, field_4}, init_call}, type}
+           ],
   Line = 1337,
   CurFile = "/foo/test.erl",
   Acc = orddict:from_list([ {cur_file, CurFile}
@@ -1080,7 +1087,7 @@ parse_abstract_record_test_() ->
   , ?_assertEqual(CurFile, orddict:fetch(cur_file, Res))
   , ?_assertMatch([_],     orddict:fetch(records, Res))
   , ?_assertEqual( lists:sort([ {record,   rec_name}
-                              , {fields, [field_1, field_2]}
+                              , {fields, [field_1, field_2, field_3, field_4]}
                               , {line,   Line}
                               , {source, CurFile}])
                  , lists:sort(hd(orddict:fetch(records, Res))))
