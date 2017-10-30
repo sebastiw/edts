@@ -121,7 +121,7 @@ directive."
   (let ((point (point)))
     (save-excursion
       (if (not (eq (get-text-property (point) 'face) 'font-lock-string-face))
-          (re-search-backward "[^@_a-zA-Z09]")
+          (re-search-backward "[^@_a-zA-Z0-9]")
         (while (eq (get-text-property (point) 'face)
                    'font-lock-string-face)
           (backward-char)))
