@@ -218,7 +218,7 @@ remote_load_module(Node, Mod) ->
   %% incompatible with the binary format of the EDTS node's OTP release.
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
-  case filename:find_src(Mod) of
+  case filelib:find_source(Mod) of
     {error, Err}  -> erlang:error({Mod, Err});
     {File, _Opts} ->
       {ok, Mod, Bin} = remote_compile_module(Node, File),
