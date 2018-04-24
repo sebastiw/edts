@@ -345,7 +345,7 @@ try_add_module(Mod, Beam) ->
             {error, Err}
         end;
       false ->
-         error_logger:error_msg("xref can't add ~p: no debug-info", [Mod]),
+        error_logger:error_msg("xref can't add ~p: no debug-info", [Mod]),
         {error, {no_beam, Mod}}
     end
   catch
@@ -495,9 +495,11 @@ eunit_test_init() ->
   meck:new(edts_code, [passthrough]),
   meck:expect(edts_code, project_specific_data_file,
            fun(_) -> "eunit-test.xref" end),
-  application:set_env(edts_xref, file_backend, dummy_file_backend).
+  application:set_env(edts_xref, file_backend, dummy_file_backend),
+  error_logger:tty(false).
 
 teardown_eunit() ->
+  error_logger:tty(true),
   stop(),
   meck:unload(),
   application:set_env(edts_xref, file_backend, file).
