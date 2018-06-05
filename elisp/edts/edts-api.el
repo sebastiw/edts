@@ -1,4 +1,4 @@
-;;; edts.el --- Functions thot do Rest API calls.
+;;; edts.el --- Functions that do Rest API calls.
 
 ;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 
