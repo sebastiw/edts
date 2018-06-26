@@ -1,6 +1,8 @@
 sudo: required
 language: erlang
 otp_release:
+  - 21.0.1
+  - 20.3
   - 19.3
   - 18.3
   - 17.3
@@ -8,28 +10,10 @@ otp_release:
   - R15B03
   - R14B04
 before_install:
-  - |
-    docker run --rm \
-               -v ${HOME}:${HOME} \
-               -v /etc/passwd:/etc/passwd \
-               -u $(id -u) \
-               -w ${PWD} \
-               -e PATH=${PATH} \
-               silex/emacs:${EMACS} \
-               -Q --batch -l test/package-install-deps.el
-services:
-  - docker
+  - emacs -Q --batch -l test/package-install-deps.el
 env:
   - EMACS=24
   - EMACS=25
+  - EMACS=26
 script:
-  - |
-    docker run --rm \
-               -v ${HOME}:${HOME} \
-               -v /etc/passwd:/etc/passwd \
-               -u $(id -u) \
-               -w ${PWD} \
-               -e PATH=${PATH} \
-               --entrypoint /bin/bash \
-               silex/emacs:${EMACS} \
-               --norc -c 'make test'
+ - make test
