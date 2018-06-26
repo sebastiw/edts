@@ -10,7 +10,15 @@ otp_release:
   - R15B03
   - R14B04
 before_install:
-  - emacs -Q --batch -l test/package-install-deps.el
+  - |
+    docker run --rm \
+               -v ${HOME}:${HOME} \
+               -v /etc/passwd:/etc/passwd \
+               -u $(id -u) \
+               -w ${PWD} \
+               -e PATH=${PATH} \
+               silex/emacs:${EMACS} \
+               emacs -Q --batch -l test/package-install-deps.el
 env:
   - EMACS=24
   - EMACS=25
