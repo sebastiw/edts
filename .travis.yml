@@ -38,5 +38,5 @@ script:
                silex/emacs:${EMACS} 
   - docker exec -it emacs_test apt-get update
   - docker exec -it emacs_test apt-get install make
-  - docker exec -it make test
+  - docker exec -it emacs_test make test
   - docker stop emacs_test
