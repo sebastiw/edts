@@ -26,16 +26,16 @@ env:
 script:
   - |
     docker run --rm \
-	       -it \
-	       -d \
-	       --name emacs_test \
+           -it \
+           -d \
+           --name emacs_test \
                -v ${HOME}:${HOME} \
                -v /etc/passwd:/etc/passwd \
                -u $(id -u) \
                -w ${PWD} \
                -e PATH=${PATH} \
                --entrypoint /bin/bash \
-               silex/emacs:${EMACS} 
+               silex/emacs:${EMACS}
   - docker exec -it emacs_test apt-get update
   - docker exec -it emacs_test apt-get install make
   - docker exec -it emacs_test make test
