@@ -262,8 +262,7 @@ When FUNCTION is specified, the point is moved to its start."
                  (t
                   (edts-log-error ;; Some unknown error
                    "Function %s:%s/%s not found" module function arity))))
-            (edts-log-error
-              "Function %s:%s/%s not found" module function arity))))))
+            (erlang-find-tag (concat module ":" function)))))))
 
 (defun edts-navigate-to-module (module &optional line)
   "Find the source code for MODULE in a buffer, loading it if necessary.
