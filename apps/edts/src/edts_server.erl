@@ -312,9 +312,9 @@ do_init_node(ProjectName,
 
     start_services(Node, [edts_code] ++ PluginRemoteServices)
   catch
-    C:E ->
+    C:E:S ->
       edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
-                     [Node, C, E, erlang:get_stacktrace()]),
+                     [Node, C, E, S]),
       {error, E}
   end.
 

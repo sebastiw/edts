@@ -44,9 +44,9 @@ execute(Ctx) ->
         {ok, Event} = edts_event:listen(),
         {ok, [{event, Event}]}
     catch
-        C:E ->
+        C:E:S ->
             edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
-                           [C,E, erlang:get_stacktrace()]),
+                           [C,E, S]),
             execute(Ctx)
     end.
 
