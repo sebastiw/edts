@@ -28,7 +28,7 @@
 (require 'edts)
 
 (defconst edts-plugin-directory
-  (f-join (file-name-directory edts-root-directory) "plugins")
+  (f-join (file-name-directory edts-root-directory) "apps")
   "Directory where edts plugins are located.")
 (add-to-list 'load-path edts-plugin-directory)
 
@@ -39,7 +39,7 @@
        collect file)
   "a list of the names of all available plugins.")
 
-(defcustom edts-plugin-disabled-plugins nil
+(defcustom edts-plugin-disabled-plugins '("edts")
   "List of disabled plugins."
   :type (cons 'set
               (mapcar #'(lambda (plugin) (list 'const plugin))

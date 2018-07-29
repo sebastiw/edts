@@ -74,7 +74,8 @@ dirs() ->
   end.
 
 names() ->
-  [list_to_atom(filename:basename(Dir)) || Dir <- dirs()].
+  [Name || Dir <- dirs(),
+           edts /= (Name = list_to_atom(filename:basename(Dir)))].
 
 
 specs() ->

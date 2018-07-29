@@ -87,7 +87,7 @@
   (add-to-list 'load-path dir))
 
 (defconst edts-plugin-directory
-  (f-join edts-root-directory "plugins")
+  (f-join edts-root-directory "apps")
   "Directory where edts plugins are located.")
 
 (dolist (dir (f-directories edts-plugin-directory))
@@ -257,7 +257,7 @@ further.
     (let* ((path (mapconcat #'expand-file-name exec-path ":"))
            (process-environment (cons (concat "PATH=" path)
                                       process-environment)))
-      (if (= (call-process "make" nil t t "libs" "plugins") 0)
+      (if (= (call-process "make" nil t t "all") 0)
           (when (called-interactively-p 'interactive)
             (quit-window))
         (error (format (concat "Failed to compile EDTS libraries. "
