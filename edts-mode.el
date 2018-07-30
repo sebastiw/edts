@@ -83,6 +83,7 @@
 (defconst edts-lib-directory
   (f-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
+
 (dolist (dir (f-directories edts-lib-directory))
   (add-to-list 'load-path dir))
 
@@ -96,14 +97,6 @@
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
   "Directory where edts test data are located.")
-
-(defconst edts-erl-root
-  (and edts-erl-command
-       (file-name-directory
-        (directory-file-name
-         (file-name-directory (f-canonical edts-erl-command)))))
-  "Location of the Erlang root directory")
-
 
 (require 'edts)
 (require 'edts-api)

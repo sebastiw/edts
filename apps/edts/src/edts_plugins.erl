@@ -70,7 +70,8 @@ dirs() ->
       AbsDir = filename:absname(Dir),
       PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
       [PluginDir || PluginDir <- PluginDirs,
-                    filelib:is_dir(PluginDir)]
+                    filelib:is_dir(PluginDir),
+                    "edts" /= filename:basename(PluginDir)]
   end.
 
 names() ->
@@ -107,7 +108,7 @@ project_node_services(Plugin) ->
 %%%_* Internal functions =======================================================
 
 do_spec(Dir) ->
-  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  [AppFile] = filelib:wildcard(filename:join([Dir, "src", "*.app.src"])),
   {ok, [AppSpec]} = file:consult(AppFile),
   AppSpec.
 

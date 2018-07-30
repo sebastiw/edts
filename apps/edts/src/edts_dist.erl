@@ -212,18 +212,31 @@ remote_load_modules(Node, _Mods) when Node =:= node() -> ok;
 remote_load_modules(Node, Mods)                       ->
   lists:foreach(fun(Mod) -> remote_load_module(Node, Mod) end, Mods).
 
-
 remote_load_module(Node, Mod) ->
   %% Compile code on the remote in case it runs an OTP release that is
   %% incompatible with the binary format of the EDTS node's OTP release.
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
-  case filelib:find_source(Mod) of
-    {error, Err}  -> erlang:error({Mod, Err});
-    {File, _Opts} ->
-      {ok, Mod, Bin} = remote_compile_module(Node, File),
-      {module, Mod}  = remote_load_module(Node, Mod, Bin)
+  case lists:keyfind(Mod, 1, code:all_loaded()) of
+    false -> erlang:error({not_loaded, Mod});
+    {_, FileBeam} ->
+      ModInfo = Mod:module_info(compile),
+      case proplists:get_value(source, ModInfo) of
+        undefined ->
+          case filelib:find_source(FileBeam) of
+            {ok, File} ->
+              remote_compile_and_load(Node, File);
+            {error, not_found} ->
+              erlang:error({not_found, Mod})
+          end;
+        File ->
+          remote_compile_and_load(Node, File)
+      end
   end.
+
+remote_compile_and_load(Node, File) ->
+  {ok, Mod, Bin} = remote_compile_module(Node, File),
+  {module, Mod}  = remote_load_module(Node, Mod, Bin).
 
 %%------------------------------------------------------------------------------
 %% @doc

@@ -68,28 +68,34 @@ underneath a project root to be subprojects of that super project.")
   "Try to find the top-most edts-file above current buffer's file."
   (let (stop
         (roots (-map 'f-slash edts-project-roots))
-        (root nil))
+        root)
     (while (and (not stop) (not (f-root? dir)))
-      (if (-contains? roots (f-slash dir))
+      (if (or (-contains? roots (f-slash dir))
+              (f-file? (f-join dir ".edts")))
           (setq root dir
                 stop t)
-        (when (f-file? (f-join dir ".edts"))
-          (setq root dir))
         (setq dir (f-dirname dir))))
     root))
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
-                        (f-file? (f-join path "bin" "erl")))
+                        (when (not (equal path "/"))
+                          (f-file? (f-join path "bin" "erl"))))
                       (f-expand dir)))
 
 (defun edts-project--find-temp-root (dir)
   "Find the appropriate root directory for a temporary project for
 FILE."
-  (if (and (-contains? '("src" "test" "include") (f-filename dir))
-           (f-directory? (f-join (f-dirname dir) "ebin")))
-      (f-dirname dir)
-    dir))
+  (-if-let (path (f-traverse-upwards
+                  (lambda (path)
+                    (or (f-directory? (f-join (f-dirname path) "ebin"))
+                        (f-directory? (f-join (f-dirname path) "_build"))))))
+      (f-dirname path)
+    (if (and (-contains? '("src" "test" "include") (f-filename dir))
+             (or (f-directory? (f-join (f-dirname dir) "ebin"))
+                 (f-directory? (f-join (f-dirname dir) "_build"))))
+        (f-dirname dir)
+      dir)))
 
 (defun edts-project-root ()
   (unless edts-project-root
@@ -140,6 +146,7 @@ buffer's file."
       ;; making your test modules a sea of red squiggles.
       (:lib-dirs . ("lib"
                     "deps"
+                    ;; Probably use f-expand.
                     ,(f-join "_build" "test" "lib")
                     ,(f-join "_build" "default" "lib"))))))
 
@@ -190,7 +197,6 @@ buffer's file."
     (edts-alist-ensure :start-command
                        (format "erl -sname %s" node-name)
                        config)))
-
 
 (defun edts-project--config-from-file (root)
   "Read config from FILE and return it's attributes."

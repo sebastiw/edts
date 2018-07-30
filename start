@@ -19,16 +19,15 @@
 ### You should have received a copy of the GNU General Public License
 ### along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ###############################################################################
-PROJDIR=${1:-"$HOME"}
-ERL=${2:-$(which erl)}
+PROJ_DIR=${1:-"$HOME"}
+EDTS="_build/default/rel/edts/bin/edts console"
 EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
-PLUGIN_DIR=$EDTS_HOME/apps
+APP_DIR=$EDTS_HOME/apps
 
 cd "$EDTS_HOME"
-exec "$ERL" \
-    $3 \
-    -sname edts \
-    -edts project_data_dir "\"$PROJDIR\"" \
-    -edts plugin_dir "\"$PLUGIN_DIR\"" \
-    -pa "$EDTS_HOME"/_build/default/lib/*/ebin \
-    -s edts_app
+
+exec $EDTS \
+     $3 \
+    -edts project_data_dir "\"$PROJ_DIR\"" \
+    -edts plugin_dir "\"$APP_DIR\""
+

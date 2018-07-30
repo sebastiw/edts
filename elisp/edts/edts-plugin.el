@@ -27,16 +27,23 @@
 
 (require 'edts)
 
+(defconst edts-plugin-directory-name
+  "apps"
+  "Bare directory name for the plugins")
+
 (defconst edts-plugin-directory
-  (f-join (file-name-directory edts-root-directory) "apps")
+  (f-join (file-name-directory edts-root-directory) edts-plugin-directory-name)
   "Directory where edts plugins are located.")
+
 (add-to-list 'load-path edts-plugin-directory)
 
 (defconst edts-plugin-names
-  (loop for (file dirp . rest)
-       in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
-       when dirp
-       collect file)
+  (remove-if
+   (lambda (v) (equal v "edts"))
+   (loop for (file dirp . rest)
+         in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
+         when dirp
+         collect file))
   "a list of the names of all available plugins.")
 
 (defcustom edts-plugin-disabled-plugins '("edts")
@@ -88,7 +95,7 @@
   "Call PLUGIN's rpc method METHOD with ARGS on NODE."
   (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
   (let* ((resource (s-join "/"
-                           (list "plugins"
+                           (list edts-plugin-directory-name
                                  (symbol-name plugin)
                                  (symbol-name method))))
          (args     (cons (cons "node" node) args))
@@ -110,7 +117,7 @@
 CB with the result when request terminates."
   (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
   (let* ((resource (s-join "/"
-                           (list "plugins"
+                           (list edts-plugin-directory-name
                                  (symbol-name plugin)
                                  (symbol-name method))))
          (args     (cons (cons "node" node) args)))

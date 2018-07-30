@@ -9,7 +9,7 @@ REBAR3 ?= $(CURDIR)/rebar3
 comma = ,
 
 .PHONY: all
-all: compile
+all: compile release
 
 $(REBAR3):
 	curl -LO https://s3.amazonaws.com/rebar3/rebar3
@@ -18,6 +18,10 @@ $(REBAR3):
 .PHONY: compile
 compile: $(REBAR3)
 	@$(REBAR3) compile
+
+.PHONY: release
+release: $(REBAR3)
+	@$(REBAR3) release
 
 .PHONY: clean
 clean: $(REBAR3)
@@ -40,6 +44,7 @@ integration-tests: all test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
 	-l test/load-tests.el \
+	--debug-init \
 	-f edts-test-run-suites-batch-and-exit
 
 .PHONY: ert
@@ -47,6 +52,7 @@ ert: test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
 	-l test/load-tests.el \
+	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test-projects
