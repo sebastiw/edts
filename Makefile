@@ -4,7 +4,9 @@ EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard apps/*/src))
 EMACS ?= "emacs"
 
 REBAR3 ?= $(shell which rebar3)
-REBAR3 ?= $(CURDIR)/rebar3
+ifeq (,$(REBAR3))
+REBAR3 := $(CURDIR)/rebar3
+endif
 
 comma = ,
 
@@ -32,7 +34,7 @@ clean: $(REBAR3)
 test: apps-test integration-tests ert
 
 .PHONY: apps-test
-apps-test:
+apps-test: $(REBAR3)
 	@$(REBAR3) do eunit --dir="$(EUNIT_DIRS)", ct
 
 .PHONY: $(APPS:%=test-%)
