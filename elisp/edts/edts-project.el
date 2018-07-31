@@ -70,10 +70,11 @@ underneath a project root to be subprojects of that super project.")
         (roots (-map 'f-slash edts-project-roots))
         root)
     (while (and (not stop) (not (f-root? dir)))
-      (if (or (-contains? roots (f-slash dir))
-              (f-file? (f-join dir ".edts")))
+      (if (-contains? roots (f-slash dir))
           (setq root dir
                 stop t)
+        (when (f-file? (f-join dir ".edts"))
+          (setq root dir))
         (setq dir (f-dirname dir))))
     root))
 
@@ -96,6 +97,7 @@ FILE."
                  (f-directory? (f-join (f-dirname dir) "_build"))))
         (f-dirname dir)
       dir)))
+
 
 (defun edts-project-root ()
   (unless edts-project-root
