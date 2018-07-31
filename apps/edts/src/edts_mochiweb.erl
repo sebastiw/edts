@@ -74,10 +74,11 @@ do_handle_request(Req) ->
   case [list_to_atom(E) || E <- string:tokens(mochiweb_request:get(path, Req), "/")] of
     [Command] ->
       edts_cmd:run(Command, get_input_context(Req));
-    [plugins, Plugin, Command] ->
+    [apps, Plugin, Command] ->
       edts_cmd:plugin_run(Plugin, Command, get_input_context(Req));
     Path ->
-      {error, {not_found, [{path, list_to_binary(Path)}]}}
+      BinPath = iolist_to_binary([atom_to_list(P) || P <- Path]),
+      {error, {not_found, [{path, BinPath}]}}
   end.
 
 get_input_context(Req) ->
