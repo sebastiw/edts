@@ -23,13 +23,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -module(edts_mochiweb).
 
-
 -export([start_link/0,
          handle_request/1]).
 
 -compile({no_auto_import,[error/2]}).
 
 %%%_* Includes =================================================================
+
+-include("otp_workarounds.hrl").
+
 %%%_* Defines ==================================================================
 
 -define(EDTS_PORT, 4587).
@@ -59,12 +61,12 @@ handle_request(Req) ->
         error(Req, method_not_allowed)
     end
   catch
-    Class:Reason:Stack ->
+    ?EXCEPTION(Class,Reason,Stack) ->
       error(Req,
             internal_server_error,
             [{class, format_term(Class)},
              {reason, format_term(Reason)},
-             {stack_trace, format_term(Stack)}])
+             {stack_trace, format_term(?GET_STACK(Stack))}])
   end.
 
 format_term(Term) ->

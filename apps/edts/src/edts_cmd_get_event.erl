@@ -32,6 +32,9 @@
          execute/1]).
 
 %%%_* Includes =================================================================
+
+-include("otp_workarounds.hrl").
+
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
@@ -44,9 +47,9 @@ execute(Ctx) ->
         {ok, Event} = edts_event:listen(),
         {ok, [{event, Event}]}
     catch
-        C:E:S ->
+        ?EXCEPTION(C,E,S) ->
             edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
-                           [C,E, S]),
+                           [C,E,?GET_STACK(S)]),
             execute(Ctx)
     end.
 
