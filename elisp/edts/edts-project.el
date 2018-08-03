@@ -80,23 +80,18 @@ underneath a project root to be subprojects of that super project.")
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
-                        (when (not (equal path "/"))
+                        (when (not (f-root? path))
                           (f-file? (f-join path "bin" "erl"))))
                       (f-expand dir)))
 
 (defun edts-project--find-temp-root (dir)
   "Find the appropriate root directory for a temporary project for
 FILE."
-  (-if-let (path (f-traverse-upwards
-                  (lambda (path)
-                    (or (f-directory? (f-join (f-dirname path) "ebin"))
-                        (f-directory? (f-join (f-dirname path) "_build"))))))
-      (f-dirname path)
-    (if (and (-contains? '("src" "test" "include") (f-filename dir))
-             (or (f-directory? (f-join (f-dirname dir) "ebin"))
-                 (f-directory? (f-join (f-dirname dir) "_build"))))
-        (f-dirname dir)
-      dir)))
+  (if (and (-contains? '("src" "test" "include") (f-filename dir))
+           (or (f-directory? (f-join (f-dirname dir) "ebin"))
+               (f-directory? (f-join (f-dirname dir) "_build"))))
+      (f-dirname dir)
+    dir))
 
 
 (defun edts-project-root ()
