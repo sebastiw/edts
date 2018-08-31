@@ -61,7 +61,7 @@
   :group 'edts)
 
 (defcustom edts-erl-sname
-  "edts"
+  "edts-server"
   "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
   :type 'string
   :group 'edts)
@@ -90,11 +90,12 @@
 (defconst edts-lib-directory
   (f-join edts-root-directory "elisp")
   "Directory where edts libraries are located.")
+
 (dolist (dir (f-directories edts-lib-directory))
   (add-to-list 'load-path dir))
 
 (defconst edts-plugin-directory
-  (f-join edts-root-directory "plugins")
+  (f-join edts-root-directory "apps")
   "Directory where edts plugins are located.")
 
 (dolist (dir (f-directories edts-plugin-directory))
@@ -103,14 +104,6 @@
 (defconst edts-test-directory
   (f-join edts-root-directory "test")
   "Directory where edts test data are located.")
-
-(defconst edts-erl-root
-  (and edts-erl-command
-       (file-name-directory
-        (directory-file-name
-         (file-name-directory (f-canonical edts-erl-command)))))
-  "Location of the Erlang root directory")
-
 
 (require 'edts)
 (require 'edts-api)
@@ -263,7 +256,7 @@ further.
     (let* ((path (mapconcat #'expand-file-name exec-path ":"))
            (process-environment (cons (concat "PATH=" path)
                                       process-environment)))
-      (if (= (call-process "make" nil t t "libs" "plugins") 0)
+      (if (= (call-process "make" nil t t "all") 0)
           (when (called-interactively-p 'interactive)
             (quit-window))
         (error (format (concat "Failed to compile EDTS libraries. "

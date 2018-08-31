@@ -29,6 +29,9 @@
 (require 'edts-log)
 (require 'edts-rpc)
 
+(defconst edts-api-server-name "edts-server"
+  "The name of EDTS server node name. Also remember to change vm.args")
+
 (defvar edts-api-node-name nil
   "Used to manually set the project node-name to use in a buffer
 that is not part of a project")
@@ -80,8 +83,8 @@ requests.")
 the node-name of the node that has gone down as the argument.")
 
 (defvar edts-node-sname
-  (if (string= "" edts-erl-sname) "edts" edts-erl-sname)
-  "Use `edts-erl-sname' if available. If not the sname will be
+  (if (string= "" edts-erl-sname) edts-api-server-name edts-erl-sname)
+  "Use e`dts-erl-sname' if available. If not the sname will be
 set to \"edts\". This makes it possible to have several edts
 nodes on the same host.")
 (make-variable-buffer-local 'edts-node-sname)
@@ -104,7 +107,7 @@ nodes on the same host.")
                         edts-erl-flags))
          (retries edts-api-num-server-start-retries)
          available)
-    (edts-shell-make-comint-buffer "*edts*" edts-node-sname pwd command)
+    (edts-shell-make-comint-buffer "*edts-server*" edts-node-sname pwd command)
     (setq available (edts-api-get-nodes t))
     (while (and (> retries 0) (not available))
       (setq available (edts-api-get-nodes t))
@@ -423,8 +426,7 @@ ARGS as the other arguments"
   (interactive)
   (edts-api-ensure-server-started)
   (if (edts-api-node-registeredp (edts-project-attribute :node-name))
-      (progn
-        (edts-api-refresh-project-node))
+      (edts-api-refresh-project-node)
     ;; Ensure project node is started
     (unless (edts-api-node-started-p (edts-project-attribute :node-name))
       (edts-api--start-project-node))
@@ -461,7 +463,9 @@ buffer's project-node and return the resulting environment."
   "Return the otp bin-path of current-buffer's project or, if that is
 not defined, the first directory in the `exec-path' that contains a file
 named erl."
-  (or (-when-let (otp-path (edts-project-attribute :otp-path))
+  (or (-when-let (rebar-path (executable-find "rebar3"))
+        (f-dirname rebar-path))
+      (-when-let (otp-path (edts-project-attribute :otp-path))
         (f-full (f-join otp-path "bin")))
       (-when-let (erl (executable-find "erl"))
         (f-dirname erl))))

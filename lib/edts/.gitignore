@@ -1,8 +1,0 @@
-.eunit
-deps
-ebin
-logs
-*.o
-*.beam
-*.elc
-*.plt

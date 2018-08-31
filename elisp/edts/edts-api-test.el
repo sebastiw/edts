@@ -45,17 +45,17 @@
 (edts-test-case edts-api-suite edts-api-start-server-test ()
   "Tests that the main server starts ok."
   (edts-test-pre-cleanup-all-buffers)
-  (edts-test-wait-for (lambda () (not (edts-api-node-started-p "edts"))))
+  (edts-test-wait-for (lambda () (not (edts-api-node-started-p "edts-server"))))
   (edts-api-start-server)
-  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts")))
-  (kill-buffer "*edts*")
+  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts-server")))
+  (kill-buffer "*edts-server*")
   (edts-test-wait-for
-   (lambda () (not (edts-api-node-started-p "edts")))))
+   (lambda () (not (edts-api-node-started-p "edts-server")))))
 
 (edts-test-case edts-api-suite edts-api-init-node-test ()
   "Tests that it's possible to register nodes with the main server."
   (edts-api-ensure-server-started)
-  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts")))
+  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts-server")))
   (edts-shell-make-comint-buffer "test-node"
                                  "*test_node*"
                                  (edts-test-project-directory 'temp-2)
@@ -79,7 +79,7 @@
 (edts-test-case edts-api-suite edts-api-module-operations-test ()
   "Tests that it's possible to perform module operations on a project node."
   (edts-api-ensure-server-started)
-  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts")))
+  (edts-test-wait-for (lambda () (edts-api-node-started-p "edts-server")))
   (let* (node-initialized
          (edts-api-after-node-init-hook
           (list (lambda () (setq node-initialized t)))))
