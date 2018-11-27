@@ -25,7 +25,7 @@
 (require 'f)
 (require 'woman)
 
-(defconst edts-man-download-url "http://www.erlang.org/download"
+(defconst edts-man-download-url "http://erlang.org/download/"
   "Where to download the erlang documentation from.")
 
 (defcustom edts-man-root nil
@@ -100,7 +100,7 @@ Location of the OTP documentation man-pages."
   (with-current-buffer (url-retrieve-synchronously edts-man-download-url)
     (goto-char (point-min))
     (let ((case-fold-search t)
-          (re "<a href=\".*/\\(otp_doc_man_\\(.*?\\)\\.tar\\.gz\\)\">")
+          (re "<A HREF=\"\\(otp_doc_man_\\(.*?\\)\\.tar\\.gz\\)\">")
           vsn-urls)
       (while (< (point) (point-max))
         (re-search-forward re nil 'move-point)
