@@ -261,3 +261,24 @@ of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 If you're using proxy server, you have to make sure that the proxy is not used
 for communicating with EDTS:
 ```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
+
+## Setup edts from source instructions ##
+To setup from source (assuming that you have rebar3 installed and added to your PATH), you first need to clone and compile edts:
+
+```bash
+$ git clone https://github.com/sebastiw/edts
+$ cd edts
+$ make
+```
+
+Next you need to ensure the edts directory is added to the emacs load-path. Add to your `.emacs.d` or `init.el` file:
+
+```
+(add-to-list 'load-path "<path to the cloned edts repo>")
+
+(add-hook 'after-init-hook 'my-after-init-hook)
+(defun my-after-init-hook ()
+  (require 'edts-start))
+```
+
+With this edts fork the .edts file shouldn't be need. Just ensure that you have compiled first your rebar3 project and start emacs.
