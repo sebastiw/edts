@@ -53,7 +53,9 @@
     (setq url-show-status nil)
     (edts-log-debug "Sending call to %s" url)
     (edts-log-debug-2 "Call args: %s" url-request-data)
-    (-when-let (buffer (url-retrieve-synchronously url))
+    (-when-let (buffer (condition-case nil
+                           (url-retrieve-synchronously url)
+                         (error nil)))
       (with-current-buffer buffer
         (let* ((proc (get-buffer-process (current-buffer)))
                (reply  (edts-rpc-parse-http-response))
