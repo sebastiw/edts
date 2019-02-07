@@ -27,7 +27,5 @@ APP_DIR=$EDTS_HOME/apps
 cd "$EDTS_HOME"
 
 exec $EDTS \
-    -sname $3 \
     -edts project_data_dir "\"$PROJ_DIR\"" \
     -edts plugin_dir "\"$APP_DIR\""
-
