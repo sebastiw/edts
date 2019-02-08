@@ -49,11 +49,9 @@ For questions or support, please sign up for the [EDTS mailing list](https://gro
 Please use the Github issue tracker to report bugs.
 
 #### Requirements:
-  - Emacs 23.3 or later (24.2 or higher recommended)
+  - Emacs 24 or later
 
 #### First of all, ensure your environment is setup correctly:
-  - If you're using Emacs 23, set up package.el according to the instructions
-on [Emacs Wiki](http://www.emacswiki.org/emacs/ELPA).
   - You will need make and Erlang installed or the package installation will
 fail.
   - You will also need both elpa and melpa package repositories added to your
@@ -80,7 +78,7 @@ An easy way is to load edts-start:
   EDTS projects are configured by creating a file called
   `.edts` in your project's root. The configuration file is a number of lines,
   where each line is in the format:
-` :<property> <value> `
+  ` :<property> <value> `
 
   Values that are lists must be prefixed with a single-quote, eg. `'("lib")`. See
   example below.
@@ -111,7 +109,7 @@ An easy way is to load edts-start:
   - `lib-dirs <list of strings>`
 
   A list of paths (relative to the project's root) where the project's code is
-  located. All subdirectories of lib-dirs are assumed to be otp-applications.
+  located. All subdirectories of lib-dirs are assumed to be otp-applications.
   If you're using rebar, this variable should contain your deps_dir and all
   lib_dirs from your rebar.config.
   Defaults to `'("lib" "deps")`.
@@ -263,7 +261,10 @@ for communicating with EDTS:
 ```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
 
 ## Setup edts from source instructions ##
-To setup from source (assuming that you have rebar3 installed and added to your PATH), you first need to clone and compile edts:
+
+To setup from source (assuming that you have rebar3 installed and
+added to your PATH), you first need to clone and compile edts:
+
 
 ```bash
 $ git clone https://github.com/sebastiw/edts
@@ -271,7 +272,8 @@ $ cd edts
 $ make
 ```
 
-Next you need to ensure the edts directory is added to the emacs load-path. Add to your `.emacs.d` or `init.el` file:
+Next you need to ensure the edts directory is added to the emacs
+load-path. Add to your `.emacs.d` or `init.el` file:
 
 ```
 (add-to-list 'load-path "<path to the cloned edts repo>")
@@ -281,4 +283,6 @@ Next you need to ensure the edts directory is added to the emacs load-path. Add 
   (require 'edts-start))
 ```
 
-With this edts fork the .edts file shouldn't be need. Just ensure that you have compiled first your rebar3 project and start emacs.
+With this edts fork the .edts file shouldn't be need. Just ensure that
+you have compiled first your rebar3 project and start emacs.
+
