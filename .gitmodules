@@ -1,21 +1,21 @@
 [submodule "elisp/auto-complete"]
 	path = elisp/auto-complete
-	url = git://github.com/tjarvstrand/auto-complete.git
+	url = git://github.com/auto-complete/auto-complete.git
 [submodule "elisp/auto-highlight-symbol-mode"]
 	path = elisp/auto-highlight-symbol-mode
-	url = git://github.com/tjarvstrand/auto-highlight-symbol-mode.git
-[submodule "elisp/popup-el"]
-	path = elisp/popup-el
-	url = git://github.com/tjarvstrand/popup-el.git
-[submodule "elisp/pos-tip"]
-	path = elisp/pos-tip
-	url = git://github.com/tjarvstrand/pos-tip.git
-[submodule "elisp/f"]
-	path = elisp/f
-	url = https://github.com/rejeep/f.el.git
+	url = git://github.com/mhayashi1120/auto-highlight-symbol-mode.git
 [submodule "elisp/dash"]
 	path = elisp/dash
 	url = https://github.com/magnars/dash.el.git
+[submodule "elisp/f"]
+	path = elisp/f
+	url = https://github.com/rejeep/f.el.git
+[submodule "elisp/popup-el"]
+	path = elisp/popup-el
+	url = git://github.com/auto-complete/popup-el.git
+[submodule "elisp/pos-tip"]
+	path = elisp/pos-tip
+	url = git://github.com/tjarvstrand/pos-tip.git
 [submodule "elisp/s"]
 	path = elisp/s
 	url = https://github.com/magnars/s.el.git
