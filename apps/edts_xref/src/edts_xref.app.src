@@ -1,6 +1,6 @@
 {application, edts_xref,
  [
-  {description, ""},
+  {description, "Xref capabilities within EDTS"},
   {vsn, "1"},
   {registered, []},
   {applications, [
