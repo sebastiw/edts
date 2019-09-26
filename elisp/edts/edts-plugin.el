@@ -28,7 +28,7 @@
 (require 'edts)
 
 (defconst edts-plugin-directory-name
-  "apps"
+  "lib"
   "Bare directory name for the plugins")
 
 (defconst edts-plugin-directory

@@ -1,6 +1,6 @@
 MAKEFLAGS = -s
-APPS = $(subst apps/,,$(wildcard apps/*))
-EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard apps/*/src))
+APPS = $(subst lib/,,$(wildcard lib/*))
+EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
 EMACS ?= "emacs"
 
 REBAR3 ?= $(shell which rebar3)
@@ -39,7 +39,7 @@ apps-test: $(REBAR3)
 
 .PHONY: $(APPS:%=test-%)
 $(APPS:%=test-%): $(REBAR3)
-	@$(REBAR3) do eunit --dir "$(wildcard apps/*/src)", ct
+	@$(REBAR3) do eunit --dir "$(wildcard lib/*/src)", ct
 
 .PHONY: integration-tests
 integration-tests: all test-projects

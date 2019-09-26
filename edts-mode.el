@@ -95,7 +95,7 @@
   (add-to-list 'load-path dir))
 
 (defconst edts-plugin-directory
-  (f-join edts-root-directory "apps")
+  (f-join edts-root-directory "lib")
   "Directory where edts plugins are located.")
 
 (dolist (dir (f-directories edts-plugin-directory))
