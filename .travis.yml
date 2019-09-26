@@ -1,9 +1,9 @@
 sudo: required
 language: erlang
 otp_release:
-  - 21.0
+  - 22.0
+  - 21.3
   - 20.3
-  - 19.3
 before_install:
   - |
     docker run --rm \
@@ -17,9 +17,9 @@ before_install:
 services:
   - docker
 env:
-  - EMACS=24-dev
-  - EMACS=25-dev
-  - EMACS=26-dev
+  - EMACS=24.5-dev
+  - EMACS=25.3-dev
+  - EMACS=26.3-dev
 script:
   - |
     docker run --rm \
