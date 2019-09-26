@@ -13,7 +13,7 @@ before_install:
                -w ${PWD} \
                -e PATH=${PATH} \
                silex/emacs:${EMACS} \
-               emacs -Q --batch -l test/package-install-deps.el
+               emacs -Q --batch -l test_data/package-install-deps.el
 services:
   - docker
 env:

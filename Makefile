@@ -45,7 +45,7 @@ $(APPS:%=test-%): $(REBAR3)
 integration-tests: all test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
-	-l test/load-tests.el \
+	-l test_data/load-tests.el \
 	--debug-init \
 	-f edts-test-run-suites-batch-and-exit
 
@@ -53,10 +53,10 @@ integration-tests: all test-projects
 ert: test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
-	-l test/load-tests.el \
+	-l test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test-projects
 test-projects:
-	$(MAKE) -C test/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
+	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"

@@ -102,7 +102,7 @@
   (add-to-list 'load-path dir))
 
 (defconst edts-test-directory
-  (f-join edts-root-directory "test")
+  (f-join edts-root-directory "test_data")
   "Directory where edts test data are located.")
 
 (require 'edts)
