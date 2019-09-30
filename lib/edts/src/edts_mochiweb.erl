@@ -73,14 +73,14 @@ format_term(Term) ->
   list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
 
 do_handle_request(Req) ->
-  case [list_to_atom(E) || E <- string:tokens(mochiweb_request:get(path, Req), "/")] of
+  Path = mochiweb_request:get(path, Req),
+  case [list_to_atom(E) || E <- string:tokens(Path, "/")] of
     [Command] ->
       edts_cmd:run(Command, get_input_context(Req));
     [lib, Plugin, Command] ->
       edts_cmd:plugin_run(Plugin, Command, get_input_context(Req));
-    Path ->
-      BinPath = iolist_to_binary([atom_to_list(P) || P <- Path]),
-      {error, {not_found, [{path, BinPath}]}}
+    _ ->
+      {error, {not_found, [{path, list_to_binary(Path)}]}}
   end.
 
 get_input_context(Req) ->
@@ -145,18 +145,9 @@ respond(Req, Code, Data) ->
 %%%_* Internal functions =======================================================
 
 configured_port() ->
-  Port = getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
+  Port = os:getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
   edts_log:debug("Using EDTS port ~p from file.", [Port]),
   list_to_integer(Port).
-
-%%% TODO: Remove this function when dropping R17 support. Use os:getenv/2.
-getenv(Variable, Default) ->
-  case os:getenv(Variable) of
-    false ->
-      Default;
-    Value ->
-      Value
-  end.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

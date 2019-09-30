@@ -30,7 +30,7 @@
 
 (require 'edts-mode)
 
-(dolist (file (f-glob (f-join edts-code-directory "*-test.el"))) ; (f-join edts-dir "elisp" "edts" "*-test.el")))
+(dolist (file (f-glob (f-join edts-dir "elisp" "edts" "*-test.el")))
  ;; avoid symlinks created as emacs backups
   (when (not (f-symlink? file))
     (load file)))

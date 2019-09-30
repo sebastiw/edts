@@ -84,9 +84,9 @@ the node-name of the node that has gone down as the argument.")
 
 (defvar edts-node-sname
   (if (string= "" edts-erl-sname) edts-api-server-name edts-erl-sname)
-  "Use e`dts-erl-sname' if available. If not the sname will be
-set to \"edts\". This makes it possible to have several edts
-nodes on the same host.")
+  "Use `edts-erl-sname' if available. If not the sname will be
+set to `edts-api-server-name'. This makes it possible to have
+several edts nodes on the same host.")
 (make-variable-buffer-local 'edts-node-sname)
 
 (defun edts-api-ensure-server-started ()
