@@ -10,6 +10,14 @@
 
                     -- The Erlang Development Tool Suite --
 
+# It's dead
+
+Sorry folks. As I've been busy with other projects the priority of working on
+EDTS has been continuously falling. I haven't been using Erlang in many years
+now and the likelyhood that I will start doing so is still low. As such I'm
+declaring this project dead for now. Please let me know if you'd be interested
+in taking over its maintenance.
+
 ## License ##
 Copyright (C) 2012 by Thomas Järvstrand, Håkan Nilsson
               2013 by Thomas Järvstrand
