@@ -28,8 +28,7 @@
 %%%_* Includes =================================================================
 %%%_* Exports ==================================================================
 
--export([behaviour_info/1,
-         dirs/0,
+-export([dirs/0,
          names/0,
          specs/0,
          to_ret_str/1,
@@ -46,16 +45,23 @@
 
 %%%_* Types ====================================================================
 
-%%%_* API ======================================================================
+-type argument() :: {Name :: atom(), Type :: atom()}.
 
-behaviour_info(callbacks) ->
-  [ {edts_server_services,  0},
-    {event_formatters,      0},
-    {project_node_modules,  0},
-    {project_node_services, 0},
-    {spec,                  2}
-  ];
-behaviour_info(_) -> undefined.
+-type function_name() :: atom().
+
+%%%_* Behaviour callbacks ======================================================
+
+-callback edts_server_services() -> [].
+
+-callback event_formatters() -> [{edts_debug, edts_events_debug}].
+
+-callback project_node_modules() -> [module()].
+
+-callback project_node_services() -> [].
+
+-callback spec(function_name(), arity()) -> [argument()].
+
+%%%_* API ======================================================================
 
 dirs() ->
   case application:get_env(edts, plugin_dir) of
@@ -64,11 +70,13 @@ dirs() ->
       AbsDir = filename:absname(Dir),
       PluginDirs = filelib:wildcard(filename:join(AbsDir, "*")),
       [PluginDir || PluginDir <- PluginDirs,
-                    filelib:is_dir(PluginDir)]
+                    filelib:is_dir(PluginDir),
+                    "edts" /= filename:basename(PluginDir)]
   end.
 
 names() ->
-  [list_to_atom(filename:basename(Dir)) || Dir <- dirs()].
+  [Name || Dir <- dirs(),
+           edts /= (Name = list_to_atom(filename:basename(Dir)))].
 
 
 specs() ->
@@ -100,7 +108,7 @@ project_node_services(Plugin) ->
 %%%_* Internal functions =======================================================
 
 do_spec(Dir) ->
-  [AppFile] = filelib:wildcard(filename:join([Dir, "ebin", "*.app"])),
+  [AppFile] = filelib:wildcard(filename:join([Dir, "src", "*.app.src"])),
   {ok, [AppSpec]} = file:consult(AppFile),
   AppSpec.
 

@@ -3,7 +3,7 @@
                       ______    ____| $$ _| $$_     _______
                      /      \  /      $$|   $$ \   /       \
                     |  $$$$$$\|  $$$$$$$ \$$$$$$  |  $$$$$$$
-                    | $$    $$| $$  | $$  | $$ __  \$$    \
+                    | $$    $$| $$  | $$  | $$ __  \$$    \
                     | $$$$$$$$| $$__| $$  | $$|  \ _\$$$$$$\
                      \$$     \ \$$    $$   \$$  $$|       $$
                       \$$$$$$$  \$$$$$$$    \$$$$  \$$$$$$$
@@ -49,11 +49,9 @@ For questions or support, please sign up for the [EDTS mailing list](https://gro
 Please use the Github issue tracker to report bugs.
 
 #### Requirements:
-  - Emacs 23.3 or later (24.2 or higher recommended)
+  - Emacs 24 or later
 
 #### First of all, ensure your environment is setup correctly:
-  - If you're using Emacs 23, set up package.el according to the instructions
-on [Emacs Wiki](http://www.emacswiki.org/emacs/ELPA).
   - You will need make and Erlang installed or the package installation will
 fail.
   - You will also need both elpa and melpa package repositories added to your
@@ -80,7 +78,7 @@ An easy way is to load edts-start:
   EDTS projects are configured by creating a file called
   `.edts` in your project's root. The configuration file is a number of lines,
   where each line is in the format:
-` :<property> <value> `
+  ` :<property> <value> `
 
   Values that are lists must be prefixed with a single-quote, eg. `'("lib")`. See
   example below.
@@ -111,7 +109,7 @@ An easy way is to load edts-start:
   - `lib-dirs <list of strings>`
 
   A list of paths (relative to the project's root) where the project's code is
-  located. All subdirectories of lib-dirs are assumed to be otp-applications.
+  located. All subdirectories of lib-dirs are assumed to be otp-applications.
   If you're using rebar, this variable should contain your deps_dir and all
   lib_dirs from your rebar.config.
   Defaults to `'("lib" "deps")`.
@@ -254,3 +252,8 @@ of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 If you're using proxy server, you have to make sure that the proxy is not used
 for communicating with EDTS:
 ```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
+
+In Emacs 26.1 something changed with url-retrieve. It still works, but you may
+get an error message: `Connection refused :name 0 :buffer #<killed buffer>
+:host 0 :service 4587 :nowait nil :tls-parameters nil`.
+You can try reloading the buffer.

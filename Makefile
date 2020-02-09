@@ -1,43 +1,52 @@
 MAKEFLAGS = -s
-PLUGINS = $(subst plugins/,,$(wildcard plugins/*))
-export ERL_LIBS:=`pwd`"/lib"
-EMACS?= "emacs"
+APPS = $(subst apps/,,$(wildcard apps/*))
+EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard apps/*/src))
+EMACS ?= "emacs"
+
+REBAR3 ?= $(shell which rebar3)
+ifeq (,$(REBAR3))
+REBAR3 := $(CURDIR)/rebar3
+endif
+
+comma = ,
 
 .PHONY: all
-all: submodule-update libs plugins
+all: compile release
 
-.PHONY: submodule-update
-submodule-update:
-	@-if [ -z "${EDTS_SKIP_SUBMODULE_UPDATE}" ]; \
-	then git submodule update --init; fi
+$(REBAR3):
+	curl -LO https://s3.amazonaws.com/rebar3/rebar3
+	chmod a+x rebar3
 
+.PHONY: compile
+compile: $(REBAR3)
+	@$(REBAR3) compile
 
-.PHONY: libs
-libs:
-	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)"
-
-.PHONY: plugins
-plugins: $(PLUGINS)
-
-.PHONY: $(PLUGINS)
-$(PLUGINS):
-	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C plugins/$@ MAKEFLAGS="$(MAKEFLAGS)"
+.PHONY: release
+release: $(REBAR3)
+	@$(REBAR3) release
 
 .PHONY: clean
-clean: $(PLUGINS:%=clean-%) clean-test-projects
+clean: $(REBAR3)
+	@$(REBAR3) clean
 	rm -rfv elisp/*/*.elc
-	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" clean
 
-.PHONY: $(PLUGINS:%=clean-%)
-$(PLUGINS:%=clean-%):
-	$(MAKE) -C plugins/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
+.PHONY: test
+test: apps-test integration-tests ert
+
+.PHONY: apps-test
+apps-test: $(REBAR3)
+	@$(REBAR3) do eunit --dir="$(EUNIT_DIRS)", ct
+
+.PHONY: $(APPS:%=test-%)
+$(APPS:%=test-%): $(REBAR3)
+	@$(REBAR3) do eunit --dir "$(wildcard apps/*/src)", ct
 
 .PHONY: integration-tests
 integration-tests: all test-projects
-	$(MAKE) -C test/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
 	-l test/load-tests.el \
+	--debug-init \
 	-f edts-test-run-suites-batch-and-exit
 
 .PHONY: ert
@@ -45,35 +54,9 @@ ert: test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
 	-l test/load-tests.el \
+	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test-projects
 test-projects:
 	$(MAKE) -C test/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
-
-.PHONY: clean-test-projects
-clean-test-projects:
-	find test -name *.beam -delete
-
-.PHONY: test
-test: all test-edts ert integration-tests $(PLUGINS:%=test-%)
-
-:PHONY: test-edts
-test-edts:
-	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" test
-
-.PHONY: $(PLUGINS:%=test-%)
-$(PLUGINS:%=test-%):
-	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C plugins/$(@:test-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
-
-.PHONY: eunit
-eunit: libs plugins eunit-edts $(PLUGINS:%=eunit-%)
-
-:PHONY: eunit-edts
-eunit-edts:
-	$(MAKE) -C lib/edts MAKEFLAGS="$(MAKEFLAGS)" eunit
-
-.PHONY: $(PLUGINS:%=eunit-%)
-$(PLUGINS:%=eunit-%):
-	$(MAKE) -e ERL_LIBS="$(ERL_LIBS)" -C plugins/$(@:eunit-%=%) MAKEFLAGS="$(MAKEFLAGS)" eunit
-

@@ -5,7 +5,9 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  debugger,
+                  edts
                  ]},
   {env, []}
  ]}.
