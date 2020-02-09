@@ -25,9 +25,6 @@
 (require 'edts-project)
 (require 'edts-plugin)
 
-(defconst edts-test-directory (f-join edts-root-directory "test")
-  "Directory where EDTS test files are located")
-
 (defun edts-test-project-directory (project)
   (f-join edts-test-directory
           (s-concat "edts-test-project-" (symbol-name project))))

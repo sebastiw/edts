@@ -1,6 +1,6 @@
 MAKEFLAGS = -s
-APPS = $(subst apps/,,$(wildcard apps/*))
-EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard apps/*/src))
+APPS = $(subst lib/,,$(wildcard lib/*))
+EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
 EMACS ?= "emacs"
 
 REBAR3 ?= $(shell which rebar3)
@@ -39,13 +39,13 @@ apps-test: $(REBAR3)
 
 .PHONY: $(APPS:%=test-%)
 $(APPS:%=test-%): $(REBAR3)
-	@$(REBAR3) do eunit --dir "$(wildcard apps/*/src)", ct
+	@$(REBAR3) do eunit --dir "$(wildcard lib/*/src)", ct
 
 .PHONY: integration-tests
 integration-tests: all test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
-	-l test/load-tests.el \
+	-l test_data/load-tests.el \
 	--debug-init \
 	-f edts-test-run-suites-batch-and-exit
 
@@ -53,10 +53,10 @@ integration-tests: all test-projects
 ert: test-projects
 	$(EMACS) -Q --batch \
 	-L ${PWD} \
-	-l test/load-tests.el \
+	-l test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
 .PHONY: test-projects
 test-projects:
-	$(MAKE) -C test/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
+	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"

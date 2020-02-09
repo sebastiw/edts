@@ -39,6 +39,7 @@
     (define-key map "\C-c\C-de"    'edts-ahs-edit-current-function)
     (define-key map "\C-c\C-dE"    'edts-ahs-edit-buffer)
     (define-key map "\C-c\C-dt"    'edts-code-eunit)
+    (define-key map "\C-c\C-dr"    'edts-refactor-extract-function)
     (define-key map "\M-."         'edts-find-source-under-point)
     (define-key map "\M-,"         'edts-find-source-unwind)
     map)
@@ -56,6 +57,12 @@
 (defcustom edts-erl-flags
   ""
   "Flags to use when launching the main EDTS-node."
+  :type 'string
+  :group 'edts)
+
+(defcustom edts-erl-sname
+  "edts-server"
+  "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
   :type 'string
   :group 'edts)
 
@@ -88,14 +95,14 @@
   (add-to-list 'load-path dir))
 
 (defconst edts-plugin-directory
-  (f-join edts-root-directory "apps")
+  (f-join edts-root-directory "lib")
   "Directory where edts plugins are located.")
 
 (dolist (dir (f-directories edts-plugin-directory))
   (add-to-list 'load-path dir))
 
 (defconst edts-test-directory
-  (f-join edts-root-directory "test")
+  (f-join edts-root-directory "test_data")
   "Directory where edts test data are located.")
 
 (require 'edts)
@@ -105,6 +112,7 @@
 (require 'edts-face)
 (require 'edts-log)
 (require 'edts-project)
+(require 'edts-refactor)
 (require 'edts-plugin)
 (require 'edts-shell)
 
@@ -217,8 +225,6 @@ further.
 \\[edts-byte-compile]               - Byte compile all EDTS elisp files.
 \\[edts-project-start-node]         - Start current buffers project-node
                                       if not already running.
-\\[edts-refactor-extract-function]  - Extract code in current region
-                                      into a separate function.
 \\[edts-init-node]                  - Register the project-node of
                                       current buffer with the central
                                       EDTS server.

@@ -64,6 +64,7 @@
                                      [{{class(), type()}, module()}]
                }).
 
+%% Don't include the otp_workarounds.hrl. That file is not sent to the node.
 -ifdef(OTP_RELEASE). %% this implies 21 or higher
 -define(EXCEPTION(Class, Reason, StackToken), Class:Reason:StackToken).
 -define(GET_STACK(StackToken), StackToken).

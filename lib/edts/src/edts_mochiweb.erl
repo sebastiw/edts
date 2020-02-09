@@ -34,7 +34,7 @@
 
 %%%_* Defines ==================================================================
 
--define(EDTS_PORT, 4587).
+-define(EDTS_PORT_DEFAULT, "4587").
 
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
@@ -42,7 +42,7 @@
 start_link() ->
   mochiweb_http:start_link([{name, ?MODULE},
                             {loop, fun ?MODULE:handle_request/1},
-                            {port, ?EDTS_PORT}]).
+                            {port, configured_port()}]).
 
 
 handle_request(Req) ->
@@ -73,14 +73,14 @@ format_term(Term) ->
   list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
 
 do_handle_request(Req) ->
-  case [list_to_atom(E) || E <- string:tokens(mochiweb_request:get(path, Req), "/")] of
+  Path = mochiweb_request:get(path, Req),
+  case [list_to_atom(E) || E <- string:tokens(Path, "/")] of
     [Command] ->
       edts_cmd:run(Command, get_input_context(Req));
-    [apps, Plugin, Command] ->
+    [lib, Plugin, Command] ->
       edts_cmd:plugin_run(Plugin, Command, get_input_context(Req));
-    Path ->
-      BinPath = iolist_to_binary([atom_to_list(P) || P <- Path]),
-      {error, {not_found, [{path, BinPath}]}}
+    _ ->
+      {error, {not_found, [{path, list_to_binary(Path)}]}}
   end.
 
 get_input_context(Req) ->
@@ -141,6 +141,13 @@ respond(Req, Code, Data) ->
                  _         -> mochijson2:encode(Data)
                end,
   mochiweb_request:respond({Code, Headers, BodyString}, Req).
+
+%%%_* Internal functions =======================================================
+
+configured_port() ->
+  Port = os:getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
+  edts_log:debug("Using EDTS port ~p from file.", [Port]),
+  list_to_integer(Port).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

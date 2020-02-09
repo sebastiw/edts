@@ -134,6 +134,7 @@ buffer's file."
       ;; * deps: dependencies included by rebar2
       ;; * _build/test/lib: test scope dependencies from rebar3
       ;; * _build/default/lib: dependencies included by rebar3
+      ;; * _checkouts: local dependencies included by rebar3
 
       ;; NOTE: It's important for rebar3's test profile to be loaded
       ;; first, because rebar3 might have different contents of a specific
@@ -143,9 +144,11 @@ buffer's file."
       ;; making your test modules a sea of red squiggles.
       (:lib-dirs . ("lib"
                     "deps"
+                    "_checkouts"
                     ;; Probably use f-expand.
                     ,(f-join "_build" "test" "lib")
-                    ,(f-join "_build" "default" "lib"))))))
+                    ,(f-join "_build" "default" "lib")
+                    )))))
 
 (defun edts-project--init-otp-project (dir)
   (-when-let (root (edts-project--find-otp-root dir))

@@ -139,12 +139,12 @@ call."
             (max-status-len 6)
             (max-info-len   4)
             entries)
-        (flet (;; Sort an alist by comparing the keys as strings
-               (key-sort (kvs)
-                         (sort
-                          (copy-sequence kvs)
-                          #'(lambda (el1 el2)
-                                  (string< (car el1) (car el2))))))
+        (cl-flet (;; Sort an alist by comparing the keys as strings
+                  (key-sort (kvs)
+                            (sort
+                             (copy-sequence kvs)
+                             #'(lambda (el1 el2)
+                                 (string< (car el1) (car el2))))))
           (loop for (node . procs) in (key-sort edts-debug-processes-alist)
                 do (setq max-node-len (max max-node-len
                                            (length node)))

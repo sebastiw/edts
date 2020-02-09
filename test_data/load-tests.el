@@ -31,7 +31,7 @@
 (require 'edts-mode)
 
 (dolist (file (f-glob (f-join edts-dir "elisp" "edts" "*-test.el")))
-  ;; avoid symlinks created as emacs backups
+ ;; avoid symlinks created as emacs backups
   (when (not (f-symlink? file))
     (load file)))
 

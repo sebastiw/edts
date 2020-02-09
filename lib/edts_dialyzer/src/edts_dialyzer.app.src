@@ -1,13 +1,12 @@
-{application, edts_debug,
+{application, edts_dialyzer,
  [
-  {description, ""},
+  {description, "Dialyzer capabilities within EDTS"},
   {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib,
-                  debugger,
                   edts
                  ]},
-  {env, []}
+  {env, [{file_backend, file}]}
  ]}.
