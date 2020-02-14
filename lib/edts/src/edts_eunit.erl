@@ -41,10 +41,10 @@
 %%%_* Types ====================================================================
 -type info()    :: orddict:orddict().
 -type result()  :: ok() | error().
--type ok()      :: {ok, {summary(), [test()]}}.
+-type ok()      :: {ok, {summary(), test()}}.
 -type error()   :: {error, term()}.
 -type summary() :: orddict:orddict().
--type test()    :: {mfa(), [info()]}.
+-type test()    :: info().
 -type reason()  :: atom().
 
 -export_type([info/0,
@@ -167,8 +167,7 @@ get_first_prop([Key|Keys], Proplist) ->
 
 get_line(Result) ->
   case proplists:get_value(line, Result) of
-    Line when is_integer(Line) andalso
-              Line > 0 ->
+    Line when is_integer(Line) andalso Line > 0 ->
       Line;
     _ ->
       try get_error_line(Result)

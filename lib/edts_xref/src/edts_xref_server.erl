@@ -73,7 +73,7 @@ allowed_checks() -> [undefined_function_calls, unused_exports].
 %% @doc
 %% Starts the edts xref-server on the local node.
 %% @end
--spec start() -> {ok, pid()} | {error, already_started}.
+-spec start() -> ok.
 %%------------------------------------------------------------------------------
 start() ->
   File = xref_file(),
@@ -98,7 +98,7 @@ start() ->
                              [File, C, E]),
       do_start()
   end,
-  ok = update().
+  update().
 
 do_start() ->
   do_start_with(fun() -> xref:start(?MODULE) end).
@@ -158,7 +158,7 @@ get_state() ->
 %% Do an xref-analysis of Module, applying Checks
 %% @end
 -spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
-                       {ok, [edts_code:issue()]}.
+        [edts_code:issue()].
 %%------------------------------------------------------------------------------
 check_modules(Modules0, Checks) ->
   MaybeReloadFun =
@@ -220,18 +220,17 @@ ignored_p(M, F, A) ->
 %% Returns alist with all functions that call M:F/A on the local node.
 %% @end
 -spec who_calls(module(), atom(), non_neg_integer()) ->
-                   [{module(), atom(), non_neg_integer()}].
+        [{mfa(), [pos_integer()]}].
 %%------------------------------------------------------------------------------
 who_calls(M, F, A) ->
-  Str = lists:flatten(io_lib:format("(Lin) (E || ~p)", [{M, F, A}])),
-  {ok, Calls} = xref:q(?SERVER, Str),
+  Calls = do_query("(Lin) (E || ~p)", [{M, F, A}]),
   [{Caller, Lines} || {{Caller, _Callee}, Lines} <- Calls].
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Update the internal state of the xref server.
 %% @end
--spec update() -> {ok, [module()]}.
+-spec update() -> ok.
 %%------------------------------------------------------------------------------
 update() ->
   {ErlLibDirs, AppDirs} = edts_util:lib_and_app_dirs(),

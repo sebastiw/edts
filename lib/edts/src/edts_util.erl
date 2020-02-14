@@ -110,7 +110,7 @@ project_lib_file_p(File) ->
 %% Return true if File is located underneath any of LibDirs relative to
 %% ProjectDir.
 -spec project_lib_file_p(ProjectDir :: file:filename(),
-                         LibDirs :: file:filename(),
+                         LibDirs :: [file:filename()],
                          File :: file:filename()) ->
                            boolean().
 %%------------------------------------------------------------------------------

@@ -30,8 +30,12 @@ clean: $(REBAR3)
 	@$(REBAR3) clean
 	rm -rfv elisp/*/*.elc
 
+.PHONY: dialyzer
+dialyzer: $(REBAR3)
+	@$(REBAR3) dialyzer
+
 .PHONY: test
-test: apps-test integration-tests ert
+test: apps-test dialyzer integration-tests ert
 
 .PHONY: apps-test
 apps-test: $(REBAR3)

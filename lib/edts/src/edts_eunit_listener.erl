@@ -99,9 +99,10 @@ handle_cancel(test = L, Data, State) ->
   State#state{cancelled = [Data|State#state.cancelled]}.
 
 
--spec terminate({ok, proplists:proplist()}, #state{}) ->
-              {result, reference(), {edts_eunit:summary(),
-                                     [edts_eunit:test()]}}.
+-spec terminate(any(), #state{}) ->
+        {result, reference(), {edts_eunit:summary(),
+                               edts_eunit:test()}} |
+        {error, term()}.
 terminate({ok, Summary}, #state{ref=Ref, parent=Parent} = State) ->
   Result =
     orddict:from_list([{successful, State#state.successful},
@@ -125,21 +126,24 @@ debug(_FmtStr, _Args) -> ok.
 
 init_test() ->
   flush_mailbox(),
-  self() ! {start, ref},
-  ?assertEqual(#state{ref = ref, parent = foo}, init([{parent, foo}])).
+  Ref = make_ref(),
+  self() ! {start, Ref},
+  ?assertEqual(#state{ref = Ref, parent = self()}, init([{parent, self()}])).
 
 handle_begin_test_() ->
-  [ ?_assertEqual(#state{},
-                  handle_end(group, [{status, ok}], #state{}))
+  State = #state{ref=make_ref(), parent=self()},
+  [ ?_assertEqual(State,
+                  handle_end(group, [{status, ok}], State))
   ].
 
 handle_end_test_() ->
-  [ ?_assertEqual(#state{successful = [[{status, ok}]]},
-                  handle_end(test, [{status, ok}], #state{})),
-    ?_assertEqual(#state{failed = [[{status, {error, an_error}}]]},
-                  handle_end(test, [{status, {error, an_error}}], #state{})),
-    ?_assertEqual(#state{},
-                  handle_end(group, [{status, ok}], #state{}))
+  State = #state{ref=make_ref(), parent=self()},
+  [ ?_assertEqual(State#state{successful = [[{status, ok}]]},
+                  handle_end(test, [{status, ok}], State)),
+    ?_assertEqual(State#state{failed = [[{status, {error, an_error}}]]},
+                  handle_end(test, [{status, {error, an_error}}], State)),
+    ?_assertEqual(State,
+                  handle_end(group, [{status, ok}], State))
   ].
 
 terminate_test() ->
@@ -154,10 +158,11 @@ terminate_test() ->
   ?assertEqual({error, foo}, receive {error, _} = ExpErr -> ExpErr end).
 
 handle_cancel_test_() ->
-  [?_assertEqual(#state{cancelled = [data]},
-                 handle_cancel(test, data, #state{})),
-   ?_assertEqual(#state{},
-                 handle_cancel(group, data, #state{}))
+  State = #state{ref=make_ref(), parent=self()},
+  [?_assertEqual(State#state{cancelled = [[{data, test}]]},
+                 handle_cancel(test, [{data, test}], State)),
+   ?_assertEqual(State,
+                 handle_cancel(group, [{data, test}], State))
   ].
 
 flush_mailbox() ->

@@ -47,6 +47,7 @@
          terminate/2
         ]).
 
+-callback format_info(edts_events:class(), edts_events:type(), term()) -> [{atom(), term()}].
 
 %%%_* Defines ==================================================================
 

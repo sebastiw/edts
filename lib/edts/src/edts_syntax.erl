@@ -56,14 +56,14 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 %% @doc
 %% Return a list of free variables in Snippet.
 %% @end
--spec free_vars(Text::string(), pos_integer()) -> {ok, FreeVars::[atom()]} |
-                                                  {error, term()}.
+-spec free_vars(Text::string(), pos_integer()) ->
+        {ok, FreeVars::[atom()]} |
+        {error, term()}.
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Text, StartLine) ->
   %% StartLine/EndLine may be useful in error messages.
   {ok, Ts, EndLine} = erl_scan:string(Text, StartLine),
-  %%Ts1 = reverse(strip(reverse(Ts))),
   Ts2 = [{'begin', 1}] ++ Ts ++ [{'end', EndLine}, {dot, EndLine}],
   case erl_parse:parse_exprs(Ts2) of
     {ok, Es} ->
@@ -72,30 +72,45 @@ free_vars(Text, StartLine) ->
       {value, {free, Vs}} =
         lists:keysearch(free, 1, erl_syntax:get_ann(E1)),
       {ok, Vs};
-    {error, {_Line, erl_parse, _Reason}} = Err -> Err
-    end.
+    {error, _} = Err -> Err
+  end.
 
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Tokenize and parse String as a sequence of forms.
 %% @end
--spec parse_forms(string()) -> {ok, Forms::erl_parse:abstract_form()} |
-                               {error, term()}.
+-spec parse_forms(string()) ->
+        {ok, Forms::[term()]} |
+        {error, term(), term()} |
+        {error, [term()]}.
 %%------------------------------------------------------------------------------
-parse_forms(String) -> parse(scan(String)).
+parse_forms(String) ->
+  case scan(String) of
+    {error, _, _} = Err ->
+      Err;
+    Tokens ->
+      parse(Tokens)
+  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Tokenize and parse String as a sequence of expressions.
 %% @end
--spec parse_expressions(string()) -> {ok, Forms::erl_parse:abstract_form()} |
-                                     {error, term()}.
+-spec parse_expressions(string()) ->
+        {ok, Forms::[term()]} |
+        {error, term(), term()} |
+        {error, term()}.
 %%------------------------------------------------------------------------------
 parse_expressions(String) ->
-  case erl_parse:parse_exprs(scan(String)) of
-    {ok, _}    = Res -> Res;
-    {error, _} = Err -> Err
+  case scan(String) of
+    {error, _, _} = Err -> Err;
+    Tokens ->
+      case erl_parse:parse_exprs(Tokens) of
+        {ok, AnnoTerms} ->
+          {ok, lists:map(fun erl_parse:anno_to_term/1, AnnoTerms)};
+        Err -> Err
+      end
   end.
 
 
@@ -117,13 +132,14 @@ parse_term(String) ->
 scan(String) ->
   case erl_scan:string(String) of
     {ok, Toks, _}       -> Toks;
-    {error, _, _} = Err -> Err
+    {error, _Info, _Loc} = Err -> Err
   end.
 
 parse(Toks) ->
-  case parse(Toks, []) of
-    {error, _} = Err -> Err;
-    Res              -> {ok, Res}
+  Res = parse(Toks, []),
+  case [E || {error, E} <- Res] of
+    []  -> {ok, Res};
+    Errs -> {error, Errs}
   end.
 
 %% Separate
@@ -131,11 +147,11 @@ parse([Tok = {dot, _}| T], Unparsed) ->
   [get_form(lists:reverse([Tok | Unparsed])) | parse(T, [])];
 parse([Tok | T], Unparsed) -> parse(T, [Tok | Unparsed]);
 parse([], []) -> [];
-parse([], Unparsed) -> get_form(lists:reverse(Unparsed)).
+parse([], Unparsed) -> [get_form(lists:reverse(Unparsed))].
 
 get_form(Toks) ->
   case erl_parse:parse_form(Toks) of
-    {ok, Forms}      -> Forms;
+    {ok, Form}      -> Form;
     {error, _} = Err -> Err
   end.
 
@@ -144,14 +160,14 @@ get_form(Toks) ->
 parse_expressions_test_() ->
   [?_assertMatch({error, {_, erl_parse, _}},
                  parse_expressions("foo(fun() -> ok end)")),
-   ?_assertMatch({ok, [{call,1, {atom, 1, foo}, [_]}]},
+   ?_assertMatch({ok, [{call, _, {atom, 1, foo}, [_]}]},
                  parse_expressions("foo(fun() -> ok end)."))
   ].
 
 parse_forms_test_() ->
-  [?_assertMatch({error, {_, erl_parse, _}},
+  [?_assertMatch({error, [{_, erl_parse, _}]},
                  parse_forms("foo(fun() -> ok end)")),
-   ?_assertMatch({ok, [{function, 1, foo, _, [_]}]},
+   ?_assertMatch({ok, [{function, _, foo, _, [_]}]},
                  parse_forms("foo() -> ok."))
   ].
 

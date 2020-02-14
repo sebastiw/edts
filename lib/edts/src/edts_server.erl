@@ -52,7 +52,7 @@
 -define(SERVER, ?MODULE).
 -record(node, {name :: node()}).
 
--record(state, {nodes         = [] :: edts_node()}).
+-record(state, {nodes         = [] :: [edts_node()]}).
 
 %%%_* Types ====================================================================
 -type edts_node() :: #node{}.
@@ -120,7 +120,7 @@ node_registered_p(Node) ->
 %% edts-server instance
 %% @end
 %%
--spec nodes() -> [node()].
+-spec nodes() -> {ok, [node()]}.
 %%------------------------------------------------------------------------------
 nodes() ->
   gen_server:call(?SERVER, nodes, infinity).
@@ -267,7 +267,8 @@ code_change(_OldVsn, State, _Extra) ->
                    LibDirs        :: [filename:filename()],
                    AppIncludeDirs :: [filename:filename()],
                    SysIncludeDirs :: [filename:filename()],
-                   ErlangCookie   :: string()) -> [rpc:key()].
+                   ErlangCookie   :: string()) ->
+        ok | {error, term()}.
 %%------------------------------------------------------------------------------
 do_init_node(ProjectName,
              Node,
@@ -380,16 +381,16 @@ init_node_test() ->
 
   Call0 = {init_node, project_name, N1#node.name, "", [], [], [], "cookie"},
   ?assertEqual({reply, ok, S1#state{nodes = [N1]}},
-               handle_call(Call0, self(), S1)),
+               handle_call(Call0, {self(), cookie}, S1)),
   Call1 = {init_node, project_name, N1#node.name, "", [], [], [], "cookie"},
   ?assertEqual({reply, ok, S2#state{nodes = [N1]}},
-               handle_call(Call1, self(), S2)),
+               handle_call(Call1, {self(), cookie}, S2)),
 
   meck:expect(edts_dist, init_node,
               fun(foo, _) -> error(some_error) end),
   Call2 = {init_node, project_name, N1#node.name, "", [], [], [], undefined},
   ?assertEqual({reply, {error, some_error}, S1},
-               handle_call(Call2, self(), S1)),
+               handle_call(Call2, {self(), undefined}, S1)),
 
   case PrevEnv of
     undefined -> ok;
@@ -402,9 +403,9 @@ node_registered_p_test() ->
   N2 = #node{name = bar},
   S1 = #state{nodes = [N1]},
   ?assertEqual({reply, true, S1},
-               handle_call({node_registered_p, N1#node.name}, self(), S1)),
+               handle_call({node_registered_p, N1#node.name}, {self(), foo}, S1)),
   ?assertEqual({reply, false, S1},
-               handle_call({node_registered_p, N2#node.name}, self(), S1)).
+               handle_call({node_registered_p, N2#node.name}, {self(), bar}, S1)).
 
 nodes_test() ->
   N1 = #node{name = foo},
@@ -412,18 +413,20 @@ nodes_test() ->
   S1 = #state{nodes = [N1]},
   S2 = #state{nodes = [N2]},
   ?assertEqual({reply, {ok, [N1#node.name]}, S1},
-               handle_call(nodes, self(), S1)),
+               handle_call(nodes, {self(), foo}, S1)),
   ?assertEqual({reply, {ok, [N2#node.name]}, S2},
-               handle_call(nodes, self(), S2)).
+               handle_call(nodes, {self(), bar}, S2)).
 
 ignored_call_test() ->
   S1 = #state{},
-  ?assertEqual(handle_call(foo, self(), S1), {reply, ignored, S1}),
-  ?assertEqual(handle_call(bar, self(), S1), {reply, ignored, S1}).
+  ?assertEqual({reply, ignored, S1}, handle_call(foo, {self(), a}, S1)),
+  ?assertEqual({reply, ignored, S1}, handle_call(bar, {self(), b}, S1)).
 
 handle_cast_test() ->
-  ?assertEqual({noreply, bar}, handle_cast(foo, bar)),
-  ?assertEqual({noreply, foo}, handle_cast(bar, foo)).
+  Bar = #state{nodes = [#node{name = bar}]},
+  Foo = #state{nodes = [#node{name = foo}]},
+  ?assertEqual({noreply, Bar}, handle_cast(foo, Bar)),
+  ?assertEqual({noreply, Foo}, handle_cast(bar, Foo)).
 
 nodedown_test() ->
   N1 = #node{name = foo},
@@ -436,17 +439,20 @@ nodedown_test() ->
 
 
 unhandled_message_test() ->
-  ?assertEqual({noreply, bar}, handle_info(foo, bar)),
-  ?assertEqual({noreply, foo}, handle_info(bar, foo)).
-
+  Bar = #state{nodes = [#node{name = bar}]},
+  Foo = #state{nodes = [#node{name = foo}]},
+  ?assertEqual({noreply, Bar}, handle_info(foo, Bar)),
+  ?assertEqual({noreply, Foo}, handle_info(bar, Foo)).
 
 terminate_test() ->
-  ?assertEqual(ok, terminate(foo, bar)),
-  ?assertEqual(ok, terminate(bar, foo)).
+  ?assertEqual(ok, terminate(foo, #state{nodes = [#node{name = bar}]})),
+  ?assertEqual(ok, terminate(bar, #state{nodes = [#node{name = foo}]})).
 
 code_change_test() ->
-  ?assertEqual({ok, foo}, code_change("vsn", foo, extra)),
-  ?assertEqual({ok, extra}, code_change("vsn", extra, foo)).
+  Foo = #state{nodes = [#node{name = foo}]},
+  Extra = #state{nodes = [#node{name = extra}]},
+  ?assertEqual({ok, Foo}, code_change("vsn", Foo, extra)),
+  ?assertEqual({ok, Extra}, code_change("vsn", Extra, foo)).
 
 node_find_test() ->
   N = #node{name = foo},

@@ -114,7 +114,7 @@ do_break(Module, Line, true) ->
     false ->
       case interpret_module(Module, true) of
         {error, _} = E -> E;
-        true           ->
+        {ok, true}     ->
           int:break(Module, Line),
           true
       end;
@@ -131,21 +131,16 @@ do_break(Module, Line, false) ->
 %% Returns true if there exists a breakpoint at Line in Module
 %% @end
 -spec breakpoint_exists_p(Module :: module(),
-                          Line   :: non_neg_integer()) -> {ok, boolean()}.
+                          Line   :: non_neg_integer()) -> boolean().
 %%------------------------------------------------------------------------------
 breakpoint_exists_p(Module, Line) ->
-  {ok, lists:keymember({Module, Line}, 1, int:all_breaks())}.
-
-
-
-
+  lists:keymember({Module, Line}, 1, int:all_breaks()).
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Get all breakpoints and their status in the current interpreter
 %% @end
--spec breakpoints() -> {ok, [{{Module :: module(), Line :: non_neg_integer()},
-                              Options  :: [term()]}]}.
+-spec breakpoints() -> {ok, proplists:proplist()}.
 %%------------------------------------------------------------------------------
 breakpoints() ->
   ensure_started(),
@@ -163,8 +158,7 @@ breakpoints() ->
 %% Get all breakpoints and their status in the current interpreter
 %% @end
 -spec breakpoints(Module :: module()) ->
-                     [{{Module :: module(), Line   :: non_neg_integer()},
-                       Options  :: {ok, [term()]}}].
+        {ok, proplists:proplist()}.
 %%------------------------------------------------------------------------------
 breakpoints(Module) ->
   ensure_started(),
@@ -243,7 +237,7 @@ get_bindings_pretty(Pid, Indent, MaxColumn) ->
 %% Return a list of all of Pid's current variable bindings. Unless the process
 %% is in a 'break' state, this will be [].
 %% @end
--spec get_bindings(pid()) -> {ok, [{atom(), binary()}]} | {error, term()}.
+-spec get_bindings(pid()) -> [{atom(), binary()}].
 %%------------------------------------------------------------------------------
 get_bindings(Pid) ->
   ensure_started(),
@@ -252,12 +246,13 @@ get_bindings(Pid) ->
       case process_status(ProcessState) of
         break ->
           {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
-          {ok, int:meta(Meta, bindings, nostack)};
+          int:meta(Meta, bindings, nostack);
         _ ->
-          {ok, []}
+          []
       end;
-    {error, _} = Err ->
-      Err
+    {error, not_found} ->
+      edts_log:warning("Process state not found for ~p", [Pid]),
+      []
   end.
 
 
@@ -269,11 +264,11 @@ get_bindings(Pid) ->
 %% @end
 -spec interpret_module(Modules   :: module(),
                        Interpret :: true | false | toggle) ->
-                          {ok, boolean()}.
+                          {ok, boolean()} | {error, term()}.
 %%------------------------------------------------------------------------------
 interpret_module(Module, Interpret) ->
   ensure_started(),
-  {ok, do_interpret_module(Module, Interpret)}.
+  do_interpret_module(Module, Interpret).
 
 do_interpret_module(Module, toggle) ->
   do_interpret_module(Module, not module_interpreted_p(Module));
@@ -282,23 +277,22 @@ do_interpret_module(Module, true) ->
     false -> {error, uninterpretable};
     true  ->
       {module, Module} = int:i(Module),
-      true
+      {ok, true}
   end;
 do_interpret_module(Module, false) ->
   ok = int:n(Module),
-  false.
+  {ok, false}.
 
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% Return a list of all interpreted modules.
 %% @end
--spec interpreted_modules() -> {ok, [module()]}.
+-spec interpreted_modules() -> [module()].
 %%------------------------------------------------------------------------------
 interpreted_modules() ->
   ensure_started(),
-  {ok, int:interpreted()}.
-
+  int:interpreted().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -314,13 +308,13 @@ module_interpreted_p(Module) ->
 %% @doc
 %% Return true if Module is interpretable, false otherwise
 %% @end
--spec module_interpretable_p(module()) -> {ok, boolean()}.
+-spec module_interpretable_p(module()) -> boolean().
 %%------------------------------------------------------------------------------
 module_interpretable_p(Module) ->
   ensure_started(),
   case int:interpretable(Module) of
-    true       -> {ok, true};
-    {error, _} -> {ok, false}
+    true       -> true;
+    {error, _} -> false
   end.
 
 %%------------------------------------------------------------------------------
@@ -329,9 +323,9 @@ module_interpretable_p(Module) ->
 %% @end
 %% @see int:snapshot/0
 -spec process_state(Pid :: pid()) ->
-                       {ok, {{Module :: module(), Line :: non_neg_integer()},
-                             Options  :: [term()]}} |
-                       {error, not_found}.
+        {ok, {pid(), {module(), function(), [term()]}, atom(),
+              {module(), pos_integer()} | {} | term()}} |
+        {error, not_found}.
 %%------------------------------------------------------------------------------
 process_state(Pid) ->
   ensure_started(),
