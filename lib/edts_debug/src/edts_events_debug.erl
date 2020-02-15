@@ -25,7 +25,7 @@
 %%%_* Module declaration =======================================================
 -module(edts_events_debug).
 
--behaviour(edts_events).
+-behaviour(edts_event).
 
 %%%_* Exports ==================================================================
 
@@ -43,7 +43,6 @@
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
--spec format_info(edts_event:class(), edts_event:type(), term()) -> term().
 %%------------------------------------------------------------------------------
 format_info(edts_debug, starting, _) ->
   [{type, starting}];
@@ -51,7 +50,7 @@ format_info(edts_debug, _Type, Event) ->
   format_info(Event).
 
 
-%%%_* Internal functiyons ======================================================
+%%%_* Internal functions ======================================================
 
 format_info({Type, Mod}) when Type =:= interpret orelse
                                   Type =:= no_interpret ->

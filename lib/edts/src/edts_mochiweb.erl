@@ -26,8 +26,6 @@
 -export([start_link/0,
          handle_request/1]).
 
--compile({no_auto_import,[error/2]}).
-
 %%%_* Includes =================================================================
 
 -include("otp_workarounds.hrl").
@@ -58,7 +56,7 @@ handle_request(Req) ->
             error(Req, not_found, Term)
         end;
       _ ->
-        error(Req, method_not_allowed)
+        error(Req, method_not_allowed, [])
     end
   catch
     ?EXCEPTION(Class,Reason,Stack) ->
@@ -114,19 +112,12 @@ ok(Req) ->
 ok(Req, Data) ->
   respond(Req, 200, Data).
 
-error(Req, Error) ->
-  error(Req, Error, []).
-
 error(Req, not_found, Data) ->
   error(Req, 404, "Not Found", Data);
 error(Req, method_not_allowed, Data) ->
   error(Req, 405, "Method Not Allowed", Data);
-
 error(Req, internal_server_error, Data) ->
-  error(Req, 500, "Internal Server Error", Data);
-error(Req, Error, _Data) ->
-  ErrorString = "Internal Server Error: Unknown error " ++ atom_to_list(Error),
-  error(Req, 500, ErrorString, []).
+  error(Req, 500, "Internal Server Error", Data).
 
 error(Req, Code, Message, Data) ->
   Body = [{code,    Code},

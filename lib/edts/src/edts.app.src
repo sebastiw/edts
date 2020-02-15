@@ -5,7 +5,8 @@
   {applications, [kernel,
                   stdlib,
                   sasl,
-                  mochiweb
+                  mochiweb,
+                  eunit
                  ]},
   {mod, {edts_app, []}},
   {env, [{log_level, info}]}

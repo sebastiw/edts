@@ -58,20 +58,23 @@
 %% Adds LibDirs to the code-path on Node
 %% @end
 -spec add_paths(Node::node(), LibDirs::[file:filename()]) ->
-              ok | {badrpc, term()}.
+              ok | {error, {badrpc, term()}}.
 %%------------------------------------------------------------------------------
 add_paths(Node, LibDirs) ->
-  ok = call(Node, edts_code, add_paths, [LibDirs]).
+  call(Node, edts_code, add_paths, [LibDirs]).
 
 
 %%------------------------------------------------------------------------------
 %% @equiv call(Node, Mod, Fun, []).
 %% @end
 -spec call(Node::node(), Mod::atom(), Fun::atom()) ->
-              term() | {badrpc, term()}.
+              term() | {error, {badrpc, term()}}.
 %%------------------------------------------------------------------------------
 call(Node, Mod, Fun) ->
-  rpc:call(Node, Mod, Fun, []).
+  case rpc:call(Node, Mod, Fun, []) of
+    {badrpc, _} = E -> {error, E};
+    Term -> Term
+  end.
 
 
 %%------------------------------------------------------------------------------
@@ -79,14 +82,14 @@ call(Node, Mod, Fun) ->
 %% Calls Mod:Fun with Args remotely on Node
 %% @end
 -spec call(Node::node(), Mod::atom(), Fun::atom(), Args::[term()]) ->
-              term() | {badrpc, term()}.
+              term() | {error, {badrpc, term()}}.
 %%------------------------------------------------------------------------------
 call(Node, Mod, Fun, Args) ->
   Self = self(),
   Pid = spawn(fun() -> do_call(Self, Node, Mod, Fun, Args) end),
   receive
-    {Pid, {badrpc, {'EXIT', Rsn}}}      -> error(Rsn);
-    {Pid, {badrpc, Err}}                -> error(Err);
+    {Pid, {badrpc, {'EXIT', Rsn}}}      -> error({badrpc, Rsn});
+    {Pid, {badrpc, _} = Err}            -> error(Err);
     {Pid, Res}                          -> Res
   end.
 
@@ -173,7 +176,7 @@ load_all(Node) ->
 %% @doc
 %% Converts a string to a valid erlang sname for localhost.
 %% @end
--spec make_sname(string()) -> node().
+-spec make_sname(string()) -> {ok, node()} | {error, term()}.
 %%------------------------------------------------------------------------------
 make_sname(Name) ->
   {ok, Hostname} = inet:gethostname(),
@@ -183,7 +186,7 @@ make_sname(Name) ->
 %% @doc
 %% Converts a string to a valid erlang sname for Hostname.
 %% @end
--spec make_sname(Name::string(), Hostname::string()) -> node().
+-spec make_sname(Name::string(), Hostname::string()) -> {ok, node()} | {error, term()}.
 %%------------------------------------------------------------------------------
 make_sname(Name, Hostname) ->
   try
@@ -260,7 +263,7 @@ set_cookie(Node, Cookie) ->
 %% @doc
 %% Starts Service on Node.
 %% @end
--spec start_service(node(), module()) -> ok | {badrpc, Reason::term()}.
+-spec start_service(node(), module()) -> ok | {error, {badrpc, Reason::term()}}.
 %%------------------------------------------------------------------------------
 start_service(Node, Service) ->
   call(Node, Service, start).
@@ -293,7 +296,7 @@ remote_compile_module(Node, File) ->
   end.
 
 imported_predefined_type_p(Errors) ->
-  do_imported_predefined_type_p(lists:concat([E || {_F, E} <- Errors])).
+  do_imported_predefined_type_p(lists:append([E || {_F, E} <- Errors])).
 
 do_imported_predefined_type_p([]) -> false;
 do_imported_predefined_type_p([Error|Errors]) ->

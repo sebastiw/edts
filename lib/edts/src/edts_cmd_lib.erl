@@ -59,8 +59,7 @@ check_exists_and_do_rpc(Ctx, Required, {M, F, ArgKeys}) ->
 %% @doc
 %% Check that all elements of resource_exist.
 %% @end
--spec exists_p(orddict:orddict(), [atom]) ->
-                  {boolean(), orddict:orddict()}.
+-spec exists_p(orddict:orddict(), [atom()]) -> boolean().
 %%------------------------------------------------------------------------------
 exists_p(Ctx, Keys) ->
   F = fun(Key) -> (atom_to_exists_p(Key))(Ctx) end,
@@ -76,8 +75,8 @@ exists_p(Ctx, Keys) ->
 %% @doc
 %% Validate Ctx0 and convert values to internal representation.
 %% @end
--spec validate(orddict:orddict(), [atom]) ->
-                  {boolean(), orddict:orddict()}.
+-spec validate(orddict:orddict(), [atom()]) ->
+                  {ok, orddict:orddict()} | {error, term()}.
 %%------------------------------------------------------------------------------
 validate(Ctx0, Keys) ->
   F = fun(Key, Ctx) ->
@@ -174,14 +173,16 @@ term_to_validate(project_lib_dirs)     ->
 %% @doc
 %% Validate arity
 %% @end
--spec arity_validate(orddict:orddict()) -> {ok, non_neg_integer()} | error.
+-spec arity_validate(orddict:orddict()) ->
+        {ok, non_neg_integer()} |
+        {error, {badarg, string()}}.
 %%------------------------------------------------------------------------------
 arity_validate(Ctx) ->
   Str = orddict:fetch(arity, Ctx),
   try
     case list_to_integer(Str) of
       Arity when Arity >= 0 -> {ok, Arity};
-      _ -> error
+      _ -> {error, {badarg, Str}}
     end
   catch error:badarg -> {error, {badarg, Str}}
   end.
@@ -190,7 +191,9 @@ arity_validate(Ctx) ->
 %% @doc
 %% Validate integer
 %% @end
--spec integer_validate(orddict:orddict(), string()) -> {ok, integer()} | error.
+-spec integer_validate(orddict:orddict(), atom()) ->
+        {ok, integer()} |
+        {error, {badarg, string()}}.
 %%------------------------------------------------------------------------------
 integer_validate(Ctx, Key) ->
   Str = orddict:fetch(Key, Ctx),
@@ -202,8 +205,8 @@ integer_validate(Ctx, Key) ->
 %% @doc
 %% Validate a non-negative integer
 %% @end
--spec non_neg_integer_validate(orddict:orddict(), string()) ->
-                                  {ok, integer()} | error.
+-spec non_neg_integer_validate(orddict:orddict(), atom()) ->
+                                  {ok, integer()} | {error, term()}.
 %%------------------------------------------------------------------------------
 non_neg_integer_validate(Ctx, Key) ->
   case integer_validate(Ctx, Key) of
@@ -217,7 +220,7 @@ non_neg_integer_validate(Ctx, Key) ->
 %% @doc
 %% Validate and convert a list of directory names.
 %% @end
--spec dirs_validate(orddict:orddict(), string()) -> {ok, file:filename()}.
+-spec dirs_validate(orddict:orddict(), atom()) -> {ok, [file:filename()]}.
 %%------------------------------------------------------------------------------
 dirs_validate(Ctx, QsKey) ->
   case orddict:find(QsKey, Ctx) of
@@ -230,8 +233,8 @@ dirs_validate(Ctx, QsKey) ->
 %% Validate a list where every element is part of an enumeration.
 %% @end
 -spec enum_list_validate(orddict:orddict(), [{atom(), term()}]) ->
-                            {ok,  atom()} |
-                            {error, {illegal, string()}} |
+                            {ok, [atom()]} |
+                            {error, {illegal, [atom()]}} |
                             {error, {not_found, atom()}}.
 %%------------------------------------------------------------------------------
 enum_list_validate(Ctx, Props) ->
@@ -299,8 +302,9 @@ file_validate(Ctx, Key) ->
 %% Validate a list of paths.
 %% @end
 -spec files_validate(orddict:orddict()) ->
-                        {ok, filename:filename()} |
-                        {error, {no_exists, string()}}.
+        {ok, [filename:filename()]} |
+        {ok, all} |
+        {error, {no_exists, [filename:filename()]}}.
 %%------------------------------------------------------------------------------
 files_validate(Ctx) ->
   case orddict:find(files, Ctx) of
@@ -405,7 +409,9 @@ nodename_validate(Ctx) ->
 %% @doc
 %% Validate nodename
 %% @end
--spec process_validate(orddict:orddict()) -> {ok, pid()}.
+-spec process_validate(orddict:orddict()) ->
+        {ok, pid()} |
+        {error, {badarg, string()}}.
 %%------------------------------------------------------------------------------
 process_validate(Ctx) ->
   ProcessStr = orddict:fetch(process, Ctx),
@@ -446,7 +452,7 @@ project_root_validate(Ctx) ->
 %% @doc
 %% Validate a string
 %% @end
--spec string_validate(orddict:orddict(), string()) -> {ok, string()}.
+-spec string_validate(orddict:orddict(), atom(), term()) -> {ok, term()}.
 %%------------------------------------------------------------------------------
 string_validate(Ctx, Key, Default) ->
   case string_validate(Ctx, Key) of
@@ -458,7 +464,9 @@ string_validate(Ctx, Key, Default) ->
 %% @doc
 %% Validate a string
 %% @end
--spec string_validate(orddict:orddict(), string(), term()) -> term().
+-spec string_validate(orddict:orddict(), atom()) ->
+        {error, notfound} |
+        {ok, string()}.
 %%------------------------------------------------------------------------------
 string_validate(Ctx, Key) ->
   case orddict:find(Key, Ctx) of
@@ -470,7 +478,11 @@ string_validate(Ctx, Key) ->
 %% @doc
 %% Validate a list of strings
 %% @end
--spec strings_validate(orddict:orddict(), string()) -> {ok, string()}.
+-spec strings_validate(orddict:orddict(), atom()) ->
+        {ok, string()} |
+        {error, {not_strings, list(term())}} |
+        {error, {not_list, term()}} |
+        {error, notfound}.
 %%------------------------------------------------------------------------------
 strings_validate(Ctx, Key) ->
   case orddict:find(Key, Ctx) of
@@ -491,7 +503,7 @@ arity_validate_test() ->
   CtxF = fun(A) -> orddict:from_list([{arity, A}]) end,
   ?assertEqual({ok, 0}, arity_validate(CtxF("0"))),
   ?assertEqual({ok, 1}, arity_validate(CtxF("1"))),
-  ?assertEqual(error, arity_validate(CtxF("-1"))),
+  ?assertEqual({error, {badarg, "-1"}}, arity_validate(CtxF("-1"))),
   ?assertEqual({error, {badarg, "a"}}, arity_validate(CtxF("a"))).
 
 string_validate_test() ->
