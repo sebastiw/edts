@@ -28,7 +28,6 @@
 %%%_* Exports ==================================================================
 
 %% API
--export([behaviour_info/1]).
 
 %%%_* Includes =================================================================
 
@@ -41,10 +40,13 @@
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
--spec behaviour_info(any()) -> [{atom(), non_neg_integer()}] | undefined.
-%%------------------------------------------------------------------------------
-behaviour_info(callbacks) ->
-  [{format_info, 3}].
+
+-type modline() :: {module(), pos_integer()}.
+-callback format_info( {interpret | no_interpret, module()}
+                       | {new_process, {pid(), mfa(), any(), any()}}
+                       | {new_status, pid(), any(), modline() | atom() | {}}
+                       | {new_break | break_options, {modline(), any()}}
+                       | {delete_break | no_break, modline()}) -> ordlists:ordlist().
 
 %%%_* Internal functions =======================================================
 

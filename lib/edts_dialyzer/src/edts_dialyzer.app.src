@@ -1,11 +1,12 @@
-{application, edts_xref,
+{application, edts_dialyzer,
  [
-  {description, ""},
+  {description, "Dialyzer capabilities within EDTS"},
   {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  edts
                  ]},
   {env, [{file_backend, file}]}
  ]}.

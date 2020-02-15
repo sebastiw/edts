@@ -3,7 +3,7 @@
                       ______    ____| $$ _| $$_     _______
                      /      \  /      $$|   $$ \   /       \
                     |  $$$$$$\|  $$$$$$$ \$$$$$$  |  $$$$$$$
-                    | $$    $$| $$  | $$  | $$ __  \$$    \
+                    | $$    $$| $$  | $$  | $$ __  \$$    \
                     | $$$$$$$$| $$__| $$  | $$|  \ _\$$$$$$\
                      \$$     \ \$$    $$   \$$  $$|       $$
                       \$$$$$$$  \$$$$$$$    \$$$$  \$$$$$$$
@@ -49,11 +49,9 @@ For questions or support, please sign up for the [EDTS mailing list](https://gro
 Please use the Github issue tracker to report bugs.
 
 #### Requirements:
-  - Emacs 23.3 or later (24.2 or higher recommended)
+  - Emacs 24 or later
 
 #### First of all, ensure your environment is setup correctly:
-  - If you're using Emacs 23, set up package.el according to the instructions
-on [Emacs Wiki](http://www.emacswiki.org/emacs/ELPA).
   - You will need make and Erlang installed or the package installation will
 fail.
   - You will also need both elpa and melpa package repositories added to your
@@ -80,7 +78,7 @@ An easy way is to load edts-start:
   EDTS projects are configured by creating a file called
   `.edts` in your project's root. The configuration file is a number of lines,
   where each line is in the format:
-` :<property> <value> `
+  ` :<property> <value> `
 
   Values that are lists must be prefixed with a single-quote, eg. `'("lib")`. See
   example below.
@@ -111,7 +109,7 @@ An easy way is to load edts-start:
   - `lib-dirs <list of strings>`
 
   A list of paths (relative to the project's root) where the project's code is
-  located. All subdirectories of lib-dirs are assumed to be otp-applications.
+  located. All subdirectories of lib-dirs are assumed to be otp-applications.
   If you're using rebar, this variable should contain your deps_dir and all
   lib_dirs from your rebar.config.
   Defaults to `'("lib" "deps")`.
@@ -205,6 +203,13 @@ An easy way is to load edts-start:
 
 That should be all it takes. If it's not, please report any issues on github.
 
+## Multiuser systems ##
+
+For EDTS to work in multiuser systems, each user needs to configure
+the environment variable EDTS_PORT to something unique. It defaults to
+4587, which is the port that the REST-interface of which the EDTS-node
+listens on.
+
 ## Backward compatibility note ##
 
 If you have previously configured EDTS 'the old way' in `edts-projects`, you
@@ -221,7 +226,7 @@ projects, then EDTS will automatically fire up the corresponding project node
 and initiate communication between the EDTS-node and the project-node. If a node
 with the same name as the project's node is already registered with the Erlang
 port mapper daemon (epmd), then EDTS will initiate communication with that node
-instead. The EDTS node exposes a REST-interface (using webmachine) through which
+instead. The EDTS-node exposes a REST-interface (using mochiweb) through which
 emacs can then communicate with the project node.
 
 ## EDTS and Distel ##
@@ -254,3 +259,30 @@ of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 If you're using proxy server, you have to make sure that the proxy is not used
 for communicating with EDTS:
 ```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
+
+## Setup edts from source instructions ##
+
+To setup from source (assuming that you have rebar3 installed and
+added to your PATH), you first need to clone and compile edts:
+
+
+```bash
+$ git clone https://github.com/sebastiw/edts
+$ cd edts
+$ make
+```
+
+Next you need to ensure the edts directory is added to the emacs
+load-path. Add to your `.emacs.d` or `init.el` file:
+
+```
+(add-to-list 'load-path "<path to the cloned edts repo>")
+
+(add-hook 'after-init-hook 'my-after-init-hook)
+(defun my-after-init-hook ()
+  (require 'edts-start))
+```
+
+With this edts fork the .edts file shouldn't be need. Just ensure that
+you have compiled first your rebar3 project and start emacs.
+

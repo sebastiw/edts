@@ -1,11 +1,13 @@
 {application, edts_debug,
  [
-  {description, ""},
+  {description, "Debug capabilities within EDTS."},
   {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  debugger,
+                  edts
                  ]},
   {env, []}
  ]}.

@@ -26,7 +26,6 @@
 -module(edts_event).
 
 %%%_* Includes =================================================================
-
 %%%_* Exports ==================================================================
 
 %% API
@@ -48,6 +47,7 @@
          terminate/2
         ]).
 
+-callback format_info(edts_events:class(), edts_events:type(), term()) -> [{atom(), term()}].
 
 %%%_* Defines ==================================================================
 
@@ -65,6 +65,14 @@
                                      [{{class(), type()}, module()}]
                }).
 
+%% Don't include the otp_workarounds.hrl. That file is not sent to the node.
+-ifdef(OTP_RELEASE). %% this implies 21 or higher
+-define(EXCEPTION(Class, Reason, StackToken), Class:Reason:StackToken).
+-define(GET_STACK(StackToken), StackToken).
+-else.
+-define(EXCEPTION(Class, Reason, _), Class:Reason).
+-define(GET_STACK(_), erlang:get_stacktrace()).
+-endif.
 
 %%%_* Types ====================================================================
 
@@ -215,13 +223,13 @@ fmt_event_info(Class, Type, Info, Formatters) ->
 
 safe_fmt_event_info(Fmt, Class, Type, Info) ->
   try Fmt:format_info(Class, Type, Info)
-  catch C:E ->
+  catch ?EXCEPTION(C,E,S) ->
       edts_log:error("edts_event: Formatter ~p failed with ~p:~p.~n"
                      "Class: ~p~n"
                      "Type: ~p~n"
                      "Info: ~p~n"
-                     "Stactrace: ~p~n",
-                    [C, E, Fmt, Class, Type, Info, erlang:get_stacktrace()]),
+                     "Stacktrace: ~p~n",
+                    [C, E, Fmt, Class, Type, Info, ?GET_STACK(S)]),
       Info
   end.
 

@@ -23,10 +23,10 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (define-package "edts" "1.1.0" "Erlang Development Tool Suite"
-  '((auto-complete         "1.3.1")
-    (auto-highlight-symbol "1.53")
-    (dash                  "2.13")
-    (erlang                "2.4.1")
-    (f                     "0.19.0")
-    (popup                 "0.4")
-    (s                     "1.11.0")))
+  '((auto-complete         "20170125.245")
+    (auto-highlight-symbol "20130313.943")
+    (dash                  "20190814.2006")
+    (erlang                "20190404.928")
+    (f                     "20190109.906")
+    (popup                 "20160709.1429")
+    (s                     "20180406.808")))

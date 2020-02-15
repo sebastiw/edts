@@ -3,7 +3,11 @@
   {vsn, "0.2"},
   {registered, []},
   {applications, [kernel,
-                  stdlib]},
+                  stdlib,
+                  sasl,
+                  mochiweb,
+                  eunit
+                 ]},
   {mod, {edts_app, []}},
   {env, [{log_level, info}]}
  ]}.

@@ -1,11 +1,6 @@
 *~
-.eunit
-deps
-ebin
 elisp/erlang-mode
 elisp/ert
-lib/*
-!lib/edts
 log
 edts-autoloads.el
 erl_crash.dump
@@ -13,3 +8,7 @@ erl_crash.dump
 *.beam
 *.elc
 *.plt
+rebar.lock
+_build/
+rebar3
+*.coverdata

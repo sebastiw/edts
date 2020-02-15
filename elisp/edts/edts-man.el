@@ -100,7 +100,7 @@ Location of the OTP documentation man-pages."
   (with-current-buffer (url-retrieve-synchronously edts-man-download-url)
     (goto-char (point-min))
     (let ((case-fold-search t)
-          (re "<A HREF=\"\\(otp_doc_man_\\(.*?\\)\\.tar\\.gz\\)\">")
+          (re "<a href=\"\\(?:.*/\\)?\\(otp_doc_man_\\(.*?\\)\\.tar\\.gz\\)\">")
           vsn-urls)
       (while (< (point) (point-max))
         (re-search-forward re nil 'move-point)

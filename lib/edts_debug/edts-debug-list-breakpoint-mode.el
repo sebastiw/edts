@@ -92,19 +92,19 @@ call `switch-to-buffer'."
       (let ((max-node-len   4) ;; The length of the header names
             (max-module-len 6)
             entries)
-        (flet (;; Sort an alist by comparing the keys as strings
-               (key-sort (kvs)
-                         (sort
-                          (copy-sequence kvs)
-                          #'(lambda (el1 el2)
-                              (string< (car el1) (car el2)))))
-               ;; Sort breakpoints by line numbers)
-               (line-sort (breakpoints)
-                          (sort
-                           (copy-sequence breakpoints)
-                           #'(lambda (b1 b2)
-                               (< (cdr (assoc 'line b1))
-                                  (cdr (assoc 'line b2)))))))
+        (cl-flet (;; Sort an alist by comparing the keys as strings
+                  (key-sort (kvs)
+                            (sort
+                             (copy-sequence kvs)
+                             #'(lambda (el1 el2)
+                                 (string< (car el1) (car el2)))))
+                  ;; Sort breakpoints by line numbers)
+                  (line-sort (breakpoints)
+                             (sort
+                              (copy-sequence breakpoints)
+                              #'(lambda (b1 b2)
+                                  (< (cdr (assoc 'line b1))
+                                     (cdr (assoc 'line b2)))))))
           (loop for (node . modules) in (key-sort edts-debug-breakpoint-alist)
                 do (loop for (mod . breakpoints) in (key-sort modules)
                          do (loop for break in (line-sort breakpoints)

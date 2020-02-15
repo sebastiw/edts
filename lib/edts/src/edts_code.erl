@@ -93,7 +93,9 @@ add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 %% Equivalent to compile_and_load(Module, []).
 %% @end
 -spec compile_and_load(Module::file:filename() | module()) ->
-                          {ok | error, [issue()]}.
+        {ok, {[], [issue()]}} |
+        {error, {[issue()], [issue()]}} |
+        {error, term()}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module) ->
   update_paths(),
@@ -109,7 +111,9 @@ compile_and_load(Module) ->
 %% Any other options passed in will be appended to the above.
 %% @end
 -spec compile_and_load(Module::file:filename()| module(), [compile:option()]) ->
-                          {ok | error, [issue()]}.
+        {ok, {[], [issue()]}} |
+        {error, {[issue()], [issue()]}} |
+        {error, term()}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module, Opts) when is_atom(Module)->
   File = proplists:get_value(source, Module:module_info(compile)),
@@ -163,7 +167,8 @@ get_function_info(M, F, A) ->
   ensure_module_loaded(true, M),
   {M, Bin, _File}                   = code:get_object_code(M),
   {ok, {M, Chunks}}                 = beam_lib:chunks(Bin, [abstract_code]),
-  {abstract_code, {_Vsn, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+  {abstract_code, {_Vsn, Abst}} = lists:keyfind(abstract_code, 1, Chunks),
+  Abstract = lists:map(fun erl_parse:anno_to_term/1, Abst),
   ExportedP = lists:member({F, A}, M:module_info(exports)),
   {ok, ModSrc} = get_module_source(M, M:module_info()),
   case get_file_and_line(M, F, A, ModSrc, Abstract) of
@@ -213,8 +218,9 @@ free_vars(Snippet) -> free_vars(Snippet, 1).
 %% @doc
 %% Equivalent to free_vars(Snippet, 1).
 %% @end
--spec free_vars(Text::string(), pos_integer()) -> {ok, FreeVars::[atom()]} |
-                                   {error, [issue()]}.
+-spec free_vars(Text::string(), pos_integer()) ->
+        {ok, FreeVars::[atom()]} |
+        {error, [issue()]}.
 %% @equiv free_vars(Text, 1)
 %%------------------------------------------------------------------------------
 free_vars(Text, StartLine) ->
@@ -273,12 +279,14 @@ form_to_mfa({call,  _, {remote,
 %% @doc
 %% Tokenize and parse String as a sequence of expressions.
 %% @end
--spec parse_expressions(string()) -> Forms::erl_parse:abstract_form().
+-spec parse_expressions(string()) ->
+        Forms::[erl_parse:abstract_expr()] | {error, term()}.
 %%------------------------------------------------------------------------------
 parse_expressions(String) ->
   case edts_syntax:parse_expressions(String) of
     {ok, Forms}  -> Forms;
-    {error, Err} -> {error, format_errors(error, [{"Snippet", [Err]}])}
+    {error, Err} -> {error, format_errors(error, [{"Snippet", [Err]}])};
+    {error, Info, _Loc} -> {error, format_errors(error, [{"Snippet", [Info]}])}
   end.
 
 
@@ -286,7 +294,9 @@ parse_expressions(String) ->
 %% @doc
 %% Returns information on M.
 %% @end
--spec get_module_info(M::module(), Level::basic | detailed) -> [{atom, term()}].
+-spec get_module_info(M::module(), Level::basic | detailed) ->
+        {ok, [{atom(), term()}]} |
+        {error, {not_found, module()}}.
 %%------------------------------------------------------------------------------
 get_module_info(M, Level) ->
   ensure_module_loaded(true, M),
@@ -308,7 +318,8 @@ do_get_module_info(M, detailed) ->
   case code:get_object_code(M) of
     {M, Bin, _File} ->
       {ok, {M, Chunks}} = beam_lib:chunks(Bin, [abstract_code]),
-      {abstract_code, {_, Abstract}} = lists:keyfind(abstract_code, 1, Chunks),
+      {abstract_code, {_, A}} = lists:keyfind(abstract_code, 1, Chunks),
+      Abstract = lists:map(fun erl_parse:anno_to_term/1, A),
       {ok, Basic} = do_get_module_info(M, basic),
 
       {source, Source} = lists:keyfind(source, 1, Basic),
@@ -453,7 +464,7 @@ started_p() ->
 %%                             Reload).
 %% @end
 -spec ensure_module_loaded(Reload :: boolean(),
-                           Mod    :: module()) -> boolean().
+                           Mod    :: module()) -> boolean() | {error, term()}.
 %%------------------------------------------------------------------------------
 ensure_module_loaded(Reload, Mod) ->
   case code:where_is_file(atom_to_list(Mod) ++ ".beam") of
@@ -643,7 +654,7 @@ get_module_source_from_beam(M) ->
 %%------------------------------------------------------------------------------
 %% @doc Format compiler errors and warnings.
 -spec format_errors( ErrType ::warning | error
-                   , Errors  ::[{ File::string(), [term()]}]) -> issue().
+                   , Errors  ::[{ File::string(), [term()]}]) -> [issue()].
 %%------------------------------------------------------------------------------
 format_errors(Type, Errors) ->
   LineErrorF =
@@ -661,7 +672,8 @@ format_errors(Type, Errors) ->
 %% @doc Get the file and line of a function from abstract code.
 -spec get_file_and_line(M::module(), F::atom(), A::non_neg_integer(),
                         File::string(), Abstract::[term()])->
-                           {ok, {File::string(), Line::non_neg_integer()}}.
+        {ok, {File::string(), Line::non_neg_integer()}} |
+        {error, not_found}.
 %%------------------------------------------------------------------------------
 get_file_and_line(M, new, A, CurFile,
                   [{attribute, Line, module, {M, Attrs}}|_T])
@@ -678,8 +690,12 @@ get_file_and_line(_M, _F, _A, _CurFile, []) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Parse abstract code into a module information substract.
--spec parse_abstract(Abstract::[term()], Acc::orddict:orddict()) ->
-                        orddict:orddict().
+-spec parse_abstract(Abstract::
+                       {function, pos_integer(), function(), arity(), any()} |
+                       {attribute, pos_integer(), file | import | record, {any(), any()}} |
+                       term(),
+                     Acc::orddict:orddict()) ->
+        orddict:orddict().
 %%------------------------------------------------------------------------------
 parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
   M = orddict:fetch(module, Acc),
@@ -895,25 +911,25 @@ format_errors_test_() ->
                  meck:unload()
              end,
   { setup, SetupF, CleanupF,
-    [ ?_assertEqual( [ {warning, file1, 1337, "error1"},
-                       {warning, file1, 1338, "error2"},
-                       {warning, file2, 1339, "error3"},
-                       {warning, file2, 1340, "error4"} ],
+    [ ?_assertEqual( [ {warning, "file1", 1337, "error1"},
+                       {warning, "file1", 1338, "error2"},
+                       {warning, "file2", 1339, "error3"},
+                       {warning, "file2", 1340, "error4"} ],
                      format_errors(warning,
-                                   [ {file1, [ {1337, source, error1},
-                                               {1338, source, error2}]},
-                                     {file2, [ {1339, source, error3},
-                                               {1340, source, error4}]}
+                                   [ {"file1", [ {1337, source, error1},
+                                                 {1338, source, error2}]},
+                                     {"file2", [ {1339, source, error3},
+                                                 {1340, source, error4}]}
                                    ])),
-      ?_assertEqual( [ {error, file1, 1337, "error1"},
-                       {error, file1, 1338, "error2"},
-                       {error, file2, 1339, "error3"},
-                       {error, file2, 1340, "error4"} ],
+      ?_assertEqual( [ {error, "file1", 1337, "error1"},
+                       {error, "file1", 1338, "error2"},
+                       {error, "file2", 1339, "error3"},
+                       {error, "file2", 1340, "error4"} ],
                      format_errors( error,
-                                    [ {file1, [ {1337, source, error1},
-                                                {1338, source, error2}]},
-                                      {file2, [ {1339, source, error3},
-                                                {1340, source, error4}]}
+                                    [ {"file1", [ {1337, source, error1},
+                                                  {1338, source, error2}]},
+                                      {"file2", [ {1339, source, error3},
+                                                  {1340, source, error4}]}
                                     ]))
     ]}.
 
@@ -922,7 +938,7 @@ get_file_and_line_test_() ->
   File  = "non_parametrised_nodule.erl",
   Mod   = non_parametrised_nodule,
   [ ?_assertEqual( {error, not_found},
-                   get_file_and_line(Mod, f, a, File, [])),
+                   get_file_and_line(Mod, f, 0, File, [])),
     ?_assertEqual( {ok, {File, 12}},
                    get_file_and_line(Mod, foo, 0, File, Forms)),
     ?_assertEqual( {ok, {"bar.erl", 12}},
@@ -1094,7 +1110,8 @@ parse_abstract_record_test_() ->
   ].
 
 parse_abstract_other_test_() ->
-  [?_assertEqual(bar, parse_abstract(foo, bar))].
+  Acc = orddict:from_list([{bar, baz}]),
+  [?_assertEqual(Acc, parse_abstract(foo, Acc))].
 
 modules_test_() ->
   [?_assertMatch([_|_], modules())].

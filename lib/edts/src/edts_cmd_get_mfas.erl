@@ -39,15 +39,6 @@
 spec() ->
   [expressions].
 
-%%%_* Internal functions =======================================================
-
-%% json_to_mfa(Str) ->
-%%   case edts_code:string_to_mfa(binary_to_list(Str)) of
-%%     {ok, MFA}       -> MFA;
-%%     {error, Errors} -> [{errors, [format_error(Err) || Err <- Errors]}]
-%%   end.
-
-
 execute(Ctx) ->
   MFAStrings = orddict:fetch(expressions, Ctx),
   {ok, lists:filtermap(fun(MFAString) ->
@@ -57,19 +48,8 @@ execute(Ctx) ->
                            end
                        end,
                        MFAStrings)}.
-  %% case edts_code:free_vars(Code) of
-  %%   {ok, Vars}      -> {ok, [{vars, Vars}]};
-  %%   {error, Errors} ->
-  %%     {ok, [{errors, [format_error(Err) || Err <- Errors]}]}
-  %% end.
 
 %%%_* Internal functions =======================================================
-
-%% format_error({Type, File, Line, Desc}) ->
-%%   [ {type, Type}
-%%   , {file, list_to_binary(File)}
-%%   , {line, Line}
-%%   , {description, list_to_binary(Desc)}].
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

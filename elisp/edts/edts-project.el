@@ -68,7 +68,7 @@ underneath a project root to be subprojects of that super project.")
   "Try to find the top-most edts-file above current buffer's file."
   (let (stop
         (roots (-map 'f-slash edts-project-roots))
-        (root nil))
+        root)
     (while (and (not stop) (not (f-root? dir)))
       (if (-contains? roots (f-slash dir))
           (setq root dir
@@ -80,16 +80,19 @@ underneath a project root to be subprojects of that super project.")
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
-                        (f-file? (f-join path "bin" "erl")))
+                        (when (not (f-root? path))
+                          (f-file? (f-join path "bin" "erl"))))
                       (f-expand dir)))
 
 (defun edts-project--find-temp-root (dir)
   "Find the appropriate root directory for a temporary project for
 FILE."
   (if (and (-contains? '("src" "test" "include") (f-filename dir))
-           (f-directory? (f-join (f-dirname dir) "ebin")))
+           (or (f-directory? (f-join (f-dirname dir) "ebin"))
+               (f-directory? (f-join (f-dirname dir) "_build"))))
       (f-dirname dir)
     dir))
+
 
 (defun edts-project-root ()
   (unless edts-project-root
@@ -131,6 +134,7 @@ buffer's file."
       ;; * deps: dependencies included by rebar2
       ;; * _build/test/lib: test scope dependencies from rebar3
       ;; * _build/default/lib: dependencies included by rebar3
+      ;; * _checkouts: local dependencies included by rebar3
 
       ;; NOTE: It's important for rebar3's test profile to be loaded
       ;; first, because rebar3 might have different contents of a specific
@@ -140,8 +144,11 @@ buffer's file."
       ;; making your test modules a sea of red squiggles.
       (:lib-dirs . ("lib"
                     "deps"
+                    "_checkouts"
+                    ;; Probably use f-expand.
                     ,(f-join "_build" "test" "lib")
-                    ,(f-join "_build" "default" "lib"))))))
+                    ,(f-join "_build" "default" "lib")
+                    )))))
 
 (defun edts-project--init-otp-project (dir)
   (-when-let (root (edts-project--find-otp-root dir))
@@ -190,7 +197,6 @@ buffer's file."
     (edts-alist-ensure :start-command
                        (format "erl -sname %s" node-name)
                        config)))
-
 
 (defun edts-project--config-from-file (root)
   "Read config from FILE and return it's attributes."

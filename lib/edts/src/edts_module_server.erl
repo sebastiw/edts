@@ -86,7 +86,7 @@ started_p() -> whereis(?MODULE) =/= undefined.
 
 %%------------------------------------------------------------------------------
 %% @doc Starts the server.
--spec start() -> {ok, pid} | ignore | {error,term()}.
+-spec start() -> {ok, pid()} | ignore | {error,term()}.
 %%------------------------------------------------------------------------------
 start() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -108,7 +108,7 @@ init(_Args) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Handle call messages
--spec handle_call(term(), pid(), state()) ->
+-spec handle_call(term(), {pid(), atom()}, state()) ->
                      {reply, Reply::term(), state()} |
                      {reply, Reply::term(), state(), timeout()} |
                      {noreply, state()} |

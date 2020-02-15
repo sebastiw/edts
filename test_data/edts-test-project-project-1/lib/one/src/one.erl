@@ -1,7 +1,7 @@
 -module(one).
 
 -include_lib("eunit/include/eunit.hrl").
--include_lib("one/include/test.hrl").
+-include("include/test.hrl").
 
 -export([one/1]).
 
