@@ -74,9 +74,9 @@ do_handle_request(Req) ->
   Path = mochiweb_request:get(path, Req),
   case [list_to_atom(E) || E <- string:tokens(Path, "/")] of
     [Command] ->
-      edts_cmd:run(Command, get_input_context(Req));
+      edts_cmd:execute(Command, get_input_context(Req));
     [lib, Plugin, Command] ->
-      edts_cmd:plugin_run(Plugin, Command, get_input_context(Req));
+      edts_plugins:execute(Plugin, Command, get_input_context(Req));
     _ ->
       {error, {not_found, [{path, list_to_binary(Path)}]}}
   end.
