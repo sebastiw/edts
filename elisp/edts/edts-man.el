@@ -25,7 +25,7 @@
 (require 'f)
 (require 'woman)
 
-(defconst edts-man-download-url "http://www.erlang.org/download"
+(defconst edts-man-download-url "http://erlang.org/download/"
   "Where to download the erlang documentation from.")
 
 (defcustom edts-man-root nil
