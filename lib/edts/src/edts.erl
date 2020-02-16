@@ -83,7 +83,6 @@ init_node(ProjectName,
 is_node(Node) ->
   edts_server:node_registered_p(Node).
 
-
 %%------------------------------------------------------------------------------
 %% @doc
 %% Returns true if Node is registerend with the epmd on localhost.

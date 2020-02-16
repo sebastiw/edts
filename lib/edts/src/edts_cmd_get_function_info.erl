@@ -25,6 +25,8 @@
 %%%_* Module declaration =======================================================
 -module(edts_cmd_get_function_info).
 
+-behaviour(edts_cmd).
+
 %%%_* Exports ==================================================================
 
 %% API

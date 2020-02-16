@@ -46,6 +46,8 @@
 
 %%%_* Types ====================================================================
 
+-type ctx() :: edts_cmd:ctx().
+
 -type argument() :: {Name :: atom(), Type :: atom()}.
 
 -type function_name() :: atom().
@@ -64,7 +66,7 @@
 
 %%%_* API ======================================================================
 
--spec execute(Plugin::module(), Cmd::atom(), edts:ctx()) ->
+-spec execute(Plugin::module(), Cmd::atom(), ctx()) ->
           {ok, [{result, ok | error} |
                 {return, [{atom(), binary()}]}]} |
           {error, {badrpc, term()}} |
