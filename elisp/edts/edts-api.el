@@ -108,11 +108,15 @@ several edts nodes on the same host.")
          (retries edts-api-num-server-start-retries)
          available)
     (edts-shell-make-comint-buffer "*edts-server*" edts-node-sname pwd command)
-    (setq available (edts-api-get-nodes t))
+    (setq available
+          (with-demoted-errors "Error when starting EDTS server: %s"
+            (edts-api-get-nodes t)))
     (while (and (> retries 0) (not available))
-      (setq available (edts-api-get-nodes t))
       (sit-for edts-api-server-start-retry-interval)
-      (decf retries))
+      (decf retries)
+      (setq available
+            (with-demoted-errors "Error when starting EDTS server: %s"
+              (edts-api-get-nodes t))))
     (when available
       (edts-log-info "Started EDTS server")
       (run-hooks 'edts-api-server-up-hook))
