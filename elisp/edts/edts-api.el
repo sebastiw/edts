@@ -26,6 +26,7 @@
 (require 's)
 
 (require 'ferl)
+(require 'edts-mode)
 (require 'edts-log)
 (require 'edts-rpc)
 
