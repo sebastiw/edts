@@ -240,14 +240,8 @@ further.
                                       current buffer's file.
 \\[edts-dialyzer-analyze]           - Same as the xref-check
                                       above, but for dialyzer.
-\\[edts-byte-compile]               - Byte compile all EDTS elisp files.
-\\[edts-project-start-node]         - Start current buffers project-node
-                                      if not already running.
-\\[edts-init-node]                  - Register the project-node of
-                                      current buffer with the central
-                                      EDTS server.
 \\[edts-shell]                      - Start an interactive Erlang shell.
-\\[edts-start-server]               - Start the central EDTS server.
+\\[edts-api-start-server]           - Start the central EDTS server.
 \\[edts-man-setup]                  - Install the OTP documentation"
 
   :lighter " EDTS"
