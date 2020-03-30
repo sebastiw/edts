@@ -265,7 +265,7 @@ further.
 
 (eval-and-compile
   (defun edts-compile-deps ()
-  "Compile EDTS' external (Erlang) dependecies."
+  "Compile EDTS' external (Erlang) dependencies."
   (interactive)
   (let ((default-directory edts-root-directory)
         (buf  "*EDTS compile*"))
