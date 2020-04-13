@@ -17,6 +17,8 @@
 ;;
 ;; Mode for listing interpreted modules.
 
+(require 'cl-macs)
+
 (require 'edts-api)
 (require 'edts-debug)
 (require 'edts-navigate)
@@ -58,7 +60,7 @@ switch call `switch-to-buffer'."
   (with-current-buffer (get-buffer-create edts-debug-list-interpreted-buffer)
     (edts-debug-list-interpreted-mode)
     (edts-debug-list-interpreted-update)
-    (case show
+    (cl-case show
       (pop    (pop-to-buffer    (current-buffer)))
       (switch (switch-to-buffer (current-buffer))))))
 
@@ -86,11 +88,11 @@ switch call `switch-to-buffer'."
                              #'(lambda (el1 el2) (string< (car el1)
                                                           (car el2)))))
             entries)
-        (loop for (node . mods) in int-alist
-              when mods
-              do (loop for mod in (sort (copy-sequence mods) 'string<)
-                       do (setq max-node-len (max max-node-len (length node)))
-                       do (push (list nil (vector node mod)) entries)))
+        (cl-loop for (node . mods) in int-alist
+                 when mods
+                 do (cl-loop for mod in (sort (copy-sequence mods) 'string<)
+                             do (setq max-node-len (max max-node-len (length node)))
+                             do (push (list nil (vector node mod)) entries)))
         (setq tabulated-list-format
               (vector
                `("Node"   ,max-node-len 'string< :pad-right 4)

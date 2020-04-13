@@ -2,6 +2,7 @@ MAKEFLAGS = -s
 APPS = $(subst lib/,,$(wildcard lib/*))
 EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
 EMACS ?= "emacs"
+DOCKER ?= "docker"
 
 REBAR3 ?= $(shell which rebar3)
 ifeq (,$(REBAR3))
@@ -60,6 +61,21 @@ ert: test-projects
 	-l test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
+
+.PHONY: byte-compilation-test
+byte-compilation-test:
+	$(DOCKER) run -it --rm \
+	-v ${HOME}:${HOME} \
+	-v /etc/passwd:/etc/passwd \
+	-v /usr/lib/erlang:/usr/lib/erlang \
+	-v /usr/bin:/usr/bin \
+	-w ${PWD} \
+	-e PATH=${PATH} \
+	-u $(shell id -u) \
+	silex/emacs \
+	/bin/bash -c \
+	'emacs -Q --batch -L ${PWD} -l test_data/package-install-deps.el \
+	-f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el'
 
 .PHONY: test-projects
 test-projects:

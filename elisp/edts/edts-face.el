@@ -25,6 +25,7 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
+(require 'cl-macs)
 (require 'face-remap)
 ;; Faces for highlighting
 
@@ -269,7 +270,7 @@ is non-nil."
 
 (defun edts-face--remap-modeline-face (status)
   "Set a relative mapping to mode-line face for STATUS."
-  (case status
+  (cl-case status
     (warning (face-remap-add-relative 'mode-line 'edts-face-warning-mode-line))
     (error   (face-remap-add-relative 'mode-line 'edts-face-error-mode-line))
     (ok      nil)))

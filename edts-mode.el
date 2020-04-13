@@ -1,8 +1,26 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; edts-mode.el --- EDTS setup and configuration.
+
+;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
+
+;; Author: Thomas Järvstrand <thomas.jarvstrand@gmail.com>
+;; Keywords: erlang
+;; This file is not part of GNU Emacs.
+
 ;;
-;; EDTS Setup and configuration.
+;; This file is part of EDTS.
 ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; EDTS is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU Lesser General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; EDTS is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (when (< emacs-major-version 24)
     (error "EDTS requires Emacs >= 24.0"))
@@ -57,12 +75,6 @@
 (defcustom edts-erl-flags
   ""
   "Flags to use when launching the main EDTS-node."
-  :type 'string
-  :group 'edts)
-
-(defcustom edts-erl-sname
-  "edts-server"
-  "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
   :type 'string
   :group 'edts)
 
@@ -222,14 +234,8 @@ further.
                                       current buffer's file.
 \\[edts-dialyzer-analyze]           - Same as the xref-check
                                       above, but for dialyzer.
-\\[edts-byte-compile]               - Byte compile all EDTS elisp files.
-\\[edts-project-start-node]         - Start current buffers project-node
-                                      if not already running.
-\\[edts-init-node]                  - Register the project-node of
-                                      current buffer with the central
-                                      EDTS server.
 \\[edts-shell]                      - Start an interactive Erlang shell.
-\\[edts-start-server]               - Start the central EDTS server.
+\\[edts-api-start-server]           - Start the central EDTS server.
 \\[edts-man-setup]                  - Install the OTP documentation"
 
   :lighter " EDTS"
@@ -247,7 +253,7 @@ further.
 
 (eval-and-compile
   (defun edts-compile-deps ()
-  "Compile EDTS' external (Erlang) dependecies."
+  "Compile EDTS' external (Erlang) dependencies."
   (interactive)
   (let ((default-directory edts-root-directory)
         (buf  "*EDTS compile*"))

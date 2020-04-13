@@ -25,6 +25,7 @@
 ;; auto-complete source for erlang records.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts-log)
@@ -51,7 +52,7 @@
 (defun edts-complete-record-init ()
   "Initialize record completions."
   (when (edts-complete-record-p ac-point)
-    (case (ferl-point-inside-quotes)
+    (cl-case (ferl-point-inside-quotes)
       ('double-quoted nil) ; Don't complete inside strings
       (otherwise
        (edts-log-debug "Initializing record completions")
@@ -63,7 +64,7 @@
            (setq edts-complete-record-candidates candidates)))))))
 
 (defun edts-complete-record-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-record-candidates))
     ('none          (edts-complete-normal-record-candidates))))

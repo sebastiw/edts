@@ -24,6 +24,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts-log)
@@ -54,7 +55,7 @@
   "Initializes the list of exported function completions."
   (let ((point (or ac-point (point))))
     (when (edts-complete-exported-function-p point)
-      (case (ferl-point-inside-quotes)
+      (cl-case (ferl-point-inside-quotes)
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing exported function completions")
@@ -64,7 +65,7 @@
                  (edts-api-get-module-export-strings module t))))))))
 
 (defun edts-complete-exported-function-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-exported-function-candidates))
     ('none          (edts-complete-normal-exported-function-candidates))))

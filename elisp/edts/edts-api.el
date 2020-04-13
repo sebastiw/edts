@@ -22,10 +22,11 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'cl-macs)
 (require 'dash)
+(require 'ferl)
 (require 's)
 
-(require 'ferl)
 (require 'edts-log)
 (require 'edts-rpc)
 
@@ -36,6 +37,12 @@
   "Used to manually set the project node-name to use in a buffer
 that is not part of a project")
 (make-variable-buffer-local 'edts-api-node-name)
+
+(defcustom edts-erl-sname
+  "edts-server"
+  "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
+  :type 'string
+  :group 'edts)
 
 (defcustom edts-api-async-node-init t
   "Whether or not node initialization should be synchronous"
@@ -113,7 +120,7 @@ several edts nodes on the same host.")
             (edts-api-get-nodes t)))
     (while (and (> retries 0) (not available))
       (sit-for edts-api-server-start-retry-interval)
-      (decf retries)
+      (cl-decf retries)
       (setq available
             (with-demoted-errors "Error when starting EDTS server: %s"
               (edts-api-get-nodes t))))

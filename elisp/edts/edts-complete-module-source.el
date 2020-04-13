@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts-log)
@@ -46,7 +47,7 @@
 (add-hook 'after-save-hook #'(lambda () (setq edts-complete-module-cache nil)))
 
 (defun edts-complete-module-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-module-candidates))
     ('none          (edts-complete-normal-module-candidates))))

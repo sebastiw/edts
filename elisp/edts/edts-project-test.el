@@ -22,7 +22,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
-(require 'cl-lib)
+(require 'cl-macs)
 (require 'f)
 
 (require 'edts-test)

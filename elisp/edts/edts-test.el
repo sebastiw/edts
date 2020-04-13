@@ -17,6 +17,8 @@
 ;;
 ;; Test library for edts.
 (require 'dash)
+(require 'cl-lib)
+(require 'cl-macs)
 (require 'ert)
 (require 'em-glob)
 (require 'f)
@@ -64,8 +66,8 @@
     (when (f-file? project-file)
       (f-delete project-file))
     (setf edts-project-attributes
-          (delete-if (lambda (x) (equal (car x) root))
-                     edts-project-attributes))))
+          (cl-delete-if (lambda (x) (equal (car x) root))
+                        edts-project-attributes))))
 
 (defvar edts-test-pre-test-buffer-list nil
   "The buffer list prior to running tests.")
@@ -109,11 +111,11 @@
   "edts-tests")
 
 (defmacro edts-test-add-suite (suite-name &optional setup teardown)
-  (assert (symbolp suite-name))
+  (cl-assert (symbolp suite-name))
   (let ((alistvar (make-symbol "alist")))
 
-    `(let ((,alistvar (remove-if #'(lambda (suite)
-                                     (eq (car suite) ',suite-name))
+    `(let ((,alistvar (cl-remove-if #'(lambda (suite)
+                                        (eq (car suite) ',suite-name))
                                  edts-test-suite-alist)))
        (setq edts-test-suite-alist
              (cons '(,suite-name ,(eval setup)
@@ -164,9 +166,9 @@
     (dolist (suite edts-test-suite-alist)
       (let ((stats (edts-test-run-suite-batch (car suite))))
 
-      (incf all-successful (ert-stats-completed-expected stats))
-      (incf all-failed (ert-stats-completed-unexpected stats))
-      (incf all-total (ert-stats-total stats))))
+      (cl-incf all-successful (ert-stats-completed-expected stats))
+      (cl-incf all-failed (ert-stats-completed-unexpected stats))
+      (cl-incf all-total (ert-stats-total stats))))
 
     (message "Passed: %s" all-successful)
     (message "Failed: %s" all-failed)

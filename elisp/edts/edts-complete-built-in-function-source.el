@@ -24,6 +24,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts)
@@ -44,7 +45,7 @@
 ;; Candidate functions
 
 (defun edts-complete-built-in-function-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-built-in-function-candidates))
     ('none          (edts-complete-normal-built-in-function-candidates))))

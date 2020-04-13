@@ -17,7 +17,9 @@
 ;;
 ;; Debugger interaction code for EDTS
 
+(require 'cl-macs)
 (require 'dash)
+(require 'hl-line)
 
 (require 'edts-api)
 (require 'edts-event)
@@ -159,7 +161,7 @@ modules, breakpoints and debugged processes).")
 
 (defun edts-debug-event-handler (node class type info)
   "Handles erlang-side debugger events"
-  (case type
+  (cl-case type
     (interpret     (let ((module (cdr (assoc 'module info))))
                      (edts-log-info "%s is now interpreted on %s" module node))
                    (edts-debug-sync-interpreted-alist))
@@ -228,39 +230,39 @@ modules, breakpoints and debugged processes).")
 (defun edts-debug-sync-interpreted-alist ()
   "Synchronizes `edts-debug-interpreted-alist'."
   (setq edts-debug-interpreted-alist
-        (loop for node in (edts-debug-get-nodes)
-              collect (cons node (edts-debug-interpreted-modules node)))))
+        (cl-loop for node in (edts-debug-get-nodes)
+                 collect (cons node (edts-debug-interpreted-modules node)))))
 
 (defun edts-debug-sync-breakpoint-alist ()
   "Synchronizes `edts-debug-breakpoint-alist'."
   (setq edts-debug-breakpoint-alist
-        (loop for node in (edts-debug-get-nodes)
-              for node-breakpoints = (edts-debug-breakpoints node)
-              when node-breakpoints
-              collect (loop
-                       for breakpoint in node-breakpoints
-                       with breakpoints
-                       for module     = (cdr (assoc 'module breakpoint))
-                       for old-elt    = (assoc module breakpoints)
-                       ;; To get the breakpoint representation, delete the
-                       ;; module key/value of the breakpoint alist (since that
-                       ;; is the key in the outer alist)
-                       for break-list = (cons
-                                         (delete
-                                          (cons 'module module) breakpoint)
-                                         (cdr old-elt))
-                       for new-elt    = (cons module break-list)
-                       do (setq breakpoints
-                                (cons new-elt
-                                      (delete old-elt breakpoints)))
-                       finally (return (cons node breakpoints))))))
+        (cl-loop for node in (edts-debug-get-nodes)
+                 for node-breakpoints = (edts-debug-breakpoints node)
+                 when node-breakpoints
+                 collect (cl-loop
+                          for breakpoint in node-breakpoints
+                          with breakpoints
+                          for module     = (cdr (assoc 'module breakpoint))
+                          for old-elt    = (assoc module breakpoints)
+                          ;; To get the breakpoint representation, delete the
+                          ;; module key/value of the breakpoint alist (since that
+                          ;; is the key in the outer alist)
+                          for break-list = (cons
+                                            (delete
+                                             (cons 'module module) breakpoint)
+                                            (cdr old-elt))
+                          for new-elt    = (cons module break-list)
+                          do (setq breakpoints
+                                   (cons new-elt
+                                         (delete old-elt breakpoints)))
+                          finally (cl-return (cons node breakpoints))))))
 
 (defun edts-debug-sync-processes-alist ()
   "Synchronizes `edts-debug-processes-alist'."
   (setq edts-debug-processes-alist
-        (loop for node in (edts-debug-get-nodes)
-              for procs = (edts-debug-all-processes node)
-              collect (cons node procs))))
+        (cl-loop for node in (edts-debug-get-nodes)
+                 for procs = (edts-debug-all-processes node)
+                 collect (cons node procs))))
 
 (defun edts-debug-update-buffer-mode-line (node module)
   (if (member module (cdr (assoc node edts-debug-interpreted-alist)))
@@ -272,22 +274,22 @@ modules, breakpoints and debugged processes).")
   (edts-face-remove-overlays '(edts-debug-breakpoint))
   (let ((breaks (cdr (assoc module
                             (cdr (assoc node edts-debug-breakpoint-alist))))))
-    (loop for break in breaks
-        for line      = (cdr (assoc 'line      break))
-        for status    = (cdr (assoc 'status    break))
-        for trigger   = (cdr (assoc 'trigger   break))
-        for condition = (cdr (assoc 'condition break))
-        for face      = (if (string= status "active")
-                            'edts-debug-breakpoint-active-face
-                          'edts-debug-breakpoint-inactive-face)
-        for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
-        do
-        (edts-face-display-overlay face
-                                   line
-                                   (format fmt status trigger condition)
-                                   'edts-debug-breakpoint
-                                   edts-debug-breakpoint-face-prio
-                                   t))))
+    (cl-loop for break in breaks
+             for line      = (cdr (assoc 'line      break))
+             for status    = (cdr (assoc 'status    break))
+             for trigger   = (cdr (assoc 'trigger   break))
+             for condition = (cdr (assoc 'condition break))
+             for face      = (if (string= status "active")
+                                 'edts-debug-breakpoint-active-face
+                               'edts-debug-breakpoint-inactive-face)
+             for fmt       = "Breakpoint status: %s, trigger: %s, condition: %s"
+             do
+             (edts-face-display-overlay face
+                                        line
+                                        (format fmt status trigger condition)
+                                        'edts-debug-breakpoint
+                                        edts-debug-breakpoint-face-prio
+                                        t))))
 
 (defun edts-debug-update-buffer-process-location (module line)
   (edts-face-remove-overlays '(edts-debug-process-location))

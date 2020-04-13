@@ -24,6 +24,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -47,7 +48,7 @@
 (defun edts-complete-local-function-init ()
     "Initialize local function completions."
     (when (edts-complete-local-function-p)
-      (case (ferl-point-inside-quotes)
+      (cl-case (ferl-point-inside-quotes)
         ('double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing local function completions")
@@ -55,7 +56,7 @@
                (mapcar #'car (ferl-local-functions)))))))
 
 (defun edts-complete-local-function-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-local-function-candidates))
     ('none          (edts-complete-normal-local-function-candidates))))

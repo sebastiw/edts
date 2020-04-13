@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-highlight-symbol)
+(require 'cl-macs)
 (require 'erlang)
 (require 'f)
 
@@ -187,7 +188,7 @@
 (defalias 'edts-marker-fringe 'edts-face-marker-fringe)
 
 (defun edts-event-handler (node class type info)
-  (case type
+  (cl-case type
     (node_down
      (let ((node (cdr (assoc 'node info))))
        (edts-log-info "Node %s down" node)
@@ -234,11 +235,11 @@ buffer. The node is either:
         (f (cdr (assoc 'function mfa)))
         (a (cdr (assoc 'arity mfa))))
     (unless m
-      (loop named import
-            for (module . imported) in (erlang-get-import)
-            do  (when (eq a (cdr (assoc f imported)))
-                  (setq m module)
-                  (return-from import module))))
+      (cl-loop named import
+               for (module . imported) in (erlang-get-import)
+               do  (when (eq a (cdr (assoc f imported)))
+                     (setq m module)
+                     (cl-return-from import module))))
     (unless m
       (when (member (format "%s/%s" f a) edts-built-in-functions)
         (setq m "erlang")))
