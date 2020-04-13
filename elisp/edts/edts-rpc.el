@@ -79,7 +79,7 @@
           (if (not retry)
               reply
             (edts-log-debug "Retrying request")
-            (edts-rpc-call command args body t)))))))
+            (edts-rpc-call command args t)))))))
 
 (defun edts-rpc-call-async (command
                             args

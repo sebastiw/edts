@@ -18,6 +18,7 @@
 ;; Debugger interaction code for EDTS
 
 (require 'dash)
+(require 'hl-line)
 
 (require 'edts-api)
 (require 'edts-event)

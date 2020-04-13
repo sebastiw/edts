@@ -255,7 +255,7 @@ buffer's file."
                           config)))
 
 (defun edts-project--config-from-string (config)
-  (edts-alist-from-plist (eval (read (format "(list %s)" file-contents)))))
+  (edts-alist-from-plist (eval (read (format "(list %s)" config)))))
 
 (defun edts-project-buffers (&optional root)
   "Return a list of all open buffers in the project ROOT. ROOT defaults to the
@@ -288,7 +288,7 @@ Example:
   (edts-project--validate-config properties)
   (let ((config (edts-alist-merge (edts-alist-get root edts-project-attributes)
                                   properties)))
-    (!edts-alist-store root config)))
+    (!edts-alist-store root config 'edts-project-attributes)))
 
 (defun edts-project-revert-all-buffers ()
   "Revert all buffers belonging to current buffer's project. Ignores
@@ -296,6 +296,6 @@ auto-save data."
   (interactive)
   (when (y-or-n-p (format "Revert all buffers in %s" (edts-project-name)))
     (edts-project-in-each-buffer
-     (lambda (buf) ('revert-buffer t t t)))))
+     (lambda (buf) (revert-buffer t t t)))))
 
 (provide 'edts-project)
