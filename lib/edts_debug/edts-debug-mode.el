@@ -17,6 +17,7 @@
 ;;
 ;; EDTS Debug mode
 
+(require 'cl-macs)
 (require 'f)
 
 (require 'edts)

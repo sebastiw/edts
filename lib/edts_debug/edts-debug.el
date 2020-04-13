@@ -17,6 +17,7 @@
 ;;
 ;; Debugger interaction code for EDTS
 
+(require 'cl-macs)
 (require 'dash)
 (require 'hl-line)
 

@@ -17,6 +17,8 @@
 ;;
 ;; Mode for listing processess.
 
+(require 'cl-macs)
+
 (require 'edts-debug)
 (require 'edts-navigate)
 

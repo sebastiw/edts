@@ -17,6 +17,8 @@
 ;;
 ;; Mode for listing interpreted modules.
 
+(require 'cl-macs)
+
 (require 'edts-api)
 (require 'edts-debug)
 (require 'edts-navigate)

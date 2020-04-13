@@ -25,6 +25,7 @@
 ;; auto-complete source for erlang records.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts-log)

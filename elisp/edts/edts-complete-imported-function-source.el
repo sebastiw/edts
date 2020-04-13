@@ -24,6 +24,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-complete)
+(require 'cl-macs)
 (require 'ferl)
 
 (require 'edts-log)

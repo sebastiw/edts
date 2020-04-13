@@ -19,6 +19,8 @@
 
 ;; Window configuration to be restored when quitting debug mode
 
+(require 'cl-macs)
+
 (require 'edts-api)
 (require 'edts-debug)
 (require 'edts-navigate)

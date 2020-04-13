@@ -23,6 +23,7 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
 (require 'auto-highlight-symbol)
+(require 'cl-macs)
 (require 'erlang)
 (require 'f)
 

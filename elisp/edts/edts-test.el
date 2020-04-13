@@ -17,6 +17,8 @@
 ;;
 ;; Test library for edts.
 (require 'dash)
+(require 'cl-lib)
+(require 'cl-macs)
 (require 'ert)
 (require 'em-glob)
 (require 'f)

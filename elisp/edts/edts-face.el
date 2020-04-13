@@ -25,6 +25,7 @@
 ;; Rudimentary project support for edts so that we can relate buffers to
 ;; projects and communicate with the correct nodes.
 
+(require 'cl-macs)
 (require 'face-remap)
 ;; Faces for highlighting
 

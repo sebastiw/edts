@@ -27,6 +27,7 @@
 ;; done by Sebastian Weddmark Olsson.
 
 (require 'dash)
+(require 'cl-macs)
 (require 'f)
 
 (require 'edts-api)

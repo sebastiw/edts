@@ -22,10 +22,11 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 
+(require 'cl-macs)
 (require 'dash)
+(require 'ferl)
 (require 's)
 
-(require 'ferl)
 (require 'edts-log)
 (require 'edts-rpc)
 
