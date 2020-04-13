@@ -74,7 +74,7 @@ the erlang process."
         (node-name   (format "edts-%s" edts-shell-next-shell-id))
         (command     (list edts-erl-command "-sname" node-name))
         (root        (expand-file-name (or pwd default-directory))))
-    (incf edts-shell-next-shell-id)
+    (cl-incf edts-shell-next-shell-id)
     (let ((buffer (edts-shell-make-comint-buffer
                    buffer-name
                    node-name
@@ -254,7 +254,7 @@ respectively so we can use them later when fontifying user input."
 (defun edts-shell-font-lock-fontify-region (start end loudly)
   (while (< start end)
     (let ((temp-end nil))
-      (case (get-text-property start 'field)
+      (cl-case (get-text-property start 'field)
         ('output
          (setq temp-end (edts-shell-output-end start end))
          (font-lock-default-fontify-region start temp-end loudly))
@@ -303,20 +303,20 @@ bounded by BOUND."
 
 (defun edts-shell-node-name-from-args (args)
   "Return node sname based on args"
-  (block nil
+  (cl-block nil
     (while args
       (when (string= (car args) "-sname")
-        (return (cadr args)))
+        (cl-return (cadr args)))
       (pop args))))
 
 (defun edts-shell-find-by-path (path)
   "Return the buffer of the first found shell with PATH as its
 default directory if it exists, otherwise nil."
-  (block nil
+  (cl-block nil
     (let ((shells edts-shell-list))
       (while shells
         (when (string= path (cdr (assoc 'default-directory (cdar shells))))
-          (return (get-buffer (caar shells))))
+          (cl-return (get-buffer (caar shells))))
           (pop shells)))))
 
 (provide 'edts-shell)

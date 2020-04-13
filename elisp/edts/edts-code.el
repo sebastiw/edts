@@ -98,12 +98,12 @@ with severity as key and a lists of issues as values"
 (defun edts-code-buffer-status ()
   "Return 'error if there are any edts errors in current buffer,
 'warning if there are warnings and 'ok otherwise."
-  (block nil
+  (cl-block nil
     (let ((status 'ok)
           (issues edts-code-buffer-issues))
       (while issues
         (when (plist-get (cadr issues) 'error)
-          (return 'error))
+          (cl-return 'error))
         (when (plist-get (cadr issues) 'warning)
           (setq status 'warning))
         (setq issues (cddr issues)))

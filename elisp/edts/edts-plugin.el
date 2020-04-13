@@ -21,7 +21,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Paths
-(require 'cl)
+(require 'cl-lib)
+(require 'cl-macs)
 (require 'f)
 (require 's)
 
@@ -38,12 +39,12 @@
 (add-to-list 'load-path edts-plugin-directory)
 
 (defconst edts-plugin-names
-  (remove-if
+  (cl-remove-if
    (lambda (v) (equal v "edts"))
-   (loop for (file dirp . rest)
-         in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
-         when dirp
-         collect file))
+   (cl-loop for (file dirp . rest)
+            in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
+            when dirp
+            collect file))
   "a list of the names of all available plugins.")
 
 (defcustom edts-plugin-disabled-plugins '("edts")

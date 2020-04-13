@@ -96,7 +96,7 @@
                                                       edts-debug-pid))
                (max-var-len (apply #'max
                                    8 ;; The length of the header name
-                                   (loop for v in bound collect (length v))))
+                                   (cl-loop for v in bound collect (length v))))
                (col-pad 4)
                (max-col (window-body-width (get-buffer-window buf)))
                (indent  (+ max-var-len col-pad))
@@ -106,11 +106,11 @@
                                                          max-col))
                entries)
           (erase-buffer)
-          (loop for (var . bind) in bindings
-                for var-name = (propertize (symbol-name var)
-                                           'face
-                                           'font-lock-variable-name-face)
-                do (push (list nil (vector var-name bind)) entries))
+          (cl-loop for (var . bind) in bindings
+                   for var-name = (propertize (symbol-name var)
+                                              'face
+                                              'font-lock-variable-name-face)
+                   do (push (list nil (vector var-name bind)) entries))
           (setq tabulated-list-format
                 (vector
                  `("Variable" ,max-var-len 'string< :pad-right ,col-pad)

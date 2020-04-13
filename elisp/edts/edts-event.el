@@ -54,10 +54,10 @@ that class."
                          (list event-class)
                        (mapcar #'car edts-event-handlers))))
     (setq edts-event-handlers
-          (loop for (class . handlers) in edts-event-handlers
-                collect (if (member class event-class)
-                            (cons class (delq handler handlers))
-                          (cons class handlers))))))
+          (cl-loop for (class . handlers) in edts-event-handlers
+                   collect (if (member class event-class)
+                               (cons class (delq handler handlers))
+                             (cons class handlers))))))
 
 (defun edts-event-listen ()
   "Start the event-listening loop."

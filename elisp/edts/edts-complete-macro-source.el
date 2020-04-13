@@ -48,7 +48,7 @@
 (add-hook 'after-save-hook #'(lambda () (setq edts-complete-macro-cache nil)))
 
 (defun edts-complete-macro-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-macro-candidates))
     ('none          (edts-complete-normal-macro-candidates))))
@@ -92,7 +92,7 @@ candidates, except we single-quote-terminate candidates."
                                             (cons (cdr (assoc 'function m))
                                                   (cdr (assoc 'arity    m))))
                                         (edts-api-get-mfas arity-macros))))
-      (loop for raw-m in raw-macros collect
+      (cl-loop for raw-m in raw-macros collect
             (let* ((name      (cdr (assoc 'name raw-m)))
                    (args      (cdr (assoc 'args raw-m)))
                    (value     (cdr (assoc 'value raw-m)))

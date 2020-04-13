@@ -25,8 +25,8 @@
 (require 'dash)
 
 (defun edts-alist-from-plist (plist)
-  (loop for (k v . rest) on plist by #'cddr
-        collect (cons k v)))
+  (cl-loop for (k v . rest) on plist by #'cddr
+           collect (cons k v)))
 
 (defun edts-alist-map (f alist)
   (-map (-lambda ((k . v))

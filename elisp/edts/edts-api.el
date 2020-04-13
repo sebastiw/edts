@@ -119,7 +119,7 @@ several edts nodes on the same host.")
             (edts-api-get-nodes t)))
     (while (and (> retries 0) (not available))
       (sit-for edts-api-server-start-retry-interval)
-      (decf retries)
+      (cl-decf retries)
       (setq available
             (with-demoted-errors "Error when starting EDTS server: %s"
               (edts-api-get-nodes t))))

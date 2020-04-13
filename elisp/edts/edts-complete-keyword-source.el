@@ -39,7 +39,7 @@
 ;; Candidate functions
 
 (defun edts-complete-keyword-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted  nil) ; Don't complete inside strings
     ('single-quoted (edts-complete-single-quoted-keyword-candidates))
     ('none          (edts-complete-normal-keyword-candidates))))

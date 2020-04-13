@@ -52,7 +52,7 @@
           (edts-complete-find-variable-candidates))))
 
 (defun edts-complete-variable-candidates ()
-  (case (ferl-point-inside-quotes)
+  (cl-case (ferl-point-inside-quotes)
     ('double-quoted nil) ; Don't complete inside strings
     ('single-quoted nil) ; No single-quoted variables
     ('none          (edts-complete-normal-variable-candidates))))

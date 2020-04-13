@@ -73,7 +73,7 @@ call `switch-to-buffer'."
   (with-current-buffer (get-buffer-create edts-debug-list-processes-buffer)
     (edts-debug-list-processes-mode)
     (edts-debug-list-processes-update)
-    (case show
+    (cl-case show
       (pop    (pop-to-buffer    (current-buffer)))
       (switch (switch-to-buffer (current-buffer))))))
 
@@ -145,40 +145,40 @@ call."
                              (copy-sequence kvs)
                              #'(lambda (el1 el2)
                                  (string< (car el1) (car el2))))))
-          (loop for (node . procs) in (key-sort edts-debug-processes-alist)
-                do (setq max-node-len (max max-node-len
-                                           (length node)))
-                do (loop for proc in procs
-                         for pid    = (cdr (assoc 'pid    proc))
-                         for init   = (cdr (assoc 'init   proc))
-                         for status = (cdr (assoc 'status proc))
-                         for info   = (cdr (assoc 'info   proc))
-                         do
-                         (push (list nil
-                                     (vector node
-                                             pid
-                                             init
-                                             status
-                                             info))
-                               entries)
-                         (setq max-pid-len (max max-pid-len
-                                                (length pid)))
-                         (setq max-init-len (max max-init-len
-                                                 (length init)))
-                         (setq max-status-len (max max-status-len
-                                                   (length status)))
-                         (setq max-info-len (max max-info-len
-                                                 (length info)))))
-           (setq tabulated-list-format
-                 (vector
-                  `("Node"   ,max-node-len   'string< :pad-right 4)
-                  `("Pid"    ,max-pid-len     nil     :pad-right 4)
-                  `("Init"   ,max-init-len    nil     :pad-right 4)
-                  `("Status" ,max-status-len  nil     :pad-right 4)
-                  `("Info"   ,max-info-len    nil     :pad-right 4)))
-           (tabulated-list-init-header)
-           (setq tabulated-list-entries (reverse entries))
-           (tabulated-list-print))))))
+          (cl-loop for (node . procs) in (key-sort edts-debug-processes-alist)
+                   do (setq max-node-len (max max-node-len
+                                              (length node)))
+                   do (cl-loop for proc in procs
+                               for pid    = (cdr (assoc 'pid    proc))
+                               for init   = (cdr (assoc 'init   proc))
+                               for status = (cdr (assoc 'status proc))
+                               for info   = (cdr (assoc 'info   proc))
+                               do
+                               (push (list nil
+                                           (vector node
+                                                   pid
+                                                   init
+                                                   status
+                                                   info))
+                                     entries)
+                               (setq max-pid-len (max max-pid-len
+                                                      (length pid)))
+                               (setq max-init-len (max max-init-len
+                                                       (length init)))
+                               (setq max-status-len (max max-status-len
+                                                         (length status)))
+                               (setq max-info-len (max max-info-len
+                                                       (length info)))))
+          (setq tabulated-list-format
+                (vector
+                 `("Node"   ,max-node-len   'string< :pad-right 4)
+                 `("Pid"    ,max-pid-len     nil     :pad-right 4)
+                 `("Init"   ,max-init-len    nil     :pad-right 4)
+                 `("Status" ,max-status-len  nil     :pad-right 4)
+                 `("Info"   ,max-info-len    nil     :pad-right 4)))
+          (tabulated-list-init-header)
+          (setq tabulated-list-entries (reverse entries))
+          (tabulated-list-print))))))
 
 (defun edts-debug--get-module-source (node module)
   (cdr (assoc 'source (edts-api-get-module-info node module 'basic))))

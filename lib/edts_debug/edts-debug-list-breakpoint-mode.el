@@ -60,7 +60,7 @@ call `switch-to-buffer'."
   (with-current-buffer (get-buffer-create edts-debug-list-breakpoint-buffer)
     (edts-debug-list-breakpoint-mode)
     (edts-debug-list-breakpoint-update)
-    (case show
+    (cl-case show
       (pop    (pop-to-buffer    (current-buffer)))
       (switch (switch-to-buffer (current-buffer))))))
 
@@ -105,25 +105,25 @@ call `switch-to-buffer'."
                               #'(lambda (b1 b2)
                                   (< (cdr (assoc 'line b1))
                                      (cdr (assoc 'line b2)))))))
-          (loop for (node . modules) in (key-sort edts-debug-breakpoint-alist)
-                do (loop for (mod . breakpoints) in (key-sort modules)
-                         do (loop for break in (line-sort breakpoints)
-                                  for line      = (cdr (assoc 'line      break))
-                                  for status    = (cdr (assoc 'status    break))
-                                  for trigger   = (cdr (assoc 'trigger   break))
-                                  for condition = (cdr (assoc 'condition break))
-                                  do
-                                  (push (list nil
-                                              (vector node
-                                                      mod
-                                                      (number-to-string line)
-                                                      status
-                                                      trigger
-                                                      condition)) entries)
-                                  (setq max-module-len (max max-module-len
-                                                            (length mod)))
-                                  (setq max-node-len (max max-node-len
-                                                          (length node))))))
+          (cl-loop for (node . modules) in (key-sort edts-debug-breakpoint-alist)
+                   do (cl-loop for (mod . breakpoints) in (key-sort modules)
+                               do (cl-loop for break in (line-sort breakpoints)
+                                           for line      = (cdr (assoc 'line      break))
+                                           for status    = (cdr (assoc 'status    break))
+                                           for trigger   = (cdr (assoc 'trigger   break))
+                                           for condition = (cdr (assoc 'condition break))
+                                           do
+                                           (push (list nil
+                                                       (vector node
+                                                               mod
+                                                               (number-to-string line)
+                                                               status
+                                                               trigger
+                                                               condition)) entries)
+                                           (setq max-module-len (max max-module-len
+                                                                     (length mod)))
+                                           (setq max-node-len (max max-node-len
+                                                                   (length node))))))
           (setq tabulated-list-format
                 (vector
                  `("Node"      ,max-node-len   'string< :pad-right 4)
