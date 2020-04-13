@@ -26,7 +26,6 @@
 (require 's)
 
 (require 'ferl)
-(require 'edts-mode)
 (require 'edts-log)
 (require 'edts-rpc)
 
@@ -37,6 +36,12 @@
   "Used to manually set the project node-name to use in a buffer
 that is not part of a project")
 (make-variable-buffer-local 'edts-api-node-name)
+
+(defcustom edts-erl-sname
+  "edts-server"
+  "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
+  :type 'string
+  :group 'edts)
 
 (defcustom edts-api-async-node-init t
   "Whether or not node initialization should be synchronous"

@@ -78,12 +78,6 @@
   :type 'string
   :group 'edts)
 
-(defcustom edts-erl-sname
-  "edts-server"
-  "Specify an short-name for the EDTS-node. This will help in multiuser-systems."
-  :type 'string
-  :group 'edts)
-
 (eval-and-compile
   (defconst edts-root-directory
     (file-name-directory (or (locate-library "edts-autoloads")
