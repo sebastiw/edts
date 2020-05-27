@@ -26,6 +26,9 @@
 -module(edts_plugins).
 
 %%%_* Includes =================================================================
+
+-include_lib("kernel/include/logger.hrl").
+
 %%%_* Exports ==================================================================
 
 -export([execute/3,
@@ -131,10 +134,10 @@ cmd_exists_p(Plugin, Cmd, Arity) ->
     lists:member({Cmd, Arity}, Plugin:module_info(exports)).
 
 do_execute(Node, Plugin, Cmd, Input) ->
-  edts_log:debug("Validating input for ~p command ~p:~n~p",
-                 [Plugin, Cmd, Input]),
+  ?LOG_DEBUG("Validating input for ~p command ~p:~n~p",
+             [Plugin, Cmd, Input]),
   Ctx = convert_params(Input, spec(Plugin, Cmd, orddict:size(Input))),
-  edts_log:debug("Running ~p command ~p with Ctx ~p", [Plugin, Cmd, Input]),
+  ?LOG_DEBUG("Running ~p command ~p with Ctx ~p", [Plugin, Cmd, Input]),
   case edts:call(Node, Plugin, Cmd, Ctx) of
     %% The call terminated badly
     {error, E} ->

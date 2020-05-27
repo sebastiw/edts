@@ -37,7 +37,9 @@
          nodes/0]).
 
 %%%_* Includes =================================================================
+
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -119,8 +121,8 @@ call(Node, Mod, Fun, Args, LogError) ->
       case LogError of
         false -> ok;
         true  ->
-          edts_log:error("Error in remote call ~p:~p/~p on ~p: ~p",
-                         [Mod, Fun, length(Args), Node, Err])
+          ?LOG_ERROR("Error in remote call ~p:~p/~p on ~p: ~p",
+                     [Mod, Fun, length(Args), Node, Err])
       end,
       {error, Err}
   end.

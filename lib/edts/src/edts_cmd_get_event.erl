@@ -36,6 +36,7 @@
 %%%_* Includes =================================================================
 
 -include("otp_workarounds.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
@@ -50,8 +51,8 @@ execute(Ctx) ->
         {ok, [{event, Event}]}
     catch
         ?EXCEPTION(C,E,S) ->
-            edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
-                           [C,E,?GET_STACK(S)]),
+            ?LOG_ERROR("Event Listener failed with ~p:~p~nStacktrace:~n~p",
+                       [C,E,?GET_STACK(S)]),
             execute(Ctx)
     end.
 
