@@ -29,4 +29,4 @@ script:
                -w ${PWD} \
                -e PATH=${PATH} \
                silex/emacs:${EMACS} \
-               /bin/bash --norc -c 'make test'
+               /bin/bash --norc -c 'make test && make release'
