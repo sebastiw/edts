@@ -1,9 +1,9 @@
 sudo: required
 language: erlang
 otp_release:
-  - 22.0
+  - 23.0
+  - 22.3
   - 21.3
-  - 20.3
 before_install:
   - |
     docker run --rm \
