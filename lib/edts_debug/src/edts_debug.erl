@@ -393,8 +393,3 @@ process_status({_Pid, _Fun, Status, _Info}) -> Status.
 
 %%%_* Unit tests ===============================================================
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

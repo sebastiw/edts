@@ -1158,8 +1158,3 @@ test_file_forms(File) ->
   {ok, Forms} = edts_syntax:parse_forms(unicode:characters_to_list(Bin)),
   Forms.
 
-%%%_* Emacs ====================================================================
-%% %%% Local Variables:
-%% %%% allout-layout: t
-%% %%% erlang-indent-level: 2
-%% %%% End:

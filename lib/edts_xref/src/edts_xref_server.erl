@@ -520,9 +520,3 @@ compile_and_add_test_module(SrcDir, OutDir, Mod) ->
       ok      = try_add_module(Mod)
   end.
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-

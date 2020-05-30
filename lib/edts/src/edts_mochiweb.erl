@@ -140,8 +140,3 @@ configured_port() ->
   edts_log:debug("Using EDTS port ~p from file.", [Port]),
   list_to_integer(Port).
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

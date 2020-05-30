@@ -187,8 +187,3 @@ dispatch_event_p(Msg) ->
 
 event_type(Msg) -> element(1, Msg).
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

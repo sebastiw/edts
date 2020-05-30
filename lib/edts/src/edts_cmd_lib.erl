@@ -652,8 +652,3 @@ enum_list_validate_test() ->
                                    {default,  [valid_1]},
                                    {required, true}])).
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

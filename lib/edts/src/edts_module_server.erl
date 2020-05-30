@@ -179,8 +179,3 @@ fetch_modules_in_dir(Dir) ->
   Files = filelib:wildcard("*.beam", Dir),
   [list_to_atom(filename:rootname(filename:basename(F))) || F <- Files].
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

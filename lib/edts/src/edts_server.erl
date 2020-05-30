@@ -476,8 +476,3 @@ node_store_test() ->
   ?assertEqual(#state{nodes = [N2, N]}, node_store(N, #state{nodes = [N2]})).
 
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

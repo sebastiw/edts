@@ -412,9 +412,3 @@ meck_history(M0, F0, A0) ->
                                             F =:= F0,
                                             length(Args) =:= A0].
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-
