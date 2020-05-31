@@ -21,43 +21,48 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_run_eunit).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [nodename, module].
+spec() -> [nodename, module].
 
 execute(Ctx) ->
-    Node   = orddict:fetch(nodename, Ctx),
-    Module = orddict:fetch(module, Ctx),
-    {ok, {ok, Result}} = edts:call(Node, edts_eunit, run_tests, [Module]),
-    {Passed, Failed} = lists:partition(fun passed_test_p/1, Result),
-    {ok, [{passed, {array, [format_test(Test) || Test <- Passed]}},
-          {failed, {array, [format_test(Test) || Test <- Failed]}}]}.
+  Node = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  {ok, {ok, Result}} = edts:call(Node, edts_eunit, run_tests, [Module]),
+  {Passed, Failed} = lists:partition(fun passed_test_p/1, Result),
+  {
+    ok,
+    [
+      {passed, {array, [format_test(Test) || Test <- Passed]}},
+      {failed, {array, [format_test(Test) || Test <- Failed]}}
+    ]
+  }.
 
 %%%_* Internal functions =======================================================
 
-passed_test_p({Type, _, _, _}) ->
-    Type =:= 'passed-test'.
+passed_test_p({Type, _, _, _}) -> Type =:= 'passed-test'.
 
 format_test({Type, File, Line, Desc}) ->
-  {struct, [ {type, Type}
-           , {file, list_to_binary(File)}
-           , {line, Line}
-           , {description, unicode:characters_to_binary(Desc)}]}.
-
-
+  {
+    struct,
+    [
+      {type, Type},
+      {file, list_to_binary(File)},
+      {line, Line},
+      {description, unicode:characters_to_binary(Desc)}
+    ]
+  }.

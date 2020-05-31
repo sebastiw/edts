@@ -21,37 +21,32 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_get_function_info).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [nodename, module, function, arity].
+spec() -> [nodename, module, function, arity].
 
 execute(Ctx) ->
-    Node     = orddict:fetch(nodename, Ctx),
-    Module   = orddict:fetch(module, Ctx),
-    Function = orddict:fetch(function, Ctx),
-    Arity    = orddict:fetch(arity, Ctx),
-    {ok, Info} = edts:call(Node,
-                           edts_code,
-                           get_function_info,
-                           [Module, Function, Arity]),
-    {value, {source, Src}, Other} = lists:keytake(source, 1, Info),
-    {ok, {struct, [{source, list_to_binary(Src)}|Other]}}.
+  Node = orddict:fetch(nodename, Ctx),
+  Module = orddict:fetch(module, Ctx),
+  Function = orddict:fetch(function, Ctx),
+  Arity = orddict:fetch(arity, Ctx),
+  {ok, Info} =
+    edts:call(Node, edts_code, get_function_info, [Module, Function, Arity]),
+  {value, {source, Src}, Other} = lists:keytake(source, 1, Info),
+  {ok, {struct, [{source, list_to_binary(Src)} | Other]}}.
 
 %%%_* Internal functions =======================================================
-

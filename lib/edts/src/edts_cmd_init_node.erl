@@ -21,19 +21,19 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_init_node).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([execute/1,
-         spec/0]).
+
+-export([execute/1, spec/0]).
 
 %%%_* Includes =================================================================
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Defines ==================================================================
@@ -41,26 +41,26 @@
 %%%_* API ======================================================================
 
 spec() ->
-  [project_name,
-   nodename,
-   project_root,
-   project_lib_dirs,
-   app_include_dirs,
-   project_include_dirs,
-   erlang_cookie].
+  [
+    project_name,
+    nodename,
+    project_root,
+    project_lib_dirs,
+    app_include_dirs,
+    project_include_dirs,
+    erlang_cookie
+  ].
 
 execute(Ctx) ->
-  edts:init_node(orddict:fetch(project_name,         Ctx),
-                 orddict:fetch(nodename,             Ctx),
-                 orddict:fetch(project_root,         Ctx),
-                 orddict:fetch(project_lib_dirs,     Ctx),
-                 orddict:fetch(app_include_dirs,     Ctx),
-                 orddict:fetch(project_include_dirs, Ctx),
-                 orddict:fetch(erlang_cookie,        Ctx)).
-
-
+  edts:init_node(
+    orddict:fetch(project_name, Ctx),
+    orddict:fetch(nodename, Ctx),
+    orddict:fetch(project_root, Ctx),
+    orddict:fetch(project_lib_dirs, Ctx),
+    orddict:fetch(app_include_dirs, Ctx),
+    orddict:fetch(project_include_dirs, Ctx),
+    orddict:fetch(erlang_cookie, Ctx)
+  ).
 
 %%%_* Internal functions =======================================================
 %%%_* Unit tests ===============================================================
-
-

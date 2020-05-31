@@ -21,25 +21,23 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_pretty_print).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [string, indent, max_column].
+spec() -> [string, indent, max_column].
 
 execute(Ctx) ->
   String = orddict:fetch(string, Ctx),
@@ -48,7 +46,7 @@ execute(Ctx) ->
   try
     {ok, AbsTerm, _} = erl_scan:string(String ++ "."),
     {ok, Term} = erl_parse:parse_term(AbsTerm),
-    RecF = fun(_A, _N) -> no end,
+    RecF = fun (_A, _N) -> no end,
     PPStr =
       lists:flatten(io_lib_pretty:print(Term, Indent, MaxCol, -1, -1, RecF)),
     {ok, [{return, list_to_binary(PPStr)}]}
@@ -57,4 +55,3 @@ execute(Ctx) ->
   end.
 
 %%%_* Internal functions =======================================================
-

@@ -21,35 +21,38 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_get_mfas).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [expressions].
+spec() -> [expressions].
 
 execute(Ctx) ->
   MFAStrings = orddict:fetch(expressions, Ctx),
-  {ok, lists:filtermap(fun(MFAString) ->
-                           case edts_code:string_to_mfa(MFAString) of
-                             {ok, MFA}  -> {true, MFA};
-                             {error, _} -> false
-                           end
-                       end,
-                       MFAStrings)}.
+  {
+    ok,
+    lists:filtermap(
+      fun
+        (MFAString) ->
+          case edts_code:string_to_mfa(MFAString) of
+            {ok, MFA} -> {true, MFA};
+            {error, _} -> false
+          end
+      end,
+      MFAStrings
+    )
+  }.
 
 %%%_* Internal functions =======================================================
-

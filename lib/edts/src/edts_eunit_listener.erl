@@ -23,37 +23,46 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_eunit_listener).
 
 -behaviour(eunit_listener).
 
 %%%_* Includes =================================================================
+
 -include_lib("eunit/include/eunit.hrl").
 
 %%%_* Exports ==================================================================
 
--export([ handle_begin/3
-        , handle_cancel/3
-        , handle_end/3
-        , init/1
-        , start/0
-        , start/1
-        , terminate/2
-        ]).
+-export(
+  [
+    handle_begin/3,
+    handle_cancel/3,
+    handle_end/3,
+    init/1,
+    start/0,
+    start/1,
+    terminate/2
+  ]
+).
 
 %%%_* Defines ==================================================================
-
 %%%_* Records ==================================================================
--record(state, {parent          :: pid(),
-                ref             :: reference(),
-                successful = [] :: [event()],
-                failed     = [] :: [event()],
-                cancelled  = [] :: [event()]
-               }).
+
+-record(
+  state,
+  {
+    parent :: pid(),
+    ref :: reference(),
+    successful = [] :: [event()],
+    failed = [] :: [event()],
+    cancelled = [] :: [event()]
+  }
+).
 
 %%%_* Types ====================================================================
+
 -type event() :: proplists:proplist().
 
 %%%_* API ======================================================================
@@ -69,57 +78,70 @@ init(Options) ->
   debug("init, waiting for start..."),
   receive
     {start, Reference} ->
-      #state{ref    = Reference,
-             parent = proplists:get_value(parent, Options)}
+      #state{ref = Reference, parent = proplists:get_value(parent, Options)}
   end.
 
--spec handle_begin(group|test, proplists:proplist(), #state{}) -> #state{}.
+
+-spec handle_begin(group | test, proplists:proplist(), #state{}) -> #state{}.
 handle_begin(L, Data, State) ->
   debug("handle_begin ~p: ~p", [L, Data]),
   State.
 
--spec handle_end(group|test, proplists:proplist(), #state{}) -> #state{}.
+
+-spec handle_end(group | test, proplists:proplist(), #state{}) -> #state{}.
 handle_end(test, Data, State) ->
   debug("handle_end test: ~p", [Data]),
   case proplists:get_value(status, Data, ok) of
-    {error, _Err} -> State#state{failed     = [Data|State#state.failed]};
-    ok            -> State#state{successful = [Data|State#state.successful]}
+    {error, _Err} -> State#state{failed = [Data | State#state.failed]};
+    ok -> State#state{successful = [Data | State#state.successful]}
   end;
+
 handle_end(L, Data, State) ->
   debug("handle_end ~p: ~p", [L, Data]),
   State.
 
--spec handle_cancel(group|test, proplists:proplist(), #state{}) -> #state{}.
+
+-spec handle_cancel(group | test, proplists:proplist(), #state{}) -> #state{}.
 handle_cancel(group = L, Data, State) ->
   debug("handle_cancel ~p: ~p", [L, Data]),
   %% Can't handle this atm because there's not always MFA info in the error
   State;
+
 handle_cancel(test = L, Data, State) ->
   debug("handle_cancel ~p: ~p", [L, Data]),
-  State#state{cancelled = [Data|State#state.cancelled]}.
+  State#state{cancelled = [Data | State#state.cancelled]}.
 
 
 -spec terminate(any(), #state{}) ->
-        {result, reference(), {edts_eunit:summary(),
-                               edts_eunit:test()}} |
-        {error, term()}.
-terminate({ok, Summary}, #state{ref=Ref, parent=Parent} = State) ->
+  {result, reference(), {edts_eunit:summary(), edts_eunit:test()}}
+  | {error, term()}.
+terminate({ok, Summary}, #state{ref = Ref, parent = Parent} = State) ->
   Result =
-    orddict:from_list([{successful, State#state.successful},
-                       {failed,     State#state.failed},
-                       {cancelled,  State#state.cancelled}]),
+    orddict:from_list(
+      [
+        {successful, State#state.successful},
+        {failed, State#state.failed},
+        {cancelled, State#state.cancelled}
+      ]
+    ),
   debug("terminate: ~p", [Summary]),
   Parent ! {result, Ref, {orddict:from_list(Summary), Result}};
-terminate(Other, #state{parent=Parent}) ->
+
+terminate(Other, #state{parent = Parent}) ->
   debug("terminate: ~p", [Other]),
   Parent ! {error, Other}.
+
 
 debug(Str) -> debug(Str, []).
 
 -ifdef(DEBUG).
+
 debug(FmtStr, Args) -> error_logger:info_msg(FmtStr, Args).
+
 -else.
+
 debug(_FmtStr, _Args) -> ok.
+
 -endif.
 
 %%%_* Unit tests ===============================================================
@@ -130,43 +152,48 @@ init_test() ->
   self() ! {start, Ref},
   ?assertEqual(#state{ref = Ref, parent = self()}, init([{parent, self()}])).
 
+
 handle_begin_test_() ->
-  State = #state{ref=make_ref(), parent=self()},
-  [ ?_assertEqual(State,
-                  handle_end(group, [{status, ok}], State))
-  ].
+  State = #state{ref = make_ref(), parent = self()},
+  [?_assertEqual(State, handle_end(group, [{status, ok}], State))].
+
 
 handle_end_test_() ->
-  State = #state{ref=make_ref(), parent=self()},
-  [ ?_assertEqual(State#state{successful = [[{status, ok}]]},
-                  handle_end(test, [{status, ok}], State)),
-    ?_assertEqual(State#state{failed = [[{status, {error, an_error}}]]},
-                  handle_end(test, [{status, {error, an_error}}], State)),
-    ?_assertEqual(State,
-                  handle_end(group, [{status, ok}], State))
+  State = #state{ref = make_ref(), parent = self()},
+  [
+    ?_assertEqual(
+      State#state{successful = [[{status, ok}]]},
+      handle_end(test, [{status, ok}], State)
+    ),
+    ?_assertEqual(
+      State#state{failed = [[{status, {error, an_error}}]]},
+      handle_end(test, [{status, {error, an_error}}], State)
+    ),
+    ?_assertEqual(State, handle_end(group, [{status, ok}], State))
   ].
 
+
 terminate_test() ->
-  Ref   = make_ref(),
-  State = #state{ref=Ref, parent=self()},
-  Results = [{cancelled,[]},{failed,[]},{successful,[]}],
+  Ref = make_ref(),
+  State = #state{ref = Ref, parent = self()},
+  Results = [{cancelled, []}, {failed, []}, {successful, []}],
   Summary = [{a, 1}, {b, 2}],
-  Exp   = {result, Ref, {Summary, Results}},
+  Exp = {result, Ref, {Summary, Results}},
   ?assertEqual(Exp, terminate({ok, [{b, 2}, {a, 1}]}, State)),
   ?assertEqual(Exp, receive Exp -> Exp end),
   ?assertEqual({error, foo}, terminate(foo, State)),
   ?assertEqual({error, foo}, receive {error, _} = ExpErr -> ExpErr end).
 
+
 handle_cancel_test_() ->
-  State = #state{ref=make_ref(), parent=self()},
-  [?_assertEqual(State#state{cancelled = [[{data, test}]]},
-                 handle_cancel(test, [{data, test}], State)),
-   ?_assertEqual(State,
-                 handle_cancel(group, [{data, test}], State))
+  State = #state{ref = make_ref(), parent = self()},
+  [
+    ?_assertEqual(
+      State#state{cancelled = [[{data, test}]]},
+      handle_cancel(test, [{data, test}], State)
+    ),
+    ?_assertEqual(State, handle_cancel(group, [{data, test}], State))
   ].
 
-flush_mailbox() ->
-  receive _ -> flush_mailbox()
-  after   0 -> ok
-  end.
 
+flush_mailbox() -> receive _ -> flush_mailbox() after 0 -> ok end.

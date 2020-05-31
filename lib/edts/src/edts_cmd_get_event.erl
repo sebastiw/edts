@@ -21,17 +21,16 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_get_event).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 
@@ -41,19 +40,19 @@
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [].
+spec() -> [].
 
 execute(Ctx) ->
-    try
-        {ok, Event} = edts_event:listen(),
-        {ok, [{event, Event}]}
-    catch
-        ?EXCEPTION(C,E,S) ->
-            edts_log:error("Event Listener failed with ~p:~p~nStacktrace:~n~p",
-                           [C,E,?GET_STACK(S)]),
-            execute(Ctx)
-    end.
+  try
+    {ok, Event} = edts_event:listen(),
+    {ok, [{event, Event}]}
+  catch
+     ?EXCEPTION(C, E, S) ->
+      edts_log:error(
+        "Event Listener failed with ~p:~p~nStacktrace:~n~p",
+        [C, E, ?GET_STACK(S)]
+      ),
+      execute(Ctx)
+  end.
 
 %%%_* Internal functions =======================================================
-

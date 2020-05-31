@@ -21,10 +21,10 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -module(edts_mochiweb).
 
--export([start_link/0,
-         handle_request/1]).
+-export([start_link/0, handle_request/1]).
 
 %%%_* Includes =================================================================
 
@@ -38,99 +38,104 @@
 %%%_* API ======================================================================
 
 start_link() ->
-  mochiweb_http:start_link([{name, ?MODULE},
-                            {loop, fun ?MODULE:handle_request/1},
-                            {port, configured_port()}]).
-
+  mochiweb_http:start_link(
+    [
+      {name, ?MODULE},
+      {loop, fun ?MODULE:handle_request/1},
+      {port, configured_port()}
+    ]
+  ).
 
 handle_request(Req) ->
   try
     case mochiweb_request:get(method, Req) of
       'POST' ->
         case do_handle_request(Req) of
-          ok ->
-            ok(Req);
-          {ok, Data} ->
-            ok(Req, Data);
-          {error, {not_found, Term}} ->
-            error(Req, not_found, Term)
+          ok -> ok(Req);
+          {ok, Data} -> ok(Req, Data);
+          {error, {not_found, Term}} -> error(Req, not_found, Term)
         end;
-      _ ->
-        error(Req, method_not_allowed, [])
+
+      _ -> error(Req, method_not_allowed, [])
     end
   catch
-    ?EXCEPTION(Class,Reason,Stack) ->
-      error(Req,
-            internal_server_error,
-            [{class, format_term(Class)},
-             {reason, format_term(Reason)},
-             {stack_trace, format_term(?GET_STACK(Stack))}])
+     ?EXCEPTION(Class, Reason, Stack) ->
+      error(
+        Req,
+        internal_server_error,
+        [
+          {class, format_term(Class)},
+          {reason, format_term(Reason)},
+          {stack_trace, format_term(?GET_STACK(Stack))}
+        ]
+      )
   end.
 
-format_term(Term) ->
-  list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
+
+format_term(Term) -> list_to_binary(lists:flatten(io_lib:format("~p", [Term]))).
 
 do_handle_request(Req) ->
   Path = mochiweb_request:get(path, Req),
   case [list_to_atom(E) || E <- string:tokens(Path, "/")] of
-    [Command] ->
-      edts_cmd:execute(Command, get_input_context(Req));
+    [Command] -> edts_cmd:execute(Command, get_input_context(Req));
+
     [lib, Plugin, Command] ->
       edts_plugins:execute(Plugin, Command, get_input_context(Req));
-    _ ->
-      {error, {not_found, [{path, list_to_binary(Path)}]}}
+
+    _ -> {error, {not_found, [{path, list_to_binary(Path)}]}}
   end.
+
 
 get_input_context(Req) ->
   case mochiweb_request:recv_body(Req) of
-    undefined ->
-      orddict:new();
-    <<"null">> ->
-      orddict:new();
+    undefined -> orddict:new();
+    <<"null">> -> orddict:new();
+
     Body ->
       orddict:from_list(
         decode_element(
-          mochijson2:decode(
-            binary_to_list(Body), [{format, proplist}])))
+          mochijson2:decode(binary_to_list(Body), [{format, proplist}])
+        )
+      )
   end.
 
-decode_element([{_, _}|_] = Element) ->
-  lists:map(fun({K, V}) ->
-                {list_to_atom(binary_to_list(K)), decode_element(V)}
-            end,
-            Element);
+
+decode_element([{_, _} | _] = Element) ->
+  lists:map(
+    fun ({K, V}) -> {list_to_atom(binary_to_list(K)), decode_element(V)} end,
+    Element
+  );
+
 decode_element(Element) when is_list(Element) ->
   lists:map(fun decode_element/1, Element);
-decode_element(Element) when is_binary(Element) ->
-  binary_to_list(Element);
-decode_element(Element) ->
-  Element.
 
-ok(Req) ->
-  ok(Req, undefined).
+decode_element(Element) when is_binary(Element) -> binary_to_list(Element);
+decode_element(Element) -> Element.
 
-ok(Req, Data) ->
-  respond(Req, 200, Data).
+ok(Req) -> ok(Req, undefined).
 
-error(Req, not_found, Data) ->
-  error(Req, 404, "Not Found", Data);
+ok(Req, Data) -> respond(Req, 200, Data).
+
+error(Req, not_found, Data) -> error(Req, 404, "Not Found", Data);
+
 error(Req, method_not_allowed, Data) ->
   error(Req, 405, "Method Not Allowed", Data);
+
 error(Req, internal_server_error, Data) ->
   error(Req, 500, "Internal Server Error", Data).
 
 error(Req, Code, Message, Data) ->
-  Body = [{code,    Code},
-          {message, list_to_binary(Message)},
-          {data,    Data}],
+  Body = [{code, Code}, {message, list_to_binary(Message)}, {data, Data}],
   respond(Req, Code, Body).
+
 
 respond(Req, Code, Data) ->
   Headers = [{"Content-Type", "application/json"}],
-  BodyString = case Data of
-                 undefined -> "";
-                 _         -> mochijson2:encode(Data)
-               end,
+  BodyString =
+    case Data of
+      undefined -> "";
+      _ -> mochijson2:encode(Data)
+    end,
   mochiweb_request:respond({Code, Headers, BodyString}, Req).
 
 %%%_* Internal functions =======================================================
@@ -139,4 +144,3 @@ configured_port() ->
   Port = os:getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
   edts_log:debug("Using EDTS port ~p from file.", [Port]),
   list_to_integer(Port).
-

@@ -21,40 +21,37 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_get_free_vars).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [code].
+spec() -> [code].
 
 execute(Ctx) ->
   Code = orddict:fetch(code, Ctx),
   case edts_code:free_vars(Code) of
-    {ok, Vars}      -> {ok, [{vars, Vars}]};
-    {error, Errors} ->
-      {ok, [{errors, [format_error(Err) || Err <- Errors]}]}
+    {ok, Vars} -> {ok, [{vars, Vars}]};
+    {error, Errors} -> {ok, [{errors, [format_error(Err) || Err <- Errors]}]}
   end.
 
 %%%_* Internal functions =======================================================
 
 format_error({Type, File, Line, Desc}) ->
-  [ {type, Type}
-  , {file, list_to_binary(File)}
-  , {line, Line}
-  , {description, list_to_binary(Desc)}].
-
-
+  [
+    {type, Type},
+    {file, list_to_binary(File)},
+    {line, Line},
+    {description, list_to_binary(Desc)}
+  ].

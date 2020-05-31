@@ -21,41 +21,39 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_compile_and_load).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [nodename, file].
+spec() -> [nodename, file].
 
 execute(Ctx) ->
-    Node     = orddict:fetch(nodename, Ctx),
-    Filename = orddict:fetch(file, Ctx),
-    {ok, {Result, {Errors0, Warnings0}}} =
-        edts:call(Node, edts_code, compile_and_load, [Filename]),
-    Errors   = {array, [format_error(Error) || Error <- Errors0]},
-    Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
-    {ok, {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]}}.
+  Node = orddict:fetch(nodename, Ctx),
+  Filename = orddict:fetch(file, Ctx),
+  {ok, {Result, {Errors0, Warnings0}}} =
+    edts:call(Node, edts_code, compile_and_load, [Filename]),
+  Errors = {array, [format_error(Error) || Error <- Errors0]},
+  Warnings = {array, [format_error(Warning) || Warning <- Warnings0]},
+  {ok, {struct, [{result, Result}, {warnings, Warnings}, {errors, Errors}]}}.
 
 %%%_* Internal functions =======================================================
 
 format_error({Type, File, Line, Desc}) ->
-    [ {type, Type}
-    , {file, list_to_binary(File)}
-    , {line, Line}
-    , {description, list_to_binary(Desc)}].
-
-
+  [
+    {type, Type},
+    {file, list_to_binary(File)},
+    {line, Line},
+    {description, list_to_binary(Desc)}
+  ].

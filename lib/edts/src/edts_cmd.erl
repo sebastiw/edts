@@ -21,13 +21,13 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
+
 -export([execute/2]).
 
 %%%_* Includes =================================================================
@@ -44,25 +44,22 @@
 
 %%%_* API ======================================================================
 
--spec execute(Cmd::module(), edts:ctx()) ->
-          ok |
-          {ok, [{atom(), term()}]} |
-          {error, {not_found, [{command, Cmd::module()}]}}.
-
+-spec execute(Cmd :: module(), edts:ctx()) ->
+  ok
+  | {ok, [{atom(), term()}]}
+  | {error, {not_found, [{command, Cmd :: module()}]}}.
 execute(Cmd, Input) ->
   Module = cmd_module(Cmd),
   case cmd_exists_p(Module) of
-    true  -> do_execute(Module, Input);
+    true -> do_execute(Module, Input);
     false -> {error, {not_found, [{command, Cmd}]}}
   end.
 
 %%%_* Internal functions =======================================================
 
-cmd_exists_p(Cmd) ->
-  code:which(Cmd) =/= non_existing.
+cmd_exists_p(Cmd) -> code:which(Cmd) =/= non_existing.
 
-cmd_module(Cmd) ->
-  list_to_atom("edts_cmd_" ++ atom_to_list(Cmd)).
+cmd_module(Cmd) -> list_to_atom("edts_cmd_" ++ atom_to_list(Cmd)).
 
 do_execute(Cmd, Input) ->
   edts_log:debug("Validating input for command ~p:~n~p", [Cmd, Input]),
@@ -73,4 +70,3 @@ do_execute(Cmd, Input) ->
   Result.
 
 %%%_* Unit tests ===============================================================
-

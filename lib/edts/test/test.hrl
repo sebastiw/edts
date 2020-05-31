@@ -1,7 +1,2 @@
-
-
-
-
-
 baz(ping) -> pong;
-baz(_Hej) -> 'bar'(ping).
+baz(_Hej) -> bar(ping).

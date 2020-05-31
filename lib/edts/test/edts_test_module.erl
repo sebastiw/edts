@@ -26,16 +26,16 @@
 
 -export([bar/1]).
 
-
 -include_lib("eunit/include/eunit.hrl").
 
 -include("test.hrl").
 
 %% @doc hej
--spec bar(Atom::atom()) -> atom().
+
+-spec bar(Atom :: atom()) -> atom().
 bar(ping) -> pong;
-bar(_Hej) -> 'bar'(ping).
+bar(_Hej) -> bar(ping).
 
 baz_test() -> ok.
-baz_test_() -> [?_assert(true)].
 
+baz_test_() -> [?_assert(true)].

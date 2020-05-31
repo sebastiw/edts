@@ -24,14 +24,13 @@
 
 -module(edts_test_module2).
 
--export([bar/1,
-         bar_test/0]).
+-export([bar/1, bar_test/0]).
 
 %% @doc hej
--spec bar(Atom::atom()) -> atom().
+
+-spec bar(Atom :: atom()) -> atom().
 bar(ping) -> edts_test_module:bar(ping).
 
 bar() -> foo:pong().
 
 bar_test() -> ok.
-

@@ -21,29 +21,26 @@
 %%% along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%_* Module declaration =======================================================
+
 -module(edts_cmd_get_modules).
 
 -behaviour(edts_cmd).
 
 %%%_* Exports ==================================================================
-
 %% API
--export([spec/0,
-         execute/1]).
+
+-export([spec/0, execute/1]).
 
 %%%_* Includes =================================================================
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
 %%%_* API ======================================================================
 
-spec() ->
-  [nodename].
+spec() -> [nodename].
 
 execute(Ctx) ->
-    Node = orddict:fetch(nodename, Ctx),
-    edts:call(Node, edts_code, modules, []).
+  Node = orddict:fetch(nodename, Ctx),
+  edts:call(Node, edts_code, modules, []).
 
 %%%_* Internal functions =======================================================
-
