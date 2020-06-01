@@ -62,6 +62,8 @@
 
 %%%_* Includes =================================================================
 
+-include_lib("kernel/include/logger.hrl").
+
 %%%_* Defines ==================================================================
 
 %%%_* Types ====================================================================
@@ -251,7 +253,7 @@ get_bindings(Pid) ->
           []
       end;
     {error, not_found} ->
-      edts_log:warning("Process state not found for ~p", [Pid]),
+      ?LOG_WARNING("Process state not found for ~p", [Pid]),
       []
   end.
 

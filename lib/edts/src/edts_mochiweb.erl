@@ -28,7 +28,7 @@
 
 %%%_* Includes =================================================================
 
--include("otp_workarounds.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -59,12 +59,12 @@ handle_request(Req) ->
         error(Req, method_not_allowed, [])
     end
   catch
-    ?EXCEPTION(Class,Reason,Stack) ->
+    Class:Reason:Stack ->
       error(Req,
             internal_server_error,
             [{class, format_term(Class)},
              {reason, format_term(Reason)},
-             {stack_trace, format_term(?GET_STACK(Stack))}])
+             {stack_trace, format_term(Stack)}])
   end.
 
 format_term(Term) ->
@@ -137,7 +137,7 @@ respond(Req, Code, Data) ->
 
 configured_port() ->
   Port = os:getenv("EDTS_PORT", ?EDTS_PORT_DEFAULT),
-  edts_log:debug("Using EDTS port ~p from file.", [Port]),
+  ?LOG_DEBUG("Using EDTS port ~p from file.", [Port]),
   list_to_integer(Port).
 
 %%%_* Emacs ====================================================================

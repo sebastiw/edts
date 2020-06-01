@@ -45,8 +45,8 @@
 
 %%%_* Includes =================================================================
 
--include("otp_workarounds.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -166,7 +166,7 @@ handle_call({init_node,
              ErlangCookie},
             _From,
             State0) ->
-  edts_log:info("Initializing ~p.", [NodeName]),
+  ?LOG_INFO("Initializing ~p.", [NodeName]),
   case do_init_node(ProjectName,
                     NodeName,
                     ProjectRoot,
@@ -175,7 +175,7 @@ handle_call({init_node,
                     SysInclDirs,
                     ErlangCookie) of
     ok ->
-      edts_log:debug("Initialization call done on ~p.", [NodeName]),
+      ?LOG_DEBUG("Initialization call done on ~p.", [NodeName]),
       State =
         case node_find(NodeName, State0) of
           #node{} -> State0;
@@ -183,7 +183,7 @@ handle_call({init_node,
         end,
       {reply, ok, State};
     {error, _} = Err ->
-      edts_log:error("Initializing node ~p failed with ~p.", [NodeName, Err]),
+      ?LOG_ERROR("Initializing node ~p failed with ~p.", [NodeName, Err]),
       {reply, Err, State0}
   end;
 handle_call({node_registered_p, NodeName}, _From, State) ->
@@ -219,7 +219,7 @@ handle_cast(_Msg, State) ->
                                       {stop, Reason::atom(), state()}.
 %%------------------------------------------------------------------------------
 handle_info({nodedown, Node, _Info}, State0) ->
-  edts_log:info("Node down: ~p", [Node]),
+  ?LOG_INFO("Node down: ~p", [Node]),
   edts_event:dispatch(edts, node_down, [{node, Node}]),
   State = case node_find(Node, State0) of
             false   -> State0;
@@ -227,7 +227,7 @@ handle_info({nodedown, Node, _Info}, State0) ->
           end,
   {noreply, State};
 handle_info(Info, State) ->
-  edts_log:debug("Unhandled message: ~p", [Info]),
+  ?LOG_DEBUG("Unhandled message: ~p", [Info]),
   {noreply, State}.
 
 %%------------------------------------------------------------------------------
@@ -298,7 +298,7 @@ do_init_node(ProjectName,
                      edts_module_server,
                      edts_plugins,
                      edts_util] ++ PluginRemoteLoad,
-    edts_log:debug("Loading modules on ~p: ~p", [Node, ModulesToLoad]),
+    ?LOG_DEBUG("Loading modules on ~p: ~p", [Node, ModulesToLoad]),
     ok = edts_dist:remote_load_modules(Node, ModulesToLoad),
 
     {ok, ProjectDir} = application:get_env(edts, project_data_dir),
@@ -310,14 +310,14 @@ do_init_node(ProjectName,
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
 
-    edts_log:debug("Initalizing ~p with environment: ~p", [Node, AppEnv]),
+    ?LOG_DEBUG("Initalizing ~p with environment: ~p", [Node, AppEnv]),
     edts_dist:init_node(Node, AppEnv),
 
     start_services(Node, [edts_code] ++ PluginRemoteServices)
   catch
-    ?EXCEPTION(C,E,S) ->
-      edts_log:error("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
-                     [Node, C, E, ?GET_STACK(S)]),
+    C:E:S ->
+      ?LOG_ERROR("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
+                 [Node, C, E, S]),
       {error, E}
   end.
 
@@ -329,14 +329,14 @@ start_services(Node, [Service|Rest]) ->
   end.
 
 start_service(Node, Service) ->
-  edts_log:info("Starting service ~p on ~p", [Service, Node]),
+  ?LOG_INFO("Starting service ~p on ~p", [Service, Node]),
   case edts_dist:start_service(Node, Service) of
     ok ->
-      edts_log:info("Service ~p started on ~p", [Service, Node]),
+      ?LOG_INFO("Service ~p started on ~p", [Service, Node]),
       ok;
     {error, _}  = Err ->
-      edts_log:error("Starting service ~p on ~p failed with ~p",
-                     [Service, Node, Err]),
+      ?LOG_ERROR("Starting service ~p on ~p failed with ~p",
+                 [Service, Node, Err]),
       Err
   end.
 

@@ -1,9 +1,9 @@
 sudo: required
 language: erlang
 otp_release:
-  - 22.0
+  - 23.0
+  - 22.3
   - 21.3
-  - 20.3
 before_install:
   - |
     docker run --rm \
@@ -29,4 +29,4 @@ script:
                -w ${PWD} \
                -e PATH=${PATH} \
                silex/emacs:${EMACS} \
-               /bin/bash --norc -c 'make test'
+               /bin/bash --norc -c 'make test && make release'

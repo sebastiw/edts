@@ -9,5 +9,5 @@
                   eunit
                  ]},
   {mod, {edts_app, []}},
-  {env, [{log_level, info}]}
+  {env, []}
  ]}.
