@@ -53,7 +53,9 @@ handle_request(Req) ->
           {ok, Data} ->
             ok(Req, Data);
           {error, {not_found, Term}} ->
-            error(Req, not_found, Term)
+            error(Req, not_found, Term);
+          {error, {bad_gateway, Term}} ->
+            error(Req, bad_gateway, Term)
         end;
       _ ->
         error(Req, method_not_allowed, [])
@@ -117,7 +119,9 @@ error(Req, not_found, Data) ->
 error(Req, method_not_allowed, Data) ->
   error(Req, 405, "Method Not Allowed", Data);
 error(Req, internal_server_error, Data) ->
-  error(Req, 500, "Internal Server Error", Data).
+  error(Req, 500, "Internal Server Error", Data);
+error(Req, bad_gateway, Data) ->
+  error(Req, 502, "Bad Gateway", Data).
 
 error(Req, Code, Message, Data) ->
   Body = [{code,    Code},

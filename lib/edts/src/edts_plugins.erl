@@ -73,6 +73,7 @@
           {ok, [{result, ok | error} |
                 {return, [{atom(), binary()}]}]} |
           {error, {badrpc, term()}} |
+          {error, {bad_gateway, term()}} |
           {error, {not_found, [{plugin, Plugin::module()} |
                                {command, Cmd::atom()}]}}.
 
@@ -138,7 +139,7 @@ do_execute(Node, Plugin, Cmd, Input) ->
              [Plugin, Cmd, Input]),
   Ctx = convert_params(Input, spec(Plugin, Cmd, orddict:size(Input))),
   ?LOG_DEBUG("Running ~p command ~p with Ctx ~p", [Plugin, Cmd, Input]),
-  case edts:call(Node, Plugin, Cmd, Ctx) of
+  try edts:call(Node, Plugin, Cmd, Ctx) of
     %% The call terminated badly
     {error, E} ->
       {error, E};
@@ -156,6 +157,10 @@ do_execute(Node, Plugin, Cmd, Input) ->
       {ok, [{result, ok}]};
     {ok, Ret} ->
       {ok, [{result, ok}, {return, convert_return(Ret)}]}
+  catch
+    error:Err ->
+      ?LOG_ERROR(#{node => Node, plugin => Plugin, command => Cmd, ctx => Ctx, reason => Err}),
+      {error, {bad_gateway, Err}}
   end.
 
 convert_params(Params, Specs) ->

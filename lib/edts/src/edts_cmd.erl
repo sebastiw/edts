@@ -50,6 +50,7 @@
 -spec execute(Cmd::module(), edts:ctx()) ->
           ok |
           {ok, [{atom(), term()}]} |
+          {error, {bad_gateway, term()}} |
           {error, {not_found, [{command, Cmd::module()}]}}.
 
 execute(Cmd, Input) ->
@@ -71,9 +72,15 @@ do_execute(Cmd, Input) ->
   ?LOG_DEBUG("Validating input for command ~p:~n~p", [Cmd, Input]),
   {ok, Ctx} = edts_cmd_lib:validate(Input, Cmd:spec()),
   ?LOG_DEBUG("Running Command ~p with Ctx ~p", [Cmd, Input]),
-  Result = Cmd:execute(Ctx),
-  ?LOG_DEBUG("Command ~p returned ~p", [Cmd, Result]),
-  Result.
+  try Cmd:execute(Ctx) of
+    Result ->
+      ?LOG_DEBUG("Command ~p returned ~p", [Cmd, Result]),
+      Result
+  catch
+    error:Err ->
+      ?LOG_ERROR(#{command => Cmd, input => Input, reason => Err}),
+      {error, {bad_gateway, Err}}
+  end.
 
 %%%_* Unit tests ===============================================================
 
