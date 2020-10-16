@@ -38,7 +38,11 @@
 (defconst edts-rpc-host "0"
   "The host where the edts erlang node is running.")
 
-(defconst edts-rpc-port 4587
+(defconst edts-rpc-port
+  (let ((edts-port-env (getenv "EDTS_PORT")))
+    (if edts-port-env
+        edts-port-env
+      4587))
   "The port on which the edts erlang node's rpc-api is available.")
 
 (defconst edts-rpc-content-type-hdr '("Content-Type" . "application/json"))
