@@ -27,7 +27,9 @@
 
 %%%_* Includes =================================================================
 
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%%_* Exports ==================================================================
 
@@ -125,22 +127,6 @@ project_lib_file_p(ProjectDir, LibDirs, File) ->
               ["src", "test", "ebin", ""]).
 
 
-project_lib_file_p_test_() ->
-  [?_assertNot(project_lib_file_p("root", [], "")),
-   ?_assert(project_lib_file_p("root", [], "root/a")),
-   ?_assert(project_lib_file_p("root", [], "root/src/a")),
-   ?_assert(project_lib_file_p("root", [], "root/ebin/a")),
-   ?_assert(project_lib_file_p("root", [""], "root/")),
-   ?_assert(project_lib_file_p("root", ["a"], "root/a/b")),
-   ?_assertNot(project_lib_file_p("root", ["a"], "/b")),
-   ?_assert(project_lib_file_p("a", ["b"], "a/b")),
-   ?_assert(project_lib_file_p("a", ["b"], "a/c")),
-   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c")),
-   ?_assertNot(project_lib_file_p("a", ["b", "c"], "a/a/c")),
-   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c/d"))
-  ].
-
-
 %%------------------------------------------------------------------------------
 %% @doc
 %% Return true if File is located at any level underneath Dir in the file tree.
@@ -175,6 +161,8 @@ shorten_path([H|T],        Acc)        -> shorten_path(T, [H|Acc]).
 
 %%%_* Unit tests ===============================================================
 
+-ifdef(TEST).
+
 expand_code_paths_test() ->
   ?assertEqual([], expand_code_paths("", ["/foo"])),
   ?assertEqual(["/foo/ebin", "/foo/test"], expand_code_paths("/foo", [])).
@@ -204,6 +192,23 @@ shorten_path_test_() ->
    ?_assertEqual("..", shorten_path("../ebin/..")),
    ?_assertEqual("..", shorten_path("../ebin/./.."))
   ].
+
+project_lib_file_p_test_() ->
+  [?_assertNot(project_lib_file_p("root", [], "")),
+   ?_assert(project_lib_file_p("root", [], "root/a")),
+   ?_assert(project_lib_file_p("root", [], "root/src/a")),
+   ?_assert(project_lib_file_p("root", [], "root/ebin/a")),
+   ?_assert(project_lib_file_p("root", [""], "root/")),
+   ?_assert(project_lib_file_p("root", ["a"], "root/a/b")),
+   ?_assertNot(project_lib_file_p("root", ["a"], "/b")),
+   ?_assert(project_lib_file_p("a", ["b"], "a/b")),
+   ?_assert(project_lib_file_p("a", ["b"], "a/c")),
+   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c")),
+   ?_assertNot(project_lib_file_p("a", ["b", "c"], "a/a/c")),
+   ?_assert(project_lib_file_p("a", ["b", "c"], "a/c/d"))
+  ].
+
+-endif.
 
 %%%_* Test helpers =============================================================
 

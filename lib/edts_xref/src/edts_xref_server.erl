@@ -51,7 +51,9 @@
 -type xref_check() :: xref:analysis().
 
 %%%_* Includes =================================================================
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -391,6 +393,8 @@ read_file(File) ->
 
 %%%_* Unit tests ===============================================================
 
+-ifdef(TEST).
+
 start_test() ->
   eunit_test_init(),
   ?assertNot(started_p()),
@@ -483,7 +487,11 @@ check_modules_test() ->
   ?assertMatch([_, _, _], check_modules([edts_test_module2], Checks)),
   teardown_eunit().
 
+-endif.
+
 %%%_* Unit test helpers ========================================================
+
+-ifdef(TEST).
 
 eunit_test_init() ->
   stop(),
@@ -519,6 +527,8 @@ compile_and_add_test_module(SrcDir, OutDir, Mod) ->
       {ok, _} = c:c(File1, Opts),
       ok      = try_add_module(Mod)
   end.
+
+-endif.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

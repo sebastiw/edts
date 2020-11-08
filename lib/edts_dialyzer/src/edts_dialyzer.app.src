@@ -6,6 +6,7 @@
   {applications, [
                   kernel,
                   stdlib,
+                  dialyzer,
                   edts
                  ]},
   {env, [{file_backend, file}]}

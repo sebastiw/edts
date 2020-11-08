@@ -31,7 +31,9 @@
 %%%_* Includes =================================================================
 -include_lib("kernel/include/file.hrl").
 
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%%_* Exports ==================================================================
 
@@ -826,6 +828,7 @@ extract_compile_opt_p(_)                       -> false.
 
 %%%_* Unit tests ===============================================================
 
+-ifdef(TEST).
 
 get_additional_includes_test_() ->
   AppIncDirs = ["foo"],
@@ -1146,8 +1149,11 @@ do_module_modified_mtime_p_test_() ->
    ?_assertNot(do_module_modified_mtime_p(CTime2, {ok, MTime1}))
   ].
 
+-endif.
 
 %%%_* Test helpers =============================================================
+
+-ifdef(TEST).
 
 module_source_test_ret({ok, Path}) -> edts_util:shorten_path(Path);
 module_source_test_ret(Ret)        -> Ret.
@@ -1157,6 +1163,8 @@ test_file_forms(File) ->
   {ok, Bin} = file:read_file(Path),
   {ok, Forms} = edts_syntax:parse_forms(unicode:characters_to_list(Bin)),
   Forms.
+
+-endif.
 
 %%%_* Emacs ====================================================================
 %% %%% Local Variables:
