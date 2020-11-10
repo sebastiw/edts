@@ -45,8 +45,11 @@
 
 %%%_* Includes =================================================================
 
--include_lib("eunit/include/eunit.hrl").
 -include_lib("kernel/include/logger.hrl").
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%%_* Defines ==================================================================
 -define(SERVER, ?MODULE).
@@ -352,6 +355,8 @@ node_store(Node, State) ->
 
 %%%_* Unit tests ===============================================================
 
+-ifdef(TEST).
+
 init_node_test() ->
   N1 = #node{name = foo},
   S1 = #state{},
@@ -475,6 +480,7 @@ node_store_test() ->
   ?assertEqual(#state{nodes = [N]}, node_store(N, #state{nodes = [N]})),
   ?assertEqual(#state{nodes = [N2, N]}, node_store(N, #state{nodes = [N2]})).
 
+-endif.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:

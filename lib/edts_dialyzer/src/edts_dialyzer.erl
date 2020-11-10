@@ -28,7 +28,10 @@
 -behaviour(edts_plugins).
 
 %%%_* Includes =================================================================
+
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%%_* Exports ==================================================================
 
@@ -230,6 +233,8 @@ format_warnings(Warnings) ->
 
 %%%_* Unit tests ===============================================================
 
+-ifdef(TEST).
+
 update_plt_test_() ->
   {ok, Cwd} = file:get_cwd(),
   File = filename:join(Cwd, "foo1"),
@@ -404,13 +409,18 @@ format_warnings_test_() ->
     [?_assertEqual([{warning, "file", 1337, "warning"}],
                    format_warnings([{foo, {"file", 1337}, "warning"}]))]}].
 
+-endif.
+
 %%%_* Unit test helpers =======================================================-
 
+-ifdef(TEST).
 meck_history(M0, F0, A0) ->
   [{Args, Ret} || {_, {M, F, Args}, Ret} <- meck:history(M0),
                                             M =:= M0,
                                             F =:= F0,
                                             length(Args) =:= A0].
+
+-endif.
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
