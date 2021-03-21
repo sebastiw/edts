@@ -106,9 +106,9 @@ directive."
 
 (defun edts-macro-under-point-p ()
   "Return non nil if the form under point is a macro."
-  (save-excursion
-    (beginning-of-thing 'symbol)
-    (equal ?? (char-before (point)))))
+  (let ((bounds (edts-atom-at-point)))
+    (and bounds
+         (eq ?? (char-before (nth 0 bounds))))))
 
 (defun edts-record-under-point-p ()
   "Return non-nil if the form under point is a record"
@@ -190,12 +190,13 @@ directive."
 
 (defun edts-find-macro-source ()
   "Jump to the macro-definition under point."
-  (let* ((macro            (thing-at-point 'symbol))
-         (re               (format "-define\\s-*(%s\\s-*[(,]" macro))
+  (let* ((macro-bounds (edts-atom-at-point))
+         (macro-name (buffer-substring (nth 0 macro-bounds) (nth 1 macro-bounds)))
+         (re (format "-define\\s-*(%s\\s-*[(,]" macro-name))
          (case-fold-search nil))
-  (or (edts-search-current-buffer re)
-      (edts-search-includes re)
-      (error "No macro at point"))))
+    (or (edts-search-current-buffer re)
+        (edts-search-includes re)
+        (error "No macro at point"))))
 
 (defun edts-search-current-buffer (re)
   "Find the first match for RE in the current buffer. Move point there
