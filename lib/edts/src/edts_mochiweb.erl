@@ -49,24 +49,24 @@ handle_request(Req) ->
       'POST' ->
         case do_handle_request(Req) of
           ok ->
-            ok(Req);
+            http_ok(Req);
           {ok, Data} ->
-            ok(Req, Data);
+            http_ok(Req, Data);
           {error, {not_found, Term}} ->
-            error(Req, not_found, Term);
+            http_error(Req, not_found, Term);
           {error, {bad_gateway, Term}} ->
-            error(Req, bad_gateway, Term)
+            http_error(Req, bad_gateway, Term)
         end;
       _ ->
-        error(Req, method_not_allowed, [])
+        http_error(Req, method_not_allowed, [])
     end
   catch
     Class:Reason:Stack ->
-      error(Req,
-            internal_server_error,
-            [{class, format_term(Class)},
-             {reason, format_term(Reason)},
-             {stack_trace, format_term(Stack)}])
+      http_error(Req,
+                 internal_server_error,
+                 [{class, format_term(Class)},
+                  {reason, format_term(Reason)},
+                  {stack_trace, format_term(Stack)}])
   end.
 
 format_term(Term) ->
@@ -108,22 +108,22 @@ decode_element(Element) when is_binary(Element) ->
 decode_element(Element) ->
   Element.
 
-ok(Req) ->
-  ok(Req, undefined).
+http_ok(Req) ->
+  http_ok(Req, undefined).
 
-ok(Req, Data) ->
+http_ok(Req, Data) ->
   respond(Req, 200, Data).
 
-error(Req, not_found, Data) ->
-  error(Req, 404, "Not Found", Data);
-error(Req, method_not_allowed, Data) ->
-  error(Req, 405, "Method Not Allowed", Data);
-error(Req, internal_server_error, Data) ->
-  error(Req, 500, "Internal Server Error", Data);
-error(Req, bad_gateway, Data) ->
-  error(Req, 502, "Bad Gateway", Data).
+http_error(Req, not_found, Data) ->
+  http_error(Req, 404, "Not Found", Data);
+http_error(Req, method_not_allowed, Data) ->
+  http_error(Req, 405, "Method Not Allowed", Data);
+http_error(Req, internal_server_error, Data) ->
+  http_error(Req, 500, "Internal Server Error", Data);
+http_error(Req, bad_gateway, Data) ->
+  http_error(Req, 502, "Bad Gateway", Data).
 
-error(Req, Code, Message, Data) ->
+http_error(Req, Code, Message, Data) ->
   Body = [{code,    Code},
           {message, list_to_binary(Message)},
           {data,    Data}],

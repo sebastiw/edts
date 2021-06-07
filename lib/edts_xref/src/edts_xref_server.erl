@@ -471,8 +471,8 @@ check_unused_exports_test() ->
   compile_and_add_test_modules(),
   ?assertEqual([], check_modules([], [unused_exports])),
   ?assertEqual([], check_modules([edts_test_module], [unused_exports])),
-  ?assertMatch([{error, _File2, _Line1, Str1},
-                {error, _File2, _Line2, Str2}] when is_list(Str1) andalso
+  ?assertMatch([{error, File2, _Line1, Str1},
+                {error, File2, _Line2, Str2}] when is_list(Str1) andalso
                                                     is_list(Str2),
                check_modules([edts_test_module2], [unused_exports])),
   teardown_eunit().

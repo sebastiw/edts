@@ -282,12 +282,12 @@ remote_compile_module(Node, File) ->
   Opts = [{d, namespaced_types}, debug_info, binary, return_errors],
   case call(Node, compile, file, [File, Opts]) of
     {ok, _, _} = Res      -> Res;
-    {error, Rsns, _Warns} ->
+    {error, Rsns, _Warns0} ->
       case imported_predefined_type_p(Rsns) of
         true ->
           case call(Node, compile, file, [File, tl(Opts)]) of
             {ok, _, _} = Res      -> Res;
-            {error, Rsns, _Warns} ->
+            {error, Rsns, _Warns1} ->
               erlang:error({compile_error, {File, Rsns}})
           end;
         false ->
