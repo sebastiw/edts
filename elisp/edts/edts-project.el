@@ -62,21 +62,29 @@ underneath a project root to be subprojects of that super project.")
     (let ((dir (or dir (f-dirname (f-this-file)))))
       (or (edts-project--find-project-root dir)
           (edts-project--find-otp-root dir)
-          (edts-project--find-temp-root dir)))))
+          (edts-project--find-rebar-root dir)
+          (edts-project--find-temp-root dir)
+          dir))))
 
 (defun edts-project--find-project-root (dir)
   "Try to find the top-most edts-file above current buffer's file."
-  (let (stop
-        (roots (-map 'f-slash edts-project-roots))
-        root)
-    (while (and (not stop) (not (f-root? dir)))
-      (if (-contains? roots (f-slash dir))
-          (setq root dir
-                stop t)
-        (when (f-file? (f-join dir ".edts"))
-          (setq root dir))
-        (setq dir (f-dirname dir))))
+  (let (root
+	(roots (-map 'f-slash edts-project-roots)))
+    (f-traverse-upwards (lambda (path)
+			  (when (or (f-file? (f-join path ".edts"))
+				    (-contains? roots path))
+			    (setq root path))
+			  (-contains? roots path))
+			(f-expand dir))
     root))
+
+(defun edts-project--find-rebar-root (dir)
+  "Try find the top-most rebar.config file or _build directory"
+  (edts-traverse-downwards (lambda (path)
+                             (or (f-file? (f-join path "rebar.config"))
+				 (f-file? (f-join path "rebar.lock"))
+				 (f-directory? (f-join path "_build"))))
+			   (f-expand dir)))
 
 (defun edts-project--find-otp-root (dir)
   (f-traverse-upwards (lambda (path)
@@ -87,12 +95,31 @@ underneath a project root to be subprojects of that super project.")
 (defun edts-project--find-temp-root (dir)
   "Find the appropriate root directory for a temporary project for
 FILE."
-  (if (and (-contains? '("src" "test" "include") (f-filename dir))
-           (or (f-directory? (f-join (f-dirname dir) "ebin"))
-               (f-directory? (f-join (f-dirname dir) "_build"))))
-      (f-dirname dir)
-    dir))
+  (f-traverse-upwards (lambda (path)
+                            (or (f-directory? (f-join (f-dirname dir) "ebin"))
+                                (f-directory? (f-join (f-dirname dir) "_build"))
+                                (f-directory? (f-join (f-dirname dir) "src"))
+                                (f-directory? (f-join (f-dirname dir) "include"))))
+                          (f-expand dir)))
 
+(defun edts-traverse-downwards (fn &optional path)
+  "Similar to `f-traverse-upwards' but other direction.
+
+Traverse down PATH as long as FN return nil, ending at PATH."
+  (unless path
+    (setq path default-directory))
+  (when (f-relative? path)
+    (setq path (f-expand path)))
+  (edts-traverse-downwards-prim fn (f-root) (f-split path)))
+
+(defun edts-traverse-downwards-prim (fn cur parts)
+  (if (eq (length parts) 0)
+      cur
+    (let ((cur (f-join cur (car parts)))
+	  (parts (cdr parts)))
+      (if (funcall fn cur)
+	  cur
+	(edts-traverse-downwards-prim fn cur parts)))))
 
 (defun edts-project-root ()
   (unless edts-project-root
@@ -109,6 +136,7 @@ buffer's file."
   (let ((dir (or dir (f-dirname (buffer-file-name)))))
     (or (edts-project--init-project dir)
         (edts-project--init-otp-project dir)
+	(edts-project--init-rebar-project dir)
         (edts-project--init-temp-project dir))))
 
 (defun edts-project--init-project (dir)
@@ -147,6 +175,51 @@ buffer's file."
                     "_checkouts"
                     ;; Probably use f-expand.
                     ,(f-join "_build" "test" "lib")
+                    ,(f-join "_build" "default" "lib")
+                    )))))
+
+(defun edts-project--init-rebar-project (dir)
+  "Initializes the EDTS rebar3 project in ROOT."
+  (-when-let (root (edts-project--find-rebar-root dir))
+    (!edts-alist-store root
+                       (-> (edts-project--build-rebar-config root)
+                           edts-project--derive-attributes
+                           edts-project--validate-config)
+                       'edts-project-attributes)))
+
+(defun edts-project--build-rebar-config (root)
+  (edts-alist-merge (edts-project--config-default-rebar root)
+                    (edts-project--config-from-file root)
+                    (edts-project--config-overrides root)
+                    '((:type . :project))))
+
+(defun edts-project--config-default (root)
+  (let ((name (f-filename root)))
+    `((:name       . ,name)
+      (:node-sname . ,name)
+      ;; Default lib dirs
+      ;; * deps: dependencies included by rebar2
+      (:lib-dirs . ("lib"
+                    "deps"
+                    )))))
+
+(defun edts-project--config-default-rebar (root)
+  (let ((name (f-filename root)))
+    `((:name       . ,name)
+      (:node-sname . ,name)
+      ;; Default lib dirs
+      ;; * _build/test/lib: test scope dependencies from rebar3
+      ;; * _build/default/lib: dependencies included by rebar3
+      ;; * _checkouts: local dependencies included by rebar3
+
+      ;; NOTE: It's important for rebar3's test profile to be loaded
+      ;; first, because rebar3 might have different contents of a specific
+      ;; dependency, so it doesn't load the second copy it finds. For your
+      ;; root project, that basically would mean that any supporting
+      ;; modules you have for your test cases won't be loaded into EDTS,
+      ;; making your test modules a sea of red squiggles.
+      (:lib-dirs . ("_checkouts"
+		    ,(f-join "_build" "test" "lib")
                     ,(f-join "_build" "default" "lib")
                     )))))
 
