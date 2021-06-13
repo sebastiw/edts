@@ -41,7 +41,9 @@ jobs:
           submodules: true
 
       - name: Compile
-        run: "echo ERLPATH=$ERL_PATH && make"
+        run: |
+          echo "ERLPATH=${{ env.ERL_PATH }}"
+          make
 
       - name: Test
         run: make test
