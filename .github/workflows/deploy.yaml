@@ -2,9 +2,12 @@ name: Run Da Tests
 
 on:
   push:
-    branches: [ $default-branch ]
+    branches:
+      - $default-branch
+      - fix-some-warnings
   pull_request:
-    branches: [ $default-branch ]
+    branches:
+      - $default-branch
 
 jobs:
   test:
@@ -12,13 +15,14 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [22.3 23.3, 24.0.2]
+        otp: [22.3, 23.3, 24.0.2]
+        emacs: [27.1] # 24.5, 26.3,
 
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
         with:
-          version: 24.5
+          version: ${{matrix.emacs}}
 
       - name: Install Erlang
         uses: gleam-lang/setup-erlang@v1.1.2
