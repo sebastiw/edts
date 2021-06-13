@@ -1,0 +1,37 @@
+name: Run Da Tests
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: [22.3 23.3, 24.0.2]
+
+    steps:
+      - name: Install Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: 24.5
+
+      - name: Install Erlang
+        uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: ${{matrix.otp}}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Compile
+        run: make
+
+      - name: Test
+        run: make test
