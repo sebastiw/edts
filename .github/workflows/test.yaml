@@ -19,10 +19,10 @@ jobs:
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
-      - name: Install Emacs
-        uses: purcell/setup-emacs@master
-        with:
-          version: ${{matrix.emacs}}
+      # - name: Install Emacs
+      #   uses: purcell/setup-emacs@master
+      #   with:
+      #     version: ${{matrix.emacs}}
 
       - name: Install Erlang
         id: install_erlang
@@ -30,20 +30,23 @@ jobs:
         with:
           otp-version: ${{matrix.otp}}
 
-      - name: Add Erlang to Path
-        run: |
-          echo "${{ steps.install_erlang.outputs.erlpath }}/bin" >> $GITHUB_PATH
-          echo "ERL_PATH=${{ steps.install_erlang.outputs.erlpath }}" >> $GITHUB_ENV
+      - name: Test erlang
+        run: erl
 
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: true
+      # - name: Add Erlang to Path
+      #   run: |
+      #     echo "${{ steps.install_erlang.outputs.erlpath }}/bin" >> $GITHUB_PATH
+      #     echo "ERL_PATH=${{ steps.install_erlang.outputs.erlpath }}" >> $GITHUB_ENV
 
-      - name: Compile
-        run: |
-          echo "ERLPATH=${{ env.ERL_PATH }}"
-          make
+      # - name: Checkout
+      #   uses: actions/checkout@v2
+      #   with:
+      #     submodules: true
 
-      - name: Test
-        run: make test
+      # - name: Compile
+      #   run: |
+      #     echo "ERLPATH=${{ env.ERL_PATH }}"
+      #     make
+
+      # - name: Test
+      #   run: make test
