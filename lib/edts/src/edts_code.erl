@@ -67,6 +67,8 @@
                  , Line        :: non_neg_integer()
                  , Description :: string()}.
 
+-type location() :: pos_integer() | {pos_integer(), pos_integer()}.
+
 %%%_* API ======================================================================
 
 
@@ -343,7 +345,7 @@ do_get_module_info(M, detailed) ->
       {error, {not_found, M}}
   end.
 
-get_compile_cwd(M, [{attribute,1,file,{RelPath,1}}|_]) ->
+get_compile_cwd(M, [{attribute,_,file,{RelPath,1}}|_]) ->
   CompileInfo = M:module_info(compile),
   CompileOpts = proplists:get_value(options, CompileInfo),
   case proplists:get_value(cwd, CompileOpts, undefined) of
@@ -678,10 +680,12 @@ format_errors(Type, Errors) ->
         {error, not_found}.
 %%------------------------------------------------------------------------------
 get_file_and_line(M, new, A, CurFile,
-                  [{attribute, Line, module, {M, Attrs}}|_T])
+                  [{attribute, Pos, module, {M, Attrs}}|_T])
   when length(Attrs) =:= A ->
+  Line = get_line_from_annotation(Pos),
   {ok, {CurFile, Line}};
-get_file_and_line(_M, F, A, CurFile, [{function, Line, F, A, _Clauses}|_T]) ->
+get_file_and_line(_M, F, A, CurFile, [{function, Pos, F, A, _Clauses}|_T]) ->
+  Line = get_line_from_annotation(Pos),
   {ok, {CurFile, Line}};
 get_file_and_line(M, F, A, _CurFile, [{attribute, _, file, {File, _}}|T]) ->
   get_file_and_line(M, F, A, File, T);
@@ -690,16 +694,25 @@ get_file_and_line(M, F, A, CurFile, [_H|T]) ->
 get_file_and_line(_M, _F, _A, _CurFile, []) ->
   {error, not_found}.
 
+
+%%------------------------------------------------------------------------------
+%% @doc Parse line number from erl_anno:location()
+-spec get_line_from_annotation(location()) -> pos_integer().
+%%------------------------------------------------------------------------------
+get_line_from_annotation({Line, _}) -> Line;
+get_line_from_annotation(Line) when is_integer(Line) -> Line.
+
 %%------------------------------------------------------------------------------
 %% @doc Parse abstract code into a module information substract.
 -spec parse_abstract(Abstract::
-                       {function, pos_integer(), function(), arity(), any()} |
-                       {attribute, pos_integer(), file | import | record, {any(), any()}} |
+                       {function, location(), function(), arity(), any()} |
+                       {attribute, location(), file | import | record, {any(), any()}} |
                        term(),
                      Acc::orddict:orddict()) ->
         orddict:orddict().
 %%------------------------------------------------------------------------------
-parse_abstract({function, Line, F, A, _Clauses}, Acc) ->
+parse_abstract({function, Pos, F, A, _Clauses}, Acc) ->
+  Line = get_line_from_annotation(Pos),
   M = orddict:fetch(module, Acc),
   FunInfo =
     [ {module,   M}
@@ -728,12 +741,13 @@ parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
     end,
   %% Update current file.
   orddict:store(cur_file, ModSrc, Acc);
-parse_abstract({attribute,_Line,import, {Module, Imports0}}, Acc) ->
+parse_abstract({attribute, _Line, import, {Module, Imports0}}, Acc) ->
   Imports = [[ {module, Module}
              , {function, F}
              , {arity, A}] || {F, A} <- Imports0],
   orddict:update(imports, fun(I) -> Imports ++ I end, Acc);
-parse_abstract({attribute, Line ,record,{Recordname, Fields}}, Acc) ->
+parse_abstract({attribute, Pos, record, {Recordname, Fields}}, Acc) ->
+  Line = get_line_from_annotation(Pos),
   FieldsF = fun get_record_field/1,
   RecordInfo =
     [ {record, Recordname}
