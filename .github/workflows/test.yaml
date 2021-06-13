@@ -30,17 +30,18 @@ jobs:
         with:
           otp-version: ${{matrix.otp}}
 
+      - name: Add Erlang to Path
+        run: |
+          echo "${{ steps.install_erlang.outputs.erlpath }}/bin" >> $GITHUB_PATH
+          echo "ERL_PATH=${{ steps.install_erlang.outputs.erlpath }}" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: true
 
       - name: Compile
-        run: make
-        env:
-          ERL_PATH = "${{ steps.install_erlang.outputs.erlpath }}"
+        run: "echo ERLPATH=$ERL_PATH && make"
 
       - name: Test
         run: make test
-        env:
-          ERL_PATH = "${{ steps.install_erlang.outputs.erlpath }}"
