@@ -3,6 +3,7 @@ APPS = $(subst lib/,,$(wildcard lib/*))
 EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
 EMACS ?= "emacs"
 DOCKER ?= "docker"
+ERLANG_EMACS_LIB ?= $(wildcard $(subst bin/erl,lib/,$(shell which erl))/tools*/emacs)
 
 REBAR3 ?= $(shell which rebar3)
 ifeq (,$(REBAR3))
@@ -49,7 +50,7 @@ $(APPS:%=test-%): $(REBAR3)
 .PHONY: integration-tests
 integration-tests: all test-projects
 	$(EMACS) -Q --batch \
-	-L ${PWD} \
+	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
 	--debug-init \
 	-f edts-test-run-suites-batch-and-exit

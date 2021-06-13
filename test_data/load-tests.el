@@ -16,18 +16,16 @@
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
 ;; Test loading library for edts.
-
 (require 'package)
-(package-initialize)
+
+(defvar edts-dir command-line-default-directory)
+
+(let ((default-directory (expand-file-name "elisp" edts-dir)))
+  (normal-top-level-add-subdirs-to-load-path))
+
+(add-to-list 'load-path edts-dir)
 
 (require 'f)
-
-(defvar edts-dir (f-dirname (f-dirname (f-this-file))))
-
-(dolist (file (f-directories (f-join edts-dir "elisp")))
-  (add-to-list 'load-path file))
-(add-to-list 'load-path (directory-file-name edts-dir))
-
 (require 'edts-mode)
 
 (dolist (file (f-glob (f-join edts-dir "elisp" "edts" "*-test.el")))
