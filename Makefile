@@ -49,6 +49,7 @@ $(APPS:%=test-%): $(REBAR3)
 
 .PHONY: integration-tests
 integration-tests: all test-projects
+	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
@@ -57,8 +58,9 @@ integration-tests: all test-projects
 
 .PHONY: ert
 ert: test-projects
+	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
 	$(EMACS) -Q --batch \
-	-L ${PWD} \
+	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
