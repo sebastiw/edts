@@ -19,10 +19,10 @@ jobs:
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
-      # - name: Install Emacs
-      #   uses: purcell/setup-emacs@master
-      #   with:
-      #     version: ${{matrix.emacs}}
+      - name: Install Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{matrix.emacs}}
 
       - name: Install Erlang
         id: install_erlang
@@ -35,18 +35,15 @@ jobs:
 
       - name: Add Erlang to Path
         run: |
-          ls /usr/lib/erlang/
           echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
 
-      # - name: Checkout
-      #   uses: actions/checkout@v2
-      #   with:
-      #     submodules: true
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
 
-      # - name: Compile
-      #   run: |
-      #     echo "ERLPATH=${{ env.ERL_PATH }}"
-      #     make
+      - name: Compile
+        run: make
 
-      # - name: Test
-      #   run: make test
+      - name: Test
+        run: make test
