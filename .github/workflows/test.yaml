@@ -35,7 +35,7 @@ jobs:
 
       - name: Print env
         run: |
-          echo "GITHUB_ENV=${{ GITHUB_ENV }}"
+          echo "GITHUB_ENV=$ENV"
           echo "install_erlang_env=${{ jobs.test.steps.install_erlang.env }}"
 
 
