@@ -116,7 +116,7 @@
 (defun edts-plugin-call-async (node plugin method &optional args cb cb-args)
   "Call PLUGIN's rpc method METHOD with ARGS on NODE asynchronously. Calling
 CB with the result when request terminates."
-  (edts-log-debug "Plugin call %s:%s on %s" plugin method node)
+  (edts-log-debug "Plugin async call %s:%s on %s" plugin method node)
   (let* ((resource (s-join "/"
                            (list edts-plugin-directory-name
                                  (symbol-name plugin)

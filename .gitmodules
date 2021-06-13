@@ -3,7 +3,7 @@
 	url = git://github.com/auto-complete/auto-complete.git
 [submodule "elisp/auto-highlight-symbol-mode"]
 	path = elisp/auto-highlight-symbol-mode
-	url = git://github.com/mhayashi1120/auto-highlight-symbol-mode.git
+	url = git://github.com/gennad/auto-highlight-symbol.git
 [submodule "elisp/dash"]
 	path = elisp/dash
 	url = https://github.com/magnars/dash.el.git
