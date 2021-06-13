@@ -1,0 +1,49 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - $default-branch
+      - github-actions
+  pull_request:
+    branches:
+      - $default-branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: [24.0.2] # 22.3.4.9, 23.3.1,
+        emacs: [27.1] # 24.5, 26.3,
+
+    steps:
+      - name: Install Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{matrix.emacs}}
+
+      - name: Install Erlang
+        id: install_erlang
+        uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: ${{matrix.otp}}
+
+      - name: Test erlang
+        run: which erl
+
+      - name: Add Erlang to Path
+        run: |
+          echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Compile
+        run: make
+
+      - name: Test
+        run: make test
