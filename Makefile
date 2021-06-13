@@ -3,7 +3,8 @@ APPS = $(subst lib/,,$(wildcard lib/*))
 EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
 EMACS ?= "emacs"
 DOCKER ?= "docker"
-ERLANG_EMACS_LIB ?= $(wildcard $(subst bin/erl,lib/,$(shell which erl))/tools*/emacs)
+ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
+ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
 
 REBAR3 ?= $(shell which rebar3)
 ifeq (,$(REBAR3))

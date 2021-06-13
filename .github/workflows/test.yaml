@@ -15,7 +15,7 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [22.3.4.9, 23.3.1, 24.0.2]
+        otp: [24.0.2] # 22.3.4.9, 23.3.1,
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
@@ -25,6 +25,7 @@ jobs:
           version: ${{matrix.emacs}}
 
       - name: Install Erlang
+        id: install_erlang
         uses: gleam-lang/setup-erlang@v1.1.2
         with:
           otp-version: ${{matrix.otp}}
@@ -34,11 +35,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Add erl to path
-        run: $env:PATH = "${{ steps.install_erlang.outputs.erlpath }}/bin;$env:PATH"
-
       - name: Compile
         run: make
+        env:
+          ERL_PATH = "${{ steps.install_erlang.outputs.erlpath }}"
 
       - name: Test
         run: make test
+        env:
+          ERL_PATH = "${{ steps.install_erlang.outputs.erlpath }}"
