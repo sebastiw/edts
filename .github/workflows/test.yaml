@@ -33,16 +33,10 @@ jobs:
       - name: Test erlang
         run: which erl
 
-      - name: Print env
+      - name: Add Erlang to Path
         run: |
-          echo "GITHUB_ENV=$ENV"
-          echo "install_erlang_env=${{ steps.install_erlang.env }}"
-
-
-      # - name: Add Erlang to Path
-      #   run: |
-      #     echo "${{ steps.install_erlang.outputs.erlpath }}/bin" >> $GITHUB_PATH
-      #     echo "ERL_PATH=${{ steps.install_erlang.outputs.erlpath }}" >> $GITHUB_ENV
+          ls /usr/lib/erlang/
+          echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
 
       # - name: Checkout
       #   uses: actions/checkout@v2
