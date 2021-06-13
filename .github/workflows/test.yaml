@@ -29,7 +29,6 @@ jobs:
         uses: gleam-lang/setup-erlang@v1.1.2
         with:
           otp-version: ${{matrix.otp}}
-        run: echo '::set-output name=ERL_PATH::$ERL_PATH'
 
       - name: Test erlang
         run: which erl
@@ -37,7 +36,6 @@ jobs:
       - name: Print env
         run: |
           echo "GITHUB_ENV=$ENV"
-          echo "install_erlang_erl_path=${{ steps.install_erlang.outputs.ERL_PATH }}"
           echo "install_erlang_env=${{ steps.install_erlang.env }}"
 
 
