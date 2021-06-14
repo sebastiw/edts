@@ -10,11 +10,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [22.3.4.9, 23.3.1, 24.0.2]
+        otp: [20.3.8.26, 21.3.8.17, 22.3.4.9, 23.3.1, 24.0.2]
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
@@ -28,9 +28,6 @@ jobs:
         uses: gleam-lang/setup-erlang@v1.1.2
         with:
           otp-version: ${{matrix.otp}}
-
-      - name: Test erlang
-        run: which erl
 
       - name: Add Erlang to Path
         run: |
