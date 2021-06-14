@@ -33,6 +33,9 @@ jobs:
       - name: Rebar3 Version
         run: rebar3 version
 
+      - name: Rebar3 Version
+        run: rebar3 version
+
       - name: Add Erlang to Path
         run: |
           echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
