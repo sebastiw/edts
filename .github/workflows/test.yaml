@@ -25,9 +25,10 @@ jobs:
 
       - name: Install Erlang
         id: install_erlang
-        uses: gleam-lang/setup-erlang@v1.1.2
+        uses: sebastiw/setup-erlang@main
         with:
           otp-version: ${{matrix.otp}}
+          rebar3-version: true
 
       - name: Rebar3 Version
         run: rebar3 version
