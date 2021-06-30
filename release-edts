@@ -1,0 +1,8 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -sname release-edts
+
+main([]) ->
+	{ok, Conf} = file:consult("edts.config"),
+	{ok, Spec} = reltool:get_target_spec(Conf),
+	reltool:eval_target_spec(Spec, code:root_dir(), "rel").

@@ -1,6 +1,6 @@
 MAKEFLAGS = -s
 APPS = $(subst lib/,,$(wildcard lib/*))
-EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
+EUNIT_FILES = $(subst $(empty) ,$(comma),$(wildcard lib/*/src/*.erl))
 EMACS ?= "emacs"
 DOCKER ?= "docker"
 ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
@@ -16,38 +16,51 @@ comma = ,
 .PHONY: all
 all: compile release
 
-$(REBAR3):
-	curl -LO https://s3.amazonaws.com/rebar3/rebar3
-	chmod a+x rebar3
+.PHONE: compile
+compile: apps deps
 
-.PHONY: compile
-compile: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) compile
+.PHONY: apps
+apps: $(APPS)
+$(APPS):
+	$(MAKE) -C lib/$@ MAKEFLAGS="$(MAKEFLAGS)"
+
+.PHONY: deps
+deps:
+	@mkdir -p deps
+	@git clone https://github.com/mochi/mochiweb deps/mochiweb
+	$(MAKE) -C deps/mochiweb MAKEFLAGS="$(MAKEFLAGS)"
 
 .PHONY: release
-release: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) release
+release:
+	@mkdir -p rel
+	./release-edts
 
 .PHONY: clean
-clean: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) clean
-	rm -rfv elisp/*/*.elc
+clean: $(APPS:%=clean-%)
+	rm -rfv elisp/*/*.elc rel deps .dialyzer_plt
+
+.PHONY: $(APPS:%=clean-%)
+$(APPS:%=clean-%):
+	$(MAKE) -C lib/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: dialyzer
-dialyzer: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) dialyzer
+dialyzer: .dialyzer_plt
+	dialyzer --add_to_plt -r lib/ deps/
+
+.dialyzer_plt:
+	dialyzer --build_plt --apps erts kernel stdlib sasl dialyzer tools inets crypto debugger wx
 
 .PHONY: test
 test: apps-test dialyzer integration-tests ert
 
 .PHONY: apps-test
-apps-test: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) do eunit --dir="$(EUNIT_DIRS)", ct
+apps-test: eunit
+
+.PHONY: eunit $(EUNIT_FILES:%=eunit-%)
+eunit: $(EUNIT_FILES:%=eunit-%)
+$(EUNIT_FILES:%=eunit-%):
+	# Need to update path to become module
+	erl -noshell -run $(@:eunit-%=%) test -run init stop
 
 .PHONY: $(APPS:%=test-%)
 $(APPS:%=test-%): $(REBAR3)

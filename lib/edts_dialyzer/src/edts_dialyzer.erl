@@ -65,8 +65,8 @@ spec(analyze, 3) -> [ {otp_plt, string}
 
 %%------------------------------------------------------------------------------
 %% @equiv analyze(undefined, OutPlt, Modules)
--spec analyze(OutPlt ::filename:filename(),
-              Modules::[filename:filename()] | all) -> [term()].
+-spec analyze(OutPlt ::file:filename(),
+              Modules::[file:filename()] | all) -> [term()].
 %%------------------------------------------------------------------------------
 analyze(OutPlt, Modules) ->
   analyze(undefined, OutPlt, Modules).
@@ -83,9 +83,9 @@ analyze(OutPlt, Modules) ->
 %% and return warnings for all modules in Modules or for all modules if
 %% Modules =:= 'all'.
 %% @end
--spec analyze(BasePlt::filename:filename() | undefined,
-              OutPlt ::filename:filename(),
-              Modules::[filename:filename()] | all) -> [term()].
+-spec analyze(BasePlt::file:filename() | undefined,
+              OutPlt ::file:filename(),
+              Modules::[file:filename()] | all) -> [term()].
 %%------------------------------------------------------------------------------
 analyze(BasePlt, OutPlt, Modules) ->
   LoadedFiles = % Non-otp modules
@@ -191,9 +191,9 @@ get_included_files(Plt) ->
 %% @doc
 %% Return a list of the beam-files of all currently loaded modules that where
 %% loaded from such, compiled with debug-info and are not otp-modules.
--spec non_otp_beam_files(filename:filename(),
-                         [{module(), filename:filename()}]) ->
-                            [filename:filename()].
+-spec non_otp_beam_files(file:filename(),
+                         [{module(), file:filename()}]) ->
+                            [file:filename()].
 %%------------------------------------------------------------------------------
 non_otp_beam_files(OtpLibDir, LoadedModules) ->
   F = fun({M, Loc}, Acc) ->
