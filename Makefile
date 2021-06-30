@@ -22,19 +22,23 @@ $(REBAR3):
 
 .PHONY: compile
 compile: $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) compile
 
 .PHONY: release
 release: $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) release
 
 .PHONY: clean
 clean: $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) clean
 	rm -rfv elisp/*/*.elc
 
 .PHONY: dialyzer
 dialyzer: $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) dialyzer
 
 .PHONY: test
@@ -42,10 +46,12 @@ test: apps-test dialyzer integration-tests ert
 
 .PHONY: apps-test
 apps-test: $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) do eunit --dir="$(EUNIT_DIRS)", ct
 
 .PHONY: $(APPS:%=test-%)
 $(APPS:%=test-%): $(REBAR3)
+	@echo "Using $(REBAR3)"
 	@$(REBAR3) do eunit --dir "$(wildcard lib/*/src)", ct
 
 .PHONY: integration-tests

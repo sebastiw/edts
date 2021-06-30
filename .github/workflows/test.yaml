@@ -3,19 +3,18 @@ name: Run Tests
 on:
   push:
     branches:
-      - $default-branch
-      - github-actions
+      - master
   pull_request:
     branches:
-      - $default-branch
+      - master
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [24.0.2] # 22.3.4.9, 23.3.1,
+        otp: [21.3.8.17, 22.3.4.9, 23.3.1, 24.0.2]
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
@@ -26,12 +25,13 @@ jobs:
 
       - name: Install Erlang
         id: install_erlang
-        uses: gleam-lang/setup-erlang@v1.1.2
+        uses: sebastiw/setup-erlang@main
         with:
           otp-version: ${{matrix.otp}}
+          rebar3-version: true
 
-      - name: Test erlang
-        run: which erl
+      - name: Rebar3 Version
+        run: rebar3 version
 
       - name: Add Erlang to Path
         run: |

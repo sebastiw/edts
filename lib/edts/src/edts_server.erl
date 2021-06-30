@@ -286,7 +286,6 @@ do_init_node(ProjectName,
       _         -> ok = edts_dist:set_cookie(Node, list_to_atom(ErlangCookie))
     end,
     Plugins = edts_plugins:names(),
-    edts_plugins:specs(),
     ok = lists:foreach(fun(Spec) -> edts_dist:load_app(Node, Spec) end,
                        edts_plugins:specs()),
     PluginRemoteLoad =
