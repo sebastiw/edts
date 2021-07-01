@@ -62,7 +62,7 @@
                          (error nil)))
       (with-current-buffer buffer
         (let* ((proc (get-buffer-process (current-buffer)))
-               (reply  (edts-rpc-parse-http-response))
+               (reply (edts-rpc-parse-http-response))
                ;; The url-library's retry-functionality is pretty broken
                ;; for synchronous requests. url will try to re-use connections
                ;; and sometimes the used connection will have expired, in

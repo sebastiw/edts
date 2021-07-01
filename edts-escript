@@ -1,0 +1,24 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -sname edts-helper
+
+main(["release"]) ->
+	{ok, Conf} = file:consult("edts.config"),
+	{ok, Spec} = reltool:get_target_spec(Conf),
+	reltool:eval_target_spec(Spec, code:root_dir(), "rel");
+
+main(["eunit", Path0|Deps]) ->
+    Ebin = filename:join(filename:dirname(filename:dirname(Path0)), "ebin"),
+    [true = code:add_path(D) || D <- [Ebin|Deps]],
+    Mod = list_to_atom(filename:basename(Path0, ".erl")),
+    MI = Mod:module_info(exports),
+    case proplists:lookup(test, MI) of
+        {test, 0} ->
+            io:format("eunit ~s: ", [Path0]),
+            eunit:test(Mod);
+        none ->
+            ok
+    end;
+
+main(Args) ->
+    erlang:error({unknown_args, Args}).

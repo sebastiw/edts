@@ -220,6 +220,12 @@ remote_load_module(Node, Mod) ->
   %% incompatible with the binary format of the EDTS node's OTP release.
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
+  case code:ensure_loaded(Mod) of
+    {error, Err} ->
+      erlang:error({error, Err});
+    _ ->
+      ok
+  end,
   case lists:keyfind(Mod, 1, code:all_loaded()) of
     false -> erlang:error({not_loaded, Mod});
     {_, FileBeam} ->

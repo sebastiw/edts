@@ -1,39 +1,53 @@
 MAKEFLAGS = -s
 APPS = $(subst lib/,,$(wildcard lib/*))
-EUNIT_FILES = $(subst $(empty) ,$(comma),$(wildcard lib/*/src/*.erl))
+EUNIT_FILES = $(wildcard lib/*/src/*.erl)
 EMACS ?= "emacs"
 DOCKER ?= "docker"
+MKDIR ?= "mkdir"
+MKDIR_FLAGS ?= "-p"
+GIT ?= "git"
+GIT_CMD ?= "clone"
+ERL ?= "erl"
+DIALYZER ?= "dialyzer"
 ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
 ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
-
-REBAR3 ?= $(shell which rebar3)
-ifeq (,$(REBAR3))
-REBAR3 := $(CURDIR)/rebar3
-endif
 
 comma = ,
 
 .PHONY: all
 all: compile release
 
-.PHONE: compile
-compile: apps deps
+.PHONY: compile compile-test
+compile: apps dependencies
+compile-test: compile-apps-test
 
-.PHONY: apps
+.PHONY: apps compile-apps-test
 apps: $(APPS)
 $(APPS):
 	$(MAKE) -C lib/$@ MAKEFLAGS="$(MAKEFLAGS)"
 
-.PHONY: deps
+compile-apps-test: $(APPS:%=testing-%)
+$(APPS:%=testing-%):
+	$(MAKE) -C lib/$(@:testing-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
+
+.PHONY: dependencies dependencies-test
+dependencies: | deps/mochiweb
+dependencies-test: | deps/mochiweb deps/meck
+
 deps:
-	@mkdir -p deps
-	@git clone https://github.com/mochi/mochiweb deps/mochiweb
+	$(MKDIR) $(MKDIR_FLAGS) deps
+deps/mochiweb: | deps
+	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" deps/mochiweb
 	$(MAKE) -C deps/mochiweb MAKEFLAGS="$(MAKEFLAGS)"
+deps/meck: | deps
+	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" deps/meck
+	$(MKDIR) $(MKDIR_FLAGS) deps/meck/ebin
+	@erlc -o deps/meck/ebin deps/meck/src/*.erl
 
 .PHONY: release
 release:
-	@mkdir -p rel
-	./release-edts
+	$(MKDIR) $(MKDIR_FLAGS) rel
+	./edts-escript release
 
 .PHONY: clean
 clean: $(APPS:%=clean-%)
@@ -45,31 +59,22 @@ $(APPS:%=clean-%):
 
 .PHONY: dialyzer
 dialyzer: .dialyzer_plt
-	dialyzer --add_to_plt -r lib/ deps/
+	$(DIALYZER) --add_to_plt -r lib/ deps/
 
 .dialyzer_plt:
-	dialyzer --build_plt --apps erts kernel stdlib sasl dialyzer tools inets crypto debugger wx
+	$(DIALYZER) --build_plt --apps erts kernel stdlib sasl dialyzer tools inets crypto debugger wx
 
 .PHONY: test
-test: apps-test dialyzer integration-tests ert
-
-.PHONY: apps-test
-apps-test: eunit
+test: compile-apps-test dialyzer integration-tests ert
 
 .PHONY: eunit $(EUNIT_FILES:%=eunit-%)
-eunit: $(EUNIT_FILES:%=eunit-%)
+eunit: compile-test $(EUNIT_FILES:%=eunit-%)
 $(EUNIT_FILES:%=eunit-%):
-	# Need to update path to become module
-	erl -noshell -run $(@:eunit-%=%) test -run init stop
-
-.PHONY: $(APPS:%=test-%)
-$(APPS:%=test-%): $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) do eunit --dir "$(wildcard lib/*/src)", ct
+	$(foreach eunit_file,$(@:eunit-%=%),./edts-escript eunit $(eunit_file) deps/**/ebin)
 
 .PHONY: integration-tests
 integration-tests: all test-projects
-	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
+	echo "$(EMACS) -Q --batch -L $(ERLANG_EMACS_LIB) -l test_data/load-tests.el --debug-init"
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
@@ -78,7 +83,6 @@ integration-tests: all test-projects
 
 .PHONY: ert
 ert: test-projects
-	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \

@@ -371,7 +371,7 @@ non_otp_beam_files_test_() ->
   Mod = edts_dialyzer_test_module,
   {ok, Cwd} = file:get_cwd(),
   OtpDir = filename:join([Cwd, "otp", "lib"]),
-  c:l(Mod),
+  {module, Mod} = c:l(Mod),
   [?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, preloaded}])),
    ?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, OtpDir}])),
    ?_assertEqual([], non_otp_beam_files(OtpDir, [{Mod, "test"}])),
