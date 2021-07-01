@@ -10,7 +10,7 @@ main(["release"]) ->
 main(["eunit", Path0|Deps]) ->
     Ebin = filename:join(filename:dirname(filename:dirname(Path0)), "ebin"),
     [true = code:add_path(D) || D <- [Ebin|Deps]],
-    Mod = list_to_atom(filename:basename(Path0, ".erl")),
+    Mod = list_to_atom(filename:basename(Path0, ".beam")),
     MI = Mod:module_info(exports),
     case proplists:lookup(test, MI) of
         {test, 0} ->

@@ -1,60 +1,52 @@
-MAKEFLAGS = -s
-APPS = $(subst lib/,,$(wildcard lib/*))
-EUNIT_FILES = $(wildcard lib/*/src/*.erl)
-EMACS ?= "emacs"
-DOCKER ?= "docker"
-MKDIR ?= "mkdir"
+# MAKEFLAGS = -s
+LIBS = $(wildcard lib/*)
+EMACS ?= emacs
+ERL ?= erl
+MKDIR ?= mkdir
 MKDIR_FLAGS ?= "-p"
-GIT ?= "git"
-GIT_CMD ?= "clone"
-ERL ?= "erl"
-DIALYZER ?= "dialyzer"
+GIT ?= git
+GIT_CMD ?= clone
+DIALYZER ?= dialyzer
+DOCKER ?= docker
+
 ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
 ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
 
-comma = ,
-
-.PHONY: all
 all: compile release
 
-.PHONY: compile compile-test
-compile: apps dependencies
-compile-test: compile-apps-test
-
-.PHONY: apps compile-apps-test
-apps: $(APPS)
-$(APPS):
-	$(MAKE) -C lib/$@ MAKEFLAGS="$(MAKEFLAGS)"
-
-compile-apps-test: $(APPS:%=testing-%)
-$(APPS:%=testing-%):
-	$(MAKE) -C lib/$(@:testing-%=%) MAKEFLAGS="$(MAKEFLAGS)" test
-
-.PHONY: dependencies dependencies-test
-dependencies: | deps/mochiweb
-dependencies-test: | deps/mochiweb deps/meck
-
-deps:
-	$(MKDIR) $(MKDIR_FLAGS) deps
-deps/mochiweb: | deps
-	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" deps/mochiweb
-	$(MAKE) -C deps/mochiweb MAKEFLAGS="$(MAKEFLAGS)"
-deps/meck: | deps
-	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" deps/meck
-	$(MKDIR) $(MKDIR_FLAGS) deps/meck/ebin
-	@erlc -o deps/meck/ebin deps/meck/src/*.erl
+.PHONY: compile
+compile: $(LIBS) | deps/mochiweb
 
 .PHONY: release
-release:
-	$(MKDIR) $(MKDIR_FLAGS) rel
+release: | rel
 	./edts-escript release
 
+rel:
+	mkdir -p rel
+
+deps/mochiweb:
+	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" $@
+	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
+deps/meck:
+	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
+	mkdir -p $@/ebin
+	@erlc -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
+	cp $@/src/meck.app.src $@/ebin/meck.app
+
+$(LIBS):
+	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
+
+.PHONY: eunit $(LIBS:%=test-%)
+eunit: $(LIBS:%=test-%)
+$(LIBS:%=test-%):
+	$(MAKE) -C $(@:test-%=%) ERLC_EXTRA_PATHS="$(realpath deps/mochiweb/ebin) $(realpath deps/meck/ebin)" MAKEFLAGS="$(MAKEFLAGS)" test
+
 .PHONY: clean
-clean: $(APPS:%=clean-%)
+clean: $(LIBS:%=clean-%)
 	rm -rfv elisp/*/*.elc rel deps .dialyzer_plt
 
-.PHONY: $(APPS:%=clean-%)
-$(APPS:%=clean-%):
+.PHONY: $(LIBS:%=clean-%)
+$(LIBS:%=clean-%):
 	$(MAKE) -C lib/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: dialyzer
@@ -65,12 +57,13 @@ dialyzer: .dialyzer_plt
 	$(DIALYZER) --build_plt --apps erts kernel stdlib sasl dialyzer tools inets crypto debugger wx
 
 .PHONY: test
-test: compile-apps-test dialyzer integration-tests ert
+test: eunit dialyzer integration-tests ert
 
-.PHONY: eunit $(EUNIT_FILES:%=eunit-%)
-eunit: compile-test $(EUNIT_FILES:%=eunit-%)
-$(EUNIT_FILES:%=eunit-%):
-	$(foreach eunit_file,$(@:eunit-%=%),./edts-escript eunit $(eunit_file) deps/**/ebin)
+
+
+
+
+
 
 .PHONY: integration-tests
 integration-tests: all test-projects

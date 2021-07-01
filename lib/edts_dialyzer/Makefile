@@ -1,17 +1,30 @@
-.PHONY: all compile test clean
+ERLC := erlc
+ERLC_OPTIONS ?= $(if $(filter test,$(MAKECMDGOALS)),+debug_info -DTEST,)
+ERLC_EXTRA_PATHS ?=
+ERLC_PATHS := ../edts/ebin $(ERLC_EXTRA_PATHS)
 
-all: compile
+OUT_DIR := ebin
 
-compile: ebin ebin/edts_dialyzer.app
-	@erlc +debug_info -pa ../edts/ebin -o ebin src/*.erl
+ERL_SOURCES := $(wildcard src/*.erl)
+APP_SOURCES := $(wildcard src/*.app.src)
+APP_TARGET := $(patsubst src/%.app.src,$(OUT_DIR)/%.app,$(APP_SOURCES))
+BEAM_FIRST_TARGETS :=
+BEAM_TARGETS := $(filter-out $(BEAM_FIRST_TARGETS), $(patsubst src/%.erl,$(OUT_DIR)/%.beam,$(ERL_SOURCES)))
 
-test: ebin ebin/edts_dialyzer.app
-	@erlc +debug_info -DTEST -pa ../edts/ebin -o ebin src/*.erl
+all: $(BEAM_FIRST_TARGETS) | $(BEAM_TARGETS) $(APP_TARGET)
 
+.PHONY: test clean
+test: all
 clean:
 	rm -rfv ebin
 
-ebin:
-	@mkdir -p ebin
-ebin/edts_dialyzer.app:
-	@cp src/edts_dialyzer.app.src ebin/edts_dialyzer.app
+$(BEAM_TARGETS): | $(OUT_DIR)
+$(APP_TARGET): | $(OUT_DIR)
+
+$(OUT_DIR)/%.app: src/%.app.src
+	cp $< $@
+$(OUT_DIR)/%.beam: src/%.erl
+	$(ERLC) $(ERLC_OPTIONS) $(foreach path,$(subst :, ,$(ERLC_PATHS)),-pa $(path)) -o $(OUT_DIR) $<
+
+$(OUT_DIR):
+	mkdir -p ebin
