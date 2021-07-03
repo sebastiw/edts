@@ -38,7 +38,6 @@
 
 %%%_* Includes =================================================================
 
--include_lib("eunit/include/eunit.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
