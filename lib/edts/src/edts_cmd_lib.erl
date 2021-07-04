@@ -34,12 +34,15 @@
 
 %%%_* Includes =================================================================
 
--include_lib("eunit/include/eunit.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 %%%_* Defines ==================================================================
 
--define(a2l(A), atom_to_list(A)).
+-record(enum_value,
+        {name :: atom(),
+         allowed_values = [] :: [atom()],
+         default_value :: atom(),
+         is_required = false :: boolean()}).
 
 %%%_* Types ====================================================================
 
@@ -77,29 +80,13 @@ exists_p(Ctx, Keys) ->
 %% Validate Ctx0 and convert values to internal representation.
 %% @end
 -spec validate(orddict:orddict(), [atom()]) ->
-                  {ok, orddict:orddict()} | {error, term()}.
+        {ok, orddict:orddict()} | {error, term()}.
 %%------------------------------------------------------------------------------
 validate(Ctx0, Keys) ->
-  F = fun(Key, Ctx) ->
-          Name = case Key of
-                   Key when is_atom(Key) -> Key;
-                   {_Type, Props}        ->
-                     {ok, N} = edts_util:assoc(name, Props),
-                     N
-                 end,
-          case (term_to_validate(Key))(Ctx) of
-            {ok, Value} ->
-              orddict:store(Name, Value, Ctx);
-            {error, Rsn} ->
-              ?LOG_ERROR("API input validation failed. Key ~p, Rsn: ~p",
-                         [Key, Rsn]),
-              throw({error, Key})
-          end
-      end,
   try
-    {ok, lists:foldl(F, Ctx0, Keys)}
+    {ok, lists:foldl(fun validate_key/2, Ctx0, Keys)}
   catch
-    throw:{error, Key0} = E ->
+    throw:{error, Key0, Rsn} ->
       Key = case Key0 of
               Key1          when is_atom(Key1) -> atom_to_list(Key1);
               {_Type, Key1} when is_atom(Key1) -> Key1;
@@ -107,9 +94,28 @@ validate(Ctx0, Keys) ->
                 {ok, N} = edts_util:assoc(name, Props),
                 N
             end,
-      Value = orddict:fetch(Key, Ctx0),
+      Value = orddict:find(Key, Ctx0),
       ?LOG_DEBUG("Invalid Request, ~nKey: ~p~nValue: ~p", [Key, Value]),
-      E
+      {error, {Key0, Rsn}}
+  end.
+
+validate_key(Key, Ctx) ->
+  case (term_to_validate(Key))(Ctx) of
+    {ok, Value} ->
+      Name = case Key of
+               Key when is_atom(Key) ->
+                 Key;
+               {_Type, Key0} when is_atom(Key0) ->
+                 Key0;
+               {_Type, Props} when is_list(Props) ->
+                 {ok, N} = edts_util:assoc(name, Props),
+                 N
+             end,
+      orddict:store(Name, Value, Ctx);
+    {error, Rsn} ->
+      ?LOG_ERROR("API input validation failed. Key ~p, Rsn: ~p",
+                 [Key, Rsn]),
+      throw({error, Key, Rsn})
   end.
 
 %%%_* Internal functions =======================================================
@@ -120,54 +126,42 @@ atom_to_exists_p(modules)  -> fun modules_exists_p/1.
 
 term_to_validate(app_include_dirs) ->
   fun(Ctx) -> dirs_validate(Ctx, app_include_dirs) end;
-term_to_validate(arity)                -> fun arity_validate/1;
-term_to_validate(code)                 ->
+term_to_validate(arity) ->
+  fun arity_validate/1;
+term_to_validate(code) ->
   fun(Ctx) -> string_validate(Ctx, code) end;
-term_to_validate(string)                 ->
+term_to_validate(string) ->
   fun(Ctx) -> string_validate(Ctx, string) end;
 term_to_validate(indent) ->
   fun(Ctx) -> non_neg_integer_validate(Ctx, indent) end;
 term_to_validate(max_column) ->
   fun(Ctx) -> non_neg_integer_validate(Ctx, max_column) end;
-term_to_validate({enum_list, Props})   ->
-  fun(Ctx) -> enum_list_validate(Ctx, Props) end;
-term_to_validate({enum, Props})        ->
-  fun(Ctx) -> enum_validate(Ctx, Props) end;
 term_to_validate(erlang_cookie) ->
   fun(Ctx) -> string_validate(Ctx, erlang_cookie, undefined) end;
-term_to_validate(exported)             ->
-  fun(Ctx) ->
-      enum_validate(Ctx, [{name,    exported},
-                          {allowed, [true, false, all]},
-                          {default, all},
-                          {required, false}])
-  end;
-term_to_validate(expressions)          ->
+term_to_validate(expressions) ->
   fun(Ctx) -> strings_validate(Ctx, expressions) end;
-term_to_validate(file)                 -> fun file_validate/1;
-term_to_validate({file, Key})          ->
-  fun(Ctx) -> file_validate(Ctx, ?a2l(Key)) end;
-term_to_validate(files)                -> fun files_validate/1;
-term_to_validate(function)             -> fun function_validate/1;
-term_to_validate(info_level)           ->
+term_to_validate(file) ->
+  fun file_validate/1;
+term_to_validate(function) ->
+  fun function_validate/1;
+term_to_validate(info_level) ->
   fun(Ctx) ->
-      enum_validate(Ctx, [{name,     info_level},
-                          {allowed,  [basic, detailed]},
-                          {default,  basic},
-                          {required, false}])
+      enum_validate(Ctx, #enum_value{name = info_level,
+                                     allowed_values = [basic, detailed],
+                                     default_value = basic,
+                                     is_required = false})
   end;
-term_to_validate(line) ->
-  fun(Ctx) -> non_neg_integer_validate(Ctx, line) end;
-term_to_validate(module)               -> fun module_validate/1;
-term_to_validate(modules)              -> fun modules_validate/1;
-term_to_validate(nodename)             -> fun nodename_validate/1;
-term_to_validate(process)              -> fun process_validate/1;
-term_to_validate(project_name)         ->
+term_to_validate(module) ->
+  fun module_validate/1;
+term_to_validate(nodename) ->
+  fun nodename_validate/1;
+term_to_validate(project_name) ->
   fun(Ctx) -> string_validate(Ctx, project_name, "") end;
-term_to_validate(project_root)         -> fun project_root_validate/1;
+term_to_validate(project_root) ->
+  fun project_root_validate/1;
 term_to_validate(project_include_dirs) ->
   fun(Ctx) -> dirs_validate(Ctx, project_include_dirs) end;
-term_to_validate(project_lib_dirs)     ->
+term_to_validate(project_lib_dirs) ->
   fun(Ctx) -> dirs_validate(Ctx, project_lib_dirs) end.
 
 %%------------------------------------------------------------------------------
@@ -176,16 +170,22 @@ term_to_validate(project_lib_dirs)     ->
 %% @end
 -spec arity_validate(orddict:orddict()) ->
         {ok, non_neg_integer()} |
-        {error, {badarg, string()}}.
+        {error, {badarg, string()}} |
+        {error, notfound}.
 %%------------------------------------------------------------------------------
 arity_validate(Ctx) ->
-  Str = orddict:fetch(arity, Ctx),
-  try
-    case list_to_integer(Str) of
-      Arity when Arity >= 0 -> {ok, Arity};
-      _ -> {error, {badarg, Str}}
-    end
-  catch error:badarg -> {error, {badarg, Str}}
+  case orddict:find(arity, Ctx) of
+    error ->
+      {error, notfound};
+    {ok, Str} ->
+      try list_to_integer(Str) of
+        Arity when Arity >= 0 ->
+          {ok, Arity};
+        _ ->
+          {error, {badarg, Str}}
+      catch error:badarg ->
+          {error, {badarg, Str}}
+      end
   end.
 
 %%------------------------------------------------------------------------------
@@ -197,9 +197,13 @@ arity_validate(Ctx) ->
         {error, {badarg, string()}}.
 %%------------------------------------------------------------------------------
 integer_validate(Ctx, Key) ->
-  Str = orddict:fetch(Key, Ctx),
-  try {ok, list_to_integer(Str)}
-  catch error:badarg -> {error, {badarg, Str}}
+  case orddict:find(Key, Ctx) of
+    error ->
+      {error, notfound};
+    {ok, Str} ->
+      try {ok, list_to_integer(Str)}
+      catch error:badarg -> {error, {badarg, Str}}
+      end
   end.
 
 %%------------------------------------------------------------------------------
@@ -231,49 +235,22 @@ dirs_validate(Ctx, QsKey) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate a list where every element is part of an enumeration.
-%% @end
--spec enum_list_validate(orddict:orddict(), [{atom(), term()}]) ->
-                            {ok, [atom()]} |
-                            {error, {illegal, [atom()]}} |
-                            {error, {not_found, atom()}}.
-%%------------------------------------------------------------------------------
-enum_list_validate(Ctx, Props) ->
-  {ok, Name}   = edts_util:assoc(name,     Props),
-  {ok, Allowed} = edts_util:assoc(allowed,  Props),
-  Required      = edts_util:assoc(required, Props, false),
-  case orddict:find(Name, Ctx) of
-    error when Required -> {error, {not_found, Name}};
-    error               -> {ok, edts_util:assoc(default, Props, [])};
-    {ok, Strs}          ->
-      Vals = [list_to_atom(string:strip(Mod, both)) || Mod <- Strs],
-      Filter = fun(Val) -> lists:member(Val, Allowed) end,
-      case lists:partition(Filter, Vals) of
-        {_, []} -> {ok, Vals};
-        {_, Invalid} ->
-          ?LOG_DEBUG("resource_exists failed: ~p", [Invalid]),
-          {error, {illegal, Invalid}}
-      end
-  end.
-
-%%------------------------------------------------------------------------------
-%% @doc
 %% Validate an enumeration
 %% @end
 -spec enum_validate(orddict:orddict(),
-                    [{atom(), term()}]) ->
+                    #enum_value{}) ->
                        {ok,  atom()} |
                        {error, {illegal, string()}} |
                        {error, {not_found, atom()}}.
 %%------------------------------------------------------------------------------
 enum_validate(Ctx, Props) ->
-  {ok, Name}   = edts_util:assoc(name,     Props),
-  {ok, Allowed} = edts_util:assoc(allowed,  Props),
-  Required      = edts_util:assoc(required, Props, false),
+  Name = Props#enum_value.name,
+  Allowed = Props#enum_value.allowed_values,
+  Required = Props#enum_value.is_required,
   case orddict:find(Name, Ctx) of
     error when Required -> {error, {not_found, Name}};
     error               ->
-      {ok, edts_util:assoc(default, Props, undefined)};
+      {ok, Props#enum_value.default_value};
     {ok, V}                       ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of
@@ -288,44 +265,15 @@ enum_validate(Ctx, Props) ->
 %% Validate path to a file.
 %% @end
 -spec file_validate(orddict:orddict()) ->
-                       {ok, filename:filename()} |
-                       {error, {no_exists, string()}}.
+        {ok, filename:filename()} |
+        {error, {no_exists, string()}} |
+        {error, notfound}.
 %%------------------------------------------------------------------------------
 file_validate(Ctx) ->
-  file_validate(Ctx, file).
-
-file_validate(Ctx, Key) ->
-  File = orddict:fetch(Key, Ctx),
-  do_file_validate(File).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate a list of paths.
-%% @end
--spec files_validate(orddict:orddict()) ->
-        {ok, [filename:filename()]} |
-        {ok, all} |
-        {error, {no_exists, [filename:filename()]}}.
-%%------------------------------------------------------------------------------
-files_validate(Ctx) ->
-  case orddict:find(files, Ctx) of
-    error                               -> {ok, all};
-    {ok, "all"}                         -> {ok, all};
-    {ok, [F|_] = Files} when is_list(F) ->
-      NotExistsP =
-        fun(File) ->
-            %% Filter out the files that don't exist.
-            case do_file_validate(File) of
-              {error, _} -> true;
-              {ok, _}    -> false
-            end
-        end,
-      case lists:filter(NotExistsP, Files) of
-        []                  -> {ok, Files};
-        [_|_] = NonExisting -> {error ,{no_exists, NonExisting}}
-      end
+  case orddict:find(file, Ctx) of
+    error -> {error, notfound};
+    {ok, File} -> do_file_validate(File)
   end.
-
 
 do_file_validate(File) ->
   case filelib:is_file(File) of
@@ -340,8 +288,12 @@ do_file_validate(File) ->
 -spec function_validate(orddict:orddict()) -> {ok, atom()}.
 %%------------------------------------------------------------------------------
 function_validate(Ctx) ->
-  {ok, list_to_atom(orddict:fetch(function, Ctx))}.
-
+    case orddict:find(function, Ctx) of
+        error ->
+            {error, notfound};
+        {ok, F} ->
+            {ok, list_to_atom(F)}
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -350,23 +302,12 @@ function_validate(Ctx) ->
 -spec module_validate(orddict:orddict()) -> {ok, module()}.
 %%------------------------------------------------------------------------------
 module_validate(Ctx) ->
-  {ok, list_to_atom(orddict:fetch(module, Ctx))}.
-
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate a list of modules.
-%% @end
--spec modules_validate(orddict:orddict()) ->
-                          {ok, filename:filename()} |
-                          {error, {no_exists, string()}}.
-%%------------------------------------------------------------------------------
-modules_validate(Ctx) ->
-  case orddict:find(modules, Ctx) of
-    error       -> {ok, all};
-    {ok, "all"} -> {ok, all};
-    {ok, Val}   -> {ok, [list_to_atom(Mod) || Mod <- Val]}
-  end.
+    case orddict:find(module, Ctx) of
+        error ->
+            {error, notfound};
+        {ok, M} ->
+            {ok, list_to_atom(M)}
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -375,11 +316,15 @@ modules_validate(Ctx) ->
 -spec module_exists_p(orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
 module_exists_p(Ctx) ->
-  Nodename = orddict:fetch(nodename, Ctx),
-  case edts_dist:call(Nodename, code, which, [orddict:fetch(module, Ctx)]) of
-    non_existing            -> false;
-    File when is_list(File) -> true
-  end.
+    case orddict:find(nodename, Ctx) of
+        error ->
+            false;
+        {ok, Nodename} ->
+            case edts_dist:call(Nodename, code, which, [orddict:fetch(module, Ctx)]) of
+                non_existing            -> false;
+                File when is_list(File) -> true
+            end
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -388,12 +333,13 @@ module_exists_p(Ctx) ->
 -spec modules_exists_p(orddict:orddict()) -> boolean().
 %%------------------------------------------------------------------------------
 modules_exists_p(Ctx) ->
-  case orddict:fetch(modules, Ctx) of
-    all     -> true;
-    Modules ->
-      Nodename = orddict:fetch(nodename, Ctx),
-      Loaded = edts_dist:call(Nodename, code, all_loaded, []),
-      lists:all(fun(Mod) -> lists:keymember(Mod, 1, Loaded) end, Modules)
+  case orddict:find(modules, Ctx) of
+      error -> false;
+      {ok, all} -> true;
+      {ok, Modules} ->
+          Nodename = orddict:fetch(nodename, Ctx),
+          Loaded = edts_dist:call(Nodename, code, all_loaded, []),
+          lists:all(fun(Mod) -> lists:keymember(Mod, 1, Loaded) end, Modules)
   end.
 
 
@@ -405,21 +351,6 @@ modules_exists_p(Ctx) ->
 %%------------------------------------------------------------------------------
 nodename_validate(Ctx) ->
   {ok, edts_util:make_nodename(orddict:fetch(nodename, Ctx))}.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Validate nodename
-%% @end
--spec process_validate(orddict:orddict()) ->
-        {ok, pid()} |
-        {error, {badarg, string()}}.
-%%------------------------------------------------------------------------------
-process_validate(Ctx) ->
-  ProcessStr = orddict:fetch(process, Ctx),
-  case catch(erlang:list_to_pid("<" ++ ProcessStr ++ ">")) of
-    {'EXIT', {badarg, _}} -> {error, {badarg, ProcessStr}};
-    Pid when is_pid(Pid)  -> {ok, Pid}
-  end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -451,7 +382,7 @@ project_root_validate(Ctx) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Validate a string
+%% Validate a string with default
 %% @end
 -spec string_validate(orddict:orddict(), atom(), term()) -> {ok, term()}.
 %%------------------------------------------------------------------------------
@@ -497,161 +428,6 @@ strings_validate(Ctx, Key) ->
     error ->
       {error, notfound}
   end.
-
-%%%_* Unit tests ===============================================================
-
-arity_validate_test() ->
-  CtxF = fun(A) -> orddict:from_list([{arity, A}]) end,
-  ?assertEqual({ok, 0}, arity_validate(CtxF("0"))),
-  ?assertEqual({ok, 1}, arity_validate(CtxF("1"))),
-  ?assertEqual({error, {badarg, "-1"}}, arity_validate(CtxF("-1"))),
-  ?assertEqual({error, {badarg, "a"}}, arity_validate(CtxF("a"))).
-
-string_validate_test() ->
-  ?assertEqual({error, notfound}, string_validate(orddict:new(), s)),
-  Ctx = orddict:from_list([{s, "a_string"}]),
-  ?assertEqual({ok, "a_string"}, string_validate(Ctx, s)).
-
-integer_validate_test() ->
-  CtxF = fun(A) -> orddict:from_list([{integer, A}]) end,
-  ?assertEqual({ok, 0}, integer_validate(CtxF("0"), integer)),
-  ?assertEqual({ok, 1}, integer_validate(CtxF("1"), integer)),
-  ?assertEqual({ok, -1}, integer_validate(CtxF("-1"), integer)),
-  ?assertEqual({error, {badarg, "a"}}, integer_validate(CtxF("a"), integer)).
-
-non_neg_integer_validate_test() ->
-  CtxF = fun(A) -> orddict:from_list([{integer, A}]) end,
-  ?assertEqual({ok, 0}, non_neg_integer_validate(CtxF("0"), integer)),
-  ?assertEqual({ok, 1}, non_neg_integer_validate(CtxF("1"), integer)),
-  ?assertEqual({error, {illegal, "-1"}},
-               non_neg_integer_validate(CtxF("-1"), integer)),
-  ?assertEqual({error, {badarg, "a"}},
-               non_neg_integer_validate(CtxF("a"), integer)).
-
-file_validate_test() ->
-  CtxF = fun(A) -> orddict:from_list([{file, A}]) end,
-  {ok, Cwd} = file:get_cwd(),
-  ?assertEqual({ok, Cwd}, file_validate(CtxF(Cwd))),
-  Filename = filename:join(Cwd, "asotehu"),
-  ?assertEqual({error, {no_exists, Filename}}, file_validate(CtxF(Filename))),
-
-  ?assertError(function_clause, file_validate(CtxF(Filename), f)),
-  ?assertEqual({ok, Cwd}, file_validate(orddict:from_list([{f, Cwd}]), f)).
-
-files_validate_test() ->
-  {ok, Cwd} = file:get_cwd(),
-  CtxF = fun(A) -> orddict:from_list([{files, [A, A]}]) end,
-  ?assertEqual({ok, [Cwd, Cwd]}, files_validate(CtxF(Cwd))),
-  Filename = filename:join(Cwd, "asotehu"),
-  ?assertEqual({error, {no_exists, [Filename, Filename]}},
-               files_validate(CtxF(Filename))).
-
-function_validate_test() ->
-  ?assertEqual({ok, foo}, function_validate([{function, "foo"}])).
-
-dirs_validate_validate_test() ->
-  {ok, Cwd} = file:get_cwd(),
-  LibDir = filename:basename(Cwd),
-  Dirs = orddict:from_list([{project_lib_dirs, [LibDir, LibDir]}]),
-  ?assertEqual({ok, [LibDir, LibDir]},
-               dirs_validate(Dirs,
-                             project_lib_dirs)),
-  ?assertEqual({ok, []}, dirs_validate([], project_lib_dirs)).
-
-module_validate_test() ->
-  ?assertEqual({ok, foo},
-               module_validate(orddict:from_list([{module, "foo"}]))).
-
-modules_validate_test() ->
-  Ctx = orddict:from_list([{modules, ["foo","bar"]}]),
-  ?assertEqual({ok, [foo, bar]}, modules_validate(Ctx)),
-  ?assertEqual({ok, all}, modules_validate(orddict:new())).
-
-nodename_validate_test() ->
-  [_Name, Hostname] = string:tokens(atom_to_list(node()), "@"),
-  Ctx = orddict:from_list([{nodename, "foo"}]),
-  ?assertEqual( {ok, list_to_atom("foo@" ++ Hostname)}
-              , nodename_validate(Ctx)).
-
-project_root_validate_test() ->
-  {ok, Cwd} = file:get_cwd(),
-
-  Ctx1 = orddict:from_list([{project_root, Cwd}]),
-  ?assertEqual({ok, Cwd}, project_root_validate(Ctx1)),
-
-  Path = filename:join(Cwd, "asotehu"),
-  Ctx2 = orddict:from_list([{project_root, Path}]),
-  ?assertEqual({error, {not_dir, Path}},
-               project_root_validate(Ctx2)).
-
-enum_validate_test() ->
-  %% Value found
-  Ctx0 = orddict:from_list([{a, "a"}]),
-  ?assertEqual({ok, a}, enum_validate(Ctx0, [{name,     a},
-                                             {allowed,  [a, b]},
-                                             {default,  a},
-                                             {required, false}])),
-
-  %% Value not found, expect default
-  Ctx1 = orddict:new(),
-  ?assertEqual({ok, b}, enum_validate(Ctx1, [{name,     a},
-                                             {allowed,  [a, b]},
-                                             {default,  b},
-                                             {required, false}])),
-
-  %% Required value not found
-  ?assertEqual({error, {not_found, a}},
-               enum_validate(Ctx1, [{name,     a},
-                                    {allowed,  [a, b]},
-                                    {default,  b},
-                                    {required, true}])),
-
-  %% Illegal value
-  Ctx2 = orddict:from_list([{a, "c"}]),
-  ?assertEqual({error, {illegal, "c"}},
-               enum_validate(Ctx2, [{name,     a},
-                                    {allowed,  [a, b]},
-                                    {default,  b},
-                                    {required, true}])).
-
-enum_list_validate_test() ->
-  %% Value found
-  Ctx0 = orddict:from_list([{valid, ["valid_1"]}]),
-  ?assertEqual({ok, [valid_1]},
-               enum_list_validate(Ctx0,
-                                  [{name,     valid},
-                                   {allowed,  [valid_1, valid_2]},
-                                   {default,  [valid_2]},
-                                   {required, false}])),
-  %% Value not found, expect default
-  Ctx1 = orddict:new(),
-  ?assertEqual({ok, [valid_2]},
-               enum_list_validate(Ctx1,
-                                  [{name,     valid},
-                                   {allowed,  [valid_1, valid_2]},
-                                   {default,  [valid_2]},
-                                   {required, false}])),
-
-  %% Value not found and no default given, expect []
-  ?assertEqual({ok, []}, enum_list_validate(Ctx1,
-                                            [{name,     undefined},
-                                             {allowed,  [valid_1, valid_2]},
-                                             {required, false}])),
-
-  %% Required value not found
-  ?assertEqual({error, {not_found, valid}},
-               enum_list_validate(Ctx1, [{name,     valid},
-                                         {allowed,  [valid_1, valid_2]},
-                                         {required, true}])),
-
-  %% One illegal value
-  Ctx2 = orddict:from_list([{one_invalid, ["valid_1","invalid"]}]),
-  ?assertEqual({error, {illegal, [invalid]}},
-               enum_list_validate(Ctx2,
-                                  [{name,     one_invalid},
-                                   {allowed,  [valid_1, valid_2]},
-                                   {default,  [valid_1]},
-                                   {required, true}])).
 
 %%%_* Emacs ====================================================================
 %%% Local Variables:
