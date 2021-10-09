@@ -723,8 +723,8 @@ parse_abstract({function, Pos, F, A, _Clauses}, Acc) ->
     , {line,     Line}],
   orddict:update(functions, fun(Fs) -> [FunInfo|Fs] end, Acc);
 parse_abstract({attribute, _Line0, file, {[_|_] = Src0, _Line1}}, Acc0) ->
-  %% %% Get rid of any local paths, in case function was defined in a
-  %% %% file include with a relative path.
+  %% Get rid of any local paths, in case function was defined in a
+  %% file include with a relative path.
   BeamSource = path_flatten(orddict:fetch(source, Acc0)),
   ModSrc =
     case filename:pathtype(Src0) of

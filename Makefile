@@ -22,10 +22,12 @@ release: | rel
 	./edts-escript release
 
 rel:
-	mkdir -p rel
+	mkdir -p rel/releases
 
 deps/mochiweb:
 	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" $@
+	# reltool doesn't support unrecognized options
+	sed -i '/applications/{N; s/,$$// };/licenses/d;/links/d' $@/src/mochiweb.app.src
 	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 deps/meck:
 	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
@@ -33,6 +35,7 @@ deps/meck:
 	@erlc -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
 	cp $@/src/meck.app.src $@/ebin/meck.app
 
+.PHONY: $(LIBS)
 $(LIBS):
 	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 
@@ -47,7 +50,7 @@ clean: $(LIBS:%=clean-%)
 
 .PHONY: $(LIBS:%=clean-%)
 $(LIBS:%=clean-%):
-	$(MAKE) -C lib/$(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
+	$(MAKE) -C $(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: dialyzer
 dialyzer: .dialyzer_plt
