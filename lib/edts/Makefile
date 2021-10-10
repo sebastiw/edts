@@ -10,8 +10,7 @@ APP_SOURCES := $(wildcard src/*.app.src)
 APP_TARGET := $(patsubst src/%.app.src,$(OUT_DIR)/%.app,$(APP_SOURCES))
 BEAM_FIRST_TARGETS := ebin/edts_event.beam ebin/edts_plugins.beam ebin/edts_events.beam ebin/edts_cmd.beam
 BEAM_TARGETS := $(filter-out $(BEAM_FIRST_TARGETS), $(patsubst src/%.erl,$(OUT_DIR)/%.beam,$(ERL_SOURCES)))
-TEST_SOURCES := $(wildcard test/*.erl)
-TEST_TARGETS := $(patsubst test/%.erl,$(OUT_DIR)/%.beam,$(TEST_SOURCES))
+TEST_TARGETS := $(wildcard $(OUT_DIR)/*.beam)
 VPATH = src test
 
 all: $(BEAM_FIRST_TARGETS) | $(BEAM_TARGETS) $(APP_TARGET)

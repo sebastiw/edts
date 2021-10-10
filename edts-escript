@@ -14,11 +14,18 @@ main(["eunit", Path0|Deps]) ->
     MI = Mod:module_info(exports),
     case proplists:lookup(test, MI) of
         {test, 0} ->
-            io:format("eunit ~s: ", [Path0]),
-            eunit:test(Mod);
+            io:format("Eunit ~s:~n", [Path0]),
+            case eunit:test(Mod) of
+                ok -> ok;
+                error ->
+                    halt(2)
+            end;
         none ->
             ok
     end;
 
 main(Args) ->
-    erlang:error({unknown_args, Args}).
+    io:format("Unknown Args: ~p~n", [Args]),
+    io:format("release~n"),
+    io:format("eunit Path0 Deps0 Deps1 Deps2~n"),
+    halt(1).

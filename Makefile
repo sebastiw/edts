@@ -33,6 +33,7 @@ deps/meck:
 	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
 	mkdir -p $@/ebin
 	@erlc -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
+	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
 	cp $@/src/meck.app.src $@/ebin/meck.app
 
 .PHONY: $(LIBS)
@@ -41,7 +42,7 @@ $(LIBS):
 
 .PHONY: eunit $(LIBS:%=test-%)
 eunit: $(LIBS:%=test-%)
-$(LIBS:%=test-%):
+$(LIBS:%=test-%): deps/meck
 	$(MAKE) -C $(@:test-%=%) ERLC_EXTRA_PATHS="$(realpath deps/mochiweb/ebin) $(realpath deps/meck/ebin)" MAKEFLAGS="$(MAKEFLAGS)" test
 
 .PHONY: clean
