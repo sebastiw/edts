@@ -32,7 +32,7 @@ deps/mochiweb:
 deps/meck:
 	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
 	mkdir -p $@/ebin
-	@erlc -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
+	@erlc +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
 	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
 	cp $@/src/meck.app.src $@/ebin/meck.app
 
@@ -47,27 +47,27 @@ $(LIBS:%=test-%): deps/meck
 
 .PHONY: clean
 clean: $(LIBS:%=clean-%)
-	rm -rfv elisp/*/*.elc rel deps .dialyzer_plt
+	rm -rfv elisp/*/*.elc rel deps edts.plt erlang.plt
 
 .PHONY: $(LIBS:%=clean-%)
 $(LIBS:%=clean-%):
 	$(MAKE) -C $(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: dialyzer
-dialyzer: .dialyzer_plt
-	$(DIALYZER) --add_to_plt -r lib/ deps/
+dialyzer: erlang.plt edts.plt
+	$(DIALYZER) --get_warnings -pa deps/meck/ebin --plt edts.plt -r lib/edts
 
-.dialyzer_plt:
-	$(DIALYZER) --build_plt --apps erts kernel stdlib sasl dialyzer tools inets crypto debugger wx
+erlang.plt:
+	$(DIALYZER) --build_plt --output_plt $@ --apps \
+		erts kernel stdlib sasl compiler syntax_tools runtime_tools \
+		mnesia ssl public_key dialyzer tools inets crypto debugger wx \
+		asn1 \
+		eunit tools xmerl
+edts.plt: erlang.plt
+	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 
 .PHONY: test
 test: eunit dialyzer integration-tests ert
-
-
-
-
-
-
 
 .PHONY: integration-tests
 integration-tests: all test-projects

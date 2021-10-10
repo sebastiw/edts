@@ -78,7 +78,7 @@
 %% the path using edts_util:shorten_path/1, which means symbolic links could
 %% cause duplicate paths to be added.
 %% @end
--spec add_path(filename:filename()) -> code:add_path_ret().
+-spec add_path(file:filename()) -> true | {error, bad_directory}.
 %%------------------------------------------------------------------------------
 add_path(Path) -> code:add_patha(edts_util:shorten_path(Path)).
 
@@ -87,7 +87,7 @@ add_path(Path) -> code:add_patha(edts_util:shorten_path(Path)).
 %% @doc
 %% Call add_path/1 for each path in Paths.
 %% @end
--spec add_paths([filename:filename()]) -> ok.
+-spec add_paths([file:filename()]) -> ok.
 %%------------------------------------------------------------------------------
 add_paths(Paths) -> lists:foreach(fun add_path/1, Paths).
 
@@ -120,15 +120,20 @@ compile_and_load(Module) ->
         {error, term()}.
 %%------------------------------------------------------------------------------
 compile_and_load(Module, Opts) when is_atom(Module)->
-  File = proplists:get_value(source, Module:module_info(compile)),
-  compile_and_load(File, Opts);
+  case catch Module:module_info(compile) of
+    {'EXIT', {undef, _}} ->
+      {error, {undef, Module}};
+    CompileInfo ->
+      File = proplists:get_value(source, CompileInfo),
+      compile_and_load(File, Opts)
+  end;
 compile_and_load(File0, Opts) ->
-  {ok, Cwd}   = file:get_cwd(),
+  {ok, Cwd} = file:get_cwd(),
   File = case lists:prefix(Cwd, File0) of
            true  -> lists:nthtail(length(Cwd) + 1, File0);
            false -> File0
          end,
-  OutDir  = get_compile_outdir(File0),
+  OutDir = get_compile_outdir(File0),
   reload_if_modified(File0, OutDir),
   OldOpts = extract_compile_opts(File),
 
@@ -489,7 +494,7 @@ ensure_module_loaded(Reload, Mod) ->
 %% Returns true if the module was (re)loaded, false otherwise.
 %% @end
 -spec ensure_module_loaded(Mod    :: module(),
-                           File   :: filename:filename(),
+                           File   :: file:filename(),
                            Reload :: boolean()) -> boolean().
 %%------------------------------------------------------------------------------
 ensure_module_loaded(Mod, File, Reload) ->

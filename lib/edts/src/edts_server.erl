@@ -81,10 +81,10 @@ start_link() ->
 %%
 -spec init_node(ProjectName  :: string(),
                 Node         :: node(),
-                ProjectRoot  :: filename:filename(),
-                LibDirs      :: [filename:filename()],
-                AppInclDirs  :: [filename:filename()],
-                SysInclDirs  :: [filename:filename()],
+                ProjectRoot  :: file:filename(),
+                LibDirs      :: [file:filename()],
+                AppInclDirs  :: [file:filename()],
+                SysInclDirs  :: [file:filename()],
                 ErlangCookie :: string()) -> ok.
 %%------------------------------------------------------------------------------
 init_node(ProjectName,
@@ -266,10 +266,10 @@ code_change(_OldVsn, State, _Extra) ->
 %% @end
 -spec do_init_node(ProjectName    :: string(),
                    Node           :: node(),
-                   ProjectRoot    :: filename:filename(),
-                   LibDirs        :: [filename:filename()],
-                   AppIncludeDirs :: [filename:filename()],
-                   SysIncludeDirs :: [filename:filename()],
+                   ProjectRoot    :: file:filename(),
+                   LibDirs        :: [file:filename()],
+                   AppIncludeDirs :: [file:filename()],
+                   SysIncludeDirs :: [file:filename()],
                    ErlangCookie   :: string()) ->
         ok | {error, term()}.
 %%------------------------------------------------------------------------------

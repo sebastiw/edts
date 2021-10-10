@@ -512,8 +512,8 @@ teardown_eunit() ->
   application:set_env(edts_xref, file_backend, file).
 
 compile_and_add_test_modules() ->
-  TestDir = code:lib_dir(edts, 'test'),
-  EbinDir = code:lib_dir(edts, 'ebin'),
+  TestDir = code:lib_dir(edts_xref, 'test_data'),
+  EbinDir = code:lib_dir(edts_xref, 'ebin'),
   true    = code:add_patha(EbinDir),
   compile_and_add_test_module(TestDir, EbinDir, edts_test_module),
   compile_and_add_test_module(TestDir, EbinDir, edts_test_module2).

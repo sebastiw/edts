@@ -53,10 +53,10 @@
 %%
 -spec init_node(ProjectName    :: string(),
                 Node           :: node(),
-                ProjectRoot    :: filename:filename(),
-                LibDirs        :: [filename:filename()],
-                AppIncludeDirs :: [filename:filename()],
-                SysIncludeDirs :: [filename:filename()],
+                ProjectRoot    :: file:filename(),
+                LibDirs        :: [file:filename()],
+                AppIncludeDirs :: [file:filename()],
+                SysIncludeDirs :: [file:filename()],
                 ErlangCookie   :: string()) -> ok.
 %%------------------------------------------------------------------------------
 init_node(ProjectName,

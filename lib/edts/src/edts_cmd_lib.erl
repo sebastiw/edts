@@ -41,8 +41,7 @@
 -record(enum_value,
         {name :: atom(),
          allowed_values = [] :: [atom()],
-         default_value :: atom(),
-         is_required = false :: boolean()}).
+         default_value :: atom()}).
 
 %%%_* Types ====================================================================
 
@@ -102,16 +101,7 @@ validate(Ctx0, Keys) ->
 validate_key(Key, Ctx) ->
   case (term_to_validate(Key))(Ctx) of
     {ok, Value} ->
-      Name = case Key of
-               Key when is_atom(Key) ->
-                 Key;
-               {_Type, Key0} when is_atom(Key0) ->
-                 Key0;
-               {_Type, Props} when is_list(Props) ->
-                 {ok, N} = edts_util:assoc(name, Props),
-                 N
-             end,
-      orddict:store(Name, Value, Ctx);
+      orddict:store(Key, Value, Ctx);
     {error, Rsn} ->
       ?LOG_ERROR("API input validation failed. Key ~p, Rsn: ~p",
                  [Key, Rsn]),
@@ -148,8 +138,7 @@ term_to_validate(info_level) ->
   fun(Ctx) ->
       enum_validate(Ctx, #enum_value{name = info_level,
                                      allowed_values = [basic, detailed],
-                                     default_value = basic,
-                                     is_required = false})
+                                     default_value = basic})
   end;
 term_to_validate(module) ->
   fun module_validate/1;
@@ -246,12 +235,10 @@ dirs_validate(Ctx, QsKey) ->
 enum_validate(Ctx, Props) ->
   Name = Props#enum_value.name,
   Allowed = Props#enum_value.allowed_values,
-  Required = Props#enum_value.is_required,
   case orddict:find(Name, Ctx) of
-    error when Required -> {error, {not_found, Name}};
-    error               ->
+    error ->
       {ok, Props#enum_value.default_value};
-    {ok, V}                       ->
+    {ok, V} ->
       Atom = list_to_atom(V),
       case lists:member(Atom, Allowed) of
         true  -> {ok, Atom};
@@ -265,7 +252,7 @@ enum_validate(Ctx, Props) ->
 %% Validate path to a file.
 %% @end
 -spec file_validate(orddict:orddict()) ->
-        {ok, filename:filename()} |
+        {ok, file:filename()} |
         {error, {no_exists, string()}} |
         {error, notfound}.
 %%------------------------------------------------------------------------------
