@@ -1,5 +1,5 @@
 ERLC := erlc
-ERLC_OPTIONS ?= $(if $(filter test,$(MAKECMDGOALS)),+debug_info -DTEST,)
+ERLC_OPTIONS ?= $(if $(filter test,$(MAKECMDGOALS)),+debug_info -DTEST,+debug_info)
 ERLC_EXTRA_PATHS ?=
 ERLC_PATHS := ../edts/ebin ebin $(ERLC_EXTRA_PATHS)
 
