@@ -1,15 +1,16 @@
 # MAKEFLAGS = -s
 LIBS = $(wildcard lib/*)
-EMACS ?= emacs
-ERL ?= erl
 MKDIR ?= mkdir
 MKDIR_FLAGS ?= "-p"
 GIT ?= git
 GIT_CMD ?= clone
+
+# For Testing
+ERL ?= erl
+EMACS ?= emacs
 DIALYZER ?= dialyzer
 DOCKER ?= docker
-
-ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
+ERL_PATH ?= $(subst /bin/erl,,$(shell which $(ERL)))
 ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
 
 all: compile release
@@ -22,7 +23,7 @@ release: | rel
 	./edts-escript release
 
 rel:
-	mkdir -p rel/releases
+	$(MKDIR) $(MKDIR_FLAGS) rel/releases
 
 deps/mochiweb:
 	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" $@
@@ -31,7 +32,7 @@ deps/mochiweb:
 	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 deps/meck:
 	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
-	mkdir -p $@/ebin
+	$(MKDIR) $(MKDIR_FLAGS) $@/ebin
 	@erlc +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
 	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
 	cp $@/src/meck.app.src $@/ebin/meck.app
