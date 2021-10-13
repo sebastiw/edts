@@ -45,7 +45,7 @@
 
 %%%_* Includes =================================================================
 
--include_lib("kernel/include/logger.hrl").
+-include_lib("edts/include/logger.hrl").
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
