@@ -24,7 +24,7 @@ $(APP_TARGET): | $(OUT_DIR)
 $(OUT_DIR)/%.app: src/%.app.src
 	cp $< $@
 $(OUT_DIR)/%.beam: src/%.erl
-	$(ERLC) $(ERLC_OPTIONS) $(foreach path,$(subst :, ,$(ERLC_PATHS)),-pa $(path)) -o $(OUT_DIR) $<
+	$(ERLC) $(ERLC_OPTIONS) -I ../edts/include $(foreach path,$(subst :, ,$(ERLC_PATHS)),-pa $(path)) -o $(OUT_DIR) $<
 
 $(OUT_DIR):
 	mkdir -p ebin

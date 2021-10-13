@@ -27,6 +27,7 @@
 
 %%%_* Includes =================================================================
 
+-include("otp_workarounds.hrl").
 -include_lib("edts/include/logger.hrl").
 
 %%%_* Exports ==================================================================
@@ -217,13 +218,13 @@ fmt_event_info(Class, Type, Info, Formatters) ->
 
 safe_fmt_event_info(Fmt, Class, Type, Info) ->
   try Fmt:format_info(Class, Type, Info)
-  catch C:E:S ->
+  catch ?EXCEPTION(C,E,S) ->
       ?LOG_ERROR("edts_event: Formatter ~p failed with ~p:~p.~n"
                  "Class: ~p~n"
                  "Type: ~p~n"
                  "Info: ~p~n"
                  "Stacktrace: ~p~n",
-                 [C, E, Fmt, Class, Type, Info, S]),
+                 [C, E, Fmt, Class, Type, Info, ?GET_STACK(S)]),
       Info
   end.
 

@@ -28,6 +28,7 @@
 
 %%%_* Includes =================================================================
 
+-include("otp_workarounds.hrl").
 -include_lib("edts/include/logger.hrl").
 
 %%%_* Defines ==================================================================
@@ -61,12 +62,12 @@ handle_request(Req) ->
         http_error(Req, method_not_allowed, [])
     end
   catch
-    Class:Reason:Stack ->
+    ?EXCEPTION(Class,Reason,Stack) ->
       http_error(Req,
                  internal_server_error,
                  [{class, format_term(Class)},
                   {reason, format_term(Reason)},
-                  {stack_trace, format_term(Stack)}])
+                  {stack_trace, format_term(?GET_STACK(Stack))}])
   end.
 
 format_term(Term) ->

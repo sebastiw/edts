@@ -45,6 +45,7 @@
 
 %%%_* Includes =================================================================
 
+-include("otp_workarounds.hrl").
 -include_lib("edts/include/logger.hrl").
 
 -ifdef(TEST).
@@ -316,10 +317,9 @@ do_init_node(ProjectName,
     edts_dist:init_node(Node, AppEnv),
 
     start_services(Node, [edts_code] ++ PluginRemoteServices)
-  catch
-    C:E:S ->
+  catch ?EXCEPTION(C,E,S) ->
       ?LOG_ERROR("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
-                 [Node, C, E, S]),
+                 [Node, C, E, ?GET_STACK(S)]),
       {error, E}
   end.
 

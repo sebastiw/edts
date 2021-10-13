@@ -1,5 +1,5 @@
 # MAKEFLAGS = -s
-LIBS = $(wildcard lib/*)
+LIBS = lib/edts lib/edts_debug lib/edts_dialyzer lib/edts_xref
 MKDIR ?= mkdir
 MKDIR_FLAGS ?= "-p"
 GIT ?= git
@@ -19,10 +19,10 @@ all: compile release
 compile: $(LIBS) | deps/mochiweb
 
 .PHONY: release
-release: | rel
+release: rel/releases
 	./edts-escript release
 
-rel:
+rel/releases:
 	$(MKDIR) $(MKDIR_FLAGS) rel/releases
 
 deps/mochiweb:

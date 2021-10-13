@@ -30,7 +30,7 @@ $(APP_TARGET): | $(OUT_DIR)
 $(OUT_DIR)/%.app: src/%.app.src
 	cp $< $@
 $(OUT_DIR)/%.beam: %.erl
-	$(ERLC) $(ERLC_OPTIONS) $(foreach path,$(ERLC_PATHS),-pa $(path)) -o $(OUT_DIR) $<
+	$(ERLC) $(ERLC_OPTIONS) -I include $(foreach path,$(ERLC_PATHS),-pa $(path)) -o $(OUT_DIR) $<
 
 $(OUT_DIR):
 	mkdir -p ebin
