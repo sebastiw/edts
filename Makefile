@@ -59,11 +59,9 @@ dialyzer: erlang.plt edts.plt
 	$(DIALYZER) --get_warnings -pa deps/meck/ebin --plt edts.plt -r lib/edts
 
 erlang.plt:
-	$(DIALYZER) --build_plt --output_plt $@ --apps \
-		erts kernel stdlib sasl compiler syntax_tools runtime_tools \
-		mnesia ssl public_key dialyzer tools inets crypto debugger wx \
-		asn1 \
-		eunit tools xmerl
+	$(DIALYZER) --quiet --build_plt --output_plt $@ --apps \
+		erts kernel stdlib mnesia crypto sasl eunit \
+		syntax_tools compiler tools debugger dialyzer
 edts.plt: erlang.plt
 	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 

@@ -227,24 +227,26 @@ remote_load_module(Node, Mod) ->
       ok
   end,
   case lists:keyfind(Mod, 1, code:all_loaded()) of
-    false -> erlang:error({not_loaded, Mod});
+    false ->
+      erlang:error({not_loaded, Mod});
     {_, FileBeam} ->
       ModInfo = Mod:module_info(compile),
+      CompileOpts = proplists:get_value(options, ModInfo, []),
       case proplists:get_value(source, ModInfo) of
         undefined ->
           case filelib:find_source(FileBeam) of
             {ok, File} ->
-              remote_compile_and_load(Node, File);
+              remote_compile_and_load(Node, File, CompileOpts);
             {error, not_found} ->
               erlang:error({not_found, Mod})
           end;
         File ->
-          remote_compile_and_load(Node, File)
+          remote_compile_and_load(Node, File, CompileOpts)
       end
   end.
 
-remote_compile_and_load(Node, File) ->
-  {ok, Mod, Bin} = remote_compile_module(Node, File),
+remote_compile_and_load(Node, File, CompileOpts) ->
+  {ok, Mod, Bin} = remote_compile_module(Node, File, CompileOpts),
   {module, Mod}  = remote_load_module(Node, Mod, Bin).
 
 %%------------------------------------------------------------------------------
@@ -284,8 +286,8 @@ remote_load_module(Node, Mod, Bin) ->
   end.
 
 
-remote_compile_module(Node, File) ->
-  Opts = [{d, namespaced_types}, debug_info, binary, return_errors],
+remote_compile_module(Node, File, ExtraCompileOpts) ->
+  Opts = [{d, namespaced_types}, debug_info, binary, return_errors|ExtraCompileOpts],
   case call(Node, compile, file, [File, Opts]) of
     {ok, _, _} = Res      -> Res;
     {error, Rsns, _Warns0} ->

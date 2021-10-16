@@ -7,9 +7,18 @@ main(["release"]) ->
 	{ok, Spec} = reltool:get_target_spec(Conf),
 	reltool:eval_target_spec(Spec, code:root_dir(), "rel");
 
-main(["eunit", Path0|Deps]) ->
-    Ebin = filename:join(filename:dirname(filename:dirname(Path0)), "ebin"),
+main(["eunit", Ebin|Deps]) ->
+    Beams = filelib:wildcard(filename:join(Ebin, "*.beam")),
     [true = code:add_path(D) || D <- [Ebin|Deps]],
+    [test_one(B) || B <- Beams];
+
+main(Args) ->
+    io:format("Unknown Args: ~p~n", [Args]),
+    io:format("release~n"),
+    io:format("eunit EbinPathToTest Deps0 Deps1 Deps2~n"),
+    halt(1).
+
+test_one(Path0) ->
     Mod = list_to_atom(filename:basename(Path0, ".beam")),
     MI = Mod:module_info(exports),
     case proplists:lookup(test, MI) of
@@ -22,10 +31,4 @@ main(["eunit", Path0|Deps]) ->
             end;
         none ->
             ok
-    end;
-
-main(Args) ->
-    io:format("Unknown Args: ~p~n", [Args]),
-    io:format("release~n"),
-    io:format("eunit Path0 Deps0 Deps1 Deps2~n"),
-    halt(1).
+    end.
