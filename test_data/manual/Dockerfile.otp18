@@ -8,8 +8,8 @@ RUN apt-get update && \
       build-essential emacs git && \
     rm -rf /var/lib/apt/lists/*
 
-ENV ERLANG_VERSION=19.3 \
-    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-2.9.1/emacs"
+ENV ERLANG_VERSION=18.3 \
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-2.8.3/emacs"
 
 RUN . /etc/lsb-release && \
     export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${DISTRIB_CODENAME}_amd64.deb" && \

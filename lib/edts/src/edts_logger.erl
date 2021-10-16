@@ -33,6 +33,9 @@ set(error) ->
 set(A) ->
     ?LOG_WARNING("Unknown log_level ~p: specify debug | info | warning | error", [A]).
 
+location(#{file := File, mfa := {M, undefined, -1}, line := Line}) ->
+    [atom_to_list(M),
+     $(, File, $:, integer_to_list(Line), $)];
 location(#{file := File, mfa := {M, F, A}, line := Line}) ->
     [atom_to_list(M), $:, atom_to_list(F), $/, integer_to_list(A),
      $(, File, $:, integer_to_list(Line), $)].

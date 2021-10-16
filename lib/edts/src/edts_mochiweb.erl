@@ -29,7 +29,7 @@
 %%%_* Includes =================================================================
 
 -include("otp_workarounds.hrl").
--include_lib("edts/include/logger.hrl").
+-include("logger.hrl").
 
 %%%_* Defines ==================================================================
 

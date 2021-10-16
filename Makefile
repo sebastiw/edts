@@ -12,6 +12,7 @@ DIALYZER ?= dialyzer
 DOCKER ?= docker
 ERL_PATH ?= $(subst /bin/erl,,$(shell which $(ERL)))
 export ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
+OTP_TESTS = $(patsubst test_data/manual/Dockerfile.%,%,$(wildcard test_data/manual/Dockerfile.*))
 
 all: compile release
 
@@ -65,8 +66,9 @@ erlang.plt:
 edts.plt: erlang.plt
 	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 
-.PHONY: test
+.PHONY: test manual-tests
 test: eunit dialyzer integration-tests ert
+manual-tests: $(OTP_TESTS) byte-compilation-test
 
 .PHONY: integration-tests
 integration-tests: all test-projects
@@ -84,6 +86,10 @@ ert: test-projects
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
+.PHONY: test-projects
+test-projects:
+	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
+
 .PHONY: byte-compilation-test
 byte-compilation-test:
 	$(DOCKER) run -it --rm \
@@ -99,6 +105,6 @@ byte-compilation-test:
 	'emacs -Q --batch -L ${PWD} -l test_data/package-install-deps.el \
 	-f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el'
 
-.PHONY: test-projects
-test-projects:
-	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
+.PHONY: $(OTP_TESTS)
+$(OTP_TESTS):
+	$(DOCKER) build -f test_data/manual/Dockerfile.$@ .

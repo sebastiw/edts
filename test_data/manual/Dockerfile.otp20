@@ -13,7 +13,7 @@ ENV ERLANG_VERSION=20.3.8.26 \
 
 RUN . /etc/os-release && \
     export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${VERSION_CODENAME}_amd64.deb" && \
-    wget "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
+    wget -q "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
     dpkg -i $FILE && \
     rm $FILE
 
