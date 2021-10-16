@@ -2,8 +2,8 @@
 %% -*- erlang -*-
 %%! -sname edts-helper
 
-main(["release"]) ->
-	{ok, Conf} = file:consult("edts.config"),
+main(["release", ReleaseConfig]) ->
+	{ok, Conf} = file:consult(ReleaseConfig),
 	{ok, Spec} = reltool:get_target_spec(Conf),
 	reltool:eval_target_spec(Spec, code:root_dir(), "rel");
 
@@ -14,7 +14,7 @@ main(["eunit", Ebin|Deps]) ->
 
 main(Args) ->
     io:format("Unknown Args: ~p~n", [Args]),
-    io:format("release~n"),
+    io:format("release ReleaseConfig~n"),
     io:format("eunit EbinPathToTest Deps0 Deps1 Deps2~n"),
     halt(1).
 

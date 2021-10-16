@@ -20,7 +20,7 @@ compile: $(LIBS) | deps/mochiweb
 
 .PHONY: release
 release: rel/releases
-	./edts-escript release
+	./edts-escript release edts-release.config
 
 rel/releases:
 	$(MKDIR) $(MKDIR_FLAGS) rel/releases
