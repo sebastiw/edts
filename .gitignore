@@ -15,3 +15,4 @@ rebar3
 **/ebin
 rel/
 deps/
+*.tmp
