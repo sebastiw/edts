@@ -11,7 +11,7 @@ EMACS ?= emacs
 DIALYZER ?= dialyzer
 DOCKER ?= docker
 ERL_PATH ?= $(subst /bin/erl,,$(shell which $(ERL)))
-ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
+export ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
 
 all: compile release
 
@@ -70,7 +70,6 @@ test: eunit dialyzer integration-tests ert
 
 .PHONY: integration-tests
 integration-tests: all test-projects
-	echo "$(EMACS) -Q --batch -L $(ERLANG_EMACS_LIB) -l test_data/load-tests.el --debug-init"
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \

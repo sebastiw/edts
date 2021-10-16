@@ -1,0 +1,25 @@
+FROM ubuntu:14.04
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update && \
+    apt-get install -yq \
+      wget libwxbase2.8-0 libwxgtk2.8-0 libsctp1 \
+      build-essential emacs git && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ERLANG_VERSION=19.3 \
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-2.9.1/emacs"
+
+RUN . /etc/lsb-release && \
+    export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${DISTRIB_CODENAME}_amd64.deb" && \
+    wget "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
+    dpkg -i $FILE && \
+    rm $FILE
+
+WORKDIR /edts
+
+COPY . .
+
+RUN make && \
+    make test

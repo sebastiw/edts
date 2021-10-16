@@ -13,6 +13,7 @@
 ## License ##
 Copyright (C) 2012 by Thomas Järvstrand, Håkan Nilsson
               2013 by Thomas Järvstrand
+              2020 by Sebastian Weddmark Olsson
 
 EDTS is licensed under the Lesser Gnu General Public License. See COPYING.LESSER
 for details.
@@ -44,26 +45,21 @@ For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
 #### Support:
 
-For questions or support, please sign up for the [EDTS mailing list](https://groups.google.com/forum/#!forum/erlangdevelopmenttoolsuite)
-
 Please use the Github issue tracker to report bugs.
 
 #### Requirements:
   - Emacs 24 or later
 
 #### First of all, ensure your environment is setup correctly:
-  - You will need make and Erlang installed or the package installation will
-fail.
-  - You will also need both elpa and melpa package repositories added to your
-sources. Add these lines to your .emacs:
-    - ```(add-to-list 'package-archives '("elpa" . "http://elpa.gnu.org/packages/"))```
-    - ```(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))```
-    - ```(add-to-list 'package-archives '("marmalade" . "http://marmalade-repo.org/packages/"))```
-
+  - You will need make and Erlang installed or the package
+    installation will fail.
+  - You will also need both elpa and melpa package repositories added
+    to your sources. Add these lines to your .emacs:
+    - `(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))`
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:
-```M-x package-install RET edts RET```
+`M-x package-install RET edts RET`
 
 #### Make sure EDTS gets loaded in your .emacs:
 An easy way is to load edts-start:
@@ -258,12 +254,11 @@ of EDTS' `after-save-hook`. The issue does not exist in Emacs 24.
 
 If you're using proxy server, you have to make sure that the proxy is not used
 for communicating with EDTS:
-```(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))```
+`(add-to-list 'url-proxy-services '("no_proxy" . "0:4587"))`
 
 ## Setup edts from source instructions ##
 
-To setup from source (assuming that you have rebar3 installed and
-added to your PATH), you first need to clone and compile edts:
+To setup from source you first need to clone and compile edts:
 
 
 ```bash
@@ -282,7 +277,3 @@ load-path. Add to your `.emacs.d` or `init.el` file:
 (defun my-after-init-hook ()
   (require 'edts-start))
 ```
-
-With this edts fork the .edts file shouldn't be need. Just ensure that
-you have compiled first your rebar3 project and start emacs.
-

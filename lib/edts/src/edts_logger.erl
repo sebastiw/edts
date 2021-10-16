@@ -34,4 +34,5 @@ set(A) ->
     ?LOG_WARNING("Unknown log_level ~p: specify debug | info | warning | error", [A]).
 
 location(#{file := File, mfa := {M, F, A}, line := Line}) ->
-    [M, $:, F, $/, A, $(, File, $:, Line, $)].
+    [atom_to_list(M), $:, atom_to_list(F), $/, integer_to_list(A),
+     $(, File, $:, integer_to_list(Line), $)].

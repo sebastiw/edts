@@ -221,8 +221,8 @@ remote_load_module(Node, Mod) ->
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
   case code:ensure_loaded(Mod) of
-    {error, Err} ->
-      erlang:error({error, Err});
+    {error, Err0} ->
+      erlang:error({error, Err0});
     _ ->
       ok
   end,
@@ -234,16 +234,29 @@ remote_load_module(Node, Mod) ->
       CompileOpts = proplists:get_value(options, ModInfo, []),
       case proplists:get_value(source, ModInfo) of
         undefined ->
-          case filelib:find_source(FileBeam) of
+          case find_src(FileBeam) of
             {ok, File} ->
               remote_compile_and_load(Node, File, CompileOpts);
-            {error, not_found} ->
-              erlang:error({not_found, Mod})
+            {error, Err1} ->
+              erlang:error({Err1, Mod})
           end;
         File ->
           remote_compile_and_load(Node, File, CompileOpts)
       end
   end.
+
+-ifdef(OTP_RELEASE). % OTP-20+
+find_src(FileBeam) ->
+  filelib:find_source(FileBeam).
+-else.
+find_src(FileBeam) ->
+  case filename:find_src(FileBeam) of
+    {error, {Err, _}} ->
+      {error, Err};
+    {File, _} ->
+      {ok, File}
+  end.
+-endif.
 
 remote_compile_and_load(Node, File, CompileOpts) ->
   {ok, Mod, Bin} = remote_compile_module(Node, File, CompileOpts),
