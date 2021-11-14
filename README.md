@@ -55,7 +55,7 @@ Please use the Github issue tracker to report bugs.
     installation will fail.
   - You will also need both elpa and melpa package repositories added
     to your sources. Add these lines to your .emacs:
-    - `(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))`
+    - `(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)`
   - Make sure your code is compiled with the debug_info option set.
 
 #### Get EDTS:

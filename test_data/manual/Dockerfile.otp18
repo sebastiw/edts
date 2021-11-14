@@ -2,8 +2,8 @@ FROM ubuntu:14.04
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt-get update && \
-    apt-get install -yq \
+RUN apt-get -q update && \
+    apt-get -yq install \
       wget libwxbase2.8-0 libwxgtk2.8-0 libsctp1 \
       build-essential emacs git && \
     rm -rf /var/lib/apt/lists/*

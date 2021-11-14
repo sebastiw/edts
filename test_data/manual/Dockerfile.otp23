@@ -1,0 +1,34 @@
+FROM ubuntu:20.04
+
+SHELL ["/bin/bash", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get -q update && \
+    apt-get -yq install \
+      wget libncurses5 libwxgtk3.0-gtk3-0v5 libwxbase3.0-0v5 libsctp1 \
+      build-essential emacs git && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ERLANG_VERSION=23.2.3 \
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-3.4.2/emacs"
+
+RUN . /etc/os-release && \
+    export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${VERSION_CODENAME}_amd64.deb" && \
+    wget -q "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
+    dpkg -i $FILE && \
+    rm $FILE
+
+RUN mkdir -p ~/.emacs.d/elpa/gnupg && \
+    chmod 700 ~/.emacs.d/elpa/gnupg && \
+    echo "disable-ipv6" > ~/.emacs.d/elpa/gnupg/dirmngr.conf && \
+    gpg --keyserver keyserver.ubuntu.com \
+        --homedir ~/.emacs.d/elpa/gnupg \
+        --receive-keys 066DAFCB81E42C40
+
+WORKDIR /edts
+
+COPY . .
+
+RUN make && \
+    make test

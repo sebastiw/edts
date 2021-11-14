@@ -1,7 +1,7 @@
 ERLC := erlc
 ERLC_OPTIONS ?= $(if $(filter test,$(MAKECMDGOALS)),+debug_info -DTEST,+debug_info)
 ERLC_EXTRA_PATHS ?=
-ERLC_PATHS := ../edts/ebin ebin $(ERLC_EXTRA_PATHS)
+ERLC_PATHS := $(realpath ../edts/ebin) ebin $(ERLC_EXTRA_PATHS)
 
 OUT_DIR := ebin
 
@@ -10,11 +10,16 @@ APP_SOURCES := $(wildcard src/*.app.src)
 APP_TARGET := $(patsubst src/%.app.src,$(OUT_DIR)/%.app,$(APP_SOURCES))
 BEAM_FIRST_TARGETS :=
 BEAM_TARGETS := $(filter-out $(BEAM_FIRST_TARGETS), $(patsubst src/%.erl,$(OUT_DIR)/%.beam,$(ERL_SOURCES)))
+TEST_TARGETS := $(OUT_DIR)
 
 all: $(BEAM_FIRST_TARGETS) | $(BEAM_TARGETS) $(APP_TARGET)
 
 .PHONY: test clean
-test: all
+test: all $(TEST_TARGETS:%=eunit-%)
+
+$(TEST_TARGETS:%=eunit-%):
+	../../edts-escript eunit $(realpath $(@:eunit-%=%)) $(ERLC_PATHS)
+
 clean:
 	rm -rfv ebin
 

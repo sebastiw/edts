@@ -7,6 +7,7 @@ GIT_CMD ?= clone
 
 # For Testing
 ERL ?= erl
+ERLC ?= erlc
 EMACS ?= emacs
 DIALYZER ?= dialyzer
 DOCKER ?= docker
@@ -34,7 +35,7 @@ deps/mochiweb:
 deps/meck:
 	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
 	$(MKDIR) $(MKDIR_FLAGS) $@/ebin
-	@erlc +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
+	$(ERLC) +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
 	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
 	cp $@/src/meck.app.src $@/ebin/meck.app
 
@@ -49,7 +50,7 @@ $(LIBS:%=test-%): deps/meck
 
 .PHONY: clean
 clean: $(LIBS:%=clean-%)
-	rm -rfv elisp/*/*.elc rel deps edts.plt erlang.plt
+	rm -rfv *.elc elisp/*/*.elc rel deps edts.plt erlang.plt
 
 .PHONY: $(LIBS:%=clean-%)
 $(LIBS:%=clean-%):

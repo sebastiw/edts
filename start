@@ -26,6 +26,8 @@ APP_DIR=$EDTS_HOME/lib
 
 cd "$EDTS_HOME"
 
+test -f $EDTS || ./edts-escript release edts-release.config
+
 exec $EDTS \
     -edts project_data_dir "\"$PROJ_DIR\"" \
     -edts plugin_dir "\"$APP_DIR\"" \

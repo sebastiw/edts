@@ -20,6 +20,7 @@ test: | all $(TEST_TARGETS:%=eunit-%)
 
 $(TEST_TARGETS:%=eunit-%):
 	../../edts-escript eunit $(realpath $(@:eunit-%=%)) $(ERLC_PATHS)
+
 clean:
 	rm -rfv ebin
 

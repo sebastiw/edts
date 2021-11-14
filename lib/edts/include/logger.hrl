@@ -1,10 +1,14 @@
 
--ifndef(FUNCTION_NAME). %% OTP-19+
--define(FUNCTION_NAME, undefined).
+-ifdef(FUNCTION_NAME). %% OTP-19+
+-define(FUN_NAME, ?FUNCTION_NAME).
+-else.
+-define(FUN_NAME, undefined).
 -endif.
 
--ifndef(FUNCTION_ARITY). %% OTP-19+
--define(FUNCTION_ARITY, -1).
+-ifdef(FUNCTION_ARITY). %% OTP-19+
+-define(FUN_ARITY, ?FUNCTION_ARITY).
+-else.
+-define(FUN_ARITY, -1).
 -endif.
 
 -define(LOG_ERROR(Args), ?DO_LOG(error, "%s", Args)).
@@ -13,7 +17,7 @@
 -define(LOG_INFO(Fmt, Args), ?DO_LOG(info, Fmt, Args)).
 -define(LOG_DEBUG(Fmt, Args), ?DO_LOG(debug, Fmt, Args)).
 
--define(LOCATION, #{mfa => {?MODULE, ?FUNCTION_NAME, ?FUNCTION_ARITY},
+-define(LOCATION, #{mfa => {?MODULE, ?FUN_NAME, ?FUN_ARITY},
                     line => ?LINE,
                     file => ?FILE}).
 
