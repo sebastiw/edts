@@ -10,6 +10,9 @@
 
                     -- The Erlang Development Tool Suite --
 
+[![Build Status](https://github.com/sebastiw/edts/actions/workflows/test.yaml/badge.svg)](https://github.com/sebastiw/edts/actions)
+[![MELPA](https://melpa.org/packages/edts-badge.svg)](https://melpa.org/#/edts)
+
 ## License ##
 Copyright (C) 2012 by Thomas Järvstrand, Håkan Nilsson
               2013 by Thomas Järvstrand
