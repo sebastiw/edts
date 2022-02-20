@@ -25,8 +25,6 @@
 
 -behaviour(supervisor).
 
--include_lib("eunit/include/eunit.hrl").
-
 %% API
 -export([start_link/0]).
 
@@ -50,7 +48,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-  Mochiweb        = child_spec(edts_mochiweb),
+  RestServer      = child_spec(edts_mochiweb),
   Edts            = child_spec(edts_server),
 
   Formatters0     = lists:flatmap(fun edts_plugins:event_formatters/1,
@@ -63,7 +61,7 @@ init([]) ->
                                   edts_plugins:names()),
   PluginSpecs     = [child_spec(Plugin) || Plugin <- PluginServices],
 
-  Children = [EdtsEvent, Edts, Mochiweb] ++ PluginSpecs,
+  Children = [EdtsEvent, Edts, RestServer] ++ PluginSpecs,
   {ok, { {one_for_one, 5, 10}, Children} }.
 
 

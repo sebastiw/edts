@@ -45,7 +45,8 @@
 
 %%%_* Includes =================================================================
 
--include_lib("kernel/include/logger.hrl").
+-include("otp_workarounds.hrl").
+-include("logger.hrl").
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -81,10 +82,10 @@ start_link() ->
 %%
 -spec init_node(ProjectName  :: string(),
                 Node         :: node(),
-                ProjectRoot  :: filename:filename(),
-                LibDirs      :: [filename:filename()],
-                AppInclDirs  :: [filename:filename()],
-                SysInclDirs  :: [filename:filename()],
+                ProjectRoot  :: file:filename(),
+                LibDirs      :: [file:filename()],
+                AppInclDirs  :: [file:filename()],
+                SysInclDirs  :: [file:filename()],
                 ErlangCookie :: string()) -> ok.
 %%------------------------------------------------------------------------------
 init_node(ProjectName,
@@ -266,10 +267,10 @@ code_change(_OldVsn, State, _Extra) ->
 %% @end
 -spec do_init_node(ProjectName    :: string(),
                    Node           :: node(),
-                   ProjectRoot    :: filename:filename(),
-                   LibDirs        :: [filename:filename()],
-                   AppIncludeDirs :: [filename:filename()],
-                   SysIncludeDirs :: [filename:filename()],
+                   ProjectRoot    :: file:filename(),
+                   LibDirs        :: [file:filename()],
+                   AppIncludeDirs :: [file:filename()],
+                   SysIncludeDirs :: [file:filename()],
                    ErlangCookie   :: string()) ->
         ok | {error, term()}.
 %%------------------------------------------------------------------------------
@@ -316,10 +317,9 @@ do_init_node(ProjectName,
     edts_dist:init_node(Node, AppEnv),
 
     start_services(Node, [edts_code] ++ PluginRemoteServices)
-  catch
-    C:E:S ->
+  catch ?EXCEPTION(C,E,S) ->
       ?LOG_ERROR("~p initialization crashed with ~p:~p~nStacktrace:~n~p",
-                 [Node, C, E, S]),
+                 [Node, C, E, ?GET_STACK(S)]),
       {error, E}
   end.
 

@@ -1,62 +1,78 @@
-MAKEFLAGS = -s
-APPS = $(subst lib/,,$(wildcard lib/*))
-EUNIT_DIRS = $(subst $(empty) ,$(comma),$(wildcard lib/*/src))
-EMACS ?= "emacs"
-DOCKER ?= "docker"
-ERL_PATH ?= $(subst /bin/erl,,$(shell which erl))
-ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
+# MAKEFLAGS = -s
+LIBS = lib/edts lib/edts_debug lib/edts_dialyzer lib/edts_xref
+MKDIR ?= mkdir
+MKDIR_FLAGS ?= "-p"
+GIT ?= git
+GIT_CMD ?= clone
 
-REBAR3 ?= $(shell which rebar3)
-ifeq (,$(REBAR3))
-REBAR3 := $(CURDIR)/rebar3
-endif
+# For Testing
+ERL ?= erl
+ERLC ?= erlc
+EMACS ?= emacs
+DIALYZER ?= dialyzer
+DOCKER ?= docker
+ERL_PATH ?= $(subst /bin/erl,,$(shell which $(ERL)))
+export ERLANG_EMACS_LIB ?= $(wildcard $(ERL_PATH)/lib/tools*/emacs)
+OTP_TESTS = $(patsubst test_data/manual/Dockerfile.%,%,$(wildcard test_data/manual/Dockerfile.*))
 
-comma = ,
-
-.PHONY: all
 all: compile release
 
-$(REBAR3):
-	curl -LO https://s3.amazonaws.com/rebar3/rebar3
-	chmod a+x rebar3
-
 .PHONY: compile
-compile: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) compile
+compile: $(LIBS) | deps/mochiweb
 
 .PHONY: release
-release: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) release
+release: rel/releases
+	./edts-escript release edts-release.config
+
+rel/releases:
+	$(MKDIR) $(MKDIR_FLAGS) rel/releases
+
+deps/mochiweb:
+	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" $@
+	# reltool doesn't support unrecognized options
+	sed -i '/applications/{N; s/,$$// };/licenses/d;/links/d' $@/src/mochiweb.app.src
+	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
+deps/meck:
+	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
+	$(MKDIR) $(MKDIR_FLAGS) $@/ebin
+	$(ERLC) +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
+	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
+	cp $@/src/meck.app.src $@/ebin/meck.app
+
+.PHONY: $(LIBS)
+$(LIBS):
+	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
+
+.PHONY: eunit $(LIBS:%=test-%)
+eunit: $(LIBS:%=test-%)
+$(LIBS:%=test-%): deps/meck
+	$(MAKE) -C $(@:test-%=%) ERLC_EXTRA_PATHS="$(realpath deps/mochiweb/ebin) $(realpath deps/meck/ebin)" MAKEFLAGS="$(MAKEFLAGS)" test
 
 .PHONY: clean
-clean: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) clean
-	rm -rfv elisp/*/*.elc
+clean: $(LIBS:%=clean-%)
+	rm -rfv *.elc elisp/*/*.elc rel deps edts.plt erlang.plt
+
+.PHONY: $(LIBS:%=clean-%)
+$(LIBS:%=clean-%):
+	$(MAKE) -C $(@:clean-%=%) MAKEFLAGS="$(MAKEFLAGS)" clean
 
 .PHONY: dialyzer
-dialyzer: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) dialyzer
+dialyzer: erlang.plt edts.plt
+	$(DIALYZER) --get_warnings -pa deps/meck/ebin --plt edts.plt -r lib/edts
 
-.PHONY: test
-test: apps-test dialyzer integration-tests ert
+erlang.plt:
+	$(DIALYZER) --quiet --build_plt --output_plt $@ --apps \
+		erts kernel stdlib mnesia crypto sasl eunit \
+		syntax_tools compiler tools debugger dialyzer
+edts.plt: erlang.plt
+	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 
-.PHONY: apps-test
-apps-test: $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) do eunit --dir="$(EUNIT_DIRS)", ct
-
-.PHONY: $(APPS:%=test-%)
-$(APPS:%=test-%): $(REBAR3)
-	@echo "Using $(REBAR3)"
-	@$(REBAR3) do eunit --dir "$(wildcard lib/*/src)", ct
+.PHONY: test manual-tests
+test: eunit dialyzer integration-tests ert
+manual-tests: $(OTP_TESTS) byte-compilation-test
 
 .PHONY: integration-tests
 integration-tests: all test-projects
-	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
@@ -65,12 +81,15 @@ integration-tests: all test-projects
 
 .PHONY: ert
 ert: test-projects
-	@echo "Erlang Emacs path: " $(ERLANG_EMACS_LIB)
 	$(EMACS) -Q --batch \
 	-L $(ERLANG_EMACS_LIB) \
 	-l test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
+
+.PHONY: test-projects
+test-projects:
+	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
 
 .PHONY: byte-compilation-test
 byte-compilation-test:
@@ -87,6 +106,6 @@ byte-compilation-test:
 	'emacs -Q --batch -L ${PWD} -l test_data/package-install-deps.el \
 	-f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el'
 
-.PHONY: test-projects
-test-projects:
-	$(MAKE) -C test_data/edts-test-project-project-1 MAKEFLAGS="$(MAKEFLAGS)"
+.PHONY: $(OTP_TESTS)
+$(OTP_TESTS):
+	$(DOCKER) build -f test_data/manual/Dockerfile.$@ .

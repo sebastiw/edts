@@ -12,3 +12,7 @@ rebar.lock
 _build/
 rebar3
 *.coverdata
+**/ebin
+rel/
+deps/
+*.tmp

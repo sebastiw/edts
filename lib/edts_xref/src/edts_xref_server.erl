@@ -48,7 +48,26 @@
 
 -export_type([xref_check/0]).
 
--type xref_check() :: xref:analysis().
+-type xmfa() :: {module(), atom(), arity() | -1}.
+-type depr_flag() :: next_version | next_major_release | eventually.
+-type func_spec() :: xmfa() | [xmfa()].
+-type mod_spec() :: module() | [module()].
+-type app_spec() :: atom() | [atom()].
+-type rel_spec() :: atom() | [atom()].
+-type xref_check() :: undefined_function_calls | undefined_functions |
+                      locals_not_used | exports_not_used |
+                      deprecated_function_calls |
+                      {deprecated_function_calls, DeprFlag :: depr_flag()} |
+                      deprecated_functions |
+                      {deprecated_functions, DeprFlag :: depr_flag()} |
+                      {call, FuncSpec :: func_spec()} |
+                      {use, FuncSpec :: func_spec()} |
+                      {module_call, ModSpec :: mod_spec()} |
+                      {module_use, ModSpec :: mod_spec()} |
+                      {application_call, AppSpec :: app_spec()} |
+                      {application_use, AppSpec :: app_spec()} |
+                      {release_call, RelSpec :: rel_spec()} |
+                      {release_use, RelSpec :: rel_spec()}.
 
 %%%_* Includes =================================================================
 -ifdef(TEST).
@@ -159,7 +178,7 @@ get_state() ->
 %% @doc
 %% Do an xref-analysis of Module, applying Checks
 %% @end
--spec check_modules([Modules::module()], Checks::[xref:analysis()]) ->
+-spec check_modules([Modules::module()], Checks::[xref_check()]) ->
         [edts_code:issue()].
 %%------------------------------------------------------------------------------
 check_modules(Modules0, Checks) ->
@@ -512,8 +531,8 @@ teardown_eunit() ->
   application:set_env(edts_xref, file_backend, file).
 
 compile_and_add_test_modules() ->
-  TestDir = code:lib_dir(edts, 'test'),
-  EbinDir = code:lib_dir(edts, 'ebin'),
+  TestDir = code:lib_dir(edts_xref, 'test_data'),
+  EbinDir = code:lib_dir(edts_xref, 'ebin'),
   true    = code:add_patha(EbinDir),
   compile_and_add_test_module(TestDir, EbinDir, edts_test_module),
   compile_and_add_test_module(TestDir, EbinDir, edts_test_module2).

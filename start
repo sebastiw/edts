@@ -20,12 +20,15 @@
 ### along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ###############################################################################
 PROJ_DIR=${1:-"$HOME"}
-EDTS="_build/default/rel/edts/bin/edts console"
+EDTS="rel/bin/erl"
 EDTS_HOME="$(cd "$(dirname "$0")" >/dev/null && pwd -P)"
 APP_DIR=$EDTS_HOME/lib
 
 cd "$EDTS_HOME"
 
+test -f $EDTS || ./edts-escript release edts-release.config
+
 exec $EDTS \
     -edts project_data_dir "\"$PROJ_DIR\"" \
-    -edts plugin_dir "\"$APP_DIR\""
+    -edts plugin_dir "\"$APP_DIR\"" \
+    -sname edts-server

@@ -30,9 +30,11 @@
 %% API
 -export([execute/2]).
 
+-export_type([ctx/0]).
+
 %%%_* Includes =================================================================
 
--include_lib("kernel/include/logger.hrl").
+-include("logger.hrl").
 
 %%%_* Defines ==================================================================
 %%%_* Types ====================================================================
@@ -47,7 +49,7 @@
 
 %%%_* API ======================================================================
 
--spec execute(Cmd::module(), edts:ctx()) ->
+-spec execute(Cmd::module(), ctx()) ->
           ok |
           {ok, [{atom(), term()}]} |
           {error, {bad_gateway, term()}} |

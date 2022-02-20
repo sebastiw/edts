@@ -28,7 +28,8 @@
 
 %%%_* Includes =================================================================
 
--include_lib("kernel/include/logger.hrl").
+-include("otp_workarounds.hrl").
+-include("logger.hrl").
 
 %%%_* Defines ==================================================================
 
@@ -61,12 +62,15 @@ handle_request(Req) ->
         http_error(Req, method_not_allowed, [])
     end
   catch
-    Class:Reason:Stack ->
+    ?EXCEPTION(Class,Reason,Stack) ->
+      ?LOG_ERROR("Couldn't complete request because of ~p:~p "
+                 "for request ~p", [Class, Reason, Req]),
       http_error(Req,
                  internal_server_error,
                  [{class, format_term(Class)},
                   {reason, format_term(Reason)},
-                  {stack_trace, format_term(Stack)}])
+                  {stack_trace, format_term(?GET_STACK(Stack))},
+                  {request, format_term(Req)}])
   end.
 
 format_term(Term) ->
@@ -133,7 +137,13 @@ respond(Req, Code, Data) ->
   Headers = [{"Content-Type", "application/json"}],
   BodyString = case Data of
                  undefined -> "";
-                 _         -> mochijson2:encode(Data)
+                 _         ->
+                   try mochijson2:encode(Data)
+                   catch ?EXCEPTION(Class,Reason,Stack) ->
+                       ?LOG_ERROR(#{reason => {decode_error, {Class, Reason}},
+                                    data => Data}),
+                       erlang:raise(Class, Reason, ?GET_STACK(Stack))
+                   end
                end,
   mochiweb_request:respond({Code, Headers, BodyString}, Req).
 

@@ -1,6 +1,6 @@
 {application, edts,
  [{description, "The Erlang Development Tool Suite for Emacs"},
-  {vsn, "0.2"},
+  {vsn, "1"},
   {registered, []},
   {applications, [kernel,
                   stdlib,
@@ -9,5 +9,5 @@
                   eunit
                  ]},
   {mod, {edts_app, []}},
-  {env, []}
+  {env, [{log_level, info}]}
  ]}.

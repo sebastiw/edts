@@ -1,0 +1,11 @@
+.git*
+rel/
+deps/
+lib/**/ebin
+docs/
+*.plt
+*~
+test_data/manual
+erl_crash.dump
+*.elc
+**/*.elc

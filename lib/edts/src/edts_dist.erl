@@ -220,25 +220,46 @@ remote_load_module(Node, Mod) ->
   %% incompatible with the binary format of the EDTS node's OTP release.
   %% Kind of ugly to have to use two rpc's but I can't find a better way to
   %% do this.
+  case code:ensure_loaded(Mod) of
+    {error, Err0} ->
+      erlang:error({error, Err0});
+    _ ->
+      ok
+  end,
   case lists:keyfind(Mod, 1, code:all_loaded()) of
-    false -> erlang:error({not_loaded, Mod});
+    false ->
+      erlang:error({not_loaded, Mod});
     {_, FileBeam} ->
       ModInfo = Mod:module_info(compile),
+      CompileOpts = proplists:get_value(options, ModInfo, []),
       case proplists:get_value(source, ModInfo) of
         undefined ->
-          case filelib:find_source(FileBeam) of
+          case find_src(FileBeam) of
             {ok, File} ->
-              remote_compile_and_load(Node, File);
-            {error, not_found} ->
-              erlang:error({not_found, Mod})
+              remote_compile_and_load(Node, File, CompileOpts);
+            {error, Err1} ->
+              erlang:error({Err1, Mod})
           end;
         File ->
-          remote_compile_and_load(Node, File)
+          remote_compile_and_load(Node, File, CompileOpts)
       end
   end.
 
-remote_compile_and_load(Node, File) ->
-  {ok, Mod, Bin} = remote_compile_module(Node, File),
+-ifdef(OTP_RELEASE). % OTP-20+
+find_src(FileBeam) ->
+  filelib:find_source(FileBeam).
+-else.
+find_src(FileBeam) ->
+  case filename:find_src(FileBeam) of
+    {error, {Err, _}} ->
+      {error, Err};
+    {File, _} ->
+      {ok, File}
+  end.
+-endif.
+
+remote_compile_and_load(Node, File, CompileOpts) ->
+  {ok, Mod, Bin} = remote_compile_module(Node, File, CompileOpts),
   {module, Mod}  = remote_load_module(Node, Mod, Bin).
 
 %%------------------------------------------------------------------------------
@@ -278,8 +299,8 @@ remote_load_module(Node, Mod, Bin) ->
   end.
 
 
-remote_compile_module(Node, File) ->
-  Opts = [{d, namespaced_types}, debug_info, binary, return_errors],
+remote_compile_module(Node, File, ExtraCompileOpts) ->
+  Opts = [{d, namespaced_types}, debug_info, binary, return_errors|ExtraCompileOpts],
   case call(Node, compile, file, [File, Opts]) of
     {ok, _, _} = Res      -> Res;
     {error, Rsns, _Warns0} ->

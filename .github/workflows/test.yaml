@@ -14,7 +14,7 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [21.3.8.17, 22.3.4.9, 23.3.1, 24.0.2]
+        otp: [20.3.8.26, 21.3.8.17, 22.3.4.9, 23.3.1, 24.0.5]
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
@@ -28,10 +28,6 @@ jobs:
         uses: sebastiw/setup-erlang@main
         with:
           otp-version: ${{matrix.otp}}
-          rebar3-version: true
-
-      - name: Rebar3 Version
-        run: rebar3 version
 
       - name: Add Erlang to Path
         run: |

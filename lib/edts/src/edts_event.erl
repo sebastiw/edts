@@ -27,7 +27,8 @@
 
 %%%_* Includes =================================================================
 
--include_lib("kernel/include/logger.hrl").
+-include("otp_workarounds.hrl").
+-include("logger.hrl").
 
 %%%_* Exports ==================================================================
 
@@ -50,7 +51,7 @@
          terminate/2
         ]).
 
--callback format_info(edts_events:class(), edts_events:type(), term()) -> [{atom(), term()}].
+-callback format_info(class(), type(), term()) -> [{atom(), term()}].
 
 %%%_* Defines ==================================================================
 
@@ -217,13 +218,13 @@ fmt_event_info(Class, Type, Info, Formatters) ->
 
 safe_fmt_event_info(Fmt, Class, Type, Info) ->
   try Fmt:format_info(Class, Type, Info)
-  catch C:E:S ->
+  catch ?EXCEPTION(C,E,S) ->
       ?LOG_ERROR("edts_event: Formatter ~p failed with ~p:~p.~n"
                  "Class: ~p~n"
                  "Type: ~p~n"
                  "Info: ~p~n"
                  "Stacktrace: ~p~n",
-                 [C, E, Fmt, Class, Type, Info, S]),
+                 [C, E, Fmt, Class, Type, Info, ?GET_STACK(S)]),
       Info
   end.
 

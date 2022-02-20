@@ -1,0 +1,33 @@
+FROM silex/emacs:26.3
+
+# Remove erlang-mode as there are broken symlinks in manpages-dev package
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=973885
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=999682
+RUN apt-get -q update && \
+    apt-get -qy install \
+      build-essential erlang git && \
+    apt-get -qy remove erlang-mode && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p ~/.emacs.d/elpa/gnupg && \
+    chmod 700 ~/.emacs.d/elpa/gnupg && \
+    echo "disable-ipv6" > ~/.emacs.d/elpa/gnupg/dirmngr.conf && \
+    gpg --keyserver keyserver.ubuntu.com \
+        --homedir ~/.emacs.d/elpa/gnupg \
+        --receive-keys 066DAFCB81E42C40
+
+WORKDIR /edts
+
+COPY . .
+
+RUN emacs -Q --batch \
+    -L ${PWD} \
+    -l test_data/package-install-deps.el \
+    -f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el
+
+# RUN emacs -Q --batch \
+#     -L ${PWD} \
+#     -l test_data/package-install-deps.el \
+#     --eval '(byte-compile-file "edts-mode.el")' \
+#     --eval '(with-current-buffer "*EDTS compile*" (write-file "edts_compile.log"))' && \
+#     cat edts_compile.log
