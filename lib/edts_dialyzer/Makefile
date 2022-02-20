@@ -11,6 +11,7 @@ APP_TARGET := $(patsubst src/%.app.src,$(OUT_DIR)/%.app,$(APP_SOURCES))
 BEAM_FIRST_TARGETS :=
 BEAM_TARGETS := $(filter-out $(BEAM_FIRST_TARGETS), $(patsubst src/%.erl,$(OUT_DIR)/%.beam,$(ERL_SOURCES)))
 TEST_TARGETS := $(OUT_DIR)
+VPATH = src test
 
 all: $(BEAM_FIRST_TARGETS) | $(BEAM_TARGETS) $(APP_TARGET)
 

@@ -36,10 +36,11 @@
                             edts-log-default-level)
   "The current EDTS log-level."
   :type '(choice
-	  (const error)
-	  (const warning)
-	  (const info)
-	  (const debug))
+          (const error)
+          (const warning)
+          (const info)
+          (const debug)
+          (const debug-2))
   :group 'edts)
 
 (defconst edts-log-default-level 'error
