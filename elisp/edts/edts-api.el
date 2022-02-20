@@ -25,6 +25,7 @@
 (require 'cl-macs)
 (require 'dash)
 (require 'ferl)
+(require 'f)
 (require 's)
 
 (require 'edts-log)
