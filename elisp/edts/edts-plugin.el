@@ -48,10 +48,11 @@
   "a list of the names of all available plugins.")
 
 (defcustom edts-plugin-disabled-plugins '("edts")
-  "List of disabled plugins."
-  :type (cons 'set
-              (mapcar #'(lambda (plugin) (list 'const plugin))
-                      edts-plugin-names))
+  "List of disabled plugins.
+
+The plugins distributed with EDTS which you may want to add to the
+list are listed in the `edts-plugin-names' value."
+  :type '(repeat string)
   :group 'edts)
 
 (defun edts-plugin-init-all ()
