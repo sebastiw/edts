@@ -667,8 +667,8 @@ get_module_source_from_beam(M) ->
 %%------------------------------------------------------------------------------
 format_errors(Type, Errors) ->
   LineErrorF =
-    fun(File, {Line, Source, ErrorStr}) ->
-        {Type, File, Line, lists:flatten(Source:format_error(ErrorStr))}
+    fun(File, {Pos, Source, ErrorStr}) ->
+        {Type, File, get_line_from_annotation(Pos), lists:flatten(Source:format_error(ErrorStr))}
     end,
   FileErrorF =
     fun({File, Errors0}) ->
