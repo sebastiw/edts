@@ -63,7 +63,7 @@ handle_request(Req) ->
     end
   catch
     ?EXCEPTION(Class,Reason,Stack) ->
-      ?LOG_ERROR("Couldn't complete request because of ~p:~p "
+      ?LOG_ERROR("Couldn't complete request because of ~p:~p~n"
                  "for request ~p", [Class, Reason, Req]),
       http_error(Req,
                  internal_server_error,
@@ -140,7 +140,7 @@ respond(Req, Code, Data) ->
                  _         ->
                    try mochijson2:encode(Data)
                    catch ?EXCEPTION(Class,Reason,Stack) ->
-                       ?LOG_ERROR(#{reason => {decode_error, {Class, Reason}},
+                       ?LOG_ERROR(#{reason => {encode_error, {Class, Reason}},
                                     data => Data}),
                        erlang:raise(Class, Reason, ?GET_STACK(Stack))
                    end
