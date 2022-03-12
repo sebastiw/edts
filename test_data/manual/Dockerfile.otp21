@@ -1,0 +1,25 @@
+FROM ubuntu:18.04
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get -q update && \
+    apt-get -yq install \
+      wget libwxbase3.0-0v5 libwxgtk3.0-0v5 libwxgtk3.0-gtk3-0v5 libsctp1 \
+      build-essential emacs git && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ERLANG_VERSION=21.3.8.17 \
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-3.1.0.1/emacs"
+
+RUN . /etc/os-release && \
+    export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${VERSION_CODENAME}_amd64.deb" && \
+    wget -q "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
+    dpkg -i $FILE && \
+    rm $FILE
+
+WORKDIR /edts
+
+COPY . .
+
+RUN make && \
+    make test
