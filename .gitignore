@@ -1,17 +1,8 @@
 *~
-elisp/erlang-mode
-elisp/ert
-log
-edts-autoloads.el
-erl_crash.dump
 *.o
 *.beam
 *.elc
 *.plt
-rebar.lock
-_build/
-rebar3
-*.coverdata
 **/ebin
 rel/
 deps/
