@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with EDTS. If not, see <http://www.gnu.org/licenses/>.
 ;;
-;; Mode for listing processess.
+;; Mode for listing processes.
 
 (require 'cl-macs)
 

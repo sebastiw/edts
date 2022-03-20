@@ -708,7 +708,7 @@ get_line_from_annotation({Line, _}) -> Line;
 get_line_from_annotation(Line) when is_integer(Line) -> Line.
 
 %%------------------------------------------------------------------------------
-%% @doc Parse abstract code into a module information substract.
+%% @doc Parse abstract code into a module information subtract.
 -spec parse_abstract(Abstract::
                        {function, location(), function(), arity(), any()} |
                        {attribute, location(), file | import | record, {any(), any()}} |

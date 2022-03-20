@@ -260,7 +260,7 @@ get_bindings(Pid) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Change the interpretation state of Module depending on Intepret. Returns
+%% Change the interpretation state of Module depending on Interpret. Returns
 %% {ok, Bool} where Bool is true if Module is now interpreted and false
 %% otherwise.
 %% @end
