@@ -174,7 +174,7 @@ localhost."
                 ;;     triggers after 0.5 s.
                 ;;   * The function will now add another 0.5 s idle
                 ;;     timer, but the time is counted from when emacs
-                ;;     became idle and the funtion will trigger
+                ;;     became idle and the function will trigger
                 ;;     immediately.
                 ;;   * We could add the (current-idle-time) to the 0.5
                 ;;     second interval, but then we have a problem if
@@ -271,7 +271,7 @@ localhost."
   (let ((result (cadr (assoc 'result reply))))
     (if (and result (eq (string-to-number result) 200))
         (progn
-          (edts-log-info "Successfully intialized node %s" node-name)
+          (edts-log-info "Successfully initialized node %s" node-name)
           (run-hooks 'edts-api-after-node-init-hook))
       (null
        (edts-log-error "Failed to initialize node %s" node-name)))))

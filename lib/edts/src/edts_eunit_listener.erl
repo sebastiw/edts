@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% @doc This is the EUnit listner used to collect the results when running
+%%% @doc This is the EUnit listener used to collect the results when running
 %%%      EUnit tests.
 %%% @end
 %%% @author Håkan Nilsson <haakan@gmail.com>

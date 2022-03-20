@@ -313,7 +313,7 @@ do_init_node(ProjectName,
               {app_include_dirs,     AppIncludeDirs},
               {project_include_dirs, ProjectIncludeDirs}],
 
-    ?LOG_DEBUG("Initalizing ~p with environment: ~p", [Node, AppEnv]),
+    ?LOG_DEBUG("Initializing ~p with environment: ~p", [Node, AppEnv]),
     edts_dist:init_node(Node, AppEnv),
 
     start_services(Node, [edts_code] ++ PluginRemoteServices)

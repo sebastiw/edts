@@ -319,7 +319,7 @@ modules, breakpoints and debugged processes).")
 (defun edts-debug-interpret (&optional node module interpret)
   "Set interpretation state for MODULE on NODE according to INTERPRET.
 NODE and MODULE default to the values associated with current buffer.
-If INTERPRET is nil stop intepreting; if it is t interpret MODULE; any
+If INTERPRET is nil stop interpreting; if it is t interpret MODULE; any
 other value toggles interpretation, which is the default behaviour when
 called interactively."
   (let* ((module    (or module (ferl-get-module)))
