@@ -35,6 +35,9 @@ jobs:
         run: |
           echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
 
+      - name: Fix up git URLs
+        run: echo -e '[url "https://github.com/"]\n  insteadOf = "git://github.com/"' >> ~/.gitconfig
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
