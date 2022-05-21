@@ -3,7 +3,6 @@ LIBS = lib/edts lib/edts_debug lib/edts_dialyzer lib/edts_xref
 MKDIR ?= mkdir
 MKDIR_FLAGS ?= "-p"
 GIT ?= git
-GIT_CMD ?= clone
 
 # For Testing
 ERL ?= erl
@@ -28,12 +27,14 @@ rel/releases:
 	$(MKDIR) $(MKDIR_FLAGS) rel/releases
 
 deps/mochiweb:
-	$(GIT) $(GIT_CMD) "https://github.com/mochi/mochiweb" $@
+	$(GIT) clone "https://github.com/mochi/mochiweb" $@
+	cd $@ && $(GIT) checkout --detach 835b107a4da4550080d032623ff6ae9a18d02c37
 	# reltool doesn't support unrecognized options
 	sed -i '/applications/{N; s/,$$// };/licenses/d;/links/d' $@/src/mochiweb.app.src
 	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
 deps/meck:
-	$(GIT) $(GIT_CMD) "https://github.com/eproxus/meck" $@
+	$(GIT) clone "https://github.com/eproxus/meck" $@
+	cd $@ && $(GIT) checkout --detach cc47aab4b64a46a5409c1a93353d44a367b41454
 	$(MKDIR) $(MKDIR_FLAGS) $@/ebin
 	$(ERLC) +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
 	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
