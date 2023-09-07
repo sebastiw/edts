@@ -143,7 +143,9 @@ PWD and running COMMAND."
   (ignore-errors
     (make-local-variable 'show-paren-mode)
     (show-paren-mode 1))
-  (linum-mode -1)
+  (if (version<= "26.0.50" emacs-version)
+      (display-line-numbers-mode -1)
+    (linum-mode -1))
   (setq show-trailing-whitespace nil)
   (set-process-query-on-exit-flag (get-buffer-process (current-buffer)) nil)
   (add-hook 'kill-buffer-hook #'edts-shell--kill-buffer-hook t t)
