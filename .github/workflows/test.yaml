@@ -12,11 +12,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [22.3.4.9, 23.3.1, 24.3.3, 25.3.1]
+        otp: [22.3.4.9, 23.3.4.5, 24.3.3, 25.3.1]
         emacs: [27.1] # 24.5, 26.3,
 
     steps:
