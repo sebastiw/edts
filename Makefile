@@ -41,7 +41,7 @@ $(DEPS:%=deps/%/ebin):
 	$(MKDIR) $(MKDIR_FLAGS) $@
 	$(ERLC) +debug_info -o $@ -I$(@:/ebin=/include) -I$(@:/ebin=/src) $(@:/ebin=/src)/*.erl
 	# reltool doesn't support unrecognized options
-	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src
+	sed -i 'H; $$!d; x; s/[[:space:]]\+%[^\n]\+//g; s/,[[:space:]]\+{licenses[^\n]\+//; s/{links, \[[^]]\+]}//;' $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src
 	cp $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src $@/$(@:deps/%/ebin=%).app
 
 .PHONY: $(LIBS)
@@ -68,7 +68,8 @@ dialyzer: erlang.plt edts.plt
 erlang.plt:
 	$(DIALYZER) --quiet --build_plt --output_plt $@ --apps \
 		erts kernel stdlib mnesia crypto sasl eunit \
-		syntax_tools compiler tools debugger dialyzer
+		syntax_tools compiler tools debugger dialyzer \
+		wx runtime_tools
 edts.plt: erlang.plt
 	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 
