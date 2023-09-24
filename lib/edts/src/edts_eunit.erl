@@ -56,6 +56,8 @@
               reason/0
              ]).
 
+-dialyzer({nowarn_function, get_module_tests/1}).
+
 %%%_* API ======================================================================
 
 %%------------------------------------------------------------------------------
@@ -86,11 +88,15 @@ try_run_tests(Module) ->
 do_run_tests(Module) ->
   debug("running eunit tests in: ~p", [Module]),
   Listener = edts_eunit_listener:start([{parent, self()}]),
-  Tests = filter_module_tests(Module, eunit_data:get_module_tests(Module)),
+  Tests = filter_module_tests(Module, get_module_tests(Module)),
   case eunit_server:start_test(eunit_server, Listener, Tests, []) of
     {ok, Ref}    -> do_run_tests(Ref, Listener, 20000);
     {error, Err} -> {error, Err}
   end.
+
+-spec get_module_tests(module()) -> list().
+get_module_tests(Module) ->
+  eunit_data:get_module_tests(Module).
 
 filter_module_tests(Module, Tests) ->
   Fun = fun({_Type, TestModule, _Fun} = Test, Acc) when TestModule =:= Module ->

@@ -1,5 +1,6 @@
 # MAKEFLAGS = -s
 LIBS = lib/edts lib/edts_debug lib/edts_dialyzer lib/edts_xref
+DEPS = mochiweb meck
 MKDIR ?= mkdir
 MKDIR_FLAGS ?= "-p"
 GIT ?= git
@@ -26,19 +27,22 @@ release: rel/releases
 rel/releases:
 	$(MKDIR) $(MKDIR_FLAGS) rel/releases
 
-deps/mochiweb:
-	$(GIT) clone "https://github.com/mochi/mochiweb" $@
-	cd $@ && $(GIT) checkout --detach 835b107a4da4550080d032623ff6ae9a18d02c37
+deps/mochiweb/src:
+	$(GIT) clone "https://github.com/mochi/mochiweb" deps/mochiweb
+	cd deps/mochiweb && $(GIT) checkout --detach 835b107a4da4550080d032623ff6ae9a18d02c37
+deps/meck/src:
+	$(GIT) clone "https://github.com/eproxus/meck" deps/meck
+	cd deps/meck && $(GIT) checkout --detach cc47aab4b64a46a5409c1a93353d44a367b41454
+
+deps/mochiweb: deps/mochiweb/src deps/mochiweb/ebin
+deps/meck: deps/meck/src deps/meck/ebin
+
+$(DEPS:%=deps/%/ebin):
+	$(MKDIR) $(MKDIR_FLAGS) $@
+	$(ERLC) +debug_info -o $@ -I$(@:/ebin=/include) -I$(@:/ebin=/src) $(@:/ebin=/src)/*.erl
 	# reltool doesn't support unrecognized options
-	sed -i '/applications/{N; s/,$$// };/licenses/d;/links/d' $@/src/mochiweb.app.src
-	$(MAKE) -C $@ MAKEFLAGS="$(MAKEFLAGS)"
-deps/meck:
-	$(GIT) clone "https://github.com/eproxus/meck" $@
-	cd $@ && $(GIT) checkout --detach cc47aab4b64a46a5409c1a93353d44a367b41454
-	$(MKDIR) $(MKDIR_FLAGS) $@/ebin
-	$(ERLC) +debug_info -o $@/ebin -I$@/include -I$@/src $@/src/*.erl
-	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $@/src/meck.app.src
-	cp $@/src/meck.app.src $@/ebin/meck.app
+	sed -i '/env/{ s/,$$// };/licenses/d;/links/{ N; N; N; d }' $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src
+	cp $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src $@/$(@:deps/%/ebin=%).app
 
 .PHONY: $(LIBS)
 $(LIBS):
@@ -109,4 +113,7 @@ byte-compilation-test:
 
 .PHONY: $(OTP_TESTS)
 $(OTP_TESTS):
-	$(DOCKER) build -f test_data/manual/Dockerfile.$@ .
+	$(DOCKER) build \
+	--ulimit nofile=4096 \
+	-f test_data/manual/Dockerfile.$@ .
+
