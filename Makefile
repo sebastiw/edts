@@ -41,8 +41,7 @@ $(DEPS:%=deps/%/ebin):
 	$(MKDIR) $(MKDIR_FLAGS) $@
 	$(ERLC) +debug_info -o $@ -I$(@:/ebin=/include) -I$(@:/ebin=/src) $(@:/ebin=/src)/*.erl
 	# reltool doesn't support unrecognized options
-	sed -i 'H; $$!d; x; s/[[:space:]]\+%[^\n]\+//g; s/,[[:space:]]\+{licenses[^\n]\+//; s/{links, \[[^]]\+]}//;' $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src
-	cp $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src $@/$(@:deps/%/ebin=%).app
+	sed 'H; $$!d; x; s/[[:space:]]\+%[^\n]\+//g; s/,[[:space:]]\+{licenses[^\n]\+//; s/{links, \[[^]]\+]}//;' $(@:/ebin=/src)/$(@:deps/%/ebin=%).app.src > $@/$(@:deps/%/ebin=%).app
 
 .PHONY: $(LIBS)
 $(LIBS):
