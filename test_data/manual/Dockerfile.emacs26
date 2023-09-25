@@ -23,11 +23,6 @@ COPY . .
 RUN emacs -Q --batch \
     -L ${PWD} \
     -l test_data/package-install-deps.el \
-    -f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el
+    --eval '(byte-recompile-directory "." 0 t)' \
+    2> "compile.log"
 
-# RUN emacs -Q --batch \
-#     -L ${PWD} \
-#     -l test_data/package-install-deps.el \
-#     --eval '(byte-compile-file "edts-mode.el")' \
-#     --eval '(with-current-buffer "*EDTS compile*" (write-file "edts_compile.log"))' && \
-#     cat edts_compile.log

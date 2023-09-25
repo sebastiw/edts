@@ -1,0 +1,20 @@
+FROM silex/emacs:29.1
+
+# Remove erlang-mode as there are broken symlinks in manpages-dev package
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=973885
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=999682
+RUN apt-get -q update && \
+    apt-get -qy install \
+      build-essential erlang git && \
+    apt-get -qy remove erlang-mode && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /edts
+
+COPY . .
+
+RUN emacs -Q --batch \
+    -L ${PWD} \
+    -l test_data/package-install-deps.el \
+    --eval '(byte-recompile-directory "." 0 t)' \
+    2> "compile.log"
