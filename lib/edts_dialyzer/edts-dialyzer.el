@@ -34,11 +34,6 @@
   :group 'edts
   :type 'boolean)
 
-(define-obsolete-variable-alias
-  'edts-code-inhibit-dialyzer-on-compile
-  'edts-dialyzer-inhibit-on-compile
-  "2017-04-15")
-
 (defun edts-dialyzer-init ()
   "Initialize edts-dialyzer."
   (add-to-list 'edts-code-issue-types 'edts-dialyzer)

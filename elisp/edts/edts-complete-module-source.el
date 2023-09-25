@@ -48,9 +48,9 @@
 
 (defun edts-complete-module-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-module-candidates))
-    ('none          (edts-complete-normal-module-candidates))))
+    (double-quoted  nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-module-candidates))
+    (none          (edts-complete-normal-module-candidates))))
 
 (defun edts-complete-normal-module-candidates ()
   "Produces the completion list for normal (unqoted) modules."

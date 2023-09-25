@@ -257,7 +257,7 @@ respectively so we can use them later when fontifying user input."
   (while (< start end)
     (let ((temp-end nil))
       (cl-case (get-text-property start 'field)
-        ('output
+        (output
          (setq temp-end (edts-shell-output-end start end))
          (font-lock-default-fontify-region start temp-end loudly))
         (otherwise
