@@ -47,10 +47,6 @@ the module to be compiled as the only argument.")
   '(edts-code-eunit)
   "Hooks to run after compilation finishes. Hooks are called with the
 compilation result as a symbol as the only argument")
-(defvaralias ;; Compatibility
-  'edts-code-after-compilation-hook
-  'edts-code-after-compile-hook
-  "This variable is deprecated, use `edts-code-after-compile-hook'")
 
 (defvar edts-code-buffer-issues nil
   "A plist describing the current issues (errors and warnings) in the
@@ -97,8 +93,8 @@ with severity as key and a lists of issues as values"
         (plist-put edts-code-buffer-issues type issues)))
 
 (defun edts-code-buffer-status ()
-  "Return 'error if there are any edts errors in current buffer,
-'warning if there are warnings and 'ok otherwise."
+  "Return `'error' if there are any edts errors in current buffer,
+`'warning' if there are warnings and `'ok' otherwise."
   (cl-block nil
     (let ((status 'ok)
           (issues edts-code-buffer-issues))

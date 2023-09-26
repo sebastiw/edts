@@ -54,9 +54,9 @@
 
 (defun edts-complete-variable-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted nil) ; Don't complete inside strings
-    ('single-quoted nil) ; No single-quoted variables
-    ('none          (edts-complete-normal-variable-candidates))))
+    (double-quoted nil) ; Don't complete inside strings
+    (single-quoted nil) ; No single-quoted variables
+    (none          (edts-complete-normal-variable-candidates))))
 
 (defun edts-complete-normal-variable-candidates ()
   "Generates the auto-complete candidate list for variables. Matches variables

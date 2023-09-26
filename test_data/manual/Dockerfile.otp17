@@ -1,0 +1,29 @@
+FROM ubuntu:14.04
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get -q update && \
+    apt-get -yq install \
+      wget libwxbase2.8-0 libwxgtk2.8-0 libsctp1 \
+      build-essential emacs git && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ERLANG_VERSION=17.5.3 \
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-2.7.2/emacs"
+
+RUN . /etc/lsb-release && \
+    export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${DISTRIB_CODENAME}_amd64.deb" && \
+    wget -q "https://packages.erlang-solutions.com/erlang/debian/pool/$FILE" && \
+    dpkg -i $FILE && \
+    rm $FILE
+
+WORKDIR /edts
+
+COPY . .
+
+# remove -dialyzer preprocessor commands because OTP17 needs to have
+# them declared before function definitions.
+RUN make && \
+    make deps/meck/src && \
+    sed -i '/-dialyzer/d' deps/meck/src/*.erl && \
+    make eunit integration-tests ert

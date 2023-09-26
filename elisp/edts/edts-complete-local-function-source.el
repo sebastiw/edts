@@ -49,7 +49,7 @@
     "Initialize local function completions."
     (when (edts-complete-local-function-p)
       (cl-case (ferl-point-inside-quotes)
-        ('double-quoted nil) ; Don't complete inside strings
+        (double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing local function completions")
          (setq edts-complete-local-function-candidates
@@ -57,9 +57,9 @@
 
 (defun edts-complete-local-function-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-local-function-candidates))
-    ('none          (edts-complete-normal-local-function-candidates))))
+    (double-quoted  nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-local-function-candidates))
+    (none          (edts-complete-normal-local-function-candidates))))
 
 (defun edts-complete-normal-local-function-candidates ()
   "Produces the completion list for normal (unqoted) local functions."

@@ -56,7 +56,7 @@
   (let ((point (or ac-point (point))))
     (when (edts-complete-exported-function-p point)
       (cl-case (ferl-point-inside-quotes)
-        ('double-quoted nil) ; Don't complete inside strings
+        (double-quoted nil) ; Don't complete inside strings
         (otherwise
          (edts-log-debug "Initializing exported function completions")
          (let* ((module  (ferl-symbol-at (- point 1)))
@@ -66,9 +66,9 @@
 
 (defun edts-complete-exported-function-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-exported-function-candidates))
-    ('none          (edts-complete-normal-exported-function-candidates))))
+    (double-quoted nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-exported-function-candidates))
+    (none          (edts-complete-normal-exported-function-candidates))))
 
 (defun edts-complete-normal-exported-function-candidates ()
   "Produces the completion list for normal (unqoted) exported functions."

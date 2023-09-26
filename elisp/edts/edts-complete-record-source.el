@@ -53,7 +53,7 @@
   "Initialize record completions."
   (when (edts-complete-record-p ac-point)
     (cl-case (ferl-point-inside-quotes)
-      ('double-quoted nil) ; Don't complete inside strings
+      (double-quoted nil) ; Don't complete inside strings
       (otherwise
        (edts-log-debug "Initializing record completions")
        (cl-flet ((rec-name (rec) (cdr (assoc 'record rec))))
@@ -65,9 +65,9 @@
 
 (defun edts-complete-record-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-record-candidates))
-    ('none          (edts-complete-normal-record-candidates))))
+    (double-quoted  nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-record-candidates))
+    (none          (edts-complete-normal-record-candidates))))
 
 (defun edts-complete-normal-record-candidates ()
   "Produces the completion list for normal (unqoted) records. Unimplemented"

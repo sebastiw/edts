@@ -100,9 +100,9 @@
 (defmacro edts-test-case (suite name args desc &rest body)
   "Define a testcase in SUITE. All other arguments are the same is in
 `ert-deftest'."
+  (declare (indent 3))
   (unless body
     (error "edts-test-case: Not enough arguments"))
-  (declare (indent 3))
   `(macroexpand
     (ert-deftest ,name ,args ,desc :tags '(,suite edts-test-suite) ,@body)))
 

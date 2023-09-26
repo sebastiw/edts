@@ -108,7 +108,7 @@ init(_Args) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Handle call messages
--spec handle_call(term(), {pid(), atom()}, state()) ->
+-spec handle_call(term(), {pid(), any()}, state()) ->
                      {reply, Reply::term(), state()} |
                      {reply, Reply::term(), state(), timeout()} |
                      {noreply, state()} |

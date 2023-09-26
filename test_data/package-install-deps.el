@@ -1,4 +1,4 @@
-;;; edts-pkg.el --- EDTS dependency installation, for test.
+;;; package-install-deps.el --- EDTS dependency installation, for test.
 
 ;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 

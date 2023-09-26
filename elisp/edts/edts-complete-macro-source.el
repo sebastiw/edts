@@ -50,9 +50,9 @@
 
 (defun edts-complete-macro-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-macro-candidates))
-    ('none          (edts-complete-normal-macro-candidates))))
+    (double-quoted  nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-macro-candidates))
+    (none          (edts-complete-normal-macro-candidates))))
 
 (defun edts-complete-normal-macro-candidates ()
   "Produces the completion list for normal (unqoted) macros."

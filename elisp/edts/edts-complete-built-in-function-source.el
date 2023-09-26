@@ -46,9 +46,9 @@
 
 (defun edts-complete-built-in-function-candidates ()
   (cl-case (ferl-point-inside-quotes)
-    ('double-quoted  nil) ; Don't complete inside strings
-    ('single-quoted (edts-complete-single-quoted-built-in-function-candidates))
-    ('none          (edts-complete-normal-built-in-function-candidates))))
+    (double-quoted  nil) ; Don't complete inside strings
+    (single-quoted (edts-complete-single-quoted-built-in-function-candidates))
+    (none          (edts-complete-normal-built-in-function-candidates))))
 
 (defun edts-complete-normal-built-in-function-candidates ()
   "Produces the completion list for normal (unqoted) local functions."

@@ -108,11 +108,18 @@ parse_expressions(String) ->
     Tokens ->
       case erl_parse:parse_exprs(Tokens) of
         {ok, AnnoTerms} ->
-          {ok, lists:map(fun erl_parse:anno_to_term/1, AnnoTerms)};
+          {ok, lists:map(fun anno_to_term/1, AnnoTerms)};
         Err -> Err
       end
   end.
 
+anno_to_term(T) ->
+    case code:which(erl_anno) of
+        non_existing ->
+            T;
+        _ ->
+            erl_parse:anno_to_term(T)
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc

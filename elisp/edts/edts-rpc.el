@@ -169,7 +169,7 @@ inside a `with-temp-buffer'."
 (defun edts-rpc--parse-http-response-status ()
   (save-excursion
     (goto-char (point-min))
-    (s-split " " (buffer-substring (point) (point-at-eol)))))
+    (s-split " " (buffer-substring (point) (line-end-position)))))
 
 (defun edts-rpc-command-url (command)
   "Construct the edts command url."
