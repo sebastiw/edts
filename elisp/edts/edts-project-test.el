@@ -65,6 +65,16 @@
                          (lambda (f) nil)))
                 (edts-project--find-project-root "/foo/bar/baz/bam"))))
 
+(edts-test-case edts-project-suite edts-project--find-rebar-root-test ()
+  "Tests edts-project--find-project-root"
+  (should (string= "/foo"
+                   (cl-letf (((symbol-function 'f-exists?)
+                              (lambda (f) (equal f "/foo/rebar.config"))))
+                     (edts-project--find-rebar-root "/foo/bar/baz/bam"))))
+  (should-not (cl-letf (((symbol-function 'f-exists?)
+                         (lambda (f) nil))
+                (edts-project--find-rebar-root "/foo/bar/baz/bam")))))
+
 (edts-test-case edts-project-suite edts-project--find-otp-root-test ()
   "Tests edts-project--find-project-root"
   (should (string= "/foo"
@@ -98,6 +108,20 @@
   (should (equal "project"
                  (cl-letf (((symbol-function 'edts-project--find-project-root)
                             (lambda (f) "project"))
+                           ((symbol-function 'edts-project--find-rebar-root)
+                            (lambda (f) "rebar"))
+                           ((symbol-function 'edts-project--find-otp-root)
+                            (lambda (f) "otp"))
+                           ((symbol-function 'edts-project--find-temp-root)
+                            (lambda (f) "temp"))
+                           ((symbol-function 'f-this-file)
+                            (lambda () "/foo/bar/baz/src/foo")))
+                   (edts-project--find-root "/foo/bar/baz/src"))))
+  (should (equal "rebar"
+                 (cl-letf (((symbol-function 'edts-project--find-project-root)
+                            (lambda (f) nil))
+                           ((symbol-function 'edts-project--find-rebar-root)
+                            (lambda (f) "rebar"))
                            ((symbol-function 'edts-project--find-otp-root)
                             (lambda (f) "otp"))
                            ((symbol-function 'edts-project--find-temp-root)
@@ -108,6 +132,8 @@
   (should (equal "otp"
                  (cl-letf (((symbol-function 'edts-project--find-project-root)
                             (lambda (f) nil))
+                           ((symbol-function 'edts-project--find-rebar-root)
+                            (lambda (f) nil))
                            ((symbol-function 'edts-project--find-otp-root)
                             (lambda (f) "otp"))
                            ((symbol-function 'edts-project--find-temp-root)
@@ -117,6 +143,8 @@
                    (edts-project--find-root "/foo/bar/baz/src"))))
   (should (equal "temp"
                  (cl-letf (((symbol-function 'edts-project--find-project-root)
+                            (lambda (f) nil))
+                           ((symbol-function 'edts-project--find-rebar-root)
                             (lambda (f) nil))
                            ((symbol-function 'edts-project--find-otp-root)
                             (lambda (f) nil))
