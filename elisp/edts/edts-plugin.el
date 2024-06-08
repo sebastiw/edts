@@ -27,33 +27,7 @@
 (require 's)
 
 (require 'edts)
-
-(defconst edts-plugin-directory-name
-  "lib"
-  "Bare directory name for the plugins")
-
-(defconst edts-plugin-directory
-  (f-join (file-name-directory edts-root-directory) edts-plugin-directory-name)
-  "Directory where edts plugins are located.")
-
-(add-to-list 'load-path edts-plugin-directory)
-
-(defconst edts-plugin-names
-  (cl-remove-if
-   (lambda (v) (equal v "edts"))
-   (cl-loop for (file dirp . rest)
-            in (directory-files-and-attributes edts-plugin-directory nil "^[^.]")
-            when dirp
-            collect file))
-  "a list of the names of all available plugins.")
-
-(defcustom edts-plugin-disabled-plugins '("edts")
-  "List of disabled plugins.
-
-The plugins distributed with EDTS which you may want to add to the
-list are listed in the `edts-plugin-names' value."
-  :type '(repeat string)
-  :group 'edts)
+(require 'edts-vars)
 
 (defun edts-plugin-init-all ()
   "Initialize available plugins."
