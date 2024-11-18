@@ -1,4 +1,4 @@
-;;; edts.el --- Misc edts-related functionality.
+;;; edts-misc.el --- Misc edts-related functionality.
 
 ;; Copyright 2012-2013 Thomas Järvstrand <tjarvstrand@gmail.com>
 
@@ -366,4 +366,4 @@ spaces and breaking lines at column MAX-COL."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 
-(provide 'edts)
+(provide 'edts-misc)

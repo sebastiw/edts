@@ -19,7 +19,7 @@
 
 (require 'dash)
 
-(require 'edts)
+(require 'edts-misc)
 (require 'edts-api)
 (require 'edts-code)
 (require 'edts-face)

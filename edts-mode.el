@@ -117,7 +117,7 @@
   (f-join edts-root-directory "test_data")
   "Directory where edts test data are located.")
 
-(require 'edts)
+(require 'edts-misc)
 (require 'edts-api)
 (require 'edts-code)
 (require 'edts-complete)
