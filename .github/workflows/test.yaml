@@ -11,25 +11,59 @@ on:
       - main
 
 jobs:
-  test:
+  # Supported versions is rather complex:
+  #
+  # ubuntu-18.04: OTP_VERSION=17.0 - 25.3
+  # ubuntu-20.04: OTP_VERSION=21.0 - 27
+  # ubuntu-22.04: OTP_VERSION=24.2 - 27
+  # ubuntu-24.04: OTP_VERSION=24.3 - 27
+  #
+  # OTP-26) REBAR3_VERSION="3.22.1"
+  # OTP-25) REBAR3_VERSION="3.22.1"
+  # OTP-24) REBAR3_VERSION="3.16.1"
+  # OTP-23) REBAR3_VERSION="3.16.1"
+  # OTP-22) REBAR3_VERSION="3.16.1"
+  # OTP-21) REBAR3_VERSION="3.15.2"
+  # OTP-20) REBAR3_VERSION="3.15.2"
+  # OTP-19) REBAR3_VERSION="3.15.2"
+  # OTP-18) REBAR3_VERSION="3.11.1"
+  # OTP-17) REBAR3_VERSION="3.10.0"
+
+  test_r3_3_16_1:
     runs-on: ubuntu-20.04
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: [22.3.4.9, 23.3.4.5, 24.3.3, 25.3]
-        emacs: [27.1] # 24.5, 26.3,
+        otp: [22.3.4.9, 23.3.4.5, 24.3.3]
+    env:
+      emacs: 27.1
+      rebar3: 3.16.1
 
+  # test_r3_3_22_1:
+  #   runs-on: ubuntu-20.04
+  #   name: OTP ${{matrix.otp}}
+  #   strategy:
+  #     matrix:
+  #       otp: [25.3, 26.3, 27.0]
+  #   env:
+  #     emacs: 27.1
+  #     rebar3: 3.22.1
+
+  test:
+    needs: [test_r3_3_16_1]
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
         with:
-          version: ${{matrix.emacs}}
+          version: ${{env.emacs}}
 
       - name: Install Erlang
         id: install_erlang
-        uses: sebastiw/setup-erlang@main
+        uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
+          rebar3-version: ${{env.rebar3}}
+          install-hex: false
 
       - name: Add Erlang to Path
         run: |
