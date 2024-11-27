@@ -1,4 +1,4 @@
-;;; edts.el --- EDTS package declaration.
+;;; edts.el --- Erlang Development Tool Suite
 
 ;; Copyright (C) 2012-2024 Thomas Järvstrand <tjarvstrand@gmail.com>
 ;; Copyright (C) 2012-2024 Håkan Nilsson
@@ -61,3 +61,8 @@
 
 ;; For more information, hit `M-x describe-minor-mode RET edts-mode RET`.
 
+;;; Code:
+
+(provide 'edts)
+
+;;; edts.el ends here
