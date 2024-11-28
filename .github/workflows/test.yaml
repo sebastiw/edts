@@ -6,9 +6,6 @@ on:
       - master
       - main
   pull_request:
-    branches:
-      - master
-      - main
 
 jobs:
   # Supported versions is rather complex:
