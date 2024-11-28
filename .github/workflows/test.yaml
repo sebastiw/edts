@@ -29,23 +29,24 @@ jobs:
 
   test:
     runs-on: ubuntu-20.04
-    name: OTP ${{matrix.otp}}
+    name: OTP ${{matrix.version.otp}}
     env:
       emacs: 27.1
     strategy:
       matrix:
-        - otp: "22.3.4.9"
-          rebar3: "3.16.1"
-        - otp: "23.3.4.5"
-          rebar3: "3.16.1"
-        - otp: "24.3.3"
-          rebar3: "3.16.1"
-        - otp: "25.3.3"
-          rebar3: "3.22.1"
-        - otp: "26.5.3"
-          rebar3: "3.22.1"
-        - otp: "27.3.3"
-          rebar3: "3.22.1"
+        version:
+          - otp: "22.3.4.9"
+            rebar3: "3.16.1"
+          - otp: "23.3.4.5"
+            rebar3: "3.16.1"
+          - otp: "24.3.3"
+            rebar3: "3.16.1"
+          - otp: "25.3.3"
+            rebar3: "3.22.1"
+          - otp: "26.5.3"
+            rebar3: "3.22.1"
+          - otp: "27.3.3"
+            rebar3: "3.22.1"
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
@@ -56,8 +57,8 @@ jobs:
         id: install_erlang
         uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.otp}}
-          rebar3-version: ${{matrix.rebar3}}
+          otp-version: ${{matrix.version.otp}}
+          rebar3-version: ${{matrix.version.rebar3}}
           install-hex: false
 
       - name: Add Erlang to Path
