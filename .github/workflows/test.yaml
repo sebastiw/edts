@@ -45,10 +45,10 @@ jobs:
             rebar3: "3.16.1"
           - otp: "25.3.2.15"
             rebar3: "3.22.1"
-          # - otp: "26.2.5.5"
-          #   rebar3: "3.22.1"
-          # - otp: "27.1.2"
-          #   rebar3: "3.22.1"
+          - otp: "26.2.5.5"
+            rebar3: "3.22.1"
+          - otp: "27.1.2"
+            rebar3: "3.22.1"
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
