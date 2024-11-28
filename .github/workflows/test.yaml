@@ -15,26 +15,25 @@ jobs:
   # ubuntu-20.04: OTP_VERSION=21.0 - 27
   # ubuntu-22.04: OTP_VERSION=24.2 - 27
   # ubuntu-24.04: OTP_VERSION=24.3 - 27
-  #
-  # OTP-26) REBAR3_VERSION="3.22.1"
-  # OTP-25) REBAR3_VERSION="3.22.1"
-  # OTP-24) REBAR3_VERSION="3.16.1"
-  # OTP-23) REBAR3_VERSION="3.16.1"
-  # OTP-22) REBAR3_VERSION="3.16.1"
-  # OTP-21) REBAR3_VERSION="3.15.2"
-  # OTP-20) REBAR3_VERSION="3.15.2"
-  # OTP-19) REBAR3_VERSION="3.15.2"
-  # OTP-18) REBAR3_VERSION="3.11.1"
-  # OTP-17) REBAR3_VERSION="3.10.0"
 
   test:
     runs-on: ubuntu-20.04
-    name: OTP ${{matrix.version.otp}}
+    name: OTP ${{matrix.erlang.otp}}
     env:
       emacs: 27.1
     strategy:
       matrix:
-        version:
+        erlang:
+          # - otp: "17"
+          #   rebar3: "3.10.0"
+          # - otp: "18"
+          #   rebar3: "3.11.1"
+          # - otp: "19"
+          #   rebar3: "3.15.2"
+          # - otp: "20"
+          #   rebar3: "3.15.2"
+          # - otp: "21"
+          #   rebar3: "3.15.2"
           - otp: "22.3.4.9"
             rebar3: "3.16.1"
           - otp: "23.3.4.5"
@@ -45,8 +44,8 @@ jobs:
             rebar3: "3.22.1"
           - otp: "26.2.5.5"
             rebar3: "3.22.1"
-          - otp: "27.1.2"
-            rebar3: "3.22.1"
+          # - otp: "27.1.2"
+          #   rebar3: "3.22.1"
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
@@ -57,8 +56,8 @@ jobs:
         id: install_erlang
         uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.version.otp}}
-          rebar3-version: ${{matrix.version.rebar3}}
+          otp-version: ${{matrix.erlang.otp}}
+          rebar3-version: ${{matrix.erlang.rebar3}}
           install-hex: false
 
       - name: Add Erlang to Path
