@@ -9,27 +9,59 @@ on:
     branches:
       - master
       - main
+  workflow_dispatch:
 
 jobs:
+  # Supported versions is rather complex:
+  #
+  # ubuntu-18.04: OTP_VERSION=17.0 - 25.3
+  # ubuntu-20.04: OTP_VERSION=21.0 - 27
+  # ubuntu-22.04: OTP_VERSION=24.2 - 27
+  # ubuntu-24.04: OTP_VERSION=24.3 - 27
+
   test:
     runs-on: ubuntu-20.04
-    name: OTP ${{matrix.otp}}
+    name: OTP ${{matrix.erlang.otp}}
+    env:
+      emacs: 27.1
     strategy:
       matrix:
-        otp: [22.3.4.9, 23.3.4.5, 24.3.3, 25.3]
-        emacs: [27.1] # 24.5, 26.3,
-
+        erlang:
+          # - otp: "17"
+          #   rebar3: "3.10.0"
+          # - otp: "18"
+          #   rebar3: "3.11.1"
+          # - otp: "19"
+          #   rebar3: "3.15.2"
+          # - otp: "20.3.8.26"
+          #   rebar3: "3.15.2"
+          # - otp: "21.3.8.17"
+          #   rebar3: "3.15.2"
+          - otp: "22.3.4.9"
+            rebar3: "3.16.1"
+          - otp: "23.3.4.5"
+            rebar3: "3.16.1"
+          - otp: "24.3.4.17"
+            rebar3: "3.16.1"
+          - otp: "25.3.2.15"
+            rebar3: "3.22.1"
+          # - otp: "26.2.5.5"
+          #   rebar3: "3.22.1"
+          # - otp: "27.1.2"
+          #   rebar3: "3.22.1"
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
         with:
-          version: ${{matrix.emacs}}
+          version: ${{env.emacs}}
 
       - name: Install Erlang
         id: install_erlang
-        uses: sebastiw/setup-erlang@main
+        uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.otp}}
+          otp-version: ${{matrix.erlang.otp}}
+          rebar3-version: ${{matrix.erlang.rebar3}}
+          install-hex: false
 
       - name: Add Erlang to Path
         run: |
