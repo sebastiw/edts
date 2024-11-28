@@ -26,7 +26,7 @@
 (require 'f)
 (require 's)
 
-(require 'edts)
+(require 'edts-misc)
 
 (defconst edts-plugin-directory-name
   "lib"

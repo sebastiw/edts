@@ -20,7 +20,7 @@
 (require 'cl-macs)
 (require 'f)
 
-(require 'edts)
+(require 'edts-misc)
 (require 'edts-api)
 (require 'edts-debug)
 (require 'edts-debug-list-breakpoint-mode)

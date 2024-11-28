@@ -26,7 +26,7 @@
 ;; projects and communicate with the correct nodes.
 ;;
 
-(require 'edts)
+(require 'edts-misc)
 
 ;; Originally from distel
 (defun edts-refactor-extract-function (name start end)

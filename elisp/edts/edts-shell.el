@@ -24,7 +24,7 @@
 
 (require 'cl-macs)
 
-(require 'edts)
+(require 'edts-misc)
 (require 'edts-api)
 (require 'edts-complete)
 

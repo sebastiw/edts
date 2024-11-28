@@ -27,7 +27,7 @@
 (require 'cl-macs)
 (require 'ferl)
 
-(require 'edts)
+(require 'edts-misc)
 (require 'edts-log)
 (require 'edts-man)
 
