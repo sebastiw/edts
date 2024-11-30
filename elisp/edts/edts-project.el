@@ -61,6 +61,7 @@ underneath a project root to be subprojects of that super project.")
   (when (f-this-file)
     (let ((dir (or dir (f-dirname (f-this-file)))))
       (or (edts-project--find-project-root dir)
+          (edts-project--find-rebar-root dir)
           (edts-project--find-otp-root dir)
           (edts-project--find-temp-root dir)))))
 
@@ -75,6 +76,17 @@ underneath a project root to be subprojects of that super project.")
                 stop t)
         (when (f-file? (f-join dir ".edts"))
           (setq root dir))
+        (setq dir (f-dirname dir))))
+    root))
+
+(defun edts-project--find-rebar-root (dir)
+  "Try to find the top-most rebar.config above current buffer's file."
+  (interactive)
+  (let (stop root)
+    (while (and (not stop) (not (f-root? dir)))
+      (if (f-exists? (f-join dir "rebar.config"))
+          (setq root dir
+                stop t)
         (setq dir (f-dirname dir))))
     root))
 
