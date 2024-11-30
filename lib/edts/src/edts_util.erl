@@ -212,9 +212,3 @@ project_lib_file_p_test_() ->
 
 %%%_* Test helpers =============================================================
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-

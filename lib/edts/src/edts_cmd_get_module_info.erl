@@ -81,8 +81,3 @@ format(_, Acc) ->
 format_element({source, Source}) -> {source, list_to_binary(Source)};
 format_element(Attr)             -> Attr.
 
-%%%_* Emacs ============================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

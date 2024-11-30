@@ -1185,8 +1185,3 @@ test_file_forms(File) ->
 
 -endif.
 
-%%%_* Emacs ====================================================================
-%% %%% Local Variables:
-%% %%% allout-layout: t
-%% %%% erlang-indent-level: 2
-%% %%% End:

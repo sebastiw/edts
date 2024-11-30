@@ -228,8 +228,3 @@ safe_fmt_event_info(Fmt, Class, Type, Info) ->
       Info
   end.
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

@@ -86,9 +86,3 @@ who_calls(Module, Function, Arity) ->
 
 %%%_* Unit tests ===============================================================
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-

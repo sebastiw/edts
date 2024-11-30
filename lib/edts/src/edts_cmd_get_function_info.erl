@@ -55,8 +55,3 @@ execute(Ctx) ->
 
 %%%_* Internal functions =======================================================
 
-%%%_* Emacs ============================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

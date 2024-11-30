@@ -92,9 +92,3 @@ format_info({no_break, Mod}) ->
    {module, Mod}].
 
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-

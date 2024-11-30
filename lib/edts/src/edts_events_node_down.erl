@@ -49,9 +49,3 @@ format_info(edts, node_down, [{node, Node}]) ->
 
 %%%_* Internal functiyons ======================================================
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-

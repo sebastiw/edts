@@ -327,8 +327,3 @@ do_imported_predefined_type_p([Error|Errors]) ->
   end.
 
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

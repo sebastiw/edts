@@ -25,8 +25,3 @@ some_function(Foo) ->
   foo:bar(),
   #record{field = list_to_atom(Foo)}.
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

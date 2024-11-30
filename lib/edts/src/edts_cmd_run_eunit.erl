@@ -61,8 +61,3 @@ format_test({Type, File, Line, Desc}) ->
            , {description, unicode:characters_to_binary(Desc)}]}.
 
 
-%%%_* Emacs ============================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

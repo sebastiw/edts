@@ -127,9 +127,3 @@ call(Node, Mod, Fun, Args, LogError) ->
   end.
 
 %%%_* Tests ====================================================================
-
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

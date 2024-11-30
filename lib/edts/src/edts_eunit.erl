@@ -291,8 +291,3 @@ run_tests_common() ->
 assert_receive(Expected) ->
   ?assertEqual(Expected, receive Expected -> Expected end).
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:

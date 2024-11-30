@@ -170,8 +170,3 @@ flush_mailbox() ->
   after   0 -> ok
   end.
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
