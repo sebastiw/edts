@@ -68,7 +68,8 @@ erlang.plt:
 	$(DIALYZER) --quiet --build_plt --output_plt $@ --apps \
 		erts kernel stdlib mnesia crypto sasl eunit \
 		syntax_tools compiler tools debugger dialyzer \
-		wx runtime_tools
+		wx runtime_tools ssl public_key asn1 inets xmerl \
+		parsetools
 edts.plt: erlang.plt
 	$(DIALYZER) --add_to_plt --plt erlang.plt -r lib/ deps/ --output_plt $@
 
@@ -78,17 +79,17 @@ manual-tests: $(OTP_TESTS) byte-compilation-test
 
 .PHONY: integration-tests
 integration-tests: all test-projects
-	$(EMACS) -Q --batch \
-	-L $(ERLANG_EMACS_LIB) \
-	-l test_data/load-tests.el \
+	$(EMACS) --quick --batch \
+	--directory $(ERLANG_EMACS_LIB) \
+	--load test_data/load-tests.el \
 	--debug-init \
-	-f edts-test-run-suites-batch-and-exit
+	--funcall edts-test-run-suites-batch-and-exit
 
 .PHONY: ert
 ert: test-projects
-	$(EMACS) -Q --batch \
-	-L $(ERLANG_EMACS_LIB) \
-	-l test_data/load-tests.el \
+	$(EMACS) --quick --batch \
+	--directory $(ERLANG_EMACS_LIB) \
+	--load test_data/load-tests.el \
 	--debug-init \
 	--eval "(ert-run-tests-batch-and-exit '(not (tag edts-test-suite)))"
 
@@ -108,8 +109,10 @@ byte-compilation-test:
 	-u $(shell id -u) \
 	silex/emacs \
 	/bin/bash -c \
-	'emacs -Q --batch -L ${PWD} -l test_data/package-install-deps.el \
-	-f batch-byte-compile *.el elisp/edts/*.el lib/**/*.el'
+	'emacs --quick --batch \
+	--directory ${PWD} \
+	--load test_data/package-install-deps.el \
+	--funcall batch-byte-compile *.el elisp/edts/*.el lib/**/*.el'
 
 .PHONY: $(OTP_TESTS)
 $(OTP_TESTS):

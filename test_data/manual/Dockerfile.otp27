@@ -1,0 +1,20 @@
+FROM erlang:27.1.2
+
+SHELL ["/bin/bash", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get -q update && \
+    apt-get -yq install \
+      wget \
+      emacs git && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ERLANG_EMACS_LIB="/usr/local/lib/erlang/lib/tools-4.1/emacs"
+
+WORKDIR /edts
+
+COPY . .
+
+RUN make && \
+    make test
