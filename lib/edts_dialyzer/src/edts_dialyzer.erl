@@ -168,9 +168,7 @@ create_plt(BasePlt0, OutPlt, Files) ->
   BasePlt =
     case BasePlt0 of
       undefined ->
-        try dialyzer_plt:get_default_plt()
-        catch throw:{dialyzer_error, _} -> undefined
-        end;
+        try_get_default_plt();
       _ when is_list(BasePlt0) -> BasePlt0
     end,
   VarOpts =
@@ -180,6 +178,22 @@ create_plt(BasePlt0, OutPlt, Files) ->
     end,
 
   dialyzer:run(BaseOpts ++ VarOpts).
+
+-ifndef(OTP_RELEASE). % OTP-19 and lesser
+-def(OTP_RELEASE, 1).
+-endif.
+
+-if(?OTP_RELEASE >= 26).
+try_get_default_plt() ->
+    try dialyzer_iplt:get_default_iplt_filename()
+    catch throw:{dialyzer_error, _} -> undefined
+    end.
+-else.
+try_get_default_plt() ->
+    try dialyzer_plt:get_default_plt()
+    catch throw:{dialyzer_error, _} -> undefined
+    end.
+-endif.
 
 get_included_files(Plt) ->
   {ok, Info} = dialyzer:plt_info(Plt),

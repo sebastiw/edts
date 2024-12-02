@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:20.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -11,7 +11,7 @@ RUN apt-get -q update && \
     rm -rf /var/lib/apt/lists/*
 
 ENV ERLANG_VERSION=26.0.2 \
-    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-3.5.3/emacs"
+    ERLANG_EMACS_LIB="/usr/lib/erlang/lib/tools-3.6/emacs"
 
 RUN . /etc/os-release && \
     export FILE="esl-erlang_${ERLANG_VERSION}-1~ubuntu~${VERSION_CODENAME}_amd64.deb" && \
@@ -23,6 +23,5 @@ WORKDIR /edts
 
 COPY . .
 
-RUN make
-#  && \
-    # make test
+RUN make && \
+    make test
