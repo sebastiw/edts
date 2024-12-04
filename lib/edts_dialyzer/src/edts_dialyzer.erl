@@ -439,9 +439,3 @@ meck_history(M0, F0, A0) ->
 
 -endif.
 
-%%%_* Emacs ====================================================================
-%%% Local Variables:
-%%% allout-layout: t
-%%% erlang-indent-level: 2
-%%% End:
-
