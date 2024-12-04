@@ -29,6 +29,7 @@ cd "$EDTS_HOME"
 test -f $EDTS || ./edts-escript release edts-release.config
 
 exec $EDTS \
+    -code_path_choice relaxed \
     -edts project_data_dir "\"$PROJ_DIR\"" \
     -edts plugin_dir "\"$APP_DIR\"" \
     -sname edts-server
