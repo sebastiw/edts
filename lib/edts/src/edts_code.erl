@@ -356,7 +356,9 @@ get_compile_cwd(M, [{attribute,_,file,{RelPath,1}}|_]) ->
   case proplists:get_value(cwd, CompileOpts, undefined) of
     undefined -> pop_dirs(proplists:get_value(source, CompileInfo), RelPath);
     Cwd       -> Cwd
-  end.
+  end;
+get_compile_cwd(M, [{attribute,0,compile,_}|Rest]) ->
+  get_compile_cwd(M, Rest).
 
 pop_dirs(Source0, Rel) ->
   L = length(filename:split(Rel)),
