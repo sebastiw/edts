@@ -20,35 +20,46 @@ jobs:
   # ubuntu-24.04: OTP_VERSION=24.3 - 27
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ${{matrix.erlang.os}}
     name: OTP ${{matrix.erlang.otp}}
     env:
       emacs: 27.1
     strategy:
       matrix:
         erlang:
-          # - otp: "17"
+          # - otp: "17.5.3"
           #   rebar3: "3.10.0"
-          # - otp: "18"
+          #   os: ubuntu-18.04
+          # - otp: "18.3"
           #   rebar3: "3.11.1"
-          # - otp: "19"
+          #   os: ubuntu-18.04
+          # - otp: "19.3"
           #   rebar3: "3.15.2"
+          #   os: ubuntu-18.04
           # - otp: "20.3.8.26"
           #   rebar3: "3.15.2"
-          # - otp: "21.3.8.17"
-          #   rebar3: "3.15.2"
-          - otp: "22.3.4.9"
+          #   os: ubuntu-18.04
+          - otp: "21.3"
+            rebar3: "3.15.2"
+            os: ubuntu-20.04
+          - otp: "22.3"
             rebar3: "3.16.1"
-          - otp: "23.3.4.5"
+            os: ubuntu-20.04
+          - otp: "23.3"
             rebar3: "3.16.1"
-          - otp: "24.3.4.17"
+            os: ubuntu-20.04
+          - otp: "24.3"
             rebar3: "3.16.1"
-          - otp: "25.3.2.15"
+            os: ubuntu-22.04
+          - otp: "25.3"
             rebar3: "3.22.1"
-          - otp: "26.2.5.5"
+            os: ubuntu-24.04
+          - otp: "26.2"
             rebar3: "3.22.1"
-          - otp: "27.1.2"
+            os: ubuntu-24.04
+          - otp: "27.1"
             rebar3: "3.22.1"
+            os: ubuntu-24.04
     steps:
       - name: Install Emacs
         uses: purcell/setup-emacs@master
@@ -68,7 +79,7 @@ jobs:
           echo "ERL_PATH=/usr/lib/erlang" >> $GITHUB_ENV
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
 
