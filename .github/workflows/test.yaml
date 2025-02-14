@@ -39,25 +39,25 @@ jobs:
           # - otp: "20.3.8.26"
           #   rebar3: "3.15.2"
           #   os: ubuntu-18.04
-          - otp: "21.3.8.17"
+          - otp: "21.3"
             rebar3: "3.15.2"
             os: ubuntu-20.04
-          - otp: "22.3.4.9"
+          - otp: "22.3"
             rebar3: "3.16.1"
             os: ubuntu-20.04
-          - otp: "23.3.4.5"
+          - otp: "23.3"
             rebar3: "3.16.1"
             os: ubuntu-22.04
-          - otp: "24.3.4.17"
+          - otp: "24.3"
             rebar3: "3.16.1"
             os: ubuntu-22.04
-          - otp: "25.3.2.15"
+          - otp: "25.3"
             rebar3: "3.22.1"
             os: ubuntu-24.04
-          - otp: "26.2.5.5"
+          - otp: "26.2"
             rebar3: "3.22.1"
             os: ubuntu-24.04
-          - otp: "27.1.2"
+          - otp: "27.1"
             rebar3: "3.22.1"
             os: ubuntu-24.04
     steps:
@@ -72,7 +72,6 @@ jobs:
         with:
           otp-version: ${{matrix.erlang.otp}}
           rebar3-version: ${{matrix.erlang.rebar3}}
-          version-type: strict
           install-hex: false
 
       - name: Add Erlang to Path
